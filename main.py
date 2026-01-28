@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
-DATA_FILE = 'betting_data.json'# MongoDB at home lol
+DATA_FILE = 'data/betting_data.json' # MongoDB at home lol
 STARTING_BALANCE = 100
 DAILY_AMOUNT = 50
 
