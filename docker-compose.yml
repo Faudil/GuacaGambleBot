@@ -8,6 +8,4 @@ services:
     env_file:
       - .env
     volumes:
-      # Maps the 'data' folder on your PC to the '/data' folder in the container
-      # This ensures betting_data.json survives restarts.
-      - ./data:/data
+      - ./data:/app/data
