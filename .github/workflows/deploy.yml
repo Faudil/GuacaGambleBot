@@ -40,6 +40,6 @@ jobs:
             # Build and Start the container
             # -d = Detached (background)
             # --build = Rebuild the image with new code
-            docker-compose up -d --build
+            sudo docker-compose up -d --build
 
-            docker image prune -f
+            sudo docker image prune -f
