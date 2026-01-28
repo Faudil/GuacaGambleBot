@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  guacabot:
+    build: .
+    container_name: guaca_gamble_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      # Maps the 'data' folder on your PC to the '/data' folder in the container
+      # This ensures betting_data.json survives restarts.
+      - ./data:/data
