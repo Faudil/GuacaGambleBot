@@ -57,12 +57,16 @@ async def on_ready():
 
 
 
-@bot.command(name='balance', aliases=['bal', 'money'])
-async def balance(ctx):
+@bot.command(name='balance', aliases=['bal', 'money', 'solde'])
+async def balance(ctx, member: discord.Member = None):
     """Check your current balance."""
-    bal = get_balance(ctx.author.id)
+    if member is None:
+        target = ctx.author
+    else:
+        target = member
+    bal = get_balance(target.id)
     embed = discord.Embed(title="💰 Compte en banque", color=discord.Color.green())
-    embed.add_field(name="User", value=ctx.author.display_name)
+    embed.add_field(name="User", value=target.display_name)
     embed.add_field(name="Balance", value=f"${bal}")
     await ctx.send(embed=embed)
 
