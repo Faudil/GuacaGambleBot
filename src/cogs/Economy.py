@@ -24,8 +24,13 @@ class Economy(commands.Cog):
     @daily_limit("daily", 1)
     async def daily(self, ctx):
         user_id = str(ctx.author.id)
-        update_balance(user_id, DAILY_AMOUNT)
-        await ctx.send(f"💸 You collected ${DAILY_AMOUNT}!")
+        new_balance = update_balance(user_id, DAILY_AMOUNT)
+
+        embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
+        embed.add_field(name="Quantité", value=f"+${DAILY_AMOUNT}")
+        embed.add_field(name="Ta balance", value=f"${new_balance}")
+        embed.set_footer(text="Reviens demain !")
+        return await ctx.send(embed=embed)
 
     @commands.command(name='give', aliases=['pay'])
     async def give(self, ctx, recipient: discord.Member, amount: int) -> None:
@@ -37,7 +42,11 @@ class Economy(commands.Cog):
             return await ctx.send("❌ T'as pas assez d'argent.")
         update_balance(sender_id, -amount)
         update_balance(recipient_id, amount)
-        return await ctx.send(f"💸 {ctx.author.display_name} a envoyé ${amount} vers {recipient.display_name}!")
+        embed = discord.Embed(title="💸 Transaction complète", color=discord.Color.green())
+        embed.add_field(name="Donneur", value=ctx.author.display_name, inline=True)
+        embed.add_field(name="Receveur", value=recipient.display_name, inline=True)
+        embed.add_field(name="Quantité", value=f"**${amount}**", inline=False)
+        return await ctx.send(embed=embed)
 
 
 async def setup(bot):

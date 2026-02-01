@@ -36,7 +36,7 @@ class Casino(commands.Cog):
 
 
     @commands.command(name='slots', aliases=['slot', 'casino'])
-    @daily_limit("slots", 5)
+    @daily_limit("slots", 10)
     async def slots(self, ctx, amount: int):
         """Joue à la machine à sous. Usage: !slots <montant>"""
         user_id = str(ctx.author.id)
@@ -44,7 +44,7 @@ class Casino(commands.Cog):
         if amount <= 0:
             return await ctx.send("❌ Mise invalide.")
         if bal < amount:
-            return await ctx.send("❌ Pas assez d'argent.")
+            return await ctx.send("❌ T'as pas assez d'argent.")
         update_balance(user_id, -amount)
         symbols = ["🍒", "🍋", "🍇", "🍉", "7️⃣", "💎"]
         s1 = random.choice(symbols)
