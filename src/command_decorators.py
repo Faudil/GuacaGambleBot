@@ -1,7 +1,7 @@
 import discord
 from datetime import datetime
 import functools
-from data_handling import check_game_limit, increment_game_limit
+from src.data_handling import check_game_limit, increment_game_limit
 
 
 def daily_limit(game_name, max_usage):
