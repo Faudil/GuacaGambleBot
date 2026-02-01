@@ -22,7 +22,7 @@ async def on_ready():
 
 
 async def load_extensions():
-    extensions = ['cogs.Economy', 'cogs.Betting', 'cogs.Casino', 'cogs.Leaderboard']
+    extensions = ['src.cogs.Economy', 'src.cogs.Betting', 'src.cogs.Casino', 'src.cogs.Leaderboard']
     for ext in extensions:
         try:
             await bot.load_extension(ext)

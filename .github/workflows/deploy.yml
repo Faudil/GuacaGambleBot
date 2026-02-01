@@ -19,7 +19,7 @@ jobs:
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           # We only copy the necessary files
-          source: "src,Dockerfile,requirements.txt,docker-compose.yml"
+          source: "src,main.py,Dockerfile,requirements.txt,docker-compose.yml"
           target: "~/guacabot"
 
       # Step 2: Connect via SSH to build and run
