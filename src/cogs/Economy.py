@@ -5,7 +5,7 @@ from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
 from src.data_handling import get_balance, update_balance, pay_random_broke_user, get_bank_data
-from src.globals import DAILY_AMOUNT
+from src.globals import DAILY_AMOUNT, CHANNEL_ID
 
 
 class Economy(commands.Cog):
@@ -25,7 +25,7 @@ class Economy(commands.Cog):
                 for guild in self.bot.guilds:
                     member = guild.get_member(winner_id)
                     if member:
-                        channel = guild.get_channel()
+                        channel = guild.get_channel(CHANNEL_ID)
                         if not channel and guild.text_channels:
                             channel = guild.text_channels[0]
                         if channel:
@@ -51,7 +51,7 @@ class Economy(commands.Cog):
         embed.add_field(name="👛 Portefeuille", value=f"${wallet}", inline=True)
         embed.add_field(name="🔒 Coffre-fort", value=f"${bank} / 500", inline=True)
         embed.add_field(name="📈 Intérêts Daily", value=f"+${interest} / jour", inline=False)
-        embed.set_footer(text="Commandes : !dep <montant>, !with <montant>")
+        embed.set_footer(text="Commandes : !dep <montant>, !withdraw <montant>")
         await ctx.send(embed=embed)
 
     @commands.command(name='daily')

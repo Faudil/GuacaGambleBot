@@ -1,6 +1,8 @@
 import asyncio
+import logging
 import os
 import sys
+from venv import logger
 
 import discord
 from discord.ext import commands
@@ -14,7 +16,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
-
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+logger.addHandler(handler)
 
 @bot.event
 async def on_ready():
@@ -24,11 +27,12 @@ async def on_ready():
 
 async def load_extensions():
     for ext in os.listdir("src/cogs"):
-        try:
-            await bot.load_extension(f"src.cogs.{ext[:-3]}")
-            print(f"Loaded {ext}")
-        except Exception as e:
-            print(f"Failed to load {ext}: {e}")
+        if ext.endswith(".py") and not ext.startswith("_"):
+            try:
+                await bot.load_extension(f"src.cogs.{ext[:-3]}")
+                print(f"Loaded {ext}")
+            except Exception as e:
+                print(f"Failed to load {ext}: {e}")
 
 
 bot.remove_command('help')

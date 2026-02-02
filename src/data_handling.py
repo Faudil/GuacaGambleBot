@@ -157,7 +157,6 @@ def set_cooldown(user_id, activity_name):
 
 
 def check_game_limit(user_id, game_name, max_usage):
-    """Retourne (autorisé: bool, restants: int). Gère le reset journalier auto."""
     conn = get_connection()
     today_str = datetime.now().strftime("%Y-%m-%d")
     row = conn.execute("SELECT date_str, count FROM game_limits WHERE user_id = ? AND game_name = ?",
@@ -361,11 +360,6 @@ def get_bank_data(user_id):
 
 
 def deposit_money(user_id, amount):
-    """
-    Tente de déposer de l'argent.
-    Gère la limite de 500.
-    Retourne: "SUCCESS", "NO_MONEY", "BANK_FULL"
-    """
     conn = get_connection()
     try:
         row = conn.execute("SELECT balance, bank FROM users WHERE user_id = ?", (user_id,)).fetchone()
@@ -376,15 +370,10 @@ def deposit_money(user_id, amount):
 
         if bank >= MAX_BANK:
             return "BANK_FULL"
-
-        # On calcule combien on peut vraiment déposer
         space_left = MAX_BANK - bank
         actual_deposit = min(amount, space_left)
-
         if wallet < actual_deposit:
             return "NO_MONEY"
-
-        # Transaction
         conn.execute("UPDATE users SET balance = balance - ?, bank = bank + ? WHERE user_id = ?",
                      (actual_deposit, actual_deposit, user_id))
         conn.commit()
