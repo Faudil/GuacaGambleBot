@@ -1,6 +1,8 @@
 import sqlite3
 from datetime import datetime
 
+from src.globals import BASE_JACKPOT
+
 DB_FILE = './data/guacabot.db'
 STARTING_BALANCE = 100
 
@@ -304,13 +306,11 @@ def increment_lotto_jackpot(amount):
 def reset_lotto():
     import random
     new_number = random.randint(1, 100)
-    base_jackpot = 500
-
     conn = get_connection()
-    conn.execute("UPDATE lotto_state SET winning_number = ?, jackpot = ? WHERE id = 1", (new_number, base_jackpot))
+    conn.execute("UPDATE lotto_state SET winning_number = ?, jackpot = ? WHERE id = 1", (new_number, BASE_JACKPOT))
     conn.commit()
     conn.close()
-    return new_number, base_jackpot
+    return new_number, BASE_JACKPOT
 
 
 def try_daily_lotto_bonus(amount):
