@@ -23,11 +23,9 @@ async def on_ready():
 
 
 async def load_extensions():
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    extensions = ['src.cogs.Economy', 'src.cogs.Betting', 'src.cogs.Casino', 'src.cogs.Leaderboard', 'src.cogs.Duel', 'src.cogs.Blackjack', 'src.cogs.Admin']
-    for ext in extensions:
+    for ext in os.listdir("src/cogs"):
         try:
-            await bot.load_extension(ext)
+            await bot.load_extension(f"src.cogs.{ext[:-3]}")
             print(f"Loaded {ext}")
         except Exception as e:
             print(f"Failed to load {ext}: {e}")
