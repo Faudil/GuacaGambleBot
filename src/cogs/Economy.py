@@ -1,4 +1,5 @@
 import random
+from html.parser import interesting_normal
 
 import discord
 from discord.ext import commands, tasks
@@ -59,10 +60,10 @@ class Economy(commands.Cog):
     async def daily(self, ctx):
         user_id = str(ctx.author.id)
         _, bank_bal = get_bank_data(user_id)
-        interest = (bank_bal // 100) * 10
-        new_balance = update_balance(user_id, DAILY_AMOUNT + interest)
+        amount = DAILY_AMOUNT + (bank_bal // 100) * 10
+        new_balance = update_balance(user_id, amount)
         embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
-        embed.add_field(name="Quantité", value=f"+${DAILY_AMOUNT}")
+        embed.add_field(name="Quantité", value=f"+${amount}")
         embed.add_field(name="Ta balance", value=f"${new_balance}")
         embed.set_footer(text="Reviens demain !")
         return await ctx.send(embed=embed)
