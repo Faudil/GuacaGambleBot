@@ -5,7 +5,7 @@ from src.data_handling import update_balance, get_balance, create_bet_db, add_wa
 
 
 class Betting(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @commands.command(name='createbet')

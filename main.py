@@ -24,7 +24,7 @@ async def on_ready():
 
 async def load_extensions():
     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-    extensions = ['src.cogs.Economy', 'src.cogs.Betting', 'src.cogs.Casino', 'src.cogs.Leaderboard']
+    extensions = ['src.cogs.Economy', 'src.cogs.Betting', 'src.cogs.Casino', 'src.cogs.Leaderboard', 'src.cogs.Duel', 'src.cogs.Blackjack', 'src.cogs.Admin']
     for ext in extensions:
         try:
             await bot.load_extension(ext)
