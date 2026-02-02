@@ -16,6 +16,7 @@ class Admin(commands.Cog):
         """(Admin) Donne de l'argent à tout le monde !"""
         if amount <= 0:
             return await ctx.send("❌ Le montant doit être positif.")
+        update_balance(user.id, amount)
         embed = discord.Embed(
             title="💸 PLUIE DE BILLETS ! 💸",
             description=f"Je donnne **${amount}** à mon préféré {user.display_name} !",
