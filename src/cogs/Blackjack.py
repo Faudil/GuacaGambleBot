@@ -132,7 +132,6 @@ class BlackjackView(View):
 
         self.finished[self.turn] = True
 
-        # Si c'était P1, on passe à P2
         if self.turn == self.p1:
             self.turn = self.p2
             self.update_embed()
@@ -147,7 +146,7 @@ class BlackjackPvP(commands.Cog):
         self.bot = bot
         self.challenges = {}
 
-    @commands.command(name='bjduel', aliases=['bjpvp'])
+    @commands.command(name='bjduel', aliases=['bjpvp', 'blackjack', 'bj'])
     async def bjduel(self, ctx, opponent: discord.Member, amount: int):
         """Défie quelqu'un au Blackjack. Usage: !bjduel @Pseudo 100"""
         challenger = ctx.author

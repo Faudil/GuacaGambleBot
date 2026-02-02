@@ -1,9 +1,7 @@
 import discord
 from discord.ext import commands
 
-from src.command_decorators import daily_limit
-from src.data_handling import get_balance, update_balance
-from src.globals import DAILY_AMOUNT
+from src.data_handling import update_balance
 
 
 class Admin(commands.Cog):
@@ -13,7 +11,6 @@ class Admin(commands.Cog):
     @commands.command(name='airdrop', aliases=['rain'])
     @commands.has_permissions(administrator=True)
     async def airdrop(self, ctx, user: discord.Member, amount: int):
-        """(Admin) Donne de l'argent à tout le monde !"""
         if amount <= 0:
             return await ctx.send("❌ Le montant doit être positif.")
         update_balance(user.id, amount)

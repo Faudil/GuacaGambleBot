@@ -11,7 +11,6 @@ class Casino(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-
     @commands.command(name='coinflip', aliases=['cf', 'pileouface'])
     @daily_limit("coinflip", 10)
     async def coinflip(self, ctx, choice: str, amount: int):

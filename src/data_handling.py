@@ -111,7 +111,6 @@ def update_balance(user_id, amount) -> int:
 
 
 def add_money_to_all(amount):
-    """Ajoute un montant à tous les utilisateurs enregistrés dans la DB."""
     conn = get_connection()
     try:
         cursor = conn.execute("UPDATE users SET balance = balance + ?", (amount,))
@@ -132,8 +131,8 @@ def get_top_users(limit=5):
     for row in rows:
         yield {"user_id": row[0], "balance": row[1]}
 
+
 def get_cooldown(user_id, activity_name):
-    """Récupère la date de la dernière utilisation sous forme de string ISO."""
     conn = get_connection()
     row = conn.execute("SELECT last_used FROM cooldowns WHERE user_id = ? AND activity_name = ?",
                        (user_id, activity_name)).fetchone()
@@ -144,7 +143,6 @@ def get_cooldown(user_id, activity_name):
 
 
 def set_cooldown(user_id, activity_name):
-    """Met à jour le cooldown à 'maintenant'."""
     now_iso = datetime.now().isoformat()
     conn = get_connection()
     conn.execute("""
@@ -263,5 +261,80 @@ def pay_random_broke_user(amount, max_balance=0):
     except Exception as e:
         print(f"Erreur Loterie Misère: {e}")
         return None
+    finally:
+        conn.close()
+
+
+def get_lotto_state():
+    """Récupère l'état du loto (numéro gagnant et jackpot)."""
+    conn = get_connection()
+    conn.execute("""CREATE TABLE IF NOT EXISTS lotto_state
+                    (
+                        id
+                        INTEGER
+                        PRIMARY
+                        KEY,
+                        winning_number
+                        INTEGER,
+                        jackpot
+                        INTEGER
+                    )""")
+    row = conn.execute("SELECT * FROM lotto_state WHERE id = 1").fetchone()
+    if not row:
+        import random
+        winning_number = random.randint(1, 100)
+        jackpot = 500
+        conn.execute("INSERT INTO lotto_state (id, winning_number, jackpot) VALUES (1, ?, ?)",
+                     (winning_number, jackpot))
+        conn.commit()
+        conn.close()
+        return {"winning_number": winning_number, "jackpot": jackpot}
+
+    conn.close()
+    return {"winning_number": row['winning_number'], "jackpot": row['jackpot']}
+
+
+def increment_lotto_jackpot(amount):
+    conn = get_connection()
+    conn.execute("UPDATE lotto_state SET jackpot = jackpot + ? WHERE id = 1", (amount,))
+    conn.commit()
+    conn.close()
+
+
+def reset_lotto():
+    import random
+    new_number = random.randint(1, 100)
+    base_jackpot = 500
+
+    conn = get_connection()
+    conn.execute("UPDATE lotto_state SET winning_number = ?, jackpot = ? WHERE id = 1", (new_number, base_jackpot))
+    conn.commit()
+    conn.close()
+    return new_number, base_jackpot
+
+
+def try_daily_lotto_bonus(amount):
+    conn = get_connection()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    try:
+        try:
+            conn.execute("SELECT last_bonus_date FROM lotto_state LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE lotto_state ADD COLUMN last_bonus_date TEXT DEFAULT ''")
+            conn.commit()
+        row = conn.execute("SELECT last_bonus_date FROM lotto_state WHERE id = 1").fetchone()
+        if not row or row['last_bonus_date'] != today_str:
+            conn.execute("""
+                         UPDATE lotto_state
+                         SET jackpot         = jackpot + ?,
+                             last_bonus_date = ?
+                         WHERE id = 1
+                         """, (amount, today_str))
+            conn.commit()
+            return True
+        return False
+    except Exception as e:
+        print(f"Erreur Bonus Loto: {e}")
+        return False
     finally:
         conn.close()

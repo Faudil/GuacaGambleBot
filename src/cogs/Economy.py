@@ -16,16 +16,16 @@ class Economy(commands.Cog):
     def cog_unload(self):
         self.random_welfare.cancel()
 
-    @tasks.loop(minutes=120)
+    @tasks.loop(minutes=30)
     async def random_welfare(self):
-        if random.random() < 0.10:
+        if random.random() < 0.5:
             amount = 30
-            winner_id = pay_random_broke_user(amount, max_balance=5)
+            winner_id = pay_random_broke_user(amount, max_balance=50)
             if winner_id:
                 for guild in self.bot.guilds:
                     member = guild.get_member(winner_id)
                     if member:
-                        channel = guild.get_channel(1465882503045841156)
+                        channel = guild.get_channel()
                         if not channel and guild.text_channels:
                             channel = guild.text_channels[0]
                         if channel:
