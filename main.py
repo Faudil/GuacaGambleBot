@@ -65,9 +65,12 @@ async def help_command(ctx):
         inline=False
     )
     embed.add_field(
-        name="👑 Organisation",
+        name="🎰 Gambling et Casino",
         value=(
             "**`!coinflip`** (ou `!pileouface`)\n Pile ou face *Ex: !coinflip pile 50.*\n"
+            "**`!casino`** (ou `!slots`)\n Tente ta chance et augmente jusqu'à 10 fois ta mise *Ex: !casino 10*.\n"
+            "**`!blackjack`** (ou `!bjduel`)\n Defi un autre joueur sur le serveur *Ex: !casino 10*.\n"
+            "**`!duel`**\n Defi un autre joueur sur le serveur *Ex: !duel @joueur *.\n"
     ), inline=False)
     embed.set_footer(text="Bonne chance à tous ! 🎰")
     return await ctx.send(embed=embed)

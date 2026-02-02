@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
-from src.data_handling import get_balance, update_balance, pay_random_broke_user
+from src.data_handling import get_balance, update_balance, pay_random_broke_user, get_bank_data
 from src.globals import DAILY_AMOUNT
 
 
@@ -45,19 +45,22 @@ class Economy(commands.Cog):
     @commands.command(name='balance', aliases=['bal'])
     async def balance(self, ctx, member: discord.Member = None):
         user = ctx.author if member is None else member
-        bal = get_balance(user.id)
-        embed = discord.Embed(title="💰 Compte bancaire", color=discord.Color.green())
-        embed.add_field(name="Utilisateur", value=user.display_name)
-        embed.add_field(name="Balance", value=f"${bal}")
+        wallet, bank = get_bank_data(user.id)
+        interest = (bank // 100) * 10
+        embed = discord.Embed(title="🏦 Ma Banque", color=discord.Color.blue())
+        embed.add_field(name="👛 Portefeuille", value=f"${wallet}", inline=True)
+        embed.add_field(name="🔒 Coffre-fort", value=f"${bank} / 500", inline=True)
+        embed.add_field(name="📈 Intérêts Daily", value=f"+${interest} / jour", inline=False)
+        embed.set_footer(text="Commandes : !dep <montant>, !with <montant>")
         await ctx.send(embed=embed)
-
 
     @commands.command(name='daily')
     @daily_limit("daily", 1)
     async def daily(self, ctx):
         user_id = str(ctx.author.id)
-        new_balance = update_balance(user_id, DAILY_AMOUNT)
-
+        _, bank_bal = get_bank_data(user_id)
+        interest = (bank_bal // 100) * 10
+        new_balance = update_balance(user_id, DAILY_AMOUNT + interest)
         embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
         embed.add_field(name="Quantité", value=f"+${DAILY_AMOUNT}")
         embed.add_field(name="Ta balance", value=f"${new_balance}")

@@ -1,11 +1,11 @@
 import discord
 from discord.ext import commands, tasks
+
+from src.command_decorators import daily_limit
 from src.data_handling import (
     get_balance, update_balance,
-    get_cooldown, set_cooldown,
     get_lotto_state, increment_lotto_jackpot, reset_lotto, try_daily_lotto_bonus
 )
-from datetime import datetime
 
 from src.globals import CHANNEL_ID
 
@@ -39,21 +39,17 @@ class Lotto(commands.Cog):
 
 
     @commands.command(name='lotto', aliases=['loto'])
+    @daily_limit("loto", 3)
     async def play_lotto(self, ctx, number: int):
         user = ctx.author
         if not (1 <= number <= 100):
             return await ctx.send("❌ Choisis un nombre entre 1 et 100.")
-        last_played = get_cooldown(user.id, "lotto")
-        today = datetime.now().strftime("%Y-%m-%d")
-        if last_played and last_played.startswith(today):
-            return await ctx.send("🕒 Tu as déjà joué ta grille aujourd'hui ! Reviens demain.")
         if get_balance(user.id) < self.ticket_price:
             return await ctx.send(f"❌ Le ticket coûte ${self.ticket_price}. Tu es fauché.")
         update_balance(user.id, -self.ticket_price)
         state = get_lotto_state()
         winning_number = state['winning_number']
         current_jackpot = state['jackpot']
-        set_cooldown(user.id, "lotto")
         added_value = int(self.ticket_price)
         increment_lotto_jackpot(added_value)
         if number == winning_number:
