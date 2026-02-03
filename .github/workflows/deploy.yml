@@ -22,7 +22,7 @@ jobs:
           source: "src,main.py,Dockerfile,requirements.txt,docker-compose.yml"
           target: "~/guacabot"
 
-      # Step 2: Connect via SSH to build and run
+      # Step 2: Connect to build and run
       - name: Deploy on Server via SSH
         uses: appleboy/ssh-action@master
         with:
