@@ -8,6 +8,10 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
+from src.globals import ITEMS_REGISTRY
+from src.items.Coffee import Coffee
+from src.items.Ticket import Ticket
+
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 
@@ -85,8 +89,14 @@ async def on_ready():
     print(f'Logged in as {bot.user.name}')
     print('System is online.')
 
+def initialize_items():
+    """Crée les instances et les enregistre dans la DB."""
+    Coffee().register()
+    Ticket().register()
+    print(f"✅ {len(ITEMS_REGISTRY)} objets chargés dans le système.")
 
 async def main():
+    initialize_items()
     async with bot:
         await load_extensions()
         await bot.start(TOKEN)

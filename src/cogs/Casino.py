@@ -29,8 +29,8 @@ def get_flavor_text(win_type, symbol):
         if symbol == "💎": return "😲 **Si proche !** Une paire de diamants, ça rapporte gros !"
         if symbol == "🔔": return "🔔 **Joli !** Ces cloches sonnent la victoire."
         if symbol == "🍋": return "🍋 **Pas mal !** Un petit jus de citron pour fêter ça ?"
-        if symbol == "🍇": return "🍇 **Sympa !** C'est toujours ça de pris."
-        if symbol == "🍒": return "🍒 **Ouf !** Remboursé (ou presque)."
+        if symbol == "🍇": return "🍇 **Ouf !** Au moins t'es remboursé (ou presque)."
+        if symbol == "🍒": return "🍒 **Mince !** Ca aurait pu être pire."
     return "❌ Pas de chance... Retente ta chance !"
 
 
@@ -65,9 +65,11 @@ class Casino(commands.Cog):
     @daily_limit("slots", 10)
     async def slots(self, ctx, amount: int):
         user_id = ctx.author.id
-        if amount <= 0: return await ctx.send("❌ Mise invalide.")
+        if amount <= 0:
+            return await ctx.send("❌ Mise invalide.")
         bal = get_balance(user_id)
-        if bal < amount: return await ctx.send(f"❌ Pas assez d'argent (${bal}).")
+        if bal < amount:
+            return await ctx.send(f"❌ Pas assez d'argent (${bal}).")
         update_balance(user_id, -amount)
         # increment_user_stat(user_id, "total_gambles", 1)
 
@@ -102,7 +104,7 @@ class Casino(commands.Cog):
         flavor = get_flavor_text(win_type, winning_symbol)
         def make_embed(s1, s2, s3, state_text, col):
             emb = discord.Embed(title="🎰 CASINO", color=col)
-            machine_display = f"**»** {s1}   |   {s2}   |   {s3}  **«**"
+            machine_display = f"**»** {s1}   |   {s2}   |   {s3}  ****"
             emb.add_field(name="Machine", value=f"# {machine_display}", inline=False)
             emb.add_field(name="Infos", value=f"Mise : **${amount}**\n{state_text}", inline=False)
             return emb

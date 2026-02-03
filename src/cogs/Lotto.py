@@ -34,7 +34,7 @@ class Lotto(commands.Cog):
                         f"🌞 Un nouveau jour se lève !\n"
                         f"La banque ajoute **${self.daily_increase}** à la cagnotte.\n\n"
                         f"💰 **NOUVEAU JACKPOT : ${new_jackpot}**\n"
-                        f"Pour tenter sa chance: `!lotto <nombre entre 1 et 100>` (le prix du billet est de 20)"
+                        f"Pour tenter sa chance: `!lotto <nombre entre 1 et 100>` (le prix du billet est de {self.ticket_price})"
                     )
                     await channel.send(embed=embed)
 
@@ -46,7 +46,7 @@ class Lotto(commands.Cog):
         if not (1 <= number <= 100):
             return await ctx.send("❌ Choisis un nombre entre 1 et 100.")
         if get_balance(user.id) < self.ticket_price:
-            return await ctx.send(f"❌ Le ticket coûte ${self.ticket_price}. Tu es fauché.")
+            return await ctx.send(f"❌ Le ticket coûte ${self.ticket_price}. T'es fauché.")
         update_balance(user.id, -self.ticket_price)
         state = get_lotto_state()
         winning_number = state['winning_number']
@@ -64,7 +64,7 @@ class Lotto(commands.Cog):
             )
             embed.set_image(url="https://media.giphy.com/media/26tOZ42Mg6pbTUPvy/giphy.gif")
             await ctx.send(embed=embed)
-            return await ctx.guild.system_channel.send(
+            return await ctx.guild.get_channel(CHANNEL_ID).send(
                 f"🚨 **ALERTE LOTO** : {user.display_name} vient de gagner le JACKPOT de ${current_jackpot} !")
         else:
             embed = discord.Embed(title="🎫 Ticket validé", color=discord.Color.blue())

@@ -1,21 +1,29 @@
 import discord
 import random
 from src.data_handling import (
-    use_item_db, update_balance, reset_user_cooldown,
     get_connection
 )
-
-# --- LE REGISTRE GLOBAL ---
-# C'est ici qu'on stockera le lien "Nom de l'item" -> "Classe Python"
-ITEMS_REGISTRY = {}
+from src.globals import ITEMS_REGISTRY
 
 
 class Item:
-    def __init__(self, name, price, description, type="consumable"):
+    def __init__(self, name, price, description, rarity="common", image_url=None):
         self.name = name
         self.price = price
         self.description = description
-        self.type = type
+        self.rarity = rarity  # common, rare, epic, legendary, unique
+        self.image_url = image_url
+        self.type = "collectible"  # Par défau
+
+    def get_discord_color(self):
+        colors = {
+            "common": discord.Color.light_grey(),
+            "rare": discord.Color.blue(),
+            "epic": discord.Color.purple(),
+            "legendary": discord.Color.gold(),
+            "unique": discord.Color.red()
+        }
+        return colors.get(self.rarity, discord.Color.default())
 
     def register(self):
         ITEMS_REGISTRY[self.name.lower()] = self
@@ -32,9 +40,5 @@ class Item:
             conn.close()
 
     async def use(self, ctx, **kwargs):
-        """
-        Méthode à surcharger par les enfants.
-        Retourne True si l'objet a été consommé avec succès.
-        """
         await ctx.send(f"Cet objet ({self.name}) ne fait rien pour l'instant.")
         return False

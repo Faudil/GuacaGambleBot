@@ -36,7 +36,6 @@ class Duel(commands.Cog):
 
     @commands.command(name='accept')
     async def accept_duel(self, ctx):
-        """Accepte un défi en cours."""
         opponent = ctx.author
         if opponent.id not in self.pending_duels:
             return await ctx.send("❌ Personne ne t'a défié.")
