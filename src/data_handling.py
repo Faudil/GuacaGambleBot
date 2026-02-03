@@ -84,14 +84,10 @@ def init_db():
 
     conn.execute("""CREATE TABLE IF NOT EXISTS lotto_state
                     (
-                        id
-                        INTEGER
-                        PRIMARY
-                        KEY,
-                        winning_number
-                        INTEGER,
-                        jackpot
-                        INTEGER
+                        id INTEGER PRIMARY KEY,
+                        winning_number INTEGER,
+                        jackpot INTEGER,
+                        last_bonus_date TEXT DEFAULT '',
                     )""")
 
     conn.commit()
@@ -317,11 +313,6 @@ def try_daily_lotto_bonus(amount):
     conn = get_connection()
     today_str = datetime.now().strftime("%Y-%m-%d")
     try:
-        try:
-            conn.execute("SELECT last_bonus_date FROM lotto_state LIMIT 1")
-        except sqlite3.OperationalError:
-            conn.execute("ALTER TABLE lotto_state ADD COLUMN last_bonus_date TEXT DEFAULT ''")
-            conn.commit()
         row = conn.execute("SELECT last_bonus_date FROM lotto_state WHERE id = 1").fetchone()
         if not row or row['last_bonus_date'] != today_str:
             conn.execute("""

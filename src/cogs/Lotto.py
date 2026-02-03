@@ -15,11 +15,12 @@ class Lotto(commands.Cog):
         self.bot = bot
         self.ticket_price = 20
         self.daily_increase = 300
+        self.daily_pot_increase.start()
 
     def cog_unload(self):
             self.daily_pot_increase.cancel()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(hours=1)
     async def daily_pot_increase(self):
         bonus_applied = try_daily_lotto_bonus(self.daily_increase)
         if bonus_applied:
