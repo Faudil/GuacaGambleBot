@@ -399,14 +399,10 @@ def use_item_db(user_id, item_name):
     conn = get_connection()
     try:
         item = conn.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()
-        if not item: return False
-        inv_row = conn.execute(
-            "SELECT quantity FROM inventory WHERE user_id = ? AND item_id = ?",
-            (user_id, item['id'])
-        ).fetchone()
-        if not inv_row or inv_row['quantity'] < 1:
+        if not item:
             return False
-        if inv_row['quantity'] > 1:
+        user_has_item = has_item(user_id, item_name)
+        if user_has_item:
             conn.execute(
                 "UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ?",
                 (user_id, item['id']))
@@ -479,18 +475,8 @@ def transfer_item_transaction(seller_id, buyer_id, item_name, price):
         buyer_bal = conn.execute("SELECT balance FROM users WHERE user_id = ?", (buyer_id,)).fetchone()
         if not buyer_bal or buyer_bal['balance'] < price:
             return "NO_MONEY"
-        conn.execute("UPDATE users SET balance = balance + ? WHERE user_id = ?", (price, seller_id))
-        conn.execute("UPDATE users SET balance = balance - ? WHERE user_id = ?", (price, buyer_id))
-        if seller_inv['quantity'] > 1:
-            conn.execute("UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ?",
-                         (seller_id, item_id))
-        else:
-            conn.execute("DELETE FROM inventory WHERE user_id = ? AND item_id = ?", (seller_id, item_id))
-        conn.execute("""
-                     INSERT INTO inventory (user_id, item_id, quantity)
-                     VALUES (?, ?, 1) ON CONFLICT(user_id, item_id) DO
-                     UPDATE SET quantity = quantity + 1
-                     """, (buyer_id, item_id))
+        use_item_db(seller_id, item_name)
+        add_item_to_inventory(buyer_id, item_name)
         conn.commit()
         return "SUCCESS"
     except Exception as e:

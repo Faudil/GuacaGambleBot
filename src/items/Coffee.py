@@ -5,13 +5,13 @@ from src.items.Item import Item
 class Coffee(Item):
     def __init__(self):
         super().__init__(
-            name="Café",
+            name="café",
             price=50,
             description="Réveille tes sens. Réinitialise le cooldown du !daily."
         )
 
     async def use(self, ctx, **kwargs):
-        if not use_item_db(ctx.author.id, self.name):
+        if not use_item_db(ctx.author.id, self.name.lower()):
             await ctx.send("❌ Tu n'as pas cet objet.")
             return False
 

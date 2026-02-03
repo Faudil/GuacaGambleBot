@@ -5,7 +5,7 @@ from src.items.Item import Item
 class Ticket(Item):
     def __init__(self):
         super().__init__(
-            name="Ticket",
+            name="ticket",
             price=100,
             description="Te donne une nouvelle chance, reset tes limites de casino et coinflip"
         )

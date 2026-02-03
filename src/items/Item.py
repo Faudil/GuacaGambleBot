@@ -8,7 +8,7 @@ from src.globals import ITEMS_REGISTRY
 
 class Item:
     def __init__(self, name, price, description, rarity="common", image_url=None):
-        self.name = name
+        self.name = name.lower()
         self.price = price
         self.description = description
         self.rarity = rarity  # common, rare, epic, legendary, unique
@@ -26,13 +26,14 @@ class Item:
         return colors.get(self.rarity, discord.Color.default())
 
     def register(self):
-        ITEMS_REGISTRY[self.name.lower()] = self
+        name = self.name.lower()
+        ITEMS_REGISTRY[name] = self
         conn = get_connection()
         try:
             conn.execute("""
                          INSERT OR IGNORE INTO items (name, price, description, effect_type)
                          VALUES (?, ?, ?, ?)
-                         """, (self.name, self.price, self.description, self.type))
+                         """, (name, self.price, self.description, self.type))
             conn.commit()
         except Exception as e:
             print(f"Erreur register item {self.name}: {e}")
