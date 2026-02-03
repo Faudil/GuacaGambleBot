@@ -1,9 +1,9 @@
-name: Deploy to OVH
+name: Deploy to server
 
 on:
   push:
     branches:
-      - main  # Or 'master', depending on your default branch name
+      - main
 
 jobs:
   deploy:
