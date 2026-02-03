@@ -36,6 +36,7 @@ jobs:
             # Create the .env file dynamically using the GitHub Secret
             # This ensures your token is never exposed in the repo
             echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
+            echo "TZ=Europe/Paris" >> .env
 
             # Build and Start the container
             # -d = Detached (background)

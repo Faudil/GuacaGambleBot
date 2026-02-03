@@ -1,16 +1,16 @@
 import random
-from html.parser import interesting_normal
 
 import discord
 from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
-from src.data_handling import get_balance, update_balance, pay_random_broke_user, get_bank_data
+from src.data_handling import get_balance, update_balance, pay_random_broke_user, get_bank_data, get_total_debt, \
+    repay_debt_logic
 from src.globals import DAILY_AMOUNT, CHANNEL_ID
 
 
 class Economy(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.random_welfare.start()
 
@@ -60,10 +60,22 @@ class Economy(commands.Cog):
     async def daily(self, ctx):
         user_id = str(ctx.author.id)
         _, bank_bal = get_bank_data(user_id)
+
         amount = DAILY_AMOUNT + (bank_bal // 100) * 10
-        new_balance = update_balance(user_id, amount)
+
+        debt = get_total_debt(user_id)
+        repay_cut = int(amount // 2)
+        actual_repay = min(repay_cut, debt)
+
+        player_gain = amount - actual_repay
+        new_balance = update_balance(user_id, player_gain)
+        paid, lenders = repay_debt_logic(user_id, actual_repay)
+
         embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
         embed.add_field(name="Quantité", value=f"+${amount}")
+        embed.add_field(name=f"\n📉 **Saisie sur salaire (remboursement des dettes)", value=f"-${actual_repay}", inline=False)
+        for lender, amount in lenders:
+            embed.add_field(name=f"\n🤵 Tu as remboursé {self.bot.get_user(int(lender)).display_name} de ", value=f"${amount}", inline=False)
         embed.add_field(name="Ta balance", value=f"${new_balance}")
         embed.set_footer(text="Reviens demain !")
         return await ctx.send(embed=embed)
