@@ -73,9 +73,10 @@ class Economy(commands.Cog):
 
         embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
         embed.add_field(name="Quantité", value=f"+${amount}")
-        embed.add_field(name=f"\n📉 **Saisie sur salaire (remboursement des dettes)", value=f"-${actual_repay}", inline=False)
-        for lender, amount in lenders:
-            embed.add_field(name=f"\n🤵 Tu as remboursé {self.bot.get_user(int(lender)).display_name} de ", value=f"${amount}", inline=False)
+        if debt > 0:
+            embed.add_field(name=f"\n📉 **Saisie sur salaire (remboursement des dettes)", value=f"-${actual_repay}", inline=False)
+            for lender, amount in lenders:
+                embed.add_field(name=f"\n🤵 Tu as remboursé {self.bot.get_user(int(lender)).display_name} de ", value=f"${amount}", inline=False)
         embed.add_field(name="Ta balance", value=f"${new_balance}")
         embed.set_footer(text="Reviens demain !")
         return await ctx.send(embed=embed)

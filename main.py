@@ -42,6 +42,7 @@ async def load_extensions():
 bot.remove_command('help')
 
 
+
 @bot.command(name='help')
 async def help_command(ctx):
     """Affiche le guide des commandes en français."""
@@ -50,36 +51,83 @@ async def help_command(ctx):
         description="Pariez de l'argent virtuel et devenez le plus riche du serveur !",
         color=discord.Color.teal()
     )
+    # --- 1. ÉCONOMIE ---
     embed.add_field(
         name="💰 Économie",
         value=(
-            "**`!daily`**\nRécupère ton salaire quotidien (50$).\n"
-
-            "**`!balance`** (ou `!bal`)\nAffiche ton solde actuel.\n"
-            "**`!top`** (ou `!classement`)\nAffiche le top 5 des plus riches.\n"
-            "**`!give`** (ou `!donner`)\n Donne de l'argent à quelqu'un. *Ex: !give @guacamole 150*"
+            "`!daily` : Ton salaire journalier.\n"
+            "`!balance` (ou `!bal`) : Voir ton solde.\n"
+            "`!give <@joueur> <montant>` : Faire un virement."
         ),
         inline=False
     )
+
+    embed.add_field(
+        name="🎰 Casino & Cartes",
+        value=(
+            "`!slots <mise>` : Machine à sous. Vise les 💎 !\n"
+
+            "`!coinflip <pile/face> <mise>` : Quitte ou double rapide.\n"
+            "`!lotto` : Voir la cagnotte du loto."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="🔫 Duels & Adrénaline",
+        value=(
+            "`!duel <@joueur> <mise>` : Provoque quelqu'un en duel (50/50).\n"
+            "`!blackjack <mise>` (ou `!bjduel`) : Le 21. Affronte un autre joueur.\n"
+            "`!roulette <mise>` : Roulette Russe. 1 chance sur 6 de mourir (et perdre la mise).\n"
+            "*Note : Le duel nécessite que l'adversaire accepte.*"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⛏️ Métiers (Farming) **NON IMPLÉMENTÉ**",
+        value=(
+            "`!mine` : Mine des ressources pour l'XP et l'argent.\n"
+            "`!fish` : Pêche des poissons (consommables).\n"
+            "`!jobstats` : Voir ta progression de niveau."
+        ),
+        inline=False
+    )
+
     embed.add_field(
         name="🎲 Paris",
         value=(
-            "**`!bet <ID> <Choix> <Montant>`**\nPlace un pari. *Ex: !bet 1 A 100*\n"
-            "**`!odds <ID>`**\nAffiche les cotes et la cagnotte d'un pari.\n"
-            "**`!createbet \"Question\" \"A\" \"B\"`**\nCréer un pari. *N'oubliez pas les guillemets !*\n"
-            "**`!closebet <ID> <Gagnant>`**\nTerminer un pari et payer les vainqueurs.\n"
-            "**`!freezebet <ID>`**\nGêle la possibilité de parier sur un pari."
+            "`!bet <ID> <Choix> <Montant>`: Place un pari. *Ex: !bet 1 A 100*\n"
+            "`!odds <ID>`: Affiche les cotes et la cagnotte d'un pari.\n"
+            "`!createbet \"Question\" \"A\" \"B\"`: Créer un pari. *N'oubliez pas les guillemets !*\n"
+            "`!closebet <ID> <Gagnant>`: Terminer un pari et payer les vainqueurs.\n"
+            "`!freezebet <ID>`: Gêle la possibilité de parier sur un pari."
+        ),
+        inline=False)
+
+    embed.add_field(
+        name="🎒 Inventaire & Boutique",
+        value=(
+            # "`!shop` : Acheter des objets et licences.\n"
+            # "`!inventory` (ou `!inv`) : Voir ton sac.\n"
+            "`!use <item>` : Utiliser un objet.\n"
+            # "`!licenses` : Voir les spécialisations (Mineur Pro, VIP...)."
         ),
         inline=False
     )
+
+    # --- 6. BANQUE ---
     embed.add_field(
-        name="🎰 Gambling et Casino",
+        name="🏦 Banque & Prêts",
         value=(
-            "**`!coinflip`** (ou `!pileouface`)\n Pile ou face *Ex: !coinflip pile 50.*\n"
-            "**`!casino`** (ou `!slots`)\n Tente ta chance et augmente jusqu'à 10 fois ta mise *Ex: !casino 10*.\n"
-            "**`!blackjack`** (ou `!bjduel`)\n Defi un autre joueur sur le serveur *Ex: !casino 10*.\n"
-            "**`!duel`**\n Defi un autre joueur sur le serveur *Ex: !duel @joueur *.\n"
-    ), inline=False)
+            "!deposit <montant>: (ou !dep) Dépose de l'argent dans ta banque (max 500)\n"
+            "!withdraw <montant>: (ou !wd) Retire l'argent de ta banque vers ton portefeuille\n"
+            "`!lend <@joueur> <montant>` : Prêter avec 10% d'intérêt.\n"
+            "`!repay <montant>` : Rembourser tes dettes. (réparti entre tes différents créantiers)\n"
+            "`!debt` : Voir ce que tu dois aux autres."
+        ),
+        inline=False
+    )
     embed.set_footer(text="Bonne chance à tous ! 🎰")
     return await ctx.send(embed=embed)
 

@@ -58,7 +58,7 @@ class Shop(commands.Cog):
                         f"Un marchand itinérant propose : **{item['name']}**\n"
                         f"{item['description']}\n"
                         f"Prix normal : ~~${item['price']}~~\n"
-                        f"**Prix Flash : ${price}** (-{discount})%)"
+                        f"**Prix Flash : ${price}** (-{discount * 100})%)"
                     )
                     embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1170/1170679.png")
                     view = FlashSaleView(item, price)
