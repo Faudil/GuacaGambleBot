@@ -1,3 +1,4 @@
+import asyncio
 import random
 
 import discord
@@ -5,6 +6,17 @@ from discord.ext import commands
 
 from src.command_decorators import daily_limit
 from src.data_handling import get_balance, update_balance
+
+SLOT_SYMBOLS = {
+    "🍒": {"weight": 40, "mult": 3},
+    "🍇": {"weight": 30, "mult": 5},
+    "🍋": {"weight": 20, "mult": 10},
+    "🔔": {"weight": 8,  "mult": 20},
+    "💎": {"weight": 2,  "mult": 100}
+}
+WHEEL = []
+for symbol, data in SLOT_SYMBOLS.items():
+    WHEEL.extend([symbol] * data['weight'])
 
 
 class Casino(commands.Cog):
@@ -37,33 +49,80 @@ class Casino(commands.Cog):
     @commands.command(name='slots', aliases=['slot', 'casino'])
     @daily_limit("slots", 10)
     async def slots(self, ctx, amount: int):
-        """Joue à la machine à sous. Usage: !slots <montant>"""
-        user_id = str(ctx.author.id)
-        bal = get_balance(user_id)
+        """Let's go gambling !"""
+        user_id = ctx.author.id
         if amount <= 0:
-            return await ctx.send("❌ Mise invalide.")
+            return await ctx.send("❌ La mise doit être positive.")
+        bal = get_balance(user_id)
         if bal < amount:
-            return await ctx.send("❌ T'as pas assez d'argent.")
+            return await ctx.send(f"❌ Tu n'as pas assez d'argent (${bal}).")
+
         update_balance(user_id, -amount)
-        symbols = ["🍒", "🍋", "🍇", "🍉", "7️⃣", "💎"]
-        s1 = random.choice(symbols)
-        s2 = random.choice(symbols)
-        s3 = random.choice(symbols)
-        winnings = 0
-        result_text = "Perdu..."
-        if s1 == s2 == s3:
-            winnings = amount * 10
-            result_text = "🚨 **JACKPOT !** 🚨 (x10)"
-        elif s1 == s2 or s2 == s3 or s1 == s3:
-            winnings = amount * 2
-            result_text = "Pas mal ! Deux identiques. (x2)"
-        if winnings > 0:
-            update_balance(user_id, winnings)
-        embed = discord.Embed(title="🎰 Machine à Sous", color=discord.Color.magenta())
-        embed.description = f"# ║ {s1} ║ {s2} ║ {s3} ║"
-        embed.add_field(name="Résultat", value=result_text)
-        embed.add_field(name="Gain", value=f"+${winnings}" if winnings > 0 else f"-${amount}")
-        return await ctx.send(embed=embed)
+        # increment_user_stat(user_id, "total_gambles", 1)  # For later
+
+        r1 = random.choice(WHEEL)
+        r2 = random.choice(WHEEL)
+        r3 = random.choice(WHEEL)
+
+        if r1 == r2 == r3:
+            multiplier = SLOT_SYMBOLS[r1]['mult']
+            payout = amount * multiplier
+            is_win = True
+            win_type = "JACKPOT"
+        elif r1 == r2 or r2 == r3 or r1 == r3:
+            symbol = r1 if r1 == r2 else (r2 if r2 == r3 else r1)
+            full_mult = SLOT_SYMBOLS[symbol]['mult']
+            ratio = 0.25
+            payout = int(amount * full_mult * ratio)
+            is_win = True
+            win_type = "PAIRE"
+        else:
+            payout = 0
+            is_win = False
+        embed = discord.Embed(title="🎰 CASINO SLOTS", color=discord.Color.blurple())
+        embed.description = (
+            f"Mise : **${amount}**\n\n"
+            f"╔═════════════╗\n"
+            f"║ 🌀 | 🌀 | 🌀 ║\n"
+            f"╚═════════════╝"
+        )
+        msg = await ctx.send(embed=embed)
+        await asyncio.sleep(1.0)
+        embed.description = (
+            f"Mise : **${amount}**\n\n"
+            f"╔═════════════╗\n"
+            f"║ {r1} | 🌀 | 🌀 ║\n"
+            f"╚═════════════╝"
+        )
+        await msg.edit(embed=embed)
+        await asyncio.sleep(0.8)
+        embed.description = (
+            f"Mise : **${amount}**\n\n"
+            f"╔═════════════╗\n"
+            f"║ {r1} | {r2} | 🌀 ║\n"
+            f"╚═════════════╝"
+        )
+        await msg.edit(embed=embed)
+        if r1 == r2:
+            await asyncio.sleep(1.5)
+        else:
+            await asyncio.sleep(0.8)
+        if is_win:
+            update_balance(user_id, payout)
+            embed.color = discord.Color.green()
+            result_text = f"✨ **GAGNÉ !** ({win_type})\nTu remportes **${payout}** !"
+        else:
+            embed.color = discord.Color.red()
+            result_text = f"❌ **PERDU...**\nTu perds tes ${amount}."
+
+        embed.description = (
+            f"Mise : **${amount}**\n\n"
+            f"╔═════════════╗\n"
+            f"║ {r1} | {r2} | {r3} ║\n"
+            f"╚═════════════╝\n\n"
+            f"{result_text}"
+        )
+        return await msg.edit(embed=embed)
 
 
 async def setup(bot):
