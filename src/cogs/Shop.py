@@ -105,10 +105,10 @@ class Shop(commands.Cog):
 
     @commands.command(name='use')
     async def use_item(self, ctx, *, item_name: str):
+        item_name = item_name.lower()
         if not has_item(ctx.author.id, item_name):
             return await ctx.send(f"❌ Tu n'as pas de **{item_name}**.")
-        name_clean = item_name.lower()
-        await ITEMS_REGISTRY[name_clean].use(ctx)
+        await ITEMS_REGISTRY[item_name].use(ctx)
         msg = f"✨ Tu as utilisé **{item_name}**..."
         return await ctx.send(msg)
 
