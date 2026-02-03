@@ -82,6 +82,18 @@ def init_db():
         PRIMARY KEY (user_id, item_id)
         )""")
 
+    conn.execute("""CREATE TABLE IF NOT EXISTS lotto_state
+                    (
+                        id
+                        INTEGER
+                        PRIMARY
+                        KEY,
+                        winning_number
+                        INTEGER,
+                        jackpot
+                        INTEGER
+                    )""")
+
     conn.commit()
     conn.close()
     print("Base de données initialisée avec succès.")
@@ -245,7 +257,7 @@ def pay_random_broke_user(amount, max_balance=0):
     conn = get_connection()
     try:
         cursor = conn.execute(
-            "SELECT user_id FROM users WHERE balance <= ? ORDER BY RANDOM() LIMIT 1",
+            "SELECT user_id FROM users WHERE balance + bank <= ? ORDER BY RANDOM() LIMIT 1",
             (max_balance,)
         )
         row = cursor.fetchone()
@@ -269,17 +281,6 @@ def pay_random_broke_user(amount, max_balance=0):
 def get_lotto_state():
     """Récupère l'état du loto (numéro gagnant et jackpot)."""
     conn = get_connection()
-    conn.execute("""CREATE TABLE IF NOT EXISTS lotto_state
-                    (
-                        id
-                        INTEGER
-                        PRIMARY
-                        KEY,
-                        winning_number
-                        INTEGER,
-                        jackpot
-                        INTEGER
-                    )""")
     row = conn.execute("SELECT * FROM lotto_state WHERE id = 1").fetchone()
     if not row:
         import random

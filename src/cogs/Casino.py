@@ -89,7 +89,7 @@ class Casino(commands.Cog):
         elif r1 == r2 or r2 == r3 or r1 == r3:
             winning_symbol = r1 if r1 == r2 else (r2 if r2 == r3 else r1)
             full_mult = SLOT_SYMBOLS[winning_symbol]['mult']
-            ratio = 0.30
+            ratio = 0.18
             payout = int(amount * full_mult * ratio)
             if payout < amount and winning_symbol in ["💎", "🔔", "🍋"]:
                 payout = amount

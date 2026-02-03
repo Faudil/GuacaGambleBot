@@ -19,7 +19,7 @@ class Lotto(commands.Cog):
     def cog_unload(self):
             self.daily_pot_increase.cancel()
 
-    @tasks.loop(minutes=10)
+    @tasks.loop(minutes=1)
     async def daily_pot_increase(self):
         bonus_applied = try_daily_lotto_bonus(self.daily_increase)
         if bonus_applied:
