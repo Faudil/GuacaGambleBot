@@ -69,3 +69,6 @@ class ItemManager(commands.Cog):
 
         view = TradeView(ctx.author, recipient, item_name, price)
         return await ctx.send(content=recipient.mention, embed=embed, view=view)
+
+async def setup(bot):
+    await bot.add_cog(ItemManager(bot))
