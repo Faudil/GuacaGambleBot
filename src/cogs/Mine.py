@@ -114,7 +114,7 @@ class Mine(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mine", aliases=["mining", "miner"])
-    @daily_limit("mine", 10)
+    @daily_limit("mine", 5)
     async def mine(self, ctx):
         user_id = int(ctx.message.author.id)
         lvl, _ = get_job_data(user_id, "mining")
