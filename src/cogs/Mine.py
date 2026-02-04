@@ -67,7 +67,6 @@ class MineExpeditionView(View):
 
         risk = (self.depth - 1) * 5
         risk -= self.level
-        risk = max(5, risk)
 
         roll = random.randint(1, 100)
         if roll <= risk:
@@ -87,9 +86,9 @@ class MineExpeditionView(View):
         bag_str = ", ".join([loot.name for loot in self.loot_bag])
         msg = (
             f"⛏️ **Profondeur {self.depth}m**\n"
-            f"Tu as trouvé : **{drop}** !\n\n"
+            f"Tu as trouvé : **{drop.name}** !\n\n"
             f"🎒 **Sac actuel :** {bag_str}\n"
-            f"⚠️ **Risque d'éffondrement au prochain coup :** ~{max(0, (self.depth * 5) - self.level)}%"
+            f"⚠️ **Risque d'éffondrement au prochain coup :** ~{max(0, ((self.depth - 1) * 5) - self.level)}%"
         )
         await self.update_message(interaction, msg)
 
@@ -99,7 +98,7 @@ class MineExpeditionView(View):
         total_xp = self.depth * 5
         if self.loot_bag:
             for item in self.loot_bag:
-                add_item_to_inventory(self.ctx.author.id, item)
+                add_item_to_inventory(self.ctx.author.id, item.name)
                 total_xp += 10
             bag_str = ", ".join([loot.name for loot in self.loot_bag])
             msg = f"✅ **Mission Réussie !** Tu sors de la mine vivant.\n🎒 Tu remportes : {bag_str}\n📈 XP gagnée : +{total_xp}"
@@ -115,12 +114,15 @@ class Mine(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mine", aliases=["mining", "miner"])
-    @daily_limit("mine", 2)
+    @daily_limit("mine", 10)
     async def mine(self, ctx):
         user_id = int(ctx.message.author.id)
         lvl, _ = get_job_data(user_id, "mining")
         embed = discord.Embed(title="Expédition minière", description="Tu entres dans la grotte...\nJusqu'où iras-tu ?")
         embed.set_footer(text=f"Niveau Mineur : {lvl} (Réduit les risques)")
+
+        view = MineExpeditionView(ctx, lvl)
+        await ctx.send(embed=embed, view=view)
         await ctx.message.delete()
 
 

@@ -115,6 +115,7 @@ def transfer_item_transaction(seller_id, buyer_id, item_name, price):
 
 def get_all_user_inventory(user_id) -> Dict[str, int]:
     conn = get_connection()
+    result = {}
     try:
         rows = conn.execute("""
                             SELECT i.name, inv.quantity
@@ -123,10 +124,9 @@ def get_all_user_inventory(user_id) -> Dict[str, int]:
                             WHERE inv.user_id = ?
                             ORDER BY i.price DESC
                             """, (user_id,)).fetchall()
-        result = {}
         for row in rows:
             result[row['name']] = row['quantity']
         return result
     finally:
         conn.close()
-        return dict()
+        return result

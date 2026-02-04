@@ -12,11 +12,11 @@ class Coal(ResourceItem):
 
 class IronOre(ResourceItem):
     def __init__(self):
-        super().__init__("Minerai de Fer", 10, "Utile pour forger des trucs solides.", ItemRarity.common)
+        super().__init__("Minerai de Fer", 10, "Utile pour forger des trucs solides.", ItemRarity.rare)
 
 class CopperOre(ResourceItem):
     def __init__(self):
-        super().__init__("Minerai de Cuivre", 15, "Utile pour forger des trucs solides.", ItemRarity.common)
+        super().__init__("Minerai de Cuivre", 15, "Utile pour forger des trucs solides.", ItemRarity.rare)
 
 class SilverOre(ResourceItem):
     def __init__(self):
@@ -24,7 +24,7 @@ class SilverOre(ResourceItem):
 
 class GoldNugget(ResourceItem):
     def __init__(self):
-        super().__init__("Pépite d'Or", 50, "Brillant ! Les marchands adorent ça.", ItemRarity.rare)
+        super().__init__("Pépite d'Or", 50, "Brillant ! Les marchands adorent ça.", ItemRarity.epic)
 
 class PlatinumOre(ResourceItem):
     def __init__(self):

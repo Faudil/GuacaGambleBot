@@ -36,20 +36,21 @@ class Market(commands.Cog):
         random.random()
 
 
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=1)
     async def update_market_prices(self):
         for i in range(0, len(self.item_multipliers)):
             change = random.choice([-0.1, -0.05, 0, 0.05, 0.1])
             multiplier = self.item_multipliers[i]
             multiplier += change
-            multiplier = min(0.1, max(3, multiplier))
+            multiplier = max(0.1, min(3, multiplier))
+            self.item_multipliers[i] = multiplier
             self.market_multiplier = self.market_multiplier * multiplier
 
     @commands.command(name='market')
     async def show_market(self, ctx):
         embed = discord.Embed(title="📈 Cours", color=discord.Color.gold())
         for item, multiplier in zip(self.sellable_items, self.item_multipliers):
-            current_price = int(item.price * multiplier)
+            current_price = int(max(1, item.price * multiplier))
             embed.add_field(
                 name=item.name,
                 value=f"Vente : **${current_price}** (Base: ${item.price})",
@@ -61,11 +62,11 @@ class Market(commands.Cog):
     async def sell(self, ctx, item_name: str, amount: int = 1):
         user_id = ctx.author.id
         if item_name not in ITEMS_REGISTRY:
-            ctx.send("❌ Cet item n'existe pas !")
+            await ctx.send("❌ Cet item n'existe pas !")
         if item_name not in self.sellable_items_names:
-            ctx.send("❌ Cet item ne peut pas être vendu sur le marché !")
+            await ctx.send("❌ Cet item ne peut pas être vendu sur le marché !")
         idx = self.sellable_items_names.index(item_name)
-        final_price = int(self.sellable_items[idx].price * self.item_multipliers[idx])
+        final_price = max(1, int(self.sellable_items[idx].price * self.item_multipliers[idx]))
         total_gain = final_price * amount
         remove_item_from_inventory(user_id, item_name)
         update_balance(user_id, total_gain)

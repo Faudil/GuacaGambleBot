@@ -44,7 +44,7 @@ class FishingGameView(View):
 
         await message.edit(embed=embed, view=self)
 
-        await asyncio.sleep(self.time_limit + 0.5)
+        await asyncio.sleep(self.time_limit + 1)
 
         if self.bite_active:
             self.bite_active = False
@@ -124,7 +124,8 @@ class FishBiomeView(View):
         self.ctx = ctx
 
     async def launch_biome(self, interaction, biome, limit, items):
-        if interaction.user != self.ctx.author: return
+        if interaction.user != self.ctx.author:
+            return
 
         embed = discord.Embed(
             title=f"🎣 Direction : {biome}",
@@ -156,7 +157,7 @@ class Fishing(commands.Cog):
         self.bot = bot
 
     @commands.command(name='fish')
-    @daily_limit("job", 5)
+    @daily_limit("fish", 5)
     async def fish(self, ctx):
         embed = discord.Embed(
             title="🎣 Partie de Pêche",
