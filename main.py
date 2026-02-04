@@ -100,7 +100,8 @@ async def help_command(ctx):
         value=(
             "`!mine` : Expédition minière. Gère ton risque pour trouver des diamants.\n"
             "`!fish` : Jeu de réflexe. Choisis ton biome et clique au bon moment !\n"
-            "`!farm` : Gestion agricole. Achète des terrains et gère tes récoltes."
+            "`!farm` : Gestion agricole. Achète des terrains et gère tes récoltes. \n"
+            "`!level` : Vois les différents niveaux que t'as atteint \n"
         ),
         inline=False
     )
