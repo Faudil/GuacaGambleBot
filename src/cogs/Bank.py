@@ -1,6 +1,6 @@
 from discord.ext import commands
 
-from src.data_handling import get_bank_data, deposit_money, withdraw_money
+from src.database.bank import get_bank_data, deposit_money, withdraw_money
 
 
 class Bank(commands.Cog):

@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands
 import random
-import asyncio
 from discord.ui import Button, View
-from src.data_handling import get_balance, update_balance
+
+from src.database.balance import update_balance, get_balance
 
 
 class RouletteGameView(View):

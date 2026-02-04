@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 
-from src.data_handling import update_balance, add_item_to_inventory
+from src.database.balance import update_balance
+from src.database.item import add_item_to_inventory
 
 
 class Admin(commands.Cog):

@@ -4,8 +4,10 @@ import discord
 from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
-from src.data_handling import get_balance, update_balance, pay_random_broke_user, get_bank_data, get_total_debt, \
-    repay_debt_logic
+from src.database.balance import update_balance, get_balance
+from src.database.bank import get_bank_data
+from src.database.loan import get_total_debt, repay_debt_logic
+from src.database.other import pay_random_broke_user
 from src.globals import DAILY_AMOUNT, CHANNEL_ID
 
 
@@ -19,7 +21,7 @@ class Economy(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def random_welfare(self):
-        if random.random() < 0.5:
+        if random.random() < 0.7:
             amount = 30
             winner_id = pay_random_broke_user(amount, max_balance=70)
             if winner_id:

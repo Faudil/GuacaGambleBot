@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from src.data_handling import get_top_users
+from src.database.other import get_top_users
 
 
 class Leaderboard(commands.Cog):

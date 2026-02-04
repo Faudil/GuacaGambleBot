@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-import sys
 from venv import logger
 
 import discord
@@ -9,8 +8,20 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 from src.globals import ITEMS_REGISTRY
+from src.items.Beer import Beer
+from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
-from src.items.Ticket import Ticket
+from src.items.FarmItem import Wheat, Oat, Potato, Tomato, Pumpkin, CocoaBean, Strawberry, GoldenApple, StarFruit, Corn, \
+    RottenPlant
+from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
+    Shark
+from src.items.FortuneCookie import FortuneCookie
+from src.items.LandDeed import VegetablePatchDeed, OrchardDeed, GreenhouseDeed
+from src.items.Magnet import RustyMagnet, Magnet, ElectricMagnet
+from src.items.MiningLoot import Emerald, PlatinumOre, GoldNugget, SilverOre, CopperOre, IronOre, Coal, Pebble, \
+    Diamond
+from src.items.ScratchTicket import ScratchTicket
+from src.items.VipTicket import VipTicket
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -22,6 +33,7 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 logger.addHandler(handler)
+
 
 @bot.event
 async def on_ready():
@@ -66,7 +78,6 @@ async def help_command(ctx):
         name="🎰 Casino & Cartes",
         value=(
             "`!slots <mise>` : Machine à sous. Vise les 💎 !\n"
-
             "`!coinflip <pile/face> <mise>` : Quitte ou double rapide.\n"
             "`!lotto` : Voir la cagnotte du loto."
         ),
@@ -85,11 +96,23 @@ async def help_command(ctx):
     )
 
     embed.add_field(
-        name="⛏️ Métiers (Farming) **NON IMPLÉMENTÉ**",
+        name="⚒️ Les 3 Grands Métiers (XP)",
         value=(
-            "`!mine` : Mine des ressources pour l'XP et l'argent.\n"
-            "`!fish` : Pêche des poissons (consommables).\n"
-            "`!jobstats` : Voir ta progression de niveau."
+            "`!mine` : Expédition minière. Gère ton risque pour trouver des diamants.\n"
+            "`!fish` : Jeu de réflexe. Choisis ton biome et clique au bon moment !\n"
+            "`!farm` : Gestion agricole. Achète des terrains et gère tes récoltes."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="🎒 Inventaire & Craft",
+        value=(
+            "`!inv` (ou `!bag`) : Voir tes ressources et objets.\n"
+            "`!craft` : Oouvre l'atelier pour fabriquer des objets (Pain, Outils...).\n"
+            "`!use <objet>` : Utiliser un consommable (Potion, Dynamite...).\n"
+            "`!sell <@joueur> <objet> <valeur>` : Vend un objet à un autre joueur."
+
         ),
         inline=False
     )
@@ -106,17 +129,27 @@ async def help_command(ctx):
         inline=False)
 
     embed.add_field(
+        name="📈 Marché",
+        value=(
+            "`!market` : Voir le cours de la bourse (Krach ou Boom ?).\n"
+            "`!market_sell <item> [qte]` : Vendre tes ressources au prix du marché.\n"
+            # "`!shop` : Acheter des permis, des terrains ou des objets.\n"
+            "`!daily` : Ton salaire de base."
+        ),
+        inline=False
+    )
+
+    embed.add_field(
         name="🎒 Inventaire & Boutique",
         value=(
             # "`!shop` : Acheter des objets et licences.\n"
-            # "`!inventory` (ou `!inv`) : Voir ton sac.\n"
+            "`!inventory` (ou `!inv`) : Voir ton sac.\n"
             "`!use <item>` : Utiliser un objet.\n"
             # "`!licenses` : Voir les spécialisations (Mineur Pro, VIP...)."
         ),
         inline=False
     )
 
-    # --- 6. BANQUE ---
     embed.add_field(
         name="🏦 Banque & Prêts",
         value=(
@@ -128,7 +161,7 @@ async def help_command(ctx):
         ),
         inline=False
     )
-    embed.set_footer(text="Bonne chance à tous ! 🎰")
+    embed.set_footer(text=f"Astuce : Monte de niveau dans ton métier pour gagner plus !")
     return await ctx.send(embed=embed)
 
 
@@ -138,9 +171,61 @@ async def on_ready():
     print('System is online.')
 
 def initialize_items():
-    """Crée les instances et les enregistre dans la DB."""
+
+    # Consumable
     Coffee().register()
-    Ticket().register()
+    VipTicket().register()
+    Beer().register()
+    FortuneCookie().register()
+    CheatCoin().register()
+    Magnet().register()
+    RustyMagnet().register()
+    ElectricMagnet().register()
+    ScratchTicket().register()
+
+
+    # Mining resources
+    Pebble().register()
+    Coal().register()
+    IronOre().register()
+    CopperOre().register()
+    SilverOre().register()
+    GoldNugget().register()
+    PlatinumOre().register()
+    Emerald().register()
+    Diamond().register()
+
+    # Fishing resources
+    OldBoot().register()
+    Trout().register()
+    Salmon().register()
+    Pufferfish().register()
+    Swordfish().register()
+    Sardine().register()
+    KrakenTentacle().register()
+    Carp().register()
+    Shark().register()
+    Whale().register()
+
+    # Farm Items
+    Wheat().register()
+    Oat().register()
+    Corn().register()
+    Potato().register()
+    Tomato().register()
+    Pumpkin().register()
+    CocoaBean().register()
+    Strawberry().register()
+    GoldenApple().register()
+    StarFruit().register()
+    RottenPlant().register()
+
+    # Lands to buy
+    VegetablePatchDeed().register()
+    GreenhouseDeed().register()
+    OrchardDeed().register()
+
+
     print(f"✅ {len(ITEMS_REGISTRY)} objets chargés dans le système.")
 
 async def main():

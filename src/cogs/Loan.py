@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
-from src.data_handling import create_loan, get_total_debt, repay_debt_logic, get_balance, update_balance, get_creditors
+
+from src.database.balance import get_balance, update_balance
+from src.database.loan import create_loan, get_total_debt, get_creditors, repay_debt_logic
 
 
 class LoanView(View):

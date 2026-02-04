@@ -3,9 +3,11 @@ import random
 
 import discord
 from discord.ext import commands
+from discord.ui import Button, View
 
 from src.command_decorators import daily_limit
-from src.data_handling import get_balance, update_balance
+from src.database.balance import update_balance, get_balance
+from src.database.item import has_item, remove_item_from_inventory
 
 SLOT_SYMBOLS = {
     "🍒": {"weight": 40, "mult": 3},
@@ -34,6 +36,29 @@ def get_flavor_text(win_type, symbol):
     return "❌ Pas de chance... Retente ta chance !"
 
 
+class CheatView(View):
+    def __init__(self, author):
+        super().__init__(timeout=30)
+        self.author = author
+        self.use_cheat = False
+
+    @discord.ui.button(label="🕵️ Utiliser la Pièce Truquée (75%)", style=discord.ButtonStyle.danger)
+    async def cheat(self, interaction: discord.Interaction, button: Button):
+        if interaction.user.id != self.author.id:
+            return
+        self.use_cheat = True
+        await interaction.response.defer()
+        self.stop()
+
+    @discord.ui.button(label="🎲 Jouer loyal (50%)", style=discord.ButtonStyle.secondary)
+    async def legit(self, interaction: discord.Interaction, button: Button):
+        if interaction.user.id != self.author.id:
+            return
+        self.use_cheat = False
+        await interaction.response.defer()
+        self.stop()
+
+
 class Casino(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -42,23 +67,63 @@ class Casino(commands.Cog):
     @daily_limit("coinflip", 10)
     async def coinflip(self, ctx, choice: str, amount: int):
         """Bet against the bot. Usage: !cf <pile/face> <amount>"""
-        user_id = str(ctx.author.id)
+        user_id = ctx.author.id
         choice = choice.lower()
-        valid_choices = ["pile", "face"]
-        if choice not in valid_choices:
+        if choice not in ['pile', 'face', 'heads', 'tails']:
             return await ctx.send("❌ Choisis **pile** ou **face**.")
+
+        if choice == 'heads':
+            choice = 'face'
+        if choice == 'tails':
+            choice = 'pile'
+
         if amount <= 0:
-            return await ctx.send("❌ Tu dois parier plus que 0$.")
-        user_bal = get_balance(user_id)
-        if user_bal < amount:
-            return await ctx.send(f"❌ Tu n'as pas assez d'argent (${user_bal}).")
-        outcome = random.choice(valid_choices)
-        if choice == outcome:
+            return await ctx.send("❌ Mise invalide.")
+        if get_balance(user_id) < amount:
+            return await ctx.send("❌ Pas assez d'argent.")
+        use_rigged = False
+        if has_item(user_id, "Pièce Truquée"):
+            view = CheatView(ctx.author)
+            msg = await ctx.send(
+                f"💳 Mise: **${amount}** sur **{choice.upper()}**.\n🕵️ Tu as une **Pièce Truquée** dans ta poche...",
+                view=view)
+            await view.wait()
+            if view.use_cheat:
+                if remove_item_from_inventory(user_id, "pièce truquée"):
+                    use_rigged = True
+                    await msg.edit(content="🕵️ *Tu échanges discrètement la pièce...*", view=None)
+                else:
+                    await ctx.send("❌ Erreur : Item introuvable au moment de l'utilisation.")
+            else:
+                await msg.edit(content="🎲 Tu décides de jouer à la loyal.", view=None)
+        else:
+            await ctx.send(f"🎲 C'est parti ! **{choice.upper()}** pour **${amount}**...")
+        await asyncio.sleep(1)
+        win = False
+        result_side = ""
+        if use_rigged:
+            if random.random() < 0.75:
+                result_side = choice
+                win = True
+            else:
+                result_side = "face" if choice == "pile" else "pile"
+                win = False
+        else:
+            options = ["pile", "face"]
+            result_side = random.choice(options)
+            win = (result_side == choice)
+        if win:
             update_balance(user_id, amount)
-            return await ctx.send(f"🪙 La pièce tombe sur **{outcome.upper()}** ! Tu gagnes **${amount}** ! Tu possèdes maintenant {user_bal + amount}$. 🎉")
+            text = f"✨ **GAGNÉ !** La pièce tombe sur **{result_side.upper()}**."
+            if use_rigged: text += " (Merci la triche 😉)"
+            color = discord.Color.green()
         else:
             update_balance(user_id, -amount)
-            return await ctx.send(f"🪙 La pièce tombe sur **{outcome.upper()}**... Tu perds **${amount}**. Tu possèdes maintenant {user_bal - amount}$. 😢")
+            text = f"❌ **PERDU...** La pièce tombe sur **{result_side.upper()}**."
+            if use_rigged: text += " (Même en trichant ?! La honte...)"
+            color = discord.Color.red()
+        embed = discord.Embed(description=text, color=color)
+        return await ctx.send(embed=embed)
 
 
     @commands.command(name='slots', aliases=['slot', 'casino'])
@@ -72,15 +137,12 @@ class Casino(commands.Cog):
             return await ctx.send(f"❌ Pas assez d'argent (${bal}).")
         update_balance(user_id, -amount)
         # increment_user_stat(user_id, "total_gambles", 1)
-
         r1 = random.choice(WHEEL)
         r2 = random.choice(WHEEL)
         r3 = random.choice(WHEEL)
-
         payout = 0
         is_win = False
         winning_symbol = None
-
         if r1 == r2 == r3:
             winning_symbol = r1
             multiplier = SLOT_SYMBOLS[winning_symbol]['mult']

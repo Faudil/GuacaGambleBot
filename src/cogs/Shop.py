@@ -3,15 +3,24 @@ from discord.ext import commands, tasks
 import random
 from discord.ui import Button, View
 
-from src.data_handling import (
-    get_all_items_db, add_item_to_inventory, update_balance, get_balance
-)
-from src.globals import CHANNEL_ID, ITEMS_REGISTRY
+from src.command_decorators import daily_limit
+from src.database.balance import get_balance, update_balance
+from src.database.item import add_item_to_inventory, get_all_items_db
+
+from src.globals import CHANNEL_ID, ITEMS_REGISTRY, ITEM_DROPPABLE
+from src.items.Beer import Beer
+from src.items.CheatCoin import CheatCoin
+from src.items.Coffee import Coffee
+from src.items.FortuneCookie import FortuneCookie
+from src.items.LandDeed import VegetablePatchDeed, GreenhouseDeed, OrchardDeed
+from src.items.Magnet import Magnet, RustyMagnet, ElectricMagnet
+from src.items.ScratchTicket import ScratchTicket
+from src.items.VipTicket import VipTicket
 
 
 class FlashSaleView(View):
     def __init__(self, item, price):
-        super().__init__(timeout=300)
+        super().__init__(timeout=None)
         self.item = item
         self.price = price
 
@@ -41,10 +50,13 @@ class Shop(commands.Cog):
     def cog_unload(self):
         self.drop_loop.cancel()
 
-    @tasks.loop(minutes=45)
+    @tasks.loop(minutes=30)
     async def drop_loop(self):
-        if random.random() < 0.5:
-            items = get_all_items_db()
+        if random.random() < 0.7:
+            items = [Coffee(), VipTicket(), Beer(),
+                     FortuneCookie(), CheatCoin(), Magnet(),
+                     RustyMagnet(), ElectricMagnet(), ScratchTicket(),
+                     VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed()]
             if not items: return
 
             item = random.choice(items)
@@ -63,6 +75,7 @@ class Shop(commands.Cog):
                     embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1170/1170679.png")
                     view = FlashSaleView(item, price)
                     await channel.send(embed=embed, view=view)
+
 
     @drop_loop.before_loop
     async def before_drop(self):

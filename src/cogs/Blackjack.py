@@ -3,11 +3,9 @@ from discord.ext import commands
 import random
 from discord.ui import Button, View
 
-# Imports avec le chemin absolu correct
-from src.data_handling import get_balance, update_balance
+from src.database.balance import update_balance, get_balance
 
 
-# --- LOGIQUE DES CARTES ---
 def create_deck():
     suits = ["♠️", "♥️", "♦️", "♣️"]
     ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -64,7 +62,6 @@ class BlackjackView(View):
         self.embed.set_footer(text=f"C'est au tour de {self.turn.display_name}")
 
     async def check_game_over(self, interaction):
-        """Vérifie si le jeu est fini et détermine le gagnant."""
         s1 = calculate_score(self.hands[self.p1])
         s2 = calculate_score(self.hands[self.p2])
         winner = None

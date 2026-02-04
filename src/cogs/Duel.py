@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands
 import random
-import asyncio
 
-# Attention aux imports : on utilise bien "src." maintenant
-from src.data_handling import get_balance, update_balance
+from src.database.balance import get_balance, update_balance
 
 
 class Duel(commands.Cog):

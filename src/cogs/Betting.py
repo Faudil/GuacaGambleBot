@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
-from src.data_handling import update_balance, get_balance, create_bet_db, add_wager, get_bet_data, close_bet_db, \
-    freeze_bet
+
+from src.database.balance import get_balance, update_balance
+from src.database.bet import create_bet_db, get_bet_data, add_wager, close_bet_db, freeze_bet
 
 
 class Betting(commands.Cog):
@@ -110,7 +111,7 @@ class Betting(commands.Cog):
     async def freeze_bet(self, ctx, bet_id: str):
         """Freeze the bet and stop . Usage: !freezebet <bet_id>"""
         bet_data = get_bet_data(bet_id)
-        if bet_id not in bet_data["bets"]:
+        if not bet_data:
             return await ctx.send("❌ ID du pari non trouvé.")
         if ctx.author.id != bet_data["creator"]:
             return await ctx.send("❌ Seul le créateur peut geler le pari.")

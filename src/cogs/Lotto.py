@@ -2,10 +2,8 @@ import discord
 from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
-from src.data_handling import (
-    get_balance, update_balance,
-    get_lotto_state, increment_lotto_jackpot, reset_lotto, try_daily_lotto_bonus
-)
+from src.database.balance import get_balance, update_balance
+from src.database.lotto import try_daily_lotto_bonus, get_lotto_state, increment_lotto_jackpot, reset_lotto
 
 from src.globals import CHANNEL_ID
 

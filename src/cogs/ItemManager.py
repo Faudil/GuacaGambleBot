@@ -2,7 +2,7 @@ import discord
 from discord.ui import Button, View
 from discord.ext import commands
 
-from src.data_handling import transfer_item_transaction, has_item
+from src.database.item import transfer_item_transaction, has_item
 from src.globals import ITEMS_REGISTRY
 
 

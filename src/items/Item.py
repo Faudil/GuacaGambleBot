@@ -1,27 +1,40 @@
+from enum import Enum
+
 import discord
-import random
-from src.data_handling import (
-    get_connection
-)
+
+from src.database.db_handler import get_connection
 from src.globals import ITEMS_REGISTRY
+
+class ItemRarity(Enum):
+    common = "common"
+    rare = "rare"
+    epic = "epic"
+    legendary = "legendary"
+    unique = "unique"
+
+class ItemType(Enum):
+    collectible = "collectible"
+    consumable = "consumable"
+    permanent = "permanent"
+    resource = "resource"
 
 
 class Item:
-    def __init__(self, name, price, description, rarity="common", image_url=None):
+    def __init__(self, name, price, description, item_type: ItemType, rarity: ItemRarity=ItemRarity.common, image_url=None):
         self.name = name.lower()
         self.price = price
         self.description = description
-        self.rarity = rarity  # common, rare, epic, legendary, unique
+        self.type = item_type
+        self.rarity = rarity
         self.image_url = image_url
-        self.type = "collectible"  # Par défau
 
     def get_discord_color(self):
         colors = {
-            "common": discord.Color.light_grey(),
-            "rare": discord.Color.blue(),
-            "epic": discord.Color.purple(),
-            "legendary": discord.Color.gold(),
-            "unique": discord.Color.red()
+            ItemRarity.common: discord.Color.light_grey(),
+            ItemRarity.rare: discord.Color.blue(),
+            ItemRarity.epic: discord.Color.purple(),
+            ItemRarity.legendary: discord.Color.gold(),
+            ItemRarity.unique: discord.Color.red()
         }
         return colors.get(self.rarity, discord.Color.default())
 
@@ -33,7 +46,7 @@ class Item:
             conn.execute("""
                          INSERT OR IGNORE INTO items (name, price, description, effect_type)
                          VALUES (?, ?, ?, ?)
-                         """, (name, self.price, self.description, self.type))
+                         """, (name, self.price, self.description, self.type.value))
             conn.commit()
         except Exception as e:
             print(f"Erreur register item {self.name}: {e}")
