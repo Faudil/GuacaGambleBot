@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+import sys
+import traceback
 from venv import logger
 
 import discord
@@ -49,6 +51,22 @@ async def load_extensions():
                 print(f"Loaded {ext}")
             except Exception as e:
                 print(f"Failed to load {ext}: {e}")
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    if isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(f"⏳ Doucement ! Réessaie dans {error.retry_after:.1f}s.")
+        return
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"❌ Il manque des informations ! Vérifie la commande.")
+        return
+    print(f"\n⚠️ ERREUR DANS LA COMMANDE : {ctx.command}", file=sys.stderr)
+    if isinstance(error, commands.CommandInvokeError):
+        error = error.original
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
 
 bot.remove_command('help')

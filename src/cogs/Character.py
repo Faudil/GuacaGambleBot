@@ -12,17 +12,11 @@ def make_progress_bar(xp, xp_needed, length=10):
     filled_length = int(length * percent)
     empty_length = length - filled_length
 
-    # On utilise des caractères blocs
     bar = "█" * filled_length + "░" * empty_length
     return f"[{bar}] {int(percent * 100)}%"
 
 
 def get_xp_requirement(level):
-    """
-    Définit la courbe de progression.
-    Exemple : Niveau 1 = 100 XP, Niveau 2 = 200 XP, etc.
-    """
-    # Formule simple : 100 * Niveau actuel
     return level * 100
 
 

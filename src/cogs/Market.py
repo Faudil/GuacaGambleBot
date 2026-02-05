@@ -68,7 +68,7 @@ class Market(commands.Cog):
         idx = self.sellable_items_names.index(item_name)
         final_price = max(1, int(self.sellable_items[idx].price * self.item_multipliers[idx]))
         total_gain = final_price * amount
-        if remove_item_from_inventory(user_id, item_name):
+        if remove_item_from_inventory(user_id, item_name, amount):
             update_balance(user_id, total_gain)
             await ctx.send(f"💰 Tu as vendu **{amount}x {item_name}** pour **${total_gain}**.")
         else:

@@ -51,9 +51,9 @@ class ItemManager(commands.Cog):
         item_name = item_name.lower()
         if not has_item(ctx.author.id, item_name):
             return await ctx.send(f"❌ Tu n'as pas de **{item_name}**.")
-        await ITEMS_REGISTRY[item_name].use(ctx)
-        msg = f"✨ Tu as utilisé **{item_name}**..."
-        return await ctx.send(msg)
+        if await ITEMS_REGISTRY[item_name].use(ctx):
+            return await ctx.send(f"✨ Tu as utilisé **{item_name}**, il a été retiré de ton inventaire")
+        return None
 
     @commands.command(name='sell')
     async def sell_item(self, ctx, recipient: discord.Member, price: int, item_name: str):
