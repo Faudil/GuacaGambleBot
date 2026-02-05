@@ -33,7 +33,7 @@ def remove_item_from_inventory(user_id, item_name, quantity: int = 1) -> bool:
         else:
             conn.execute("DELETE FROM inventory WHERE user_id = ? AND item_id = ?", (user_id, item['id']))
         conn.commit()
-        return True
+        return user_has_item
     finally:
         conn.close()
 

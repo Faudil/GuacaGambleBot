@@ -58,7 +58,7 @@ class Market(commands.Cog):
             )
         await ctx.send(embed=embed)
 
-    @commands.command(name='market_sell')
+    @commands.command(name='market_sell', aliases=["ms"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
         user_id = ctx.author.id
         if item_name not in ITEMS_REGISTRY:

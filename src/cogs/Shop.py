@@ -57,19 +57,19 @@ class Shop(commands.Cog):
                      FortuneCookie(), CheatCoin(), Magnet(),
                      RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                      VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed()]
-            if not items: return
-
+            if not items:
+                return
             item = random.choice(items)
             discount = random.randint(30, 70) / 100
-            price = max(1, int(item['price'] * (1 - discount)))
+            price = max(1, int(item.price * (1 - discount)))
             for guild in self.bot.guilds:
                 channel = guild.get_channel(CHANNEL_ID)
                 if channel:
                     embed = discord.Embed(title="⚡ VENTE FLASH !", color=discord.Color.gold())
                     embed.description = (
-                        f"Un marchand itinérant propose : **{item['name']}**\n"
-                        f"{item['description']}\n"
-                        f"Prix normal : ~~${item['price']}~~\n"
+                        f"Un marchand itinérant propose : **{item.name}**\n"
+                        f"{item.description}\n"
+                        f"Prix normal : ~~${item.price}~~\n"
                         f"**Prix Flash : ${price}** (-{discount * 100})%)"
                     )
                     embed.set_thumbnail(url="https://cdn-icons-png.flaticon.com/512/1170/1170679.png")
