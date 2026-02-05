@@ -36,7 +36,7 @@ class Market(commands.Cog):
         random.random()
 
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=5)
     async def update_market_prices(self):
         for i in range(0, len(self.item_multipliers)):
             change = random.choice([-0.1, -0.05, 0, 0.05, 0.1])
@@ -58,7 +58,7 @@ class Market(commands.Cog):
             )
         await ctx.send(embed=embed)
 
-    @commands.command(name='market_sell', aliases=["ms"])
+    @commands.command(name='market_sell', aliases=["ms", "m_s"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
         user_id = ctx.author.id
         if item_name not in ITEMS_REGISTRY:

@@ -31,12 +31,12 @@ class FlashSaleView(View):
             return await interaction.response.send_message("❌ Tu es trop pauvre !", ephemeral=True)
 
         update_balance(interaction.user.id, -self.price)
-        add_item_to_inventory(interaction.user.id, self.item['name'])
+        add_item_to_inventory(interaction.user.id, self.item.name)
         self.stop()
         button.disabled = True
         button.label = "VENDU !"
         await interaction.response.send_message(
-            f"✅ **{interaction.user.display_name}** a saisi l'offre ! Il obtient **{self.item['name']}**.",
+            f"✅ **{interaction.user.display_name}** a saisi l'offre ! Il obtient **{self.item.name}**.",
             ephemeral=False)
         return await interaction.message.edit(view=self)
 

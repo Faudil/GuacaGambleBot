@@ -1,3 +1,5 @@
+from enum import Enum
+
 import discord
 import functools
 
@@ -22,9 +24,14 @@ def daily_limit(game_name, max_usage):
     return decorator
 
 
+class ActivityType(Enum):
+    MINING = "⛔ **Fermé !** La mine n'ouvre que l'après-midi (de {}h à {}h). Les mineurs boivent .\n* La porte reste fermée.*",
+    FISHING = "⛔ **Ça ne mord pas...** Les poissons dorment.\nReviens pêcher le matin (de {}h à {}h).",
+    FARMING = "**Fermée** Les plantes ne poussent pas la nuit.\n Revient plutôt en journée {}h à {}h.",
+    CASINO = "⛔ **Fermé !** Le Casino n'ouvre que la nuit (de {}h à {}h).\n*Le videur ne te laisse pas entrer.*",
 
 
-def opening_hours(start_hour: int, end_hour: int):
+def opening_hours(activity: ActivityType, start_hour: int, end_hour: int):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(self, ctx, *args, **kwargs):
@@ -39,6 +46,6 @@ def opening_hours(start_hour: int, end_hour: int):
             if is_open:
                 return await func(self, ctx, *args, **kwargs)
             else:
-                return await ctx.send("AAAAAA")
+                return await ctx.send(str(activity.value).format(start_hour, end_hour))
         return wrapper
     return decorator

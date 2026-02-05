@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button
 import random
-from src.command_decorators import daily_limit
+from src.command_decorators import daily_limit, opening_hours, ActivityType
 
 from src.items.MiningLoot import Pebble, Diamond, IronOre, GoldNugget, ResourceItem, Coal, CopperOre, SilverOre, \
     PlatinumOre, Emerald
@@ -115,6 +115,7 @@ class Mine(commands.Cog):
 
     @commands.command(name="mine", aliases=["mining", "miner"])
     @daily_limit("mine", 5)
+    @opening_hours(ActivityType.CASINO, 12, 22)
     async def mine(self, ctx):
         user_id = int(ctx.message.author.id)
         lvl, _ = get_job_data(user_id, "mining")

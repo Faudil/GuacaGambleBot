@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.ui import View, Button
 import random
 
-from src.command_decorators import daily_limit
+from src.command_decorators import daily_limit, opening_hours, ActivityType
 from src.database.item import add_item_to_inventory, has_item
 from src.database.job import add_job_xp, get_job_data
 from src.items.FarmItem import (
@@ -103,6 +103,7 @@ class Farm(commands.Cog):
 
     @commands.command(name='farm')
     @daily_limit("farm", 5)
+    @opening_hours(ActivityType.FARMING, 6, 20)
     async def farm(self, ctx):
         embed = discord.Embed(
             title="🚜 Carte de tes Propriétés",

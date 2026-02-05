@@ -5,7 +5,7 @@ import random
 import asyncio
 import time
 
-from src.command_decorators import daily_limit
+from src.command_decorators import daily_limit, ActivityType, opening_hours
 from src.database.item import add_item_to_inventory
 from src.database.job import add_job_xp
 from src.items.FishingLoot import KrakenTentacle, Swordfish, Pufferfish, Trout, Sardine, OldBoot, Salmon, Carp, Shark, \
@@ -158,6 +158,7 @@ class Fishing(commands.Cog):
 
     @commands.command(name='fish')
     @daily_limit("fish", 5)
+    @opening_hours(ActivityType.FISHING, 4, 13)
     async def fish(self, ctx):
         embed = discord.Embed(
             title="🎣 Partie de Pêche",
