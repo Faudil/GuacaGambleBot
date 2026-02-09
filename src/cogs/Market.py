@@ -1,9 +1,12 @@
+import itertools
+
 import discord
 from discord.ext import commands, tasks
 import random
 
 from src.database.balance import update_balance
-from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name
+from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name, \
+    get_all_user_inventory
 from src.globals import ITEMS_REGISTRY
 from src.items.FarmItem import Wheat, Oat, Corn, Tomato, Pumpkin, Potato, CoffeeBean, CocoaBean, Strawberry, \
     GoldenApple, StarFruit, RottenPlant
@@ -15,24 +18,31 @@ from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish,
 
 class Market(commands.Cog):
     def __init__(self, bot):
-        self.sellable_items = [
-            # Mining loot
-            Pebble(), Coal(), IronOre(), CopperOre(),
+        self.mining_items = [Pebble(), Coal(), IronOre(), CopperOre(),
             SilverOre(), GoldNugget(), PlatinumOre(),
-            Emerald(), Diamond(),
-            # Fishing loot
+            Emerald(), Diamond()]
+        self.fishing_items = [
             OldBoot(), Trout(), Salmon(),
             Pufferfish(), Swordfish(), Sardine(),
             KrakenTentacle(), Carp(), Whale(),
             Shark(),
-            # Farmning Items
+
+        ]
+        self.farming_items = [
             Wheat(), Oat(), Corn(), Potato(), Tomato(),
             Pumpkin(), CoffeeBean(), CocoaBean(),
             Strawberry(), GoldenApple(), StarFruit(),
             RottenPlant()
         ]
-        self.sellable_items_names = [item.name.lower() for item in self.sellable_items]
-        self.item_multipliers = [1] * len(self.sellable_items)
+        self.titles = [
+            "📈⛏️ Cours items minages",
+            "🦈 Cours items pêche",
+            "📈🚜 Cours items ferme",
+        ]
+        self.total_items_nbr = len(self.mining_items) + len(self.fishing_items) + len(self.farming_items)
+        self.sellable_items = [self.mining_items, self.fishing_items, self.farming_items]
+        self.sellable_items_names = [item.name.lower() for item in itertools.chain(*self.sellable_items)]
+        self.item_multipliers = [1] * self.total_items_nbr
         self.bot = bot
         self.market_multiplier = 1.0
         self.trend = "stable"
@@ -54,22 +64,25 @@ class Market(commands.Cog):
             self.market_multiplier = self.market_multiplier * multiplier
 
     @commands.command(name='market')
-    async def show_market(self, ctx):
-        embed = discord.Embed(title="📈 Cours", color=discord.Color.gold())
-        for item in self.sellable_items:
-            item_id = get_item_id_from_name(item.name)
-            idx = self.sellable_items.index(item)
-            multiplier = self.item_multipliers[idx]
-            current_price = int(max(1, item.price * multiplier))
-            
-            id_str = f"🆔 {item_id} | " if item_id is not None else ""
-            
-            embed.add_field(
-                name=f"{item.name}",
-                value=f"Vente ({id_str}) : **${current_price}** (Base: ${item.price})",
-                inline=True
-            )
-        await ctx.send(embed=embed)
+    async def show_market(self, ctx, to_show='inv'):
+        # inventory = None
+        # if to_show == 'inv':
+        #     inventory = get_all_user_inventory(ctx.author.id)
+        idx = 0
+        for titles, items in zip(self.titles, self.sellable_items):
+            embed = discord.Embed(title=titles, color=discord.Color.gold())
+            for item in items:
+                item_id = get_item_id_from_name(item.name)
+                multiplier = self.item_multipliers[idx]
+                current_price = int(max(1, item.price * multiplier))
+                id_str = f"🆔 {item_id} | " if item_id is not None else ""
+                embed.add_field(
+                    name=f"{id_str} {item.name}",
+                    value=f"Vente: **${current_price}** (Base: ${item.price})",
+                    inline=True
+                )
+                idx += 1
+            await ctx.send(embed=embed)
 
     @commands.command(name='market_sell', aliases=["ms", "m_s"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
@@ -85,7 +98,7 @@ class Market(commands.Cog):
         if item_name not in self.sellable_items_names:
             await ctx.send("❌ Cet item ne peut pas être vendu sur le marché !")
         idx = self.sellable_items_names.index(item_name)
-        final_price = max(1, int(self.sellable_items[idx].price * self.item_multipliers[idx]))
+        final_price = max(1, int(ITEMS_REGISTRY[item_name].price * self.item_multipliers[idx]))
         total_gain = final_price * amount
         if remove_item_from_inventory(user_id, item_name, amount):
             update_balance(user_id, total_gain)

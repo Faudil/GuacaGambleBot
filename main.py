@@ -9,7 +9,7 @@ import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from src.globals import ITEMS_REGISTRY
+from src.globals import ITEMS_REGISTRY, TEST_CHANNEL_ID
 from src.items.Beer import Beer
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
@@ -24,6 +24,7 @@ from src.items.MiningLoot import Emerald, PlatinumOre, GoldNugget, SilverOre, Co
     Diamond
 from src.items.ScratchTicket import ScratchTicket
 from src.items.VipTicket import VipTicket
+from src.globals import CHANNEL_ID
 
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
