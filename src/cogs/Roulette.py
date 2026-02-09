@@ -72,10 +72,8 @@ class JoinView(View):
         if interaction.user != self.ctx.author:
             return await interaction.response.send_message("Seul celui qui a créé la partie peut la lancer.",
                                                            ephemeral=True)
-
         if len(self.players) < 2:
             return await interaction.response.send_message("Il faut au moins 2 joueurs !", ephemeral=True)
-
         self.stop()
         game_view = RouletteGameView(self.players, self.amount)
         first_player = game_view.get_current_player()

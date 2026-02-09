@@ -82,7 +82,7 @@ class Casino(commands.Cog):
         if get_balance(user_id) < amount:
             return await ctx.send("❌ Pas assez d'argent.")
         use_rigged = False
-        if has_item(user_id, "Pièce Truquée"):
+        if has_item(user_id, "pièce truquée"):
             view = CheatView(ctx.author)
             msg = await ctx.send(
                 f"💳 Mise: **${amount}** sur **{choice.upper()}**.\n🕵️ Tu as une **Pièce Truquée** dans ta poche...",

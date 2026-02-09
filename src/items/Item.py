@@ -19,11 +19,14 @@ class ItemType(Enum):
     resource = "resource"
 
 
+
+
 class Item:
     def __init__(self, name, price, description, item_type: ItemType, rarity: ItemRarity=ItemRarity.common, image_url=None):
         self.name = name.lower()
         self.price = price
         self.description = description
+        self.id = -1
         self.type = item_type
         self.rarity = rarity
         self.image_url = image_url
@@ -48,8 +51,10 @@ class Item:
                          VALUES (?, ?, ?, ?)
                          """, (name, self.price, self.description, self.type.value))
             conn.commit()
+            item = conn.execute("SELECT id FROM items WHERE name = ?", (self.name,)).fetchone()
+            self.id = item["id"]
         except Exception as e:
-            print(f"Erreur register item {self.name}: {e}")
+            print(f"Error register item {self.name}: {e}")
         finally:
             conn.close()
 

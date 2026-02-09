@@ -115,7 +115,7 @@ class Mine(commands.Cog):
 
     @commands.command(name="mine", aliases=["mining", "miner"])
     @daily_limit("mine", 5)
-    @opening_hours(ActivityType.CASINO, 12, 22)
+    @opening_hours(ActivityType.CASINO, 6, 22)
     async def mine(self, ctx):
         user_id = int(ctx.message.author.id)
         lvl, _ = get_job_data(user_id, "mining")

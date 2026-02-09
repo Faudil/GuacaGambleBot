@@ -8,7 +8,6 @@ from src.database.balance import get_balance, update_balance
 class Duel(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
         self.pending_duels = {}
 
     @commands.command(name='duel')

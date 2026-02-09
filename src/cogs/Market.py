@@ -3,8 +3,10 @@ from discord.ext import commands, tasks
 import random
 
 from src.database.balance import update_balance
-from src.database.item import remove_item_from_inventory
+from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name
 from src.globals import ITEMS_REGISTRY
+from src.items.FarmItem import Wheat, Oat, Corn, Tomato, Pumpkin, Potato, CoffeeBean, CocoaBean, Strawberry, \
+    GoldenApple, StarFruit, RottenPlant
 from src.items.MiningLoot import Coal, IronOre, GoldNugget, Diamond, Pebble, SilverOre, CopperOre, Emerald, \
     PlatinumOre
 from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
@@ -22,9 +24,14 @@ class Market(commands.Cog):
             OldBoot(), Trout(), Salmon(),
             Pufferfish(), Swordfish(), Sardine(),
             KrakenTentacle(), Carp(), Whale(),
-            Shark()
+            Shark(),
+            # Farmning Items
+            Wheat(), Oat(), Corn(), Potato(), Tomato(),
+            Pumpkin(), CoffeeBean(), CocoaBean(),
+            Strawberry(), GoldenApple(), StarFruit(),
+            RottenPlant()
         ]
-        self.sellable_items_names = [item.name for item in self.sellable_items]
+        self.sellable_items_names = [item.name.lower() for item in self.sellable_items]
         self.item_multipliers = [1] * len(self.sellable_items)
         self.bot = bot
         self.market_multiplier = 1.0
@@ -50,9 +57,10 @@ class Market(commands.Cog):
     async def show_market(self, ctx):
         embed = discord.Embed(title="📈 Cours", color=discord.Color.gold())
         for item, multiplier in zip(self.sellable_items, self.item_multipliers):
+            item_id = get_item_id_from_name(item.name)
             current_price = int(max(1, item.price * multiplier))
             embed.add_field(
-                name=item.name,
+                name=f"🆔 {item_id} | {item.name}",
                 value=f"Vente : **${current_price}** (Base: ${item.price})",
                 inline=True
             )
@@ -60,6 +68,12 @@ class Market(commands.Cog):
 
     @commands.command(name='market_sell', aliases=["ms", "m_s"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
+        item_name = item_name.strip()
+        if item_name.isdigit():
+            resolved = get_item_name_by_id(int(item_name))
+            if resolved:
+                item_name = resolved
+        
         user_id = ctx.author.id
         if item_name not in ITEMS_REGISTRY:
             await ctx.send("❌ Cet item n'existe pas !")

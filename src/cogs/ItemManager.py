@@ -2,7 +2,7 @@ import discord
 from discord.ui import Button, View
 from discord.ext import commands
 
-from src.database.item import transfer_item_transaction, has_item
+from src.database.item import transfer_item_transaction, has_item, remove_item_from_inventory, get_item_name_by_id
 from src.globals import ITEMS_REGISTRY
 
 
@@ -47,16 +47,27 @@ class ItemManager(commands.Cog):
         self.bot = bot
 
     @commands.command(name='use')
-    async def use_item(self, ctx, *, item_name: str):
+    async def use_item(self, ctx, item_name: str):
+        item_name = item_name.strip()
+        if item_name.isdigit():
+            resolved = get_item_name_by_id(int(item_name))
+            if resolved:
+                item_name = resolved
         item_name = item_name.lower()
         if not has_item(ctx.author.id, item_name):
             return await ctx.send(f"❌ Tu n'as pas de **{item_name}**.")
         if await ITEMS_REGISTRY[item_name].use(ctx):
+            remove_item_from_inventory(ctx.author.id, item_name)
             return await ctx.send(f"✨ Tu as utilisé **{item_name}**, il a été retiré de ton inventaire")
         return None
 
     @commands.command(name='sell')
     async def sell_item(self, ctx, recipient: discord.Member, price: int, item_name: str):
+        item_name = item_name.strip()
+        if item_name.isdigit():
+            resolved = get_item_name_by_id(int(item_name))
+            if resolved:
+                item_name = resolved
         if recipient.bot or recipient.id == ctx.author.id:
             return await ctx.send("❌ Transaction impossible.")
         if price < 0:

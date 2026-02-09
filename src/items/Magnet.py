@@ -28,7 +28,7 @@ class Magnet(Item):
             name="Aimant",
             price=50,
             description="🧲 Utilise-le pour trouver de la monnaie par terre.",
-            rarity=ItemRarity.common,
+            rarity=ItemRarity.rare,
             item_type=ItemType.consumable
         )
 
@@ -45,7 +45,7 @@ class ElectricMagnet(Item):
             name="Aimant électrique",
             price=500,
             description="🧲 Utilise-le pour trouver un max de monnaie par terre.",
-            rarity=ItemRarity.common,
+            rarity=ItemRarity.epic,
             item_type=ItemType.consumable
         )
 

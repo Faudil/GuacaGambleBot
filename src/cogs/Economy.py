@@ -23,7 +23,7 @@ class Economy(commands.Cog):
     async def random_welfare(self):
         if random.random() < 0.7:
             amount = 30
-            winner_id = pay_random_broke_user(amount, max_balance=70)
+            winner_id = pay_random_broke_user(amount, max_balance=200)
             if winner_id:
                 for guild in self.bot.guilds:
                     member = guild.get_member(winner_id)

@@ -5,8 +5,7 @@ from src.database.job import get_job_data
 
 
 def make_progress_bar(xp, xp_needed, length=10):
-    """Génère une barre de progression textuelle."""
-    if xp_needed == 0: xp_needed = 1  # Évite division par zéro
+    if xp_needed == 0: xp_needed = 1
 
     percent = min(1.0, xp / xp_needed)
     filled_length = int(length * percent)

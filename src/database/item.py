@@ -1,7 +1,5 @@
 from typing import Dict
 
-from multidict import upstr
-
 from src.database.balance import update_balance
 from src.database.db_handler import get_connection
 
@@ -11,6 +9,14 @@ def get_all_items_db():
     items = conn.execute("SELECT * FROM items").fetchall()
     conn.close()
     return items
+
+def get_item_id_from_name(item_name) -> int:
+    conn = get_connection()
+    try:
+        item = conn.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()
+        return item['id']
+    finally:
+        conn.close()
 
 
 def remove_item_from_inventory(user_id, item_name, quantity: int = 1) -> bool:
@@ -63,7 +69,7 @@ def add_item_to_inventory(user_id, item_name, quantity: int = 1) -> bool:
         conn.close()
 
 
-def has_item(user_id, item_name, min_quantity=1):
+def has_item(user_id, item_name: str, min_quantity=1):
     conn = get_connection()
     try:
         query = """
@@ -113,19 +119,34 @@ def transfer_item_transaction(seller_id, buyer_id, item_name, price):
         conn.close()
 
 
-def get_all_user_inventory(user_id) -> Dict[str, int]:
+def get_item_name_by_id(item_id: int) -> str | None:
     conn = get_connection()
-    result = {}
+    try:
+        row = conn.execute("SELECT name FROM items WHERE id = ?", (item_id,)).fetchone()
+        if row:
+            return row['name']
+        return None
+    finally:
+        conn.close()
+
+
+def get_all_user_inventory(user_id) -> list[Dict]:
+    conn = get_connection()
+    result = []
     try:
         rows = conn.execute("""
-                            SELECT i.name, inv.quantity
+                            SELECT i.id, i.name, inv.quantity
                             FROM inventory inv
                                      JOIN items i ON inv.item_id = i.id
                             WHERE inv.user_id = ?
                             ORDER BY i.price DESC
                             """, (user_id,)).fetchall()
         for row in rows:
-            result[row['name']] = row['quantity']
+            result.append({
+                "id": row['id'],
+                "name": row['name'],
+                "quantity": row['quantity']
+            })
         return result
     finally:
         conn.close()

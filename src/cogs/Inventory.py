@@ -34,10 +34,13 @@ class Inventory(commands.Cog):
             color=discord.Color.blue()
         )
         description_lines = []
-        for obj_name, quantity in inventory.items():
+        for item in inventory:
+            obj_name = item['name']
+            quantity = item['quantity']
+            item_id = item['id']
             obj = ITEMS_REGISTRY[obj_name]
             emoji = self.get_rarity_emoji(obj.rarity)
-            line = f"{emoji} **{obj_name}** : `x{quantity}`"
+            line = f"🆔 `{item_id}` | {emoji} **{obj_name}** : `x{quantity}`"
             description_lines.append(line)
         full_text = "\n".join(description_lines)
 

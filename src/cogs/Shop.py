@@ -29,7 +29,6 @@ class FlashSaleView(View):
         bal = get_balance(interaction.user.id)
         if bal < self.price:
             return await interaction.response.send_message("❌ Tu es trop pauvre !", ephemeral=True)
-
         update_balance(interaction.user.id, -self.price)
         add_item_to_inventory(interaction.user.id, self.item.name)
         self.stop()
