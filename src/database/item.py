@@ -10,11 +10,13 @@ def get_all_items_db():
     conn.close()
     return items
 
-def get_item_id_from_name(item_name) -> int:
+def get_item_id_from_name(item_name) -> int | None:
     conn = get_connection()
     try:
         item = conn.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()
-        return item['id']
+        if item:
+            return item['id']
+        return None
     finally:
         conn.close()
 

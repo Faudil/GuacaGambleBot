@@ -56,11 +56,16 @@ class Market(commands.Cog):
     @commands.command(name='market')
     async def show_market(self, ctx):
         embed = discord.Embed(title="📈 Cours", color=discord.Color.gold())
-        for item, multiplier in zip(self.sellable_items, self.item_multipliers):
+        for item in self.sellable_items:
             item_id = get_item_id_from_name(item.name)
+            idx = self.sellable_items.index(item)
+            multiplier = self.item_multipliers[idx]
             current_price = int(max(1, item.price * multiplier))
+            
+            id_str = f"🆔 {item_id} | " if item_id is not None else ""
+            
             embed.add_field(
-                name=f"🆔 {item_id} | {item.name}",
+                name=f"{id_str}{item.name}",
                 value=f"Vente : **${current_price}** (Base: ${item.price})",
                 inline=True
             )
