@@ -65,8 +65,8 @@ class Market(commands.Cog):
             id_str = f"🆔 {item_id} | " if item_id is not None else ""
             
             embed.add_field(
-                name=f"{id_str}{item.name}",
-                value=f"Vente : **${current_price}** (Base: ${item.price})",
+                name=f"{item.name}",
+                value=f"Vente ({id_str}) : **${current_price}** (Base: ${item.price})",
                 inline=True
             )
         await ctx.send(embed=embed)
