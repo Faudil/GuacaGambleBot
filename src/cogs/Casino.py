@@ -8,6 +8,7 @@ from discord.ui import Button, View
 from src.command_decorators import daily_limit, opening_hours, ActivityType
 from src.database.balance import update_balance, get_balance
 from src.database.item import has_item, remove_item_from_inventory
+from src.items.CheatCoin import CheatCoin
 
 SLOT_SYMBOLS = {
     "🍒": {"weight": 40, "mult": 3},
@@ -79,17 +80,19 @@ class Casino(commands.Cog):
 
         if amount <= 0:
             return await ctx.send("❌ Mise invalide.")
+        if amount > 2000:
+            return await ctx.send("❌ Tu ne peux pas miser plus de 2000$.")
         if get_balance(user_id) < amount:
             return await ctx.send("❌ Pas assez d'argent.")
         use_rigged = False
-        if has_item(user_id, "pièce truquée"):
+        if has_item(user_id, CheatCoin().name):
             view = CheatView(ctx.author)
             msg = await ctx.send(
                 f"💳 Mise: **${amount}** sur **{choice.upper()}**.\n🕵️ Tu as une **Pièce Truquée** dans ta poche...",
                 view=view)
             await view.wait()
             if view.use_cheat:
-                if remove_item_from_inventory(user_id, "pièce truquée"):
+                if remove_item_from_inventory(user_id, CheatCoin().name):
                     use_rigged = True
                     await msg.edit(content="🕵️ *Tu échanges discrètement la pièce...*", view=None)
                 else:
@@ -99,8 +102,6 @@ class Casino(commands.Cog):
         else:
             await ctx.send(f"🎲 C'est parti ! **{choice.upper()}** pour **${amount}**...")
         await asyncio.sleep(1)
-        win = False
-        result_side = ""
         if use_rigged:
             if random.random() < 0.75:
                 result_side = choice
