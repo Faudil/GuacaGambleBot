@@ -158,7 +158,6 @@ class Fishing(commands.Cog):
 
     @commands.command(name='fish')
     @daily_limit("fish", 5)
-    @opening_hours(ActivityType.FISHING, 4, 13)
     async def fish(self, ctx):
         embed = discord.Embed(
             title="🎣 Partie de Pêche",

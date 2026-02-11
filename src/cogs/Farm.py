@@ -10,6 +10,7 @@ from src.items.FarmItem import (
     Wheat, Oat, Corn, Potato, Tomato, Pumpkin,
     CoffeeBean, CocoaBean, Strawberry, GoldenApple, StarFruit,
 )
+from src.items.LandDeed import VegetablePatchDeed, GreenhouseDeed, OrchardDeed
 
 
 class FarmActionView(View):
@@ -84,17 +85,17 @@ class FarmDashboardView(View):
     @discord.ui.button(label="Mon Potager", style=discord.ButtonStyle.primary, emoji="🥕", row=0)
     async def veggie_zone(self, interaction: discord.Interaction, button: Button):
         loots = [Potato(), Tomato(), Pumpkin()]
-        await self.check_land_and_go(interaction, "Terrain : Potager", "Potager Privé", loots)
+        await self.check_land_and_go(interaction, VegetablePatchDeed().name, "Potager Privé", loots)
 
     @discord.ui.button(label="Ma Serre", style=discord.ButtonStyle.success, emoji="🌡️", row=1)
     async def greenhouse_zone(self, interaction: discord.Interaction, button: Button):
         loots = [CoffeeBean(), CocoaBean(), Strawberry()]
-        await self.check_land_and_go(interaction, "Terrain : Serre Tropicale", "Serre Tropicale", loots)
+        await self.check_land_and_go(interaction, GreenhouseDeed().name, "Serre Tropicale", loots)
 
     @discord.ui.button(label="Mon Verger", style=discord.ButtonStyle.danger, emoji="✨", row=1)
     async def orchard_zone(self, interaction: discord.Interaction, button: Button):
         loots = [Strawberry(), GoldenApple(), StarFruit()]
-        await self.check_land_and_go(interaction, "Terrain : Verger Enchanté", "Verger Céleste", loots)
+        await self.check_land_and_go(interaction, OrchardDeed().name, "Verger Céleste", loots)
 
 
 class Farm(commands.Cog):

@@ -50,7 +50,7 @@ class ElectricMagnet(Item):
         )
 
     async def use(self, ctx, **kwargs):
-        found = random.randint(250, 2000)
+        found = random.randint(150, 1000)
         update_balance(ctx.author.id, found)
 
         await ctx.send(f"🧲 Tu promènes l'aimant... *Cling !* Des pièces collent dessus ! Tu gagnes **${found}**.")

@@ -118,7 +118,7 @@ class Mine(commands.Cog):
     @opening_hours(ActivityType.CASINO, 6, 22)
     async def mine(self, ctx):
         user_id = int(ctx.message.author.id)
-        lvl, _ = get_job_data(user_id, "mining")
+        lvl, _ = get_job_data(user_id, "miner")
         embed = discord.Embed(title="Expédition minière", description="Tu entres dans la grotte...\nJusqu'où iras-tu ?")
         embed.set_footer(text=f"Niveau Mineur : {lvl} (Réduit les risques)")
 

@@ -62,7 +62,7 @@ class ItemManager(commands.Cog):
         return None
 
     @commands.command(name='sell')
-    async def sell_item(self, ctx, recipient: discord.Member, price: int, item_name: str):
+    async def sell_item(self, ctx, recipient: discord.Member, item_name: str, price: int):
         item_name = item_name.strip()
         if item_name.isdigit():
             resolved = get_item_name_by_id(int(item_name))

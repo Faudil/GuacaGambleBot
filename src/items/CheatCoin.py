@@ -13,6 +13,5 @@ class CheatCoin(Item):
         )
 
     async def use(self, ctx, **kwargs):
-        reset_user_limit(ctx.author.id, "daily")
         await ctx.send(f"🍀 **Zouuuuuu...** La chance est avec toi ! Passe ta probabilité de réussir ton pile ou face à 75%.")
-        return True
+        return False

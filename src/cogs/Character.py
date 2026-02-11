@@ -23,7 +23,7 @@ class Character(commands.Cog):
     def __init__(self, bot:commands.Bot):
         self.bot = bot
 
-    @commands.command(name='level', aliases=['levels', 'jobstats', 'profil', 'skills'])
+    @commands.command(name='level', aliases=['levels', 'jobstats', 'profil', 'skills', 'lvl'])
     async def level(self, ctx, target: discord.Member = None):
         user = target if target else ctx.author
 
