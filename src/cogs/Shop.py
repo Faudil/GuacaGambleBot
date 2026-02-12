@@ -11,7 +11,9 @@ from src.globals import CHANNEL_ID, ITEMS_REGISTRY, ITEM_DROPPABLE
 from src.items.Beer import Beer
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
+from src.items.Fertilizer import Fertilizer
 from src.items.FortuneCookie import FortuneCookie
+from src.items.Hook import Hook
 from src.items.LandDeed import VegetablePatchDeed, GreenhouseDeed, OrchardDeed
 from src.items.Magnet import Magnet, RustyMagnet, ElectricMagnet
 from src.items.ScratchTicket import ScratchTicket
@@ -53,6 +55,7 @@ class Shop(commands.Cog):
     async def drop_loop(self):
         if random.random() < 0.7:
             items = [Coffee(), VipTicket(), Beer(),
+                     Hook(), Fertilizer(),
                      FortuneCookie(), CheatCoin(), Magnet(),
                      RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                      VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed()]

@@ -21,7 +21,7 @@ class FortuneCookie(Item):
             "Le prochain !coinflip sera le bon.",
             "Investis dans le Bitcoin maintenant.",
             "L'amour est au coin de la rue, l'argent aussi.",
-            "Tu devrais arrêter de parier (lol je rigole)."
+            "Tu devrais arrêter de parier (lol)."
         ]
         msg = random.choice(messages)
         update_balance(ctx.author.id, 5)

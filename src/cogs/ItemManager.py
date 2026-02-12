@@ -2,6 +2,7 @@ import discord
 from discord.ui import Button, View
 from discord.ext import commands
 
+from src.command_decorators import daily_limit
 from src.database.item import transfer_item_transaction, has_item, remove_item_from_inventory, get_item_name_by_id
 from src.globals import ITEMS_REGISTRY
 
@@ -47,6 +48,7 @@ class ItemManager(commands.Cog):
         self.bot = bot
 
     @commands.command(name='use')
+    @daily_limit("item", 3)
     async def use_item(self, ctx, item_name: str):
         item_name = item_name.strip()
         if item_name.isdigit():

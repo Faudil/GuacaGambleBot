@@ -21,9 +21,8 @@ class Inventory(commands.Cog):
         return emojis.get(rarity, "⚪")
 
     @commands.command(name='inventory', aliases=['inv', 'bag', 'sac'])
-    async def inventory(self, ctx):
-        user_id = ctx.author.id
-
+    async def inventory(self, ctx, user: discord.Member = None):
+        user_id = ctx.author.id if user is None else user.id
         inventory = get_all_user_inventory(user_id)
         if not inventory:
             return await ctx.send(
@@ -43,7 +42,6 @@ class Inventory(commands.Cog):
             line = f"🆔 `{item_id}` | {emoji} **{obj_name}** : `x{quantity}`"
             description_lines.append(line)
         full_text = "\n".join(description_lines)
-
         embed.description = full_text
         embed.set_footer(text="Utilise !use <nom de l'objet> pour t'en servir !")
         return await ctx.send(embed=embed)

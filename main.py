@@ -15,9 +15,11 @@ from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.FarmItem import Wheat, Oat, Potato, Tomato, Pumpkin, CocoaBean, Strawberry, GoldenApple, StarFruit, Corn, \
     RottenPlant
+from src.items.Fertilizer import Fertilizer
 from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
     Shark
 from src.items.FortuneCookie import FortuneCookie
+from src.items.Hook import Hook
 from src.items.LandDeed import VegetablePatchDeed, OrchardDeed, GreenhouseDeed
 from src.items.Magnet import RustyMagnet, Magnet, ElectricMagnet
 from src.items.MiningLoot import Emerald, PlatinumOre, GoldNugget, SilverOre, CopperOre, IronOre, Coal, Pebble, \
@@ -196,6 +198,8 @@ def initialize_items():
     Coffee().register()
     VipTicket().register()
     Beer().register()
+    Hook().register()
+    Fertilizer().register()
     FortuneCookie().register()
     CheatCoin().register()
     Magnet().register()

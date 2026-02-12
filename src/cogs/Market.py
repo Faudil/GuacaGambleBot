@@ -6,7 +6,7 @@ import random
 
 from src.database.balance import update_balance
 from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name, \
-    get_all_user_inventory
+    get_all_user_inventory, has_item
 from src.globals import ITEMS_REGISTRY
 from src.items.FarmItem import Wheat, Oat, Corn, Tomato, Pumpkin, Potato, CoffeeBean, CocoaBean, Strawberry, \
     GoldenApple, StarFruit, RottenPlant
@@ -64,12 +64,26 @@ class Market(commands.Cog):
             self.market_multiplier = self.market_multiplier * multiplier
 
     @commands.command(name='market')
-    async def show_market(self, ctx, to_show='inv'):
-        # inventory = None
-        # if to_show == 'inv':
-        #     inventory = get_all_user_inventory(ctx.author.id)
+    async def show_market(self, ctx, to_show: str = None):
+        mine_tag = ["mine", "minage", "mining"]
+        fish_tag = ["fish", "pêche", "fishing"]
+        farm_tag = ["farm", "ferme", "farming"]
+        to_show_items = self.sellable_items
+        to_show_items_titles = self.titles
         idx = 0
-        for titles, items in zip(self.titles, self.sellable_items):
+        if to_show in mine_tag:
+            to_show_items = [self.mining_items]
+            to_show_items_titles = [self.titles[0]]
+        elif to_show in fish_tag:
+            idx = len(self.mining_items)
+            to_show_items = [self.fishing_items]
+            to_show_items_titles = [self.titles[1]]
+        elif to_show in farm_tag:
+            idx = len(self.mining_items) + len(self.fishing_items)
+            to_show_items = [self.farming_items]
+            to_show_items_titles = [self.titles[2]]
+
+        for titles, items in zip(to_show_items_titles, to_show_items):
             embed = discord.Embed(title=titles, color=discord.Color.gold())
             for item in items:
                 item_id = get_item_id_from_name(item.name)
@@ -100,7 +114,8 @@ class Market(commands.Cog):
         idx = self.sellable_items_names.index(item_name)
         final_price = max(1, int(ITEMS_REGISTRY[item_name].price * self.item_multipliers[idx]))
         total_gain = final_price * amount
-        if remove_item_from_inventory(user_id, item_name, amount):
+        if has_item(user_id, item_name, amount):
+            remove_item_from_inventory(user_id, item_name, amount)
             update_balance(user_id, total_gain)
             await ctx.send(f"💰 Tu as vendu **{amount}x {item_name}** pour **${total_gain}**.")
         else:
