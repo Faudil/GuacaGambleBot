@@ -7,7 +7,7 @@ import time
 
 from src.command_decorators import daily_limit, ActivityType, opening_hours
 from src.database.item import add_item_to_inventory
-from src.database.job import add_job_xp
+from src.database.job import add_job_xp, get_job_data
 from src.items.FishingLoot import KrakenTentacle, Swordfish, Pufferfish, Trout, Sardine, OldBoot, Salmon, Carp, Shark, \
     Whale
 
@@ -17,9 +17,11 @@ class FishingGameView(View):
         super().__init__(timeout=60)
         self.ctx = ctx
         self.biome_name = biome_name
-        self.time_limit = time_limit
-        self.loot_pool = loot_pool
 
+        lvl, _ = get_job_data(self.ctx.author.id, "fisher")
+        self.time_limit = time_limit + (lvl * 0.1)
+
+        self.loot_pool = loot_pool
         self.bite_active = False
         self.start_time = 0
         self.message = None
@@ -35,7 +37,7 @@ class FishingGameView(View):
 
         button = self.children[0]
         button.label = "🦈 ÇA MORD ! CLIQUE !"
-        button.style = discord.ButtonStyle.success  # Vert
+        button.style = discord.ButtonStyle.success
         button.emoji = "🎣"
 
         embed = message.embeds[0]
@@ -75,6 +77,8 @@ class FishingGameView(View):
         reaction = time.time() - self.start_time
         self.bite_active = False
         self.stop()
+
+
 
         if reaction > self.time_limit:
             embed = interaction.message.embeds[0]
@@ -167,6 +171,8 @@ class Fishing(commands.Cog):
         embed.add_field(name="🦆 Étang", value="Facile. Pas de stress.", inline=True)
         embed.add_field(name="🐟 Rivière", value="Moyen. Courant modéré.", inline=True)
         embed.add_field(name="🦈 Océan", value="Extrême ! Pour les pêcheurs aguerris.", inline=True)
+        lvl, _ = get_job_data(ctx.author.id, "fisher")
+        embed.set_footer(text=f"Le délai augmente de 0.1s par niveau (tu es niveau {lvl})")
         view = FishBiomeView(ctx)
         await ctx.send(embed=embed, view=view)
 

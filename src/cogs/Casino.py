@@ -8,6 +8,7 @@ from discord.ui import Button, View
 from src.command_decorators import daily_limit, opening_hours, ActivityType
 from src.database.balance import update_balance, get_balance
 from src.database.item import has_item, remove_item_from_inventory
+from src.database.job import add_job_xp
 from src.items.CheatCoin import CheatCoin
 
 SLOT_SYMBOLS = {
@@ -114,15 +115,19 @@ class Casino(commands.Cog):
             result_side = random.choice(options)
             win = (result_side == choice)
         if win:
+            xp_gain = 10
             update_balance(user_id, amount)
             text = f"✨ **GAGNÉ !** La pièce tombe sur **{result_side.upper()}**."
             if use_rigged: text += " (Merci la triche 😉)"
             color = discord.Color.green()
         else:
+            xp_gain = 30
             update_balance(user_id, -amount)
             text = f"❌ **PERDU...** La pièce tombe sur **{result_side.upper()}**."
             if use_rigged: text += " (Même en trichant ?! La honte...)"
             color = discord.Color.red()
+        add_job_xp(user_id, "gambler", xp_gain)
+        text += f" Tu as gagné {xp_gain} xp"
         embed = discord.Embed(description=text, color=color)
         return await ctx.send(embed=embed)
 
@@ -137,7 +142,6 @@ class Casino(commands.Cog):
         if bal < amount:
             return await ctx.send(f"❌ Pas assez d'argent (${bal}).")
         update_balance(user_id, -amount)
-        # increment_user_stat(user_id, "total_gambles", 1)
         r1 = random.choice(WHEEL)
         r2 = random.choice(WHEEL)
         r3 = random.choice(WHEEL)
@@ -151,6 +155,7 @@ class Casino(commands.Cog):
             is_win = True
             win_type = "JACKPOT"
             color = discord.Color.gold()
+            xp_gain = 100
         elif r1 == r2 or r2 == r3 or r1 == r3:
             winning_symbol = r1 if r1 == r2 else (r2 if r2 == r3 else r1)
             full_mult = SLOT_SYMBOLS[winning_symbol]['mult']
@@ -161,9 +166,11 @@ class Casino(commands.Cog):
             is_win = True
             win_type = "PAIRE"
             color = discord.Color.green() if payout > amount else discord.Color.blue()
+            xp_gain = 30
         else:
             win_type = "LOSE"
             color = discord.Color.dark_red()
+            xp_gain = 10
         flavor = get_flavor_text(win_type, winning_symbol)
         def make_embed(s1, s2, s3, state_text, col):
             emb = discord.Embed(title="🎰 CASINO", color=col)
@@ -185,6 +192,7 @@ class Casino(commands.Cog):
             status = f"{flavor}\n💰 **Gain : ${payout}**"
         else:
             status = f"{flavor}\n💸 -${amount}"
+        status += f" +{xp_gain} xp"
         return await msg.edit(embed=make_embed(r1, r2, r3, status, color))
 
 

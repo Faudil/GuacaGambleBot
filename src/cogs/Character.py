@@ -31,6 +31,7 @@ class Character(commands.Cog):
             "miner": {"emoji": "⛏️", "name": "Mineur", "color": "⬜"},
             "fisher": {"emoji": "🎣", "name": "Pêcheur", "color": "🟦"},
             "farmer": {"emoji": "🚜", "name": "Fermier", "color": "🟨"},
+            "gambler": {"emoji": "🎰", "name": "Gambleur", "color": "🟨"},
             # "crafter": {"emoji": "🛠️", "name": "Artisan", "color": "🟧"}
         }
         embed = discord.Embed(
