@@ -288,13 +288,13 @@ class Pets(commands.Cog):
 
 
     @commands.command(name='play')
-    # @commands.cooldown(1, 7200, commands.BucketType.user)
+    @commands.cooldown(1, 7200, commands.BucketType.user)
     async def play_pet(self, ctx):
         """Jouer avec ton familier pour lui donner de l'XP."""
         user_id = ctx.author.id
         pet = get_active_pet(user_id)
         if not pet: return await ctx.send("❌ Tu n'as pas de familier actif !")
-        xp_gain = random.randint(100, 500)
+        xp_gain = random.randint(35, 100)
         leveled_up = pet.add_xp(xp_gain)
         update_pet(pet)
         if leveled_up:

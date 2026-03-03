@@ -62,6 +62,11 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def airdrop_item_all(self, ctx, item_name: str, quantity: int = 1):
         """Donner un objet à tous les joueurs (Admin)."""
+        item_name = item_name.strip()
+        if item_name.isdigit():
+            resolved = get_item_name_by_id(int(item_name))
+            if resolved:
+                item_name = resolved
         if quantity <= 0:
             return await ctx.send("❌ La quantité doit être positive.")
         

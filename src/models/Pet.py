@@ -22,10 +22,10 @@ class DamageType(enum.Enum):
 
 class PetStatus(enum.Enum):
     STUNNED = 0
-    BLEEDING = 1,
+    BLEEDING = 1
     FIRE = 2
-    POISONED = 3,
-    WEAKENED = 4,
+    POISONED = 3
+    WEAKENED = 4
     FROZEN = 5
 
 
@@ -386,7 +386,6 @@ class Pet:
         hit_chance = max(20, min(100, 100 + self.real_acc - target.real_dge))
         if random.randint(1, 100) > hit_chance:
             return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque !"
-
         effect_msg = ""
         if self.pet_type in PET_DAMAGE_TYPES and random.randint(1, 100) < self.spc_c:
             dmg_type = PET_DAMAGE_TYPES[self.pet_type]
