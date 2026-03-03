@@ -6,11 +6,14 @@ import random
 from src.command_decorators import daily_limit, opening_hours, ActivityType
 from src.database.item import add_item_to_inventory, has_item
 from src.database.job import add_job_xp, get_job_data
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
+from src.database.pets import get_active_pet
 from src.items.FarmItem import (
     Wheat, Oat, Corn, Potato, Tomato, Pumpkin,
     CoffeeBean, CocoaBean, Strawberry, GoldenApple, StarFruit,
 )
 from src.items.LandDeed import VegetablePatchDeed, GreenhouseDeed, OrchardDeed
+from src.models.Pet import PetBonus
 
 
 class FarmActionView(View):
@@ -29,7 +32,9 @@ class FarmActionView(View):
         weight_rare = min(60, 20 + level)
         weights = [weight_common, weight_uncommon, weight_rare][:len(self.loots)]
         loot = random.choices(self.loots, weights=weights, k=1)[0]
-        double_drop_chance = min(50, level * 2)
+        pet = get_active_pet(self.ctx.author.id)
+        pet_bonus = pet.level // 2 if pet.bonus == PetBonus.FARM else 0
+        double_drop_chance = min(50, level * 2 + pet_bonus)
         quantity = 1
         is_double = False
         if random.randint(1, 100) <= double_drop_chance:
@@ -38,6 +43,7 @@ class FarmActionView(View):
         xp_gain = (int(loot.price * 0.6) + 5) * quantity
         add_item_to_inventory(self.ctx.author.id, loot.name,
                               quantity)
+        increment_stat(self.ctx.author.id, "items_farmed", quantity)
         add_job_xp(self.ctx.author.id, "farmer", xp_gain)
         embed = discord.Embed(title=f"🏡 {self.zone_name}", color=discord.Color.green())
         msg_loot = f"📦 Récolte : **{quantity}x {loot.name}**"
@@ -50,6 +56,10 @@ class FarmActionView(View):
         )
         await interaction.response.edit_message(content=None, embed=embed, view=None)
         self.stop()
+        
+        unlocks = check_and_unlock_achievements(self.ctx.author.id)
+        if unlocks:
+            await interaction.channel.send(content=interaction.user.mention, embed=format_achievements_unlocks(unlocks))
 
 
 class FarmDashboardView(View):
@@ -106,6 +116,7 @@ class Farm(commands.Cog):
     @daily_limit("farm", 5)
     @opening_hours(ActivityType.FARMING, 6, 20)
     async def farm(self, ctx):
+        """Gestion agricole. Achète des terrains et gère tes récoltes."""
         embed = discord.Embed(
             title="🚜 Carte de tes Propriétés",
             description="Sélectionne un terrain pour y travailler.\nTu peux acheter de nouvelles parcelles au `!shop`.",

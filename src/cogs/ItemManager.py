@@ -25,8 +25,7 @@ class TradeView(View):
         if result == "SUCCESS":
             await interaction.response.edit_message(
                 content=f"🤝 **Affaire conclue !**\n{self.seller.mention} a vendu **{self.item_name}** à {self.buyer.mention} pour **${self.price}**.",
-                view=None
-            )
+                view=None)
         elif result == "NO_MONEY":
             await interaction.response.send_message("❌ Tu n'as pas assez d'argent.", ephemeral=True)
         elif result == "NO_ITEM":
@@ -50,6 +49,7 @@ class ItemManager(commands.Cog):
     @commands.command(name='use')
     @daily_limit("item", 3)
     async def use_item(self, ctx, item_name: str):
+        """Utiliser un objet."""
         item_name = item_name.strip()
         if item_name.isdigit():
             resolved = get_item_name_by_id(int(item_name))
@@ -65,6 +65,7 @@ class ItemManager(commands.Cog):
 
     @commands.command(name='sell')
     async def sell_item(self, ctx, recipient: discord.Member, item_name: str, price: int):
+        """Vend un objet à un autre joueur."""
         item_name = item_name.strip()
         if item_name.isdigit():
             resolved = get_item_name_by_id(int(item_name))
@@ -77,8 +78,7 @@ class ItemManager(commands.Cog):
         embed = discord.Embed(title="🤝 Proposition d'échange", color=discord.Color.orange())
         embed.description = (
             f"**{ctx.author.mention}** veut te vendre **{item_name}** pour **${price}**.\n"
-            f"{recipient.mention}, acceptes-tu ?"
-        )
+            f"{recipient.mention}, acceptes-tu ?")
 
         view = TradeView(ctx.author, recipient, item_name, price)
         return await ctx.send(content=recipient.mention, embed=embed, view=view)

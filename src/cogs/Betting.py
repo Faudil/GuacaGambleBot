@@ -3,6 +3,7 @@ from discord.ext import commands
 
 from src.database.balance import get_balance, update_balance
 from src.database.bet import create_bet_db, get_bet_data, add_wager, close_bet_db, freeze_bet
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
 
 
 class Betting(commands.Cog):
@@ -11,12 +12,14 @@ class Betting(commands.Cog):
 
     @commands.command(name='createbet')
     async def create_bet(self, ctx, description: str, option1: str, option2: str):
+        """Créer un pari personnalisé."""
         user_id = ctx.author.id
         bet_id = create_bet_db(user_id, description, option1, option2)
         await ctx.send(f"🎲 Pari #{bet_id} créé: {description}")
 
     @commands.command(name='bet')
     async def place_bet(self, ctx, bet_id: str, choice: str, amount: int):
+        """Parier sur un pari personnalisé."""
         choice = choice.lower()
         bet_data = get_bet_data(bet_id)
         if not bet_data:
@@ -35,7 +38,7 @@ class Betting(commands.Cog):
 
     @commands.command(name='closebet')
     async def close_bet(self, ctx, bet_id: str, winning_option: str):
-        """End a bet and payout. Usage: !closebet <id> <winning_option>"""
+        """Terminer un pari et distribuer les gains."""
         bet_data = get_bet_data(bet_id)
         winning_option = winning_option.lower()
         if not bet_data:
@@ -57,14 +60,23 @@ class Betting(commands.Cog):
         else:
             multiplier = total_pool / winning_pool
             for wager in bet_data["wagers"]:
+                user_id = wager["user_id"]
                 if wager["option"] == winning_option:
-                    user_id = wager["user_id"]
+                    increment_stat(user_id, "wagers_won")
                     wager_amount = wager["amount"]
                     payout = int(wager_amount * multiplier)
                     update_balance(user_id, payout)
                     user = self.bot.get_user(user_id)
                     name = user.display_name if user else "Unknown"
                     results.append(f"{name} won ${payout}")
+                else:
+                    increment_stat(user_id, "wagers_lost")
+                
+                unlocks = check_and_unlock_achievements(user_id)
+                if unlocks:
+                    user_obj = self.bot.get_user(user_id)
+                    if user_obj:
+                        await ctx.send(content=user_obj.mention, embed=format_achievements_unlocks(unlocks))
             embed = discord.Embed(title=f"🏆 pari #{bet_id} Résultat", description=f"Gagnant: **{bet_winning_option}**",
                                   color=discord.Color.purple())
             embed.add_field(name="Valeur total", value=f"${total_pool}")
@@ -75,7 +87,7 @@ class Betting(commands.Cog):
 
     @commands.command(name='odds', aliases=['betinfo', 'status'])
     async def show_odds(self, ctx, bet_id: str):
-        """Check the current pool and odds for a specific bet."""
+        """Voir les cotes et infos d'un pari."""
         bet_data = get_bet_data(bet_id)
         if not bet_data:
             return await ctx.send("❌ Je connais pas ce pari chef !")
@@ -109,7 +121,7 @@ class Betting(commands.Cog):
 
     @commands.command(name="freezebet")
     async def freeze_bet(self, ctx, bet_id: str):
-        """Freeze the bet and stop . Usage: !freezebet <bet_id>"""
+        """Geler un pari pour empêcher de nouvelles mises."""
         bet_data = get_bet_data(bet_id)
         if not bet_data:
             return await ctx.send("❌ ID du pari non trouvé.")

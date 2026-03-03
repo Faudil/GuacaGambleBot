@@ -22,20 +22,23 @@ class Inventory(commands.Cog):
 
     @commands.command(name='inventory', aliases=['inv', 'bag', 'sac'])
     async def inventory(self, ctx, user: discord.Member = None):
-        user_id = ctx.author.id if user is None else user.id
-        inventory = get_all_user_inventory(user_id)
+        """Voir ton sac à dos et tes objets."""
+        user = ctx.author if user is None else user
+        inventory = get_all_user_inventory(user.id)
         if not inventory:
             return await ctx.send(
-                f"🎒 Ton sac est vide, {ctx.author.mention} ! Va miner ou achète des trucs.")
+                f"🎒 Ton sac est vide, {user.mention} ! Va miner ou achète des trucs.")
 
         embed = discord.Embed(
-            title=f"🎒 Sac à dos de {ctx.author.name}",
+            title=f"🎒 Sac à dos de {user.name}",
             color=discord.Color.blue()
         )
         description_lines = []
         for item in inventory:
             obj_name = item['name']
             quantity = item['quantity']
+            if quantity == 0:
+                continue
             item_id = item['id']
             obj = ITEMS_REGISTRY[obj_name]
             emoji = self.get_rarity_emoji(obj.rarity)

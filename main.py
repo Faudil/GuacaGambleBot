@@ -24,6 +24,7 @@ from src.items.LandDeed import VegetablePatchDeed, OrchardDeed, GreenhouseDeed
 from src.items.Magnet import RustyMagnet, Magnet, ElectricMagnet
 from src.items.MiningLoot import Emerald, PlatinumOre, GoldNugget, SilverOre, CopperOre, IronOre, Coal, Pebble, \
     Diamond
+from src.items.MysteryEgg import MysteryEgg
 from src.items.ScratchTicket import ScratchTicket
 from src.items.VipTicket import VipTicket
 from src.globals import CHANNEL_ID
@@ -78,112 +79,49 @@ bot.remove_command('help')
 
 @bot.command(name='help')
 async def help_command(ctx):
-    """Affiche le guide des commandes en français."""
+    """Affiche le guide des commandes."""
     embed = discord.Embed(
         title="📚 Aide - GuacaGambleBot",
-        description="Pariez de l'argent virtuel et devenez le plus riche du serveur !",
+        description="Pariez de l'argent virtuel et devenez le plus riche du serveur !\nVoici la liste de toutes les commandes disponibles :",
         color=discord.Color.teal()
     )
-    # --- 1. ÉCONOMIE ---
-    embed.add_field(
-        name="💰 Économie",
-        value=(
-            "`!daily` : Ton salaire journalier.\n"
-            "`!balance` (ou `!bal`) : Voir ton solde.\n"
-            "`!give <@joueur> <montant>` : Faire un virement."
-        ),
-        inline=False
-    )
 
-    embed.add_field(
-        name="🎰 Casino & Cartes",
-        value=(
-            "`!slots <mise>` : Machine à sous. Vise les 💎 !\n"
-            "`!coinflip <pile/face> <mise>` : Quitte ou double rapide.\n"
-            "`!lotto` : Voir la cagnotte du loto."
-        ),
-        inline=False
-    )
+    for cog_name, cog in bot.cogs.items():
+        if cog_name.startswith('_') or cog_name == 'Tasks':
+            continue
+            
+        cog_commands = cog.get_commands()
+        if not cog_commands:
+            continue
+            
+        command_list = []
+        for cmd in cog_commands:
+            if not cmd.hidden:
+                desc = cmd.short_doc or "Aucune description"
+                command_list.append(f"`!{cmd.name}` : {desc}")
+                
+        if command_list:
+            embed.add_field(
+                name=f"📌 {cog_name}",
+                value="\n".join(command_list),
+                inline=False
+            )
 
-    embed.add_field(
-        name="🔫 Duels & Adrénaline",
-        value=(
-            "`!duel <@joueur> <mise>` : Provoque quelqu'un en duel (50/50).\n"
-            "`!blackjack <mise>` (ou `!bjduel`) : Le 21. Affronte un autre joueur.\n"
-            "`!roulette <mise>` : Roulette Russe. 1 chance sur 6 de mourir (et perdre la mise).\n"
-            "*Note : Le duel nécessite que l'adversaire accepte.*"
-        ),
-        inline=False
-    )
+    uncogged_commands = [cmd for cmd in bot.commands if cmd.cog is None and cmd.name != "help" and not cmd.hidden]
+    if uncogged_commands:
+        command_list = []
+        for cmd in uncogged_commands:
+            desc = cmd.short_doc or "Aucune description"
+            command_list.append(f"`!{cmd.name}` : {desc}")
+        
+        if command_list:
+            embed.add_field(
+                name="⚙️ Autres commandes",
+                value="\n".join(command_list),
+                inline=False
+            )
 
-    embed.add_field(
-        name="⚒️ Les 3 Grands Métiers (XP)",
-        value=(
-            "`!mine` : Expédition minière. Gère ton risque pour trouver des diamants.\n"
-            "`!fish` : Jeu de réflexe. Choisis ton biome et clique au bon moment !\n"
-            "`!farm` : Gestion agricole. Achète des terrains et gère tes récoltes. \n"
-            "`!level` : Vois les différents niveaux que t'as atteint \n"
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🎒 Inventaire & Craft",
-        value=(
-            "`!inv` (ou `!bag`) : Voir tes ressources et objets.\n"
-            "`!craft` : Oouvre l'atelier pour fabriquer des objets (Pain, Outils...).\n"
-            "`!use <objet>` : Utiliser un consommable (Potion, Dynamite...).\n"
-            "`!sell <@joueur> <objet> <valeur>` : Vend un objet à un autre joueur."
-
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🎲 Paris",
-        value=(
-            "`!bet <ID> <Choix> <Montant>`: Place un pari. *Ex: !bet 1 A 100*\n"
-            "`!odds <ID>`: Affiche les cotes et la cagnotte d'un pari.\n"
-            "`!createbet \"Question\" \"A\" \"B\"`: Créer un pari. *N'oubliez pas les guillemets !*\n"
-            "`!closebet <ID> <Gagnant>`: Terminer un pari et payer les vainqueurs.\n"
-            "`!freezebet <ID>`: Gêle la possibilité de parier sur un pari."
-        ),
-        inline=False)
-
-    embed.add_field(
-        name="📈 Marché",
-        value=(
-            "`!market` : Voir le cours de la bourse (Krach ou Boom ?).\n"
-            "`!market_sell <item> [qte]` : Vendre tes ressources au prix du marché.\n"
-            # "`!shop` : Acheter des permis, des terrains ou des objets.\n"
-            "`!daily` : Ton salaire de base."
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🎒 Inventaire & Boutique",
-        value=(
-            # "`!shop` : Acheter des objets et licences.\n"
-            "`!inventory` (ou `!inv`) : Voir ton sac.\n"
-            "`!use <item>` : Utiliser un objet.\n"
-            # "`!licenses` : Voir les spécialisations (Mineur Pro, VIP...)."
-        ),
-        inline=False
-    )
-
-    embed.add_field(
-        name="🏦 Banque & Prêts",
-        value=(
-            "!deposit <montant>: (ou !dep) Dépose de l'argent dans ta banque (max 500)\n"
-            "!withdraw <montant>: (ou !wd) Retire l'argent de ta banque vers ton portefeuille\n"
-            "`!lend <@joueur> <montant>` : Prêter avec 10% d'intérêt.\n"
-            "`!repay <montant>` : Rembourser tes dettes. (réparti entre tes différents créantiers)\n"
-            "`!debt` : Voir ce que tu dois aux autres."
-        ),
-        inline=False
-    )
-    embed.set_footer(text=f"Astuce : Monte de niveau dans ton métier pour gagner plus !")
+    embed.set_footer(text="Astuce : Utilisez !help <commande> pour plus de détails (si implémenté) !")
     return await ctx.send(embed=embed)
 
 
@@ -249,6 +187,8 @@ def initialize_items():
     GreenhouseDeed().register()
     OrchardDeed().register()
 
+    # Pet
+    MysteryEgg().register()
 
     print(f"✅ {len(ITEMS_REGISTRY)} objets chargés dans le système.")
 

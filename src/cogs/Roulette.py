@@ -4,6 +4,7 @@ import random
 from discord.ui import Button, View
 
 from src.database.balance import update_balance, get_balance
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
 
 
 class RouletteGameView(View):
@@ -29,14 +30,29 @@ class RouletteGameView(View):
         if bullet:
             await interaction.response.send_message(f"💥 **BANG !** {shooter.mention} est mort...")
             self.stop()
+            increment_stat(shooter.id, "roulette_lost")
+            increment_stat(shooter.id, "roulette_spent", self.entry_fee)
+            increment_stat(shooter.id, "roulette_money_lost", self.entry_fee)
+            
             survivors = [p for p in self.alive_players if p != shooter]
             share = self.pot // len(survivors)
             text = f"💀 **{shooter.display_name}** a perdu **${self.entry_fee}**.\n"
             text += f"💰 Les {len(survivors)} survivants gagnent chacun **${share}** !"
+            embed = discord.Embed(title="🩸 FIN DE LA PARTIE", description=text, color=discord.Color.red())
+            await interaction.channel.send(embed=embed)
             for s in survivors:
                 update_balance(s.id, share)
-            embed = discord.Embed(title="🩸 FIN DE LA PARTIE", description=text, color=discord.Color.red())
-            return await interaction.channel.send(embed=embed)
+                increment_stat(s.id, "roulette_won")
+                increment_stat(s.id, "roulette_spent", self.entry_fee)
+                
+                net_win = share - self.entry_fee
+                if net_win > 0:
+                    increment_stat(s.id, "roulette_money_won", net_win)
+                    
+                unlocks = check_and_unlock_achievements(s.id)
+                if unlocks:
+                    await interaction.channel.send(content=s.mention, embed=format_achievements_unlocks(unlocks))
+            return
         else:
             await interaction.response.send_message(f"😅 **CLIC !** {shooter.display_name} survit...")
             self.turn_index += 1
@@ -89,6 +105,7 @@ class Roulette(commands.Cog):
 
     @commands.command(name='roulette', aliases=['rr'])
     async def roulette(self, ctx, amount: int):
+        """Roulette Russe. 1 chance sur 6 de mourir (et perdre la mise)."""
         if amount <= 0:
             return await ctx.send("Mise invalide.")
         view = JoinView(ctx, amount)

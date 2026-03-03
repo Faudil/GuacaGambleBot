@@ -71,6 +71,29 @@ def add_item_to_inventory(user_id, item_name, quantity: int = 1) -> bool:
         conn.close()
 
 
+def add_item_to_all(item_name: str, quantity: int = 1) -> int:
+    conn = get_connection()
+    try:
+        item = conn.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()
+        if not item:
+            return 0
+
+        cursor = conn.execute("""
+            INSERT INTO inventory (user_id, item_id, quantity)
+            SELECT user_id, ?, ? FROM users
+            ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + ?
+        """, (item['id'], quantity, quantity))
+        conn.commit()
+        return cursor.rowcount
+
+    except Exception as e:
+        print(f"Erreur ajout inventaire all : {e}")
+        return 0
+
+    finally:
+        conn.close()
+
+
 def has_item(user_id, item_name: str, min_quantity=1):
     conn = get_connection()
     try:

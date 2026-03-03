@@ -8,8 +8,11 @@ import time
 from src.command_decorators import daily_limit, ActivityType, opening_hours
 from src.database.item import add_item_to_inventory
 from src.database.job import add_job_xp, get_job_data
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
+from src.database.pets import get_active_pet
 from src.items.FishingLoot import KrakenTentacle, Swordfish, Pufferfish, Trout, Sardine, OldBoot, Salmon, Carp, Shark, \
     Whale
+from src.models.Pet import PetBonus
 
 
 class FishingGameView(View):
@@ -19,11 +22,13 @@ class FishingGameView(View):
         self.biome_name = biome_name
 
         lvl, _ = get_job_data(self.ctx.author.id, "fisher")
-        self.time_limit = time_limit + (lvl * 0.1)
+        pet = get_active_pet(self.ctx.author.id)
+        pet_bonus = pet.level // 4 if pet.bonus == PetBonus.FISH else 0
+        self.time_limit = time_limit + (lvl + pet_bonus) * 0.1
 
         self.loot_pool = loot_pool
         self.bite_active = False
-        self.start_time = 0
+        self.start_time = 0.0
         self.message = None
 
     async def start_game(self, message):
@@ -94,6 +99,7 @@ class FishingGameView(View):
         xp_gain = int(10 + (1.5 / self.time_limit) * 10)
 
         add_item_to_inventory(self.ctx.author.id, loot_item.name)
+        increment_stat(self.ctx.author.id, "items_fished")
         add_job_xp(self.ctx.author.id, "fisher", xp_gain)
 
         embed = interaction.message.embeds[0]
@@ -109,6 +115,10 @@ class FishingGameView(View):
         button.disabled = True
 
         await interaction.response.edit_message(embed=embed, view=self)
+        
+        unlocks = check_and_unlock_achievements(self.ctx.author.id)
+        if unlocks:
+            await interaction.channel.send(content=interaction.user.mention, embed=format_achievements_unlocks(unlocks))
 
     def get_random_loot(self, reaction):
         roll = random.random()
@@ -163,6 +173,7 @@ class Fishing(commands.Cog):
     @commands.command(name='fish')
     @daily_limit("fish", 5)
     async def fish(self, ctx):
+        """Aller à la pêche."""
         embed = discord.Embed(
             title="🎣 Partie de Pêche",
             description="Où veux-tu aller pêcher aujourd'hui ?",

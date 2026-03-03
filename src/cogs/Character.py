@@ -25,6 +25,7 @@ class Character(commands.Cog):
 
     @commands.command(name='level', aliases=['levels', 'jobstats', 'profil', 'skills', 'lvl'])
     async def level(self, ctx, target: discord.Member = None):
+        """Affiche le niveau et les compétences d'un joueur."""
         user = target if target else ctx.author
 
         jobs_config = {
@@ -39,9 +40,7 @@ class Character(commands.Cog):
             color=discord.Color.gold()
         )
         embed.set_thumbnail(url=user.avatar.url if user.avatar else None)
-
         total_level = 0
-
         for job_key, info in jobs_config.items():
             level, current_xp = get_job_data(user.id, job_key)
 

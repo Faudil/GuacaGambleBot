@@ -9,6 +9,7 @@ class Bank(commands.Cog):
 
     @commands.command(name='deposit', aliases=['dep'])
     async def deposit(self, ctx, amount: str):
+        """Dépose de l'argent dans ta banque (max 500)."""
         wallet, bank = get_bank_data(ctx.author.id)
         if amount.lower() == "all":
             amount_int = wallet
@@ -32,6 +33,7 @@ class Bank(commands.Cog):
 
     @commands.command(name='withdraw', aliases=['wd'])
     async def withdraw(self, ctx, amount: str):
+        """Retire l'argent de ta banque vers ton portefeuille."""
         _, bank = get_bank_data(ctx.author.id)
         if amount.lower() == "all":
             amount_int = bank

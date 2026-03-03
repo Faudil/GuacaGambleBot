@@ -3,6 +3,7 @@ from discord.ext import commands
 import random
 
 from src.database.balance import get_balance, update_balance
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
 
 
 class Duel(commands.Cog):
@@ -12,6 +13,7 @@ class Duel(commands.Cog):
 
     @commands.command(name='duel')
     async def duel(self, ctx, opponent: discord.Member, amount: int):
+        """Provoque quelqu'un en duel (50/50)."""
         challenger = ctx.author
         if opponent.bot:
             return await ctx.send("🤖 Tu ne peux pas défier un bot (ils trichent).")
@@ -33,6 +35,7 @@ class Duel(commands.Cog):
 
     @commands.command(name='accept')
     async def accept_duel(self, ctx):
+        """Accepter un duel de Quitte ou Double."""
         opponent = ctx.author
         if opponent.id not in self.pending_duels:
             return await ctx.send("❌ Personne ne t'a défié.")
@@ -52,11 +55,15 @@ class Duel(commands.Cog):
         if total_challenger > total_opponent:
             update_balance(challenger_id, amount)
             update_balance(opponent.id, -amount)
+            increment_stat(challenger_id, "pvp_wins")
+            increment_stat(opponent.id, "pvp_losses")
             result_msg += f"🏆 **{challenger.display_name}** gagne **${amount}** !"
             color = discord.Color.gold()
         elif total_opponent > total_challenger:
             update_balance(opponent.id, amount)
             update_balance(challenger_id, -amount)
+            increment_stat(opponent.id, "pvp_wins")
+            increment_stat(challenger_id, "pvp_losses")
             result_msg += f"🏆 **{opponent.display_name}** gagne **${amount}** !"
             color = discord.Color.gold()
         else:
@@ -64,10 +71,18 @@ class Duel(commands.Cog):
             color = discord.Color.light_grey()
         embed = discord.Embed(title="🎲 RÉSULTAT DU DUEL", description=result_msg, color=color)
         await ctx.send(embed=embed)
+        
+        c_unlocks = check_and_unlock_achievements(challenger_id)
+        if c_unlocks:
+             await ctx.send(content=challenger.mention, embed=format_achievements_unlocks(c_unlocks))
+        o_unlocks = check_and_unlock_achievements(opponent.id)
+        if o_unlocks:
+             await ctx.send(content=opponent.mention, embed=format_achievements_unlocks(o_unlocks))
         return None
 
     @commands.command(name='deny')
     async def deny_duel(self, ctx):
+        """Refuser un duel."""
         if ctx.author.id in self.pending_duels:
             del self.pending_duels[ctx.author.id]
             await ctx.send(f"🛡️ {ctx.author.display_name} a refusé le duel (le fragile !).")

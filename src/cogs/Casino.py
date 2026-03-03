@@ -8,6 +8,7 @@ from discord.ui import Button, View
 from src.command_decorators import daily_limit, opening_hours, ActivityType
 from src.database.balance import update_balance, get_balance
 from src.database.item import has_item, remove_item_from_inventory
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
 from src.database.job import add_job_xp
 from src.items.CheatCoin import CheatCoin
 
@@ -68,7 +69,7 @@ class Casino(commands.Cog):
     @commands.command(name='coinflip', aliases=['cf', 'pileouface'])
     @daily_limit("coinflip", 10)
     async def coinflip(self, ctx, choice: str, amount: int):
-        """Bet against the bot. Usage: !cf <pile/face> <amount>"""
+        """Jouer à pile ou face contre le bot."""
         user_id = ctx.author.id
         choice = choice.lower()
         if choice not in ['pile', 'face', 'heads', 'tails']:
@@ -102,6 +103,8 @@ class Casino(commands.Cog):
                 await msg.edit(content="🎲 Tu décides de jouer à la loyal.", view=None)
         else:
             await ctx.send(f"🎲 C'est parti ! **{choice.upper()}** pour **${amount}**...")
+            
+        increment_stat(user_id, "coinflip_spent", amount)
         await asyncio.sleep(1)
         if use_rigged:
             if random.random() < 0.75:
@@ -117,24 +120,34 @@ class Casino(commands.Cog):
         if win:
             xp_gain = 10
             update_balance(user_id, amount)
+            increment_stat(user_id, "coinflip_won")
+            increment_stat(user_id, "coinflip_money_won", amount)
             text = f"✨ **GAGNÉ !** La pièce tombe sur **{result_side.upper()}**."
             if use_rigged: text += " (Merci la triche 😉)"
             color = discord.Color.green()
         else:
             xp_gain = 30
             update_balance(user_id, -amount)
+            increment_stat(user_id, "coinflip_lost")
+            increment_stat(user_id, "coinflip_money_lost", amount)
             text = f"❌ **PERDU...** La pièce tombe sur **{result_side.upper()}**."
             if use_rigged: text += " (Même en trichant ?! La honte...)"
             color = discord.Color.red()
         add_job_xp(user_id, "gambler", xp_gain)
         text += f" Tu as gagné {xp_gain} xp"
         embed = discord.Embed(description=text, color=color)
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
+        
+        unlocks = check_and_unlock_achievements(user_id)
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
+        return
 
 
     @commands.command(name='slots', aliases=['slot', 'casino'])
     @daily_limit("slots", 10)
     async def slots(self, ctx, amount: int):
+        """Jouer à la machine à sous."""
         user_id = ctx.author.id
         if amount <= 0:
             return await ctx.send("❌ Mise invalide.")
@@ -142,6 +155,7 @@ class Casino(commands.Cog):
         if bal < amount:
             return await ctx.send(f"❌ Pas assez d'argent (${bal}).")
         update_balance(user_id, -amount)
+        increment_stat(user_id, "slots_spent", amount)
         r1 = random.choice(WHEEL)
         r2 = random.choice(WHEEL)
         r3 = random.choice(WHEEL)
@@ -188,12 +202,25 @@ class Casino(commands.Cog):
         else:
             await asyncio.sleep(0.5)
         if is_win:
+            increment_stat(user_id, "slots_won")
             update_balance(user_id, payout)
             status = f"{flavor}\n💰 **Gain : ${payout}**"
+            net_profit = payout - amount
+            if net_profit > 0:
+                increment_stat(user_id, "slots_money_won", net_profit)
+            elif net_profit < 0:
+                increment_stat(user_id, "slots_money_lost", -net_profit)
         else:
+            increment_stat(user_id, "slots_lost")
+            increment_stat(user_id, "slots_money_lost", amount)
             status = f"{flavor}\n💸 -${amount}"
         status += f" +{xp_gain} xp"
-        return await msg.edit(embed=make_embed(r1, r2, r3, status, color))
+        await msg.edit(embed=make_embed(r1, r2, r3, status, color))
+        
+        unlocks = check_and_unlock_achievements(user_id)
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
+        return
 
 
 async def setup(bot):

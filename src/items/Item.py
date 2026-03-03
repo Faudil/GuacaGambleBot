@@ -22,7 +22,7 @@ class ItemType(Enum):
 
 
 class Item:
-    def __init__(self, name, price, description, item_type: ItemType, rarity: ItemRarity=ItemRarity.common, image_url=None):
+    def __init__(self, name, price, description, item_type: ItemType, rarity: ItemRarity=ItemRarity.common, image_url=None, pet_effet=None):
         self.name = name.lower()
         self.price = price
         self.description = description
@@ -30,6 +30,7 @@ class Item:
         self.type = item_type
         self.rarity = rarity
         self.image_url = image_url
+        self.pet_effect = pet_effet
 
     def get_discord_color(self):
         colors = {

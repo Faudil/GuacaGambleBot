@@ -9,7 +9,8 @@ class Coffee(Item):
             price=50,
             description="Réveille tes sens. Réinitialise le cooldown du !daily.",
             item_type=ItemType.consumable,
-            rarity=ItemRarity.common
+            rarity=ItemRarity.common,
+            pet_effet={"stat": "speed", "amount": 5}
         )
 
     async def use(self, ctx, **kwargs):

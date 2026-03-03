@@ -4,6 +4,7 @@ import random
 from discord.ui import Button, View
 
 from src.database.balance import update_balance, get_balance
+from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
 
 
 def create_deck():
@@ -99,6 +100,16 @@ class BlackjackView(View):
             color = discord.Color.light_grey()
         else:
             update_balance(winner.id, self.amount * 2)
+            loser = self.p1 if winner == self.p2 else self.p2
+            increment_stat(winner.id, "blackjack_won")
+            increment_stat(loser.id, "blackjack_lost")
+            
+            increment_stat(winner.id, "blackjack_spent", self.amount)
+            increment_stat(winner.id, "blackjack_money_won", self.amount)
+            
+            increment_stat(loser.id, "blackjack_spent", self.amount)
+            increment_stat(loser.id, "blackjack_money_lost", self.amount)
+            
             result_text = f"🎉 **{winner.display_name} remporte le duel !** ({reason})\nIl gagne **${self.amount * 2}**."
             color = discord.Color.gold()
 
@@ -106,6 +117,14 @@ class BlackjackView(View):
         final_embed.color = color
         final_embed.description += f"\n\n🛑 **FIN DU JEU**\n{result_text}"
         await interaction.response.edit_message(embed=final_embed, view=None)
+        
+        if winner != "DRAW":
+            w_unlocks = check_and_unlock_achievements(winner.id)
+            l_unlocks = check_and_unlock_achievements(loser.id)
+            if w_unlocks:
+                await interaction.channel.send(embed=format_achievements_unlocks(w_unlocks), content=winner.mention)
+            if l_unlocks:
+                await interaction.channel.send(embed=format_achievements_unlocks(l_unlocks), content=loser.mention)
 
     @discord.ui.button(label="Tirer (Hit)", style=discord.ButtonStyle.success)
     async def hit(self, interaction: discord.Interaction, button: Button):
@@ -145,7 +164,7 @@ class BlackjackPvP(commands.Cog):
 
     @commands.command(name='bjduel', aliases=['bjpvp', 'blackjack', 'bj'])
     async def bjduel(self, ctx, opponent: discord.Member, amount: int):
-        """Défie quelqu'un au Blackjack. Usage: !bjduel @Pseudo 100"""
+        """Le 21. Affronte un autre joueur."""
         challenger = ctx.author
         if opponent.bot or opponent.id == challenger.id:
             return await ctx.send("❌ Adversaire invalide.")

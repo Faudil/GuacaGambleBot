@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands, tasks
 
 from src.command_decorators import daily_limit
+from src.database.achievement import check_and_unlock_achievements, format_achievements_unlocks
 from src.database.balance import update_balance, get_balance
 from src.database.bank import get_bank_data
 from src.database.loan import get_total_debt, repay_debt_logic
@@ -47,6 +48,7 @@ class Economy(commands.Cog):
 
     @commands.command(name='balance', aliases=['bal'])
     async def balance(self, ctx, member: discord.Member = None):
+        """Voir ton solde."""
         user = ctx.author if member is None else member
         wallet, bank = get_bank_data(user.id)
         interest = (bank // 100) * 10
@@ -60,6 +62,7 @@ class Economy(commands.Cog):
     @commands.command(name='daily')
     @daily_limit("daily", 1)
     async def daily(self, ctx):
+        """Ton salaire journalier."""
         user_id = str(ctx.author.id)
         _, bank_bal = get_bank_data(user_id)
 
@@ -81,10 +84,18 @@ class Economy(commands.Cog):
                 embed.add_field(name=f"\n🤵 Tu as remboursé {self.bot.get_user(int(lender)).display_name} de ", value=f"${amount}", inline=False)
         embed.add_field(name="Ta balance", value=f"${new_balance}")
         embed.set_footer(text="Reviens demain !")
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
+        
+        from src.database.achievement import increment_stat
+        increment_stat(int(user_id), "daily_uses", 1)
+
+        unlocks = check_and_unlock_achievements(int(user_id))
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
 
     @commands.command(name='give', aliases=['pay'])
     async def give(self, ctx, recipient: discord.Member, amount: int) -> None:
+        """Faire un virement (donner de l'argent)."""
         sender_id = ctx.author.id
         recipient_id = recipient.id
         if sender_id == recipient_id or amount <= 0:
@@ -97,7 +108,15 @@ class Economy(commands.Cog):
         embed.add_field(name="Donneur", value=ctx.author.display_name, inline=True)
         embed.add_field(name="Receveur", value=recipient.display_name, inline=True)
         embed.add_field(name="Quantité", value=f"**${amount}**", inline=False)
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
+
+        unlocks = check_and_unlock_achievements(sender_id)
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
+        unlocks = check_and_unlock_achievements(recipient_id)
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
+        return None
 
 
 async def setup(bot):

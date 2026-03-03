@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands, tasks
 import random
 
+from src.database.achievement import check_and_unlock_achievements, format_achievements_unlocks
 from src.database.balance import update_balance
 from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name, \
     get_all_user_inventory, has_item
@@ -65,6 +66,7 @@ class Market(commands.Cog):
 
     @commands.command(name='market')
     async def show_market(self, ctx, to_show: str = None):
+        """Voir le cours de la bourse (Krach ou Boom ?)."""
         mine_tag = ["mine", "minage", "mining"]
         fish_tag = ["fish", "pêche", "fishing"]
         farm_tag = ["farm", "ferme", "farming"]
@@ -100,6 +102,7 @@ class Market(commands.Cog):
 
     @commands.command(name='market_sell', aliases=["ms", "m_s"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
+        """Vendre tes ressources au prix du marché."""
         item_name = item_name.strip()
         if item_name.isdigit():
             resolved = get_item_name_by_id(int(item_name))
@@ -120,6 +123,10 @@ class Market(commands.Cog):
             await ctx.send(f"💰 Tu as vendu **{amount}x {item_name}** pour **${total_gain}**.")
         else:
             await ctx.send(f"❌ Tu ne possèdes pas cet item **{item_name}**.")
+
+        unlocks = check_and_unlock_achievements(int(user_id))
+        if unlocks:
+            await ctx.send(embed=format_achievements_unlocks(unlocks))
 
 async def setup(bot):
     await bot.add_cog(Market(bot))

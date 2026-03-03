@@ -46,6 +46,7 @@ class Loan(commands.Cog):
 
     @commands.command(name='lend', aliases=['pret'])
     async def lend(self, ctx, borrower: discord.Member, amount: int):
+        """Prêter de l'argent avec 10% d'intérêt."""
         if borrower.bot or borrower.id == ctx.author.id:
             return await ctx.send("❌ Tu ne peux pas te prêter à toi-même.")
         if amount <= 0:
@@ -71,6 +72,7 @@ class Loan(commands.Cog):
 
     @commands.command(name='debt', aliases=['dettes'])
     async def my_debt(self, ctx):
+        """Voir ce que tu dois aux autres."""
         debt = get_total_debt(ctx.author.id)
         if debt == 0:
             await ctx.send("✅ Tu es libre de toute dette !")
@@ -85,6 +87,7 @@ class Loan(commands.Cog):
 
     @commands.command(name='repay', aliases=['rembourser'])
     async def repay_cmd(self, ctx, amount: int):
+        """Rembourser tes dettes. (réparti entre tes différents créanciers)"""
         if amount <= 0: return await ctx.send("Montant invalide.")
         debt = get_total_debt(ctx.author.id)
         if debt == 0:

@@ -57,3 +57,33 @@ def reset_user_limit(user_id, activity_name):
     conn.close()
 
 
+def get_top_glory_users(limit=5):
+    from src.models.Achievement import Achievement
+    conn = get_connection()
+    try:
+        rows = conn.execute("SELECT user_id, achievement_id FROM user_achievements").fetchall()
+    finally:
+        conn.close()
+    
+    user_glory = {}
+    for row in rows:
+        user_id = row["user_id"]
+        ach_id = row["achievement_id"]
+        ach = Achievement.get(ach_id)
+        if ach:
+            if user_id not in user_glory:
+                user_glory[user_id] = 0
+            user_glory[user_id] += ach.glory
+
+    sorted_users = sorted(user_glory.items(), key=lambda x: x[1], reverse=True)
+    return [{"user_id": uid, "glory": glory} for uid, glory in sorted_users[:limit]]
+
+
+def get_top_pets(limit=5):
+    conn = get_connection()
+    try:
+        rows = conn.execute("SELECT user_id, nickname, pet_type, elo FROM user_pets ORDER BY elo DESC LIMIT ?", (limit,)).fetchall()
+        return [{"user_id": row["user_id"], "nickname": row["nickname"], "pet_type": row["pet_type"], "elo": row["elo"]} for row in rows]
+    finally:
+        conn.close()
+
