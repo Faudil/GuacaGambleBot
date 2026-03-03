@@ -80,9 +80,9 @@ def add_item_to_all(item_name: str, quantity: int = 1) -> int:
 
         cursor = conn.execute("""
             INSERT INTO inventory (user_id, item_id, quantity)
-            SELECT user_id, ?, ? FROM users
-            ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + ?
-        """, (item['id'], quantity, quantity))
+            SELECT user_id, ?, ? FROM users WHERE 1=1
+            ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = inventory.quantity + excluded.quantity
+        """, (item['id'], quantity))
         conn.commit()
         return cursor.rowcount
 
