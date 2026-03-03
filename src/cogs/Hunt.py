@@ -163,7 +163,7 @@ class Hunt(commands.Cog):
         turn = 1
         fighters = [pet, enemy] if pet.speed >= enemy.speed else [enemy, pet]
 
-        while pet.is_alive and enemy.is_alive and turn <= 15:
+        while pet.is_alive and enemy.is_alive and turn <= 35:
             for i in range(2):
                 attacker = fighters[i]
                 defender = fighters[1 - i]

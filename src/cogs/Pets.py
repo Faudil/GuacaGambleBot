@@ -478,7 +478,7 @@ class Pets(commands.Cog):
         turn = 1
         fighters = [pet1, pet2] if pet1.speed >= pet2.speed else [pet2, pet1]
 
-        while pet1.is_alive and pet2.is_alive and turn <= 15:
+        while pet1.is_alive and pet2.is_alive and turn <= 35:
             for i in range(2):
                 attacker = fighters[i]
                 defender = fighters[1 - i]
@@ -493,7 +493,7 @@ class Pets(commands.Cog):
                 update_embed_fields()
                 embed.description = "📜 **Journal de combat :**\n\n" + "\n".join(log)
                 await msg.edit(embed=embed)
-                await asyncio.sleep(1.5)
+                await asyncio.sleep(0.5)
 
                 if not defender.is_alive: break
             turn += 1

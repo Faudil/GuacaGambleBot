@@ -108,6 +108,7 @@ class Tournament(commands.Cog):
 
         while len(players) > 1:
             await ctx.send(f"🛡️ **--- ROUND {round_num} ---** 🛡️")
+            random.shuffle(players)
             next_round_players = []
             is_final = len(players) == 2
             for i in range(0, len(players), 2):
@@ -124,7 +125,7 @@ class Tournament(commands.Cog):
                     else:
                         consecutive_final_ties = 0
                     next_round_players.extend(winners)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
                 else:
                     lucky_player = players[i]
                     next_round_players.append(lucky_player)
@@ -188,19 +189,19 @@ class Tournament(commands.Cog):
         await asyncio.sleep(1)
 
         log = []
-        while pet1.is_alive and pet2.is_alive and turn <= 15:
+        while pet1.is_alive and pet2.is_alive and turn <= 35:
             for i in range(2):
                 attacker = fighters[i]
                 defender = fighters[1 - i]
                 if attacker.is_alive:
                     action_text = attacker.attack(defender)
-                    if len(log) > 5:
+                    if len(log) > 10:
                         log.pop(0)
                     log.append(action_text)
                     update_embed_fields()
                     embed.description = "📜 **Journal de combat :**\n\n" + "\n".join(log)
                     await msg.edit(embed=embed)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(0.2)
             turn += 1
 
         if pet1.is_alive and not pet2.is_alive:
