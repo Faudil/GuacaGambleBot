@@ -9,7 +9,8 @@ class CasinoToken(Item):
             price=50,
             description="Te donne une nouvelle chance, reset ta limite de `!casino`",
             rarity=ItemRarity.rare,
-            item_type=ItemType.consumable
+            item_type=ItemType.consumable,
+            pet_effet={"stat": "crit_c", "amount": 2}
         )
 
     async def use(self, ctx, **kwargs):

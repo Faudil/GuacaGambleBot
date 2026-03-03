@@ -9,7 +9,8 @@ class Fertilizer(Item):
             price=200,
             description="Accélère la pousés des récoltes ! Réinitialise le cooldown de !farm.",
             item_type=ItemType.consumable,
-            rarity=ItemRarity.common
+            rarity=ItemRarity.common,
+            pet_effet={"stat": "max_hp", "amount": 2}
         )
 
     async def use(self, ctx, **kwargs):

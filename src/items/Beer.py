@@ -10,7 +10,7 @@ class Beer(Item):
             description="La boisson du mineur ! Réinitialise le cooldown de !mine.",
             item_type=ItemType.consumable,
             rarity=ItemRarity.common,
-            pet_effet={"stat": "crit_d", "amount": 5}
+            pet_effet={"stat": "crit_d", "amount": 0.15}
         )
 
     async def use(self, ctx, **kwargs):

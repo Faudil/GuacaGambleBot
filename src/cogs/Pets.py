@@ -482,7 +482,6 @@ class Pets(commands.Cog):
             for i in range(2):
                 attacker = fighters[i]
                 defender = fighters[1 - i]
-
                 if not attacker.is_alive: continue
 
                 action_text = attacker.attack(defender)

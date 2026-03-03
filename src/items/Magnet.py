@@ -11,7 +11,8 @@ class RustyMagnet(Item):
             price=30,
             description="🧲 Utilise-le pour trouver de la petite monnaie par terre.",
             rarity=ItemRarity.common,
-            item_type=ItemType.consumable
+            item_type=ItemType.consumable,
+            pet_effet={"stat": "atk", "amount": 1}
         )
 
     async def use(self, ctx, **kwargs):
@@ -30,7 +31,7 @@ class Magnet(Item):
             description="🧲 Utilise-le pour trouver de la monnaie par terre.",
             rarity=ItemRarity.rare,
             item_type=ItemType.consumable,
-            pet_effet={"stat": "atk", "amount": 1}
+            pet_effet={"stat": "atk", "amount": 2}
         )
 
     async def use(self, ctx, **kwargs):
@@ -47,7 +48,8 @@ class ElectricMagnet(Item):
             price=500,
             description="🧲 Utilise-le pour trouver un max de monnaie par terre.",
             rarity=ItemRarity.epic,
-            item_type=ItemType.consumable
+            item_type=ItemType.consumable,
+            pet_effet={"stat": "atk", "amount": 3}
         )
 
     async def use(self, ctx, **kwargs):
