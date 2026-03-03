@@ -23,7 +23,10 @@ class FishingGameView(View):
 
         lvl, _ = get_job_data(self.ctx.author.id, "fisher")
         pet = get_active_pet(self.ctx.author.id)
-        pet_bonus = pet.level // 4 if pet.bonus == PetBonus.FISH else 0
+        if pet:
+            pet_bonus = pet.level // 4 if pet.bonus == PetBonus.FISH else 0
+        else:
+            pet_bonus = 0
         self.time_limit = time_limit + (lvl + pet_bonus) * 0.1
 
         self.loot_pool = loot_pool

@@ -33,7 +33,10 @@ class FarmActionView(View):
         weights = [weight_common, weight_uncommon, weight_rare][:len(self.loots)]
         loot = random.choices(self.loots, weights=weights, k=1)[0]
         pet = get_active_pet(self.ctx.author.id)
-        pet_bonus = pet.level // 2 if pet.bonus == PetBonus.FARM else 0
+        if pet:
+            pet_bonus = pet.level // 2 if pet.bonus == PetBonus.FARM else 0
+        else:
+            pet_bonus = 0
         double_drop_chance = min(50, level * 2 + pet_bonus)
         quantity = 1
         is_double = False

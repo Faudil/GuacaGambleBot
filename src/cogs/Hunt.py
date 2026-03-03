@@ -210,7 +210,7 @@ class Hunt(commands.Cog):
             embed.description += f"\n\n✨ **{pet.nickname}** a vaincu le monstre et gagne **+{xp_gained} XP** !"
 
         elif enemy.is_alive and not pet.is_alive:
-            base_xp = enemy.level * random.randint(15, 25) / 2
+            base_xp = enemy.level * random.randint(15, 25) / 10
             xp_gained = int(base_xp)
             leveled_up = pet.add_xp(xp_gained)
             embed.color = discord.Color.red()
