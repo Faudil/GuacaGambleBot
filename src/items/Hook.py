@@ -9,7 +9,8 @@ class Hook(Item):
             price=200,
             description="Attire les poissons ! Réinitialise le cooldown de !fish.",
             item_type=ItemType.consumable,
-            rarity=ItemRarity.common
+            rarity=ItemRarity.common,
+            pet_effet={"stat": "atk", "amount": 1}
         )
 
     async def use(self, ctx, **kwargs):

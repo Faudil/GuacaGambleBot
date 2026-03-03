@@ -30,7 +30,7 @@ class Magnet(Item):
             description="🧲 Utilise-le pour trouver de la monnaie par terre.",
             rarity=ItemRarity.rare,
             item_type=ItemType.consumable,
-            pet_effet={"stat": "", "amount": 5}
+            pet_effet={"stat": "atk", "amount": 1}
         )
 
     async def use(self, ctx, **kwargs):
