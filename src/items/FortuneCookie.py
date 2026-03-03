@@ -11,7 +11,8 @@ class FortuneCookie(Item):
             price=20,
             description="🥠 Un biscuit délicieux avec un message prémonitoire.",
             rarity=ItemRarity.common,
-            item_type=ItemType.consumable
+            item_type=ItemType.consumable,
+            pet_effet={"stat": "crit_c", "amount": 1}
         )
 
     async def use(self, ctx, **kwargs):
