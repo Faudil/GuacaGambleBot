@@ -116,8 +116,7 @@ class Farm(commands.Cog):
         self.bot = bot
 
     @commands.command(name='farm')
-    @daily_limit("farm", 5)
-    @opening_hours(ActivityType.FARMING, 6, 23)
+    @daily_limit("farm", 10)
     async def farm(self, ctx):
         """Gestion agricole. Achète des terrains et gère tes récoltes."""
         embed = discord.Embed(

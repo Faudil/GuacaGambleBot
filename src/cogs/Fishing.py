@@ -174,7 +174,7 @@ class Fishing(commands.Cog):
         self.bot = bot
 
     @commands.command(name='fish')
-    @daily_limit("fish", 5)
+    @daily_limit("fish", 10)
     async def fish(self, ctx):
         """Aller à la pêche."""
         embed = discord.Embed(

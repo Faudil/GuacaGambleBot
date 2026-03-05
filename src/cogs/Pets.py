@@ -294,7 +294,7 @@ class Pets(commands.Cog):
         user_id = ctx.author.id
         pet = get_active_pet(user_id)
         if not pet: return await ctx.send("❌ Tu n'as pas de familier actif !")
-        xp_gain = random.randint(35, 100)
+        xp_gain = random.randint(15, 30) * pet.level
         leveled_up = pet.add_xp(xp_gain)
         update_pet(pet)
         if leveled_up:

@@ -121,8 +121,7 @@ class Mine(commands.Cog):
         self.bot = bot
 
     @commands.command(name="mine", aliases=["mining", "miner"])
-    @daily_limit("mine", 5)
-    @opening_hours(ActivityType.CASINO, 6, 22)
+    @daily_limit("mine", 10)
     async def mine(self, ctx):
         """Expédition minière. Gère ton risque pour trouver des diamants."""
         user_id = int(ctx.message.author.id)

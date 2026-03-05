@@ -7,6 +7,7 @@ from src.command_decorators import daily_limit
 from src.database.item import add_item_to_inventory
 from src.database.pets import get_active_pet, update_pet
 from src.database.achievement import increment_stat, check_and_unlock_achievements, format_achievements_unlocks
+from src.items.MysteryEgg import MysteryEgg
 from src.models.Pet import Pet, PetBonus
 from src.utils.embed_utils import generate_hp_bar
 
@@ -21,7 +22,8 @@ HUNT_ZONES = {
         "loot_table": [
             {"item": "Caillou", "chance": 0.50, "max_qty": 3},
             {"item": "Tomate", "chance": 0.30, "max_qty": 2},
-            {"item": "Charbon", "chance": 0.15, "max_qty": 1}
+            {"item": "Charbon", "chance": 0.15, "max_qty": 1},
+            {"item": MysteryEgg().name, "chance": 0.01, "max_qty": 1}
         ]
     },
     "medium": {
@@ -34,7 +36,8 @@ HUNT_ZONES = {
         "loot_table": [
             {"item": "Charbon", "chance": 0.60, "max_qty": 3},
             {"item": "Minerai de Fer", "chance": 0.40, "max_qty": 2},
-            {"item": "Sardine", "chance": 0.20, "max_qty": 1}
+            {"item": "Sardine", "chance": 0.20, "max_qty": 1},
+            {"item": MysteryEgg().name, "chance": 0.05, "max_qty": 1}
         ]
     },
     "hard": {
@@ -45,9 +48,10 @@ HUNT_ZONES = {
             {"name": "Drake de Feu", "emoji": "🐉", "hp": 80, "atk": 35, "def": 12, "spd": 25, "dge": 10, "acc": 20}
         ],
         "loot_table": [
-            {"item": "Minerai de Cuivre", "chance": 0.60, "max_qty": 3},
-            {"item": "Pépite d'Or", "chance": 0.3, "max_qty": 1},
-            {"item": "Diamant Brut", "chance": 0.1, "max_qty": 1}
+            {"item": "Minerai de Cuivre", "chance": 0.50, "max_qty": 5},
+            {"item": "Pépite d'Or", "chance": 0.3, "max_qty": 3},
+            {"item": "Diamant Brut", "chance": 0.2, "max_qty": 2},
+            {"item": MysteryEgg().name, "chance": 0.1, "max_qty": 1}
         ]
     }
 }
@@ -111,8 +115,8 @@ class Hunt(commands.Cog):
         self.bot = bot
 
     @commands.command(name='hunt', aliases=['chasse'])
-    @commands.cooldown(1, 30, commands.BucketType.user)
-    @daily_limit('hunt', 5)
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @daily_limit('hunt', 10)
     async def hunt(self, ctx):
         """Envoyer son familier en expédition."""
         pet = get_active_pet(ctx.author.id)

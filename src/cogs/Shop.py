@@ -34,7 +34,7 @@ class FlashSaleView(View):
             return await interaction.response.send_message("❌ Tu es trop pauvre !", ephemeral=True)
         update_balance(interaction.user.id, -self.price)
         add_item_to_inventory(interaction.user.id, self.item.name)
-        self.stop()
+        # self.stop()
         button.disabled = True
         button.label = "VENDU !"
         await interaction.response.send_message(
@@ -133,9 +133,9 @@ class Shop(commands.Cog):
 
 
     @commands.command(name='shop', aliases=['boutique'])
-    @daily_limit("shop", 1)
+    @daily_limit("shop", 2)
     async def personal_shop(self, ctx):
-        """Ouvre ta boutique personnelle avec 4 offres aléatoires (1 fois par jour)."""
+        """Ouvre ta boutique personnelle avec 4 offres aléatoires (2 fois par jour)."""
         items = [Coffee(), VipTicket(), Beer(),
                  Hook(), Fertilizer(),
                  FortuneCookie(), CheatCoin(), Magnet(),
@@ -170,7 +170,6 @@ class Shop(commands.Cog):
         view = DailyShopView(ctx.author, offers)
         message = await ctx.send(embed=embed, view=view)
         
-        # Optionally, set message to update view after timeout
         async def on_timeout():
             for child in view.children:
                 child.disabled = True
