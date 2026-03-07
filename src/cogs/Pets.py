@@ -370,11 +370,11 @@ class Pets(commands.Cog):
         elif pet.level < 10:
             price = restored
         elif pet.level < 15:
-            price = restored * 2
+            price = int(restored * 1.2)
         else:
-            price = restored * 3
+            price = int(restored * 1.5)
         if bal < price:
-            await ctx.send(f"❌ Tu n'as pas assez d'argent pour payer les soins prix: {price}$")
+            await ctx.send(f"❌ Tu n'as pas assez d'argent pour payer les soins prix: {price}$)")
             return None
         update_balance(user_id, -price)
         update_pet(pet)
