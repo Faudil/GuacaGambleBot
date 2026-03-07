@@ -6,6 +6,7 @@ import random
 from src.database.balance import get_balance, update_balance
 from src.database.pets import get_active_pet, update_pet
 from src.utils.embed_utils import generate_hp_bar
+from src.utils.battle import simulate_battle
 
 
 class Tournament(commands.Cog):
@@ -188,21 +189,10 @@ class Tournament(commands.Cog):
         msg = await ctx.send(content=None, embed=embed, view=None)
         await asyncio.sleep(1)
 
-        log = []
-        while pet1.is_alive and pet2.is_alive and turn <= 35:
-            for i in range(2):
-                attacker = fighters[i]
-                defender = fighters[1 - i]
-                if attacker.is_alive:
-                    action_text = attacker.attack(defender)
-                    if len(log) > 10:
-                        log.pop(0)
-                    log.append(action_text)
-                    update_embed_fields()
-                    embed.description = "📜 **Journal de combat :**\n\n" + "\n".join(log)
-                    await msg.edit(embed=embed)
-                    await asyncio.sleep(0.2)
-            turn += 1
+        await simulate_battle(
+            pet1, pet2, msg, embed, update_embed_fields,
+            sleep_time=0.2, send_messages=True, log_size=10
+        )
 
         if pet1.is_alive and not pet2.is_alive:
             winners = [user1]

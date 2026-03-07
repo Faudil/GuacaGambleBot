@@ -104,3 +104,21 @@ def transfer_pet(pet_id: int, new_owner_id: int):
         conn.commit()
     finally:
         conn.close()
+
+
+def get_random_pets(limit: int = 2) -> list[Pet]:
+    conn = get_connection()
+    try:
+        rows = conn.execute("SELECT * FROM user_pets ORDER BY RANDOM() LIMIT ?", (limit,)).fetchall()
+        return [Pet.from_db(dict(row)) for row in rows]
+    finally:
+        conn.close()
+
+
+def update_pet_elo(pet_id: int, elo: int):
+    conn = get_connection()
+    try:
+        conn.execute("UPDATE user_pets SET elo = ? WHERE id = ?", (elo, pet_id))
+        conn.commit()
+    finally:
+        conn.close()

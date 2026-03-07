@@ -1,12 +1,59 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 
-from src.database.other import get_top_users
+from src.database.other import get_top_users, get_top_pets
+from src.globals import CHANNEL_ID
+from src.models.Pet import PETS_DB
 
 
 class Leaderboard(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.current_top_pet_id = None
+        self.top_elo_check_loop.start()
+
+    def cog_unload(self):
+        self.top_elo_check_loop.cancel()
+
+    @tasks.loop(minutes=30)
+    async def top_elo_check_loop(self):
+        top_pets = get_top_pets(1)
+        if not top_pets:
+            return
+
+        current_top = top_pets[0]
+        new_top_pet_id = current_top["pet_id"]
+
+        if self.current_top_pet_id is None:
+            self.current_top_pet_id = new_top_pet_id
+            return
+
+        if new_top_pet_id != self.current_top_pet_id:
+            self.current_top_pet_id = new_top_pet_id
+
+            for guild in self.bot.guilds:
+                channel = guild.get_channel(CHANNEL_ID)
+                if not channel and guild.text_channels:
+                    channel = guild.text_channels[0]
+                if channel:
+                    member = guild.get_member(int(current_top["user_id"]))
+                    owner_name = member.display_name if member else "Inconnu"
+                    
+                    pet_info = PETS_DB.get(current_top["pet_type"], {})
+                    pet_emoji = pet_info.get("emoji", "🐾")
+                    pet_name = current_top["nickname"] or current_top["pet_type"]
+
+                    embed = discord.Embed(
+                        title="🌟 NOUVEAU #1 CLASSEMENT ELO ! 🌟",
+                        description=f"Le familier **{pet_name}** {pet_emoji} de **{owner_name}** vient de prendre la première place du classement mondial des familiers avec **{current_top['elo']} ELO** !",
+                        color=discord.Color.gold()
+                    )
+                    await channel.send(embed=embed)
+                    break
+
+    @top_elo_check_loop.before_loop
+    async def before_top_elo_check_loop(self):
+        await self.bot.wait_until_ready()
 
     @commands.command(name='richest', aliases=['top_wealth', 'classement_richesse'])
     async def leaderboard(self, ctx):

@@ -10,6 +10,7 @@ from src.database.achievement import increment_stat, check_and_unlock_achievemen
 from src.items.MysteryEgg import MysteryEgg
 from src.models.Pet import Pet, PetBonus
 from src.utils.embed_utils import generate_hp_bar
+from src.utils.battle import simulate_battle
 
 HUNT_ZONES = {
     "easy": {
@@ -163,28 +164,11 @@ class Hunt(commands.Cog):
         await message.edit(content=None, embed=embed, view=None)
         await asyncio.sleep(2)
 
-        log = []
-        turn = 1
-        fighters = [pet, enemy] if pet.speed >= enemy.speed else [enemy, pet]
-
-        while pet.is_alive and enemy.is_alive and turn <= 35:
-            for i in range(2):
-                attacker = fighters[i]
-                defender = fighters[1 - i]
-
-                if not attacker.is_alive: continue
-
-                action_text = attacker.attack(defender)
-                log.append(action_text)
-                if len(log) > 5:
-                    log.pop(0)
-                update_embed()
-                embed.description = "📜 **Combat en cours :**\n\n" + "\n".join(log)
-                await message.edit(embed=embed)
-                await asyncio.sleep(1.5)
-
-                if not defender.is_alive: break
-            turn += 1
+        await simulate_battle(
+            pet, enemy, message, embed, update_embed,
+            sleep_time=1.5, send_messages=True, log_size=5,
+            journal_title="📜 **Combat en cours :**\n\n"
+        )
 
         leveled_up = False
         if pet.is_alive and not enemy.is_alive:
@@ -201,7 +185,7 @@ class Hunt(commands.Cog):
                 if random.random() < loot["chance"] + (bonus * 0.01):
                     qty = random.randint(1, loot["max_qty"])
                     item_name = loot["item"]
-                    add_item_to_inventory(user_id, item_name, qty)
+                    add_item_to_inventory(user_id, item_name.lower(), qty)
                     looted_items.append(f"**{qty}x {item_name}**")
 
             if looted_items:

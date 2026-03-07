@@ -328,7 +328,7 @@ class Pet:
         leveled_up = False
 
         while self.xp >= self.level * rarity_xp_multiplier[self.rarity] * 100 and self.level < 20:
-            self.xp -= self.level * 100
+            self.xp -= self.level * rarity_xp_multiplier[self.rarity] * 100
             self.level += 1
             self.max_hp += 5
             self.hp += 5
@@ -382,7 +382,7 @@ class Pet:
     def attack(self, target: 'Pet'):
         if self.is_stunned:
             self._stunned_remaining_turn -= 1
-            return f"{target.nickname} est assomé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
+            return f"{self.nickname} est assomé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
         hit_chance = max(20, min(100, 100 + self.real_acc - target.real_dge))
         if random.randint(1, 100) > hit_chance:
             return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque !"

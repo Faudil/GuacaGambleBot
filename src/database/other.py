@@ -82,8 +82,8 @@ def get_top_glory_users(limit=5):
 def get_top_pets(limit=5):
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT user_id, nickname, pet_type, elo FROM user_pets ORDER BY elo DESC LIMIT ?", (limit,)).fetchall()
-        return [{"user_id": row["user_id"], "nickname": row["nickname"], "pet_type": row["pet_type"], "elo": row["elo"]} for row in rows]
+        rows = conn.execute("SELECT id, user_id, nickname, pet_type, elo FROM user_pets ORDER BY elo DESC LIMIT ?", (limit,)).fetchall()
+        return [{"pet_id": row["id"], "user_id": row["user_id"], "nickname": row["nickname"], "pet_type": row["pet_type"], "elo": row["elo"]} for row in rows]
     finally:
         conn.close()
 

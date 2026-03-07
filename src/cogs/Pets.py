@@ -13,6 +13,7 @@ from src.items.Item import ItemRarity, Item
 from src.items.MysteryEgg import MysteryEgg
 from src.models.Pet import PETS_DB, Pet, PetBonus
 from src.utils.embed_utils import generate_hp_bar
+from src.utils.battle import simulate_battle
 
 STAT_DISPLAY = {
     "max_hp": "❤️ PV Max",
@@ -193,9 +194,13 @@ class Pets(commands.Cog):
         await msg.edit(embed=embed)
 
     @commands.command(name='pets', aliases=['familiers', 'zoo'])
-    async def my_pets(self, ctx):
+    async def my_pets(self, ctx, user: discord.Member = None):
         """Voir ta collection de familiers."""
-        my_pets = get_all_pets(ctx.author.id)
+        user = user if user else ctx.author
+        if user:
+            my_pets = get_all_pets(user.id)
+        else:
+            my_pets = get_all_pets(ctx.author.id)
         if not my_pets:
             return await ctx.send("🐾 Tu n'as aucun familier. Achète un Œuf Mystère au shop !")
         embed = discord.Embed(title=f"🐾 La Ménagerie de {ctx.author.name}", color=discord.Color.green())
@@ -294,7 +299,7 @@ class Pets(commands.Cog):
         user_id = ctx.author.id
         pet = get_active_pet(user_id)
         if not pet: return await ctx.send("❌ Tu n'as pas de familier actif !")
-        xp_gain = random.randint(15, 30) * pet.level
+        xp_gain = random.randint(15, 30) * (pet.level // 2)
         leveled_up = pet.add_xp(xp_gain)
         update_pet(pet)
         if leveled_up:
@@ -365,20 +370,23 @@ class Pets(commands.Cog):
         elif pet.level < 10:
             price = restored
         elif pet.level < 15:
-            price = restored * 5
+            price = restored * 2
         else:
-            price = restored * 10
+            price = restored * 3
         if bal < price:
             await ctx.send(f"❌ Tu n'as pas assez d'argent pour payer les soins prix: {price}$")
             return None
         update_balance(user_id, -price)
         update_pet(pet)
-        return await ctx.send(f"🏥 **{pet.nickname}** s'est bien reposé et a récupéré **{int(restored)} PV** ! Ses PV sont maintenant au maximum.")
+        return await ctx.send(f"🏥 **{pet.nickname}** s'est bien reposé et a récupéré **{int(restored)} PV** ! Ses PV sont maintenant au maximum. (tu as payé {price}$")
 
     @commands.command(name='petstats', aliases=['pstats', 'pet_stats', 'pet_stat'])
-    async def pet_stats(self, ctx):
+    async def pet_stats(self, ctx, user: discord.User = None):
         """Voir les statistiques de ton familier actif."""
-        pet = get_active_pet(ctx.author.id)
+        if user:
+            pet = get_active_pet(user.id)
+        else:
+            pet = get_active_pet(ctx.author.id)
         if not pet:
             return await ctx.send("❌ Tu n'as pas de familier actif !")
         
@@ -474,28 +482,10 @@ class Pets(commands.Cog):
         await asyncio.sleep(2)
 
 
-        log = []
-        turn = 1
-        fighters = [pet1, pet2] if pet1.speed >= pet2.speed else [pet2, pet1]
-
-        while pet1.is_alive and pet2.is_alive and turn <= 35:
-            for i in range(2):
-                attacker = fighters[i]
-                defender = fighters[1 - i]
-                if not attacker.is_alive: continue
-
-                action_text = attacker.attack(defender)
-                log.append(action_text)
-
-                if len(log) > 10: log.pop(0)
-
-                update_embed_fields()
-                embed.description = "📜 **Journal de combat :**\n\n" + "\n".join(log)
-                await msg.edit(embed=embed)
-                await asyncio.sleep(0.5)
-
-                if not defender.is_alive: break
-            turn += 1
+        await simulate_battle(
+            pet1, pet2, msg, embed, update_embed_fields,
+            sleep_time=0.5, send_messages=True, log_size=10
+        )
 
         update_pet(pet1)
         update_pet(pet2)
