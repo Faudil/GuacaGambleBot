@@ -12,7 +12,7 @@ class EloSimulation(commands.Cog):
     def cog_unload(self):
         self.simulation_loop.cancel()
 
-    @tasks.loop(seconds=1)
+    @tasks.loop(seconds=5)
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:

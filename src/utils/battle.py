@@ -41,9 +41,12 @@ async def simulate_battle(
                 if atb_pet1 > atb_pet2:
                     attacker, defender = pet1, pet2
                     atb_pet1 -= 100
+                    atb_pet2 += pet1.speed
                 elif atb_pet2 > atb_pet1:
                     attacker, defender = pet2, pet1
                     atb_pet2 -= 100
+                    atb_pet1 += pet2.speed
+
                 else: 
                     if pet1.speed >= pet2.speed:
                         attacker, defender = pet1, pet2
