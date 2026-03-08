@@ -9,6 +9,7 @@ from src.database.item import add_item_to_inventory, get_all_items_db
 
 from src.globals import CHANNEL_ID, ITEMS_REGISTRY, ITEM_DROPPABLE
 from src.items.Beer import Beer
+from src.items.Bow import Bow
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.Fertilizer import Fertilizer
@@ -34,7 +35,7 @@ class FlashSaleView(View):
             return await interaction.response.send_message("❌ Tu es trop pauvre !", ephemeral=True)
         update_balance(interaction.user.id, -self.price)
         add_item_to_inventory(interaction.user.id, self.item.name)
-        # self.stop()
+        self.stop()
         button.disabled = True
         button.label = "VENDU !"
         await interaction.response.send_message(
@@ -108,7 +109,7 @@ class Shop(commands.Cog):
     async def drop_loop(self):
         if random.random() < 0.5:
             items = [Coffee(), VipTicket(), Beer(),
-                     Hook(), Fertilizer(),
+                     Hook(), Fertilizer(), Bow(),
                      FortuneCookie(), CheatCoin(), Magnet(),
                      RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                      VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed(), MysteryEgg()]
@@ -137,7 +138,7 @@ class Shop(commands.Cog):
     async def personal_shop(self, ctx):
         """Ouvre ta boutique personnelle avec 4 offres aléatoires (2 fois par jour)."""
         items = [Coffee(), VipTicket(), Beer(),
-                 Hook(), Fertilizer(),
+                 Hook(), Fertilizer(), Bow(),
                  FortuneCookie(), CheatCoin(), Magnet(),
                  RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                  VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed(), MysteryEgg()]
@@ -165,7 +166,6 @@ class Shop(commands.Cog):
                 'price': price,
                 'discounted': is_discounted
             })
-            
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
         view = DailyShopView(ctx.author, offers)
         message = await ctx.send(embed=embed, view=view)

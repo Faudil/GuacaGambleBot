@@ -33,22 +33,22 @@ async def simulate_battle(
     atb_pet2 = 0
 
     while pet1.is_alive and pet2.is_alive and actions_count <= 70:
-        atb_pet1 += pet1.speed
-        atb_pet2 += pet2.speed
+        atb_pet1 += pet1.real_speed
+        atb_pet2 += pet2.real_speed
 
         while (atb_pet1 >= 100 or atb_pet2 >= 100) and pet1.is_alive and pet2.is_alive:
             if atb_pet1 >= 100 and atb_pet2 >= 100:
                 if atb_pet1 > atb_pet2:
                     attacker, defender = pet1, pet2
                     atb_pet1 -= 100
-                    atb_pet2 += pet1.speed
+                    atb_pet2 += pet1.real_speed
                 elif atb_pet2 > atb_pet1:
                     attacker, defender = pet2, pet1
                     atb_pet2 -= 100
-                    atb_pet1 += pet2.speed
+                    atb_pet1 += pet2.real_speed
 
                 else: 
-                    if pet1.speed >= pet2.speed:
+                    if pet1.real_speed >= pet2.real_speed:
                         attacker, defender = pet1, pet2
                         atb_pet1 -= 100
                     else:
@@ -63,7 +63,7 @@ async def simulate_battle(
 
             fatigue_mult = 1.0
             if actions_count > 25:
-                fatigue_mult = max(0.2, 1.0 - ((actions_count - 30) * 0.05))
+                fatigue_mult = max(0.2, 1.0 - ((actions_count - 50) * 0.05))
                 
             action_text = attacker.attack(defender, fatigue_mult=fatigue_mult)
             log.append(action_text)

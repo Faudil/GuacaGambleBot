@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from src.globals import ITEMS_REGISTRY, TEST_CHANNEL_ID
 from src.items.Beer import Beer
+from src.items.Bow import Bow
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.FarmItem import Wheat, Oat, Potato, Tomato, Pumpkin, CocoaBean, Strawberry, GoldenApple, StarFruit, Corn, \
@@ -144,6 +145,7 @@ def initialize_items():
     RustyMagnet().register()
     ElectricMagnet().register()
     ScratchTicket().register()
+    Bow().register()
 
 
     # Mining resources

@@ -226,9 +226,11 @@ class Pet:
         self._acc_malus = 0
         self._dge_malus = 0
         self._atk_malus = 0
-        self._life_drain = 0
-        self._life_drain_remaining_turn = 0
-        self._stunned_remaining_turn = 0
+        self._speed_malus = 0
+        self._stunned_turns = 0
+        self._poisoned_turns = 0
+        self._burning_turns = 0
+        self._bleeding_turns = 0
 
 
 
@@ -346,55 +348,111 @@ class Pet:
             self.xp = 0
         return leveled_up
 
-    def apply_special_effect(self, effect: DamageType):
+    def tick_effects(self) -> str:
+        msg_parts: list[str] = []
+        if self._poisoned_turns > 0:
+            dmg = max(1, int(self.max_hp * 0.05))
+            self.hp = max(0, self.hp - dmg)
+            msg_parts.append(f"🧪 **{self.nickname}** souffre du poison et perd **{dmg}** PV.")
+            self._poisoned_turns -= 1
+            if self._poisoned_turns == 0:
+                self._atk_malus = 0
+                msg_parts.append(f"✨ **{self.nickname}** n'est plus empoisonné !")
+
+        if self._burning_turns > 0:
+            dmg = max(5, int(self.max_hp * 0.08))
+            self.hp = max(0, self.hp - dmg)
+            msg_parts.append(f"🔥 **{self.nickname}** brûle et perd **{dmg}** PV.")
+            self._burning_turns -= 1
+            if self._burning_turns == 0:
+                self._dge_malus = 0
+                msg_parts.append(f"💦 **{self.nickname}** ne brûle plus !")
+
+        if self._bleeding_turns > 0:
+            dmg = max(2, int(self.max_hp * 0.06))
+            self.hp = max(0, self.hp - dmg)
+            msg_parts.append(f"🩸 **{self.nickname}** saigne et perd **{dmg}** PV.")
+            self._bleeding_turns -= 1
+            if self._bleeding_turns == 0:
+                self._speed_malus = 0
+                msg_parts.append(f"🩹 **{self.nickname}** ne saigne plus !")
+
+        return "\n".join(msg_parts)
+
+    def apply_special_effect(self, effect: DamageType, damage_dealt: int = 0) -> str:
+        msg = ""
         if effect == DamageType.BITE:
-            self._defense_malus = self.defense / 2
+            self._bleeding_turns = 3
+            self._speed_malus = self.speed * 0.2
+            msg = " et lui inflige **Saignement** 🩸"
         elif effect == DamageType.SCRATCH:
-            self._acc_malus = self.acc / 2
-            self._life_drain_remaining_turn = 3
+            self._acc_malus = self.acc * 0.3
+            self._dge_malus = self.dge * 0.3
+            msg = " et l'**affaiblit** (Précision/Esquive réduites) 📉"
         elif effect == DamageType.POISON:
-            self._atk_malus = self.atk / 2
+            self._poisoned_turns = 3
+            self._atk_malus = self.atk * 0.3
+            msg = " et l'**Empoisonne** 🧪"
         elif effect == DamageType.IMPACT:
-            self._stunned_remaining_turn = random.randint(1, 3)
+            self._stunned_turns = random.randint(1, 2)
+            self._defense_malus = self.defense * 0.2
+            msg = " et l'**Étourdit** 💫"
         elif effect == DamageType.FIRE:
-            self._dge_malus = self.dge / 2
+            self._burning_turns = 2
+            self._dge_malus = self.dge * 0.8
+            msg = " et le **Brûle** 🔥"
+        return msg
 
     @property
     def is_stunned(self) -> bool:
-        return self._stunned_remaining_turn > 0
+        return self._stunned_turns > 0
 
     @property
     def real_defense(self):
-        return self.defense - self._defense_malus
+        return max(0, self.defense - self._defense_malus)
 
     @property
     def real_acc(self) -> int:
-        return self.acc - self._acc_malus
+        return max(0, int(self.acc - self._acc_malus))
 
     @property
     def real_atk(self):
-        return self.atk - self._atk_malus
+        return max(0, self.atk - self._atk_malus)
 
     @property
     def real_dge(self):
-        return self.dge - self._dge_malus
+        return max(0, int(self.dge - self._dge_malus))
+
+    @property
+    def real_speed(self):
+        return max(1, int(self.speed - self._speed_malus))
 
 
     def attack(self, target: 'Pet', can_crit: bool=True, can_effect: bool=True, fatigue_mult: float=1.0):
+        msgs: list[str] = []
+        tick_msg = self.tick_effects()
+        if tick_msg:
+            msgs.append(tick_msg)
+
+        if not self.is_alive:
+            return "\n".join(msgs)
+
         if self.is_stunned:
-            self._stunned_remaining_turn -= 1
-            return f"💫 {self.emoji} **{self.nickname}** est assommé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
+            self._stunned_turns -= 1
+            msgs.append(f"💫 {self.emoji} **{self.nickname}** est assommé, il ne peut pas attaquer (tours restants: {self._stunned_turns + 1})")
+            if self._stunned_turns <= 0:
+                self._defense_malus = 0
+            return "\n".join(msgs)
+
         hit_chance = max(20, min(100, int(100 + self.real_acc - (target.real_dge * fatigue_mult))))
         if random.randint(1, 100) > hit_chance:
-            return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !"
-        effect_msg = ""
-        if can_effect and self.pet_type in PET_DAMAGE_TYPES and random.randint(1, 100) < self.spc_c:
-            dmg_type = PET_DAMAGE_TYPES[self.pet_type]
-            target.apply_special_effect(dmg_type)
-            effect_msg = f" et lui applique {dmg_type.value}"
+            msgs.append(f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !")
+            return "\n".join(msgs)
+
+        dmg_type = PET_DAMAGE_TYPES.get(self.pet_type)
+        is_effect_trigger = can_effect and dmg_type and random.randint(1, 100) < self.spc_c
 
         min_dmg = self.real_atk * 0.2
-
         base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult))
 
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
@@ -403,16 +461,28 @@ class Pet:
         final_dmg = int(base_dmg * crit_mult * random.uniform(0.85, 1.15))
         target.hp = max(0, target.hp - final_dmg)
 
+        effect_msg = ""
+        if is_effect_trigger and dmg_type is not None:
+            effect_msg = target.apply_special_effect(dmg_type, final_dmg)
+
         msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{final_dmg}** dégâts" + effect_msg
         
-        thorns_dmg = int(target.real_defense * 0.15) if target.real_defense < base_dmg else 0
+        if is_effect_trigger and dmg_type == DamageType.SCRATCH:
+            heal_amount = max(1, int(final_dmg * 0.3))
+            self.hp = min(self.max_hp, self.hp + heal_amount)
+            msg += f" et se soigne de **{heal_amount}** PV 🩸"
+
+        thorns_dmg = int(target.real_defense * 0.2) if target.real_defense < base_dmg else 0
         if thorns_dmg > 0:
             self.hp = max(0, self.hp - thorns_dmg)
             msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
 
         if is_crit:
-            return f"💥 **CRITIQUE !** {msg} !"
-        return f"{msg}."
+            msgs.append(f"💥 **CRITIQUE !** {msg} !")
+        else:
+            msgs.append(f"{msg}.")
+
+        return "\n".join(msgs)
 
     def update_elo(self, opponent: 'Pet', result: float):
         if self.level < 5 or opponent.level < 5:
