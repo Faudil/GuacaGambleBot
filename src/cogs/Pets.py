@@ -398,7 +398,7 @@ class Pets(commands.Cog):
         embed.description = (
             f"**Type:** {pet.pet_type.capitalize()} | **Niveau:** {pet.level} | **XP:** {pet.xp}\n"
             f"**Bonus:** {DISPLAY_BONUS[pet.bonus]} ({pet.level // 4}%)\n"
-            f"**ELO (Classement):** {pet.elo} 🏆"
+            f"**ELO (Classement):** {pet.elo} 🏆" if pet.level >= 5 else "Tu débloques le classement elo à partir du niveau 5"
         )
         
         stats_str = (

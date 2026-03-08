@@ -106,10 +106,10 @@ def transfer_pet(pet_id: int, new_owner_id: int):
         conn.close()
 
 
-def get_random_pets(limit: int = 2) -> list[Pet]:
+def get_random_pets(limit: int = 2, min_lvl=1) -> list[Pet]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM user_pets ORDER BY RANDOM() LIMIT ?", (limit,)).fetchall()
+        rows = conn.execute("SELECT * FROM user_pets WHERE level >= ? ORDER BY RANDOM() LIMIT ?", (min_lvl, limit)).fetchall()
         return [Pet.from_db(dict(row)) for row in rows]
     finally:
         conn.close()

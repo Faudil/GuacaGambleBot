@@ -195,7 +195,7 @@ RARITY_FOOD_CAPACITY = {
 class Pet:
     def __init__(self, pet_id=None, user_id=None, pet_type="Escargot", nickname=None,
                  level=1, food_eaten=0, xp=0, max_hp=50, hp=50, atk=10, defense=5,
-                 speed=10, dge=5, acc=0, crit_c=5, crit_d=1.5, elo=1000,
+                 speed=10, dge=5, acc=0, crit_c=5, crit_d=1.5, elo=0,
                  bonus=0, spc_c=0, is_active=0, trs_lvl=0):
 
         self.id = pet_id
@@ -336,6 +336,7 @@ class Pet:
             self.defense += 1
             leveled_up = True
             if self.level == 5:
+                self.elo = 1000
                 self.spc_c = 5
             elif self.level == 10:
                 self.spc_c = 10
@@ -367,7 +368,7 @@ class Pet:
         return self.defense - self._defense_malus
 
     @property
-    def real_acc(self):
+    def real_acc(self) -> int:
         return self.acc - self._acc_malus
 
     @property
@@ -383,7 +384,7 @@ class Pet:
         if self.is_stunned:
             self._stunned_remaining_turn -= 1
             return f"💫 {self.emoji} **{self.nickname}** est assommé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
-        hit_chance = max(20, min(100, 100 + self.real_acc - (target.real_dge * fatigue_mult)))
+        hit_chance = max(20, min(100, int(100 + self.real_acc - (target.real_dge * fatigue_mult))))
         if random.randint(1, 100) > hit_chance:
             return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !"
         effect_msg = ""
@@ -393,10 +394,8 @@ class Pet:
             effect_msg = f" et lui applique {dmg_type.value}"
 
         min_dmg = self.real_atk * 0.2
-        
-        # Shield Bash : La défense de l'attaquant s'ajoute une petite quantité à ses dégâts de base
-        shield_bash_bonus = self.real_defense * 0.15
-        base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult)) + shield_bash_bonus
+
+        base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult))
 
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
         crit_mult = self.crit_d if is_crit else 1.0
@@ -406,8 +405,7 @@ class Pet:
 
         msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{final_dmg}** dégâts" + effect_msg
         
-        # Thorns : Le défenseur renvoie une partie de sa défense en dégâts purs à l'attaquant
-        thorns_dmg = int(target.real_defense * 0.15)
+        thorns_dmg = int(target.real_defense * 0.15) if target.real_defense < base_dmg else 0
         if thorns_dmg > 0:
             self.hp = max(0, self.hp - thorns_dmg)
             msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
@@ -417,6 +415,8 @@ class Pet:
         return f"{msg}."
 
     def update_elo(self, opponent: 'Pet', result: float):
+        if self.level < 5 or opponent.level < 5:
+            return 0, 0
         K = 32
         expected_self = 1 / (1 + 10 ** ((opponent.elo - self.elo) / 400))
         expected_opp = 1 / (1 + 10 ** ((self.elo - opponent.elo) / 400))

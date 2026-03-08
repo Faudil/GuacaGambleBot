@@ -16,7 +16,7 @@ class EloSimulation(commands.Cog):
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:
-            pets = get_random_pets(limit=2)
+            pets = get_random_pets(limit=2, min_lvl=5)
             if len(pets) < 2:
                 return
             
