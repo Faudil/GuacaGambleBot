@@ -169,7 +169,7 @@ PETS_DB = {
         "dge": 25, "acc": 30, "crit_chance": 15, "crit_dmg": 1.5
     },
 
-    #  LEGENDARY
+    # LEGENDARY
     "Dragon": {
         "rarity": ItemRarity.legendary, "emoji": "🐉", "bonus": PetBonus.HUNT,
         "hp": 130, "attack": 35, "defense": 20, "speed": 20,
@@ -276,8 +276,8 @@ class Pet:
             crit_c=base['crit_chance'],
             crit_d=base['crit_dmg'],
             bonus=base['bonus'].value,
-            dge=5,
-            acc=0
+            dge=base["dge"],
+            acc=base["acc"],
         )
 
     @property

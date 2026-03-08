@@ -378,7 +378,7 @@ class Pets(commands.Cog):
             return None
         update_balance(user_id, -price)
         update_pet(pet)
-        return await ctx.send(f"🏥 **{pet.nickname}** s'est bien reposé et a récupéré **{int(restored)} PV** ! Ses PV sont maintenant au maximum. (tu as payé {price}$")
+        return await ctx.send(f"🏥 **{pet.nickname}** s'est bien reposé et a récupéré **{int(restored)} PV** ! Ses PV sont maintenant au maximum. (tu as payé {price}$)")
 
     @commands.command(name='petstats', aliases=['pstats', 'pet_stats', 'pet_stat'])
     async def pet_stats(self, ctx, user: discord.User = None):
