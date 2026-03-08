@@ -393,12 +393,12 @@ class Pets(commands.Cog):
         rarity = pet_data.get("rarity", "Standard")
         if hasattr(rarity, 'value'):
             rarity = rarity.value
-            
+
         embed = discord.Embed(title=f"📊 Stats de {pet.nickname} {pet.emoji}", color=discord.Color.teal())
         embed.description = (
             f"**Type:** {pet.pet_type.capitalize()} | **Niveau:** {pet.level} | **XP:** {pet.xp}\n"
-            f"**Bonus:** {DISPLAY_BONUS[pet.bonus]} ({pet.level // 4}%)\n"
-            f"**ELO (Classement):** {pet.elo} 🏆" if pet.level >= 5 else "Tu débloques le classement elo à partir du niveau 5"
+            f"**Bonus:** {DISPLAY_BONUS[pet.bonus]} ({pet.level // 4}%)\n" +
+            (f"**ELO (Classement):** {pet.elo} 🏆" if pet.level >= 5 else "Tu débloques le classement elo à partir du niveau 5")
         )
         
         stats_str = (
