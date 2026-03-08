@@ -12,7 +12,7 @@ class EloSimulation(commands.Cog):
     def cog_unload(self):
         self.simulation_loop.cancel()
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=1)
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:
@@ -42,6 +42,9 @@ class EloSimulation(commands.Cog):
             diff1, diff2 = pet1.update_elo(pet2, result)
             update_pet_elo(pet1.id, pet1.elo)
             update_pet_elo(pet2.id, pet2.elo)
+
+            print(pet1.nickname, pet1.elo)
+            print(pet2.nickname, pet2.elo)
 
         except Exception as e:
             logging.error(f"Error in EloSimulation loop: {e}")

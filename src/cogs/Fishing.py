@@ -125,8 +125,8 @@ class FishingGameView(View):
 
     def get_random_loot(self, reaction):
         roll = random.random()
-        is_perfect = reaction < (self.time_limit * 0.8)
-        if is_perfect and roll < 0.40:
+        is_perfect = reaction < (self.time_limit * 0.7)
+        if is_perfect and roll < 0.20:
             return self.loot_pool[-1]
         elif roll < 0.60:
             index = random.randint(1, len(self.loot_pool) - 1)

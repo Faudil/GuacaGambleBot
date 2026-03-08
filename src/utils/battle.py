@@ -28,18 +28,41 @@ async def simulate_battle(
     :return: None
     """
     log = []
-    turn = 1
-    fighters = [pet1, pet2] if pet1.speed >= pet2.speed else [pet2, pet1]
+    actions_count = 0
+    atb_pet1 = 0
+    atb_pet2 = 0
 
-    while pet1.is_alive and pet2.is_alive and turn <= 35:
-        for i in range(2):
-            attacker = fighters[i]
-            defender = fighters[1 - i]
+    while pet1.is_alive and pet2.is_alive and actions_count <= 70:
+        atb_pet1 += pet1.speed
+        atb_pet2 += pet2.speed
 
-            if not attacker.is_alive:
-                continue
+        while (atb_pet1 >= 100 or atb_pet2 >= 100) and pet1.is_alive and pet2.is_alive:
+            if atb_pet1 >= 100 and atb_pet2 >= 100:
+                if atb_pet1 > atb_pet2:
+                    attacker, defender = pet1, pet2
+                    atb_pet1 -= 100
+                elif atb_pet2 > atb_pet1:
+                    attacker, defender = pet2, pet1
+                    atb_pet2 -= 100
+                else: 
+                    if pet1.speed >= pet2.speed:
+                        attacker, defender = pet1, pet2
+                        atb_pet1 -= 100
+                    else:
+                        attacker, defender = pet2, pet1
+                        atb_pet2 -= 100
+            elif atb_pet1 >= 100:
+                attacker, defender = pet1, pet2
+                atb_pet1 -= 100
+            else:
+                attacker, defender = pet2, pet1
+                atb_pet2 -= 100
 
-            action_text = attacker.attack(defender)
+            fatigue_mult = 1.0
+            if actions_count > 25:
+                fatigue_mult = max(0.2, 1.0 - ((actions_count - 30) * 0.05))
+                
+            action_text = attacker.attack(defender, fatigue_mult=fatigue_mult)
             log.append(action_text)
 
             if len(log) > log_size:
@@ -51,6 +74,4 @@ async def simulate_battle(
                 await msg.edit(embed=embed)
                 await asyncio.sleep(sleep_time)
 
-            if not defender.is_alive:
-                break
-        turn += 1
+            actions_count += 1

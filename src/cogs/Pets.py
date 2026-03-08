@@ -290,8 +290,6 @@ class Pets(commands.Cog):
         await msg.edit(content=None, embed=success_embed, view=None)
 
 
-
-
     @commands.command(name='play')
     @commands.cooldown(1, 7200, commands.BucketType.user)
     async def play_pet(self, ctx):
@@ -299,7 +297,8 @@ class Pets(commands.Cog):
         user_id = ctx.author.id
         pet = get_active_pet(user_id)
         if not pet: return await ctx.send("❌ Tu n'as pas de familier actif !")
-        xp_gain = random.randint(15, 30) * (pet.level // 2)
+        factor = pet.level // 2 if pet.level > 10 else pet.level
+        xp_gain = random.randint(15, 40) * factor
         leveled_up = pet.add_xp(xp_gain)
         update_pet(pet)
         if leveled_up:

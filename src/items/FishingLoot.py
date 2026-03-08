@@ -61,8 +61,8 @@ class Shark(ResourceItem):
 class Whale(ResourceItem):
     def __init__(self):
         super().__init__(
-            "Woaw", 300, "INCROYABLE ! Ça vaut une fortune !", ItemRarity.legendary,
-            {"stat": "max_hp", "amount": 10}
+            "Baleine", 300, "INCROYABLE ! Ça vaut une fortune !", ItemRarity.legendary,
+            {"stat": "max_hp", "amount": 6}
         )
 
 class KrakenTentacle(ResourceItem):

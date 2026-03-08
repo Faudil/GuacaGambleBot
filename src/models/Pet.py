@@ -187,8 +187,8 @@ rarity_xp_multiplier = {
 RARITY_FOOD_CAPACITY = {
     ItemRarity.common: 5,
     ItemRarity.rare: 4,
-    ItemRarity.epic: 2,
-    ItemRarity.legendary: 1,
+    ItemRarity.epic: 3,
+    ItemRarity.legendary: 2
 }
 
 
@@ -379,29 +379,39 @@ class Pet:
         return self.dge - self._dge_malus
 
 
-    def attack(self, target: 'Pet'):
+    def attack(self, target: 'Pet', can_crit: bool=True, can_effect: bool=True, fatigue_mult: float=1.0):
         if self.is_stunned:
             self._stunned_remaining_turn -= 1
-            return f"{self.nickname} est assomé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
-        hit_chance = max(20, min(100, 100 + self.real_acc - target.real_dge))
+            return f"💫 {self.emoji} **{self.nickname}** est assommé, il ne peut pas attaquer (tours restants: {self._stunned_remaining_turn})"
+        hit_chance = max(20, min(100, 100 + self.real_acc - (target.real_dge * fatigue_mult)))
         if random.randint(1, 100) > hit_chance:
-            return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque !"
+            return f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !"
         effect_msg = ""
-        if self.pet_type in PET_DAMAGE_TYPES and random.randint(1, 100) < self.spc_c:
+        if can_effect and self.pet_type in PET_DAMAGE_TYPES and random.randint(1, 100) < self.spc_c:
             dmg_type = PET_DAMAGE_TYPES[self.pet_type]
             target.apply_special_effect(dmg_type)
             effect_msg = f" et lui applique {dmg_type.value}"
 
         min_dmg = self.real_atk * 0.2
-        base_dmg = max(min_dmg, self.real_atk - target.real_defense)
+        
+        # Shield Bash : La défense de l'attaquant s'ajoute une petite quantité à ses dégâts de base
+        shield_bash_bonus = self.real_defense * 0.15
+        base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult)) + shield_bash_bonus
 
-        is_crit = random.randint(1, 100) <= self.crit_c
+        is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
         crit_mult = self.crit_d if is_crit else 1.0
 
         final_dmg = int(base_dmg * crit_mult * random.uniform(0.85, 1.15))
         target.hp = max(0, target.hp - final_dmg)
 
         msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{final_dmg}** dégâts" + effect_msg
+        
+        # Thorns : Le défenseur renvoie une partie de sa défense en dégâts purs à l'attaquant
+        thorns_dmg = int(target.real_defense * 0.15)
+        if thorns_dmg > 0:
+            self.hp = max(0, self.hp - thorns_dmg)
+            msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
+
         if is_crit:
             return f"💥 **CRITIQUE !** {msg} !"
         return f"{msg}."
