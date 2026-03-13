@@ -470,7 +470,7 @@ class Pet:
         dmg_type = PET_DAMAGE_TYPES.get(self.pet_type)
         is_effect_trigger = can_effect and dmg_type and random.randint(1, 100) < self.spc_c
 
-        min_dmg = self.real_atk * 0.1
+        min_dmg = self.real_atk * 0.2
         base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult))
 
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
@@ -498,8 +498,6 @@ class Pet:
                     tmp_dmg += min(final_dmg, 100)
                     final_dmg -= min(final_dmg, 100)
             final_dmg= tmp_dmg + final_dmg
-        else:
-            final_dmg = target.hp - final_dmg
 
         target.hp = max(0, target.hp - final_dmg)
         effect_msg = ""
