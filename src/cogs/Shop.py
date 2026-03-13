@@ -13,6 +13,7 @@ from src.items.Bow import Bow
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.Fertilizer import Fertilizer
+from src.items.ForgetPotion import ForgetPotion
 from src.items.FortuneCookie import FortuneCookie
 from src.items.Hook import Hook
 from src.items.LandDeed import VegetablePatchDeed, GreenhouseDeed, OrchardDeed
@@ -108,7 +109,7 @@ class Shop(commands.Cog):
     @tasks.loop(minutes=30)
     async def drop_loop(self):
         if random.random() < 0.5:
-            items = [Coffee(), VipTicket(), Beer(),
+            items = [Coffee(), VipTicket(), Beer(), ForgetPotion(),
                      Hook(), Fertilizer(), Bow(),
                      FortuneCookie(), CheatCoin(), Magnet(),
                      RustyMagnet(), ElectricMagnet(), ScratchTicket(),
@@ -137,7 +138,7 @@ class Shop(commands.Cog):
     @daily_limit("shop", 2)
     async def personal_shop(self, ctx):
         """Ouvre ta boutique personnelle avec 4 offres aléatoires (2 fois par jour)."""
-        items = [Coffee(), VipTicket(), Beer(),
+        items = [Coffee(), VipTicket(), Beer(), ForgetPotion(),
                  Hook(), Fertilizer(), Bow(),
                  FortuneCookie(), CheatCoin(), Magnet(),
                  RustyMagnet(), ElectricMagnet(), ScratchTicket(),
