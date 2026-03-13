@@ -115,6 +115,32 @@ def get_random_pets(limit: int = 2, min_lvl=1) -> list[Pet]:
         conn.close()
 
 
+def get_random_pet_and_opponent(min_lvl=1, elo_range=50) -> list[Pet]:
+    conn = get_connection()
+    try:
+        pet1_row = conn.execute("SELECT * FROM user_pets WHERE level >= ? ORDER BY RANDOM() LIMIT 1", (min_lvl,)).fetchone()
+        if not pet1_row:
+            return []
+            
+        pet2_row = conn.execute(
+            "SELECT * FROM user_pets WHERE level >= ? AND id != ? AND ABS(elo - ?) <= ? ORDER BY RANDOM() LIMIT 1", 
+            (min_lvl, pet1_row['id'], pet1_row['elo'], elo_range)
+        ).fetchone()
+        
+        if not pet2_row:
+            pet2_row = conn.execute(
+                "SELECT * FROM user_pets WHERE level >= ? AND id != ? ORDER BY ABS(elo - ?) ASC, RANDOM() LIMIT 1", 
+                (min_lvl, pet1_row['id'], pet1_row['elo'])
+            ).fetchone()
+            
+        if not pet2_row:
+            return [Pet.from_db(dict(pet1_row))]
+            
+        return [Pet.from_db(dict(pet1_row)), Pet.from_db(dict(pet2_row))]
+    finally:
+        conn.close()
+
+
 def update_pet_elo(pet_id: int, elo: int):
     conn = get_connection()
     try:

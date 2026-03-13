@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from src.database.pets import update_pet_elo, get_random_pets
+from src.database.pets import update_pet_elo, get_random_pet_and_opponent
 from src.utils.battle import simulate_battle
 import logging
 
@@ -12,11 +12,11 @@ class EloSimulation(commands.Cog):
     def cog_unload(self):
         self.simulation_loop.cancel()
 
-    # @tasks.loop(seconds=5)
+    @tasks.loop(seconds=5)
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:
-            pets = get_random_pets(limit=2, min_lvl=5)
+            pets = get_random_pet_and_opponent(min_lvl=5, elo_range=100)
             if len(pets) < 2:
                 return
             
