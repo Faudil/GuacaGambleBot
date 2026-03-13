@@ -13,49 +13,49 @@ class Coal(ResourceItem):
     def __init__(self):
         super().__init__(
             "Charbon", 5, "Pas mal pour se réchauffer.", ItemRarity.common,
-            {"stat": "dge", "amount": 1}
+            {"stat": "dge", "amount": 2}
         )
 
 class IronOre(ResourceItem):
     def __init__(self):
         super().__init__(
             "Minerai de Fer", 10, "Utile pour forger des trucs solides.", ItemRarity.rare,
-            {"stat": "defense", "amount": 1}
+            {"stat": "defense", "amount": 2}
         )
 
 class CopperOre(ResourceItem):
     def __init__(self):
         super().__init__(
             "Minerai de Cuivre", 15, "Utile pour forger des trucs solides.", ItemRarity.rare,
-            {"stat": "speed", "amount": 1}
+            {"stat": "speed", "amount": 2}
         )
 
 class SilverOre(ResourceItem):
     def __init__(self):
         super().__init__(
             "Minerai d'argent", 25, "Utile pour forger des trucs solides.", ItemRarity.rare,
-            {"stat": "acc", "amount": 1}
+            {"stat": "acc", "amount": 2}
         )
 
 class GoldNugget(ResourceItem):
     def __init__(self):
         super().__init__(
             "Pépite d'Or", 50, "Brillant ! Les marchands adorent ça.", ItemRarity.epic,
-            {"stat": "crit_c", "amount": 1}
+            {"stat": "crit_c", "amount": 2}
         )
 
 class PlatinumOre(ResourceItem):
     def __init__(self):
         super().__init__(
             "Platine", 75, "Brillant ! Les marchands adorent ça.", ItemRarity.epic,
-            {"stat": "defense", "amount": 2}
+            {"stat": "defense", "amount": 3}
         )
 
 class Emerald(ResourceItem):
     def __init__(self):
         super().__init__(
             "Emeraude", 100, "INCROYABLE ! Ça vaut une fortune !", ItemRarity.epic,
-            {"stat": "dge", "amount": 2}
+            {"stat": "dge", "amount": 3}
         )
 
 class Diamond(ResourceItem):

@@ -15,10 +15,11 @@ from src.items.Bow import Bow
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.FarmItem import Wheat, Oat, Potato, Tomato, Pumpkin, CocoaBean, Strawberry, GoldenApple, StarFruit, Corn, \
-    RottenPlant
+    RottenPlant, CoffeeBean
 from src.items.Fertilizer import Fertilizer
 from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
     Shark
+from src.items.ForgetPotion import ForgetPotion
 from src.items.FortuneCookie import FortuneCookie
 from src.items.Hook import Hook
 from src.items.LandDeed import VegetablePatchDeed, OrchardDeed, GreenhouseDeed
@@ -146,6 +147,7 @@ def initialize_items():
     ElectricMagnet().register()
     ScratchTicket().register()
     Bow().register()
+    ForgetPotion().register()
 
 
     # Mining resources
@@ -179,6 +181,7 @@ def initialize_items():
     Tomato().register()
     Pumpkin().register()
     CocoaBean().register()
+    CoffeeBean().register()
     Strawberry().register()
     GoldenApple().register()
     StarFruit().register()

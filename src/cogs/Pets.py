@@ -9,6 +9,7 @@ from src.database.item import has_item, remove_item_from_inventory, get_item_nam
 from src.database.pets import get_all_pets, set_active_pet, get_active_pet, insert_new_pet, update_pet, get_pet_by_id, \
     transfer_pet
 from src.globals import ITEMS_REGISTRY
+from src.items.ForgetPotion import ForgetPotion
 from src.items.Item import ItemRarity, Item
 from src.items.MysteryEgg import MysteryEgg
 from src.models.Pet import PETS_DB, Pet, PetBonus
@@ -329,6 +330,15 @@ class Pets(commands.Cog):
         if not item:
             return await ctx.send(f"❌ L'objet **{item_name}** n'existe pas.")
 
+        if item.name == ForgetPotion().name:
+            success = pet.forget_xp()
+            if success:
+                update_pet(pet)
+                remove_item_from_inventory(ctx.author.id, item.name, 1)
+                return ctx.send(f"🍶 Tu as donné la potion d'oubli à ton animal, il est maintenant niveau 10 et ses stats ont été reset.")
+            else:
+                return await ctx.send(f"❌ Ton animal doit être niveau 20 pour pouvoir boire cette potion !")
+
         error_msg = pet.feed(item)
         if error_msg:
             return await ctx.send(error_msg)
@@ -367,11 +377,11 @@ class Pets(commands.Cog):
         if pet.level < 5:
             price = 0
         elif pet.level < 10:
-            price = restored
+            price = restored // 2
         elif pet.level < 15:
-            price = int(restored * 1.2)
+            price = restored
         else:
-            price = int(restored * 1.5)
+            price = int(restored * 1.2)
         if bal < price:
             await ctx.send(f"❌ Tu n'as pas assez d'argent pour payer les soins prix: {price}$)")
             return None

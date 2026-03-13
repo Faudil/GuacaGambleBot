@@ -13,14 +13,14 @@ class Wheat(ResourceItem):
     def __init__(self):
         super().__init__(
             "Blé", 5, "Indispensable pour faire du pain.", ItemRarity.common,
-            {"stat": "max_hp", "amount": 1}
+            {"stat": "max_hp", "amount": 2}
         )
 
 class Oat(ResourceItem):
     def __init__(self):
         super().__init__(
             "Avoine", 8, "Parfait pour le petit déjeuner.", ItemRarity.common,
-            {"stat": "speed", "amount": 1}
+            {"stat": "speed", "amount": 2}
         )
 
 class Corn(ResourceItem):
@@ -34,7 +34,7 @@ class Potato(ResourceItem):
     def __init__(self):
         super().__init__(
             "Patate", 20, "On peut en faire de la vodka...", ItemRarity.rare,
-            {"stat": "defense", "amount": 1}
+            {"stat": "defense", "amount": 2}
         )
 
 class Tomato(ResourceItem):
@@ -69,7 +69,7 @@ class Strawberry(ResourceItem):
     def __init__(self):
         super().__init__(
             "Fraise", 90, "Rouge, sucrée et juteuse.", ItemRarity.epic,
-            {"stat": "crit_c", "amount": 1}
+            {"stat": "crit_c", "amount": 2}
         )
 
 class GoldenApple(ResourceItem):

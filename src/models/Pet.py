@@ -116,7 +116,7 @@ PETS_DB = {
 
     "Chat": {
         "rarity": ItemRarity.rare, "emoji": "😼", "bonus": PetBonus.FISH,
-        "hp": 45, "attack": 25, "defense": 5, "speed": 35,
+        "hp": 45, "attack": 25, "defense": 2, "speed": 35,
         "dge": 20, "acc": 10, "crit_chance": 20, "crit_dmg": 1.8
     },
 
@@ -134,7 +134,7 @@ PETS_DB = {
 
     "Singe": {
         "rarity": ItemRarity.rare, "emoji": "🐵", "bonus": PetBonus.FARM,
-        "hp": 55, "attack": 22, "defense": 8, "speed": 28,
+        "hp": 55, "attack": 22, "defense": 12, "speed": 28,
         "dge": 15, "acc": 15, "crit_chance": 12, "crit_dmg": 1.5
     },
 
@@ -348,6 +348,24 @@ class Pet:
             self.xp = 0
         return leveled_up
 
+    def forget_xp(self) -> bool:
+        if self.level < 20:
+            return False
+        base = PETS_DB[self.pet_type]
+        self.xp = 0
+        self.level = 10
+        self.max_hp = base["hp"] + 50
+        self.hp = self.max_hp
+        self.atk = base["atk"] + 20
+        self.defense = base["defense"] + 10
+        self.crit_c = base["crit_c"]
+        self.crit_d = base["crit_d"]
+        self.acc = base["acc"]
+        self.dge = base["dge"]
+        self.speed = base["speed"]
+        self.food_eaten = 0
+        return True
+
     def tick_effects(self) -> str:
         msg_parts: list[str] = []
         if self._poisoned_turns > 0:
@@ -444,7 +462,7 @@ class Pet:
                 self._defense_malus = 0
             return "\n".join(msgs)
 
-        hit_chance = max(20, min(100, int(100 + self.real_acc - (target.real_dge * fatigue_mult))))
+        hit_chance = max(20, min(100, int(100 + (self.real_acc * 1.25) - (target.real_dge * fatigue_mult))))
         if random.randint(1, 100) > hit_chance:
             msgs.append(f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !")
             return "\n".join(msgs)
@@ -452,15 +470,38 @@ class Pet:
         dmg_type = PET_DAMAGE_TYPES.get(self.pet_type)
         is_effect_trigger = can_effect and dmg_type and random.randint(1, 100) < self.spc_c
 
-        min_dmg = self.real_atk * 0.2
+        min_dmg = self.real_atk * 0.1
         base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult))
 
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
         crit_mult = self.crit_d if is_crit else 1.0
 
         final_dmg = int(base_dmg * crit_mult * random.uniform(0.85, 1.15))
-        target.hp = max(0, target.hp - final_dmg)
 
+        new_theorical_hp = max(0, (target.hp - final_dmg))
+        hundred_steps = (target.hp - 1) // 100 - new_theorical_hp // 100
+        if hundred_steps > 0:
+            tmp_dmg = 0
+            final_dmg -= 1
+            target.hp -= 1
+            for step in range(0, hundred_steps):
+                gate_prob = ((target.hp + 1) % 100) / 200 if step < 1 and (target.hp + 1) % 100 != 0 else 0.5
+                gate_prob *= 1 - self.real_acc / 100
+                print("Proba of gating:", gate_prob)
+                if random.random() < gate_prob:  # Gating check sucess
+                    tmp_dmg += min(final_dmg, target.hp % 100)
+                    final_dmg = 0
+                    print(f"Gating on {step + 1} step")
+                    break
+                else:
+                    print("Gating failed")
+                    tmp_dmg += min(final_dmg, 100)
+                    final_dmg -= min(final_dmg, 100)
+            final_dmg= tmp_dmg + final_dmg
+        else:
+            final_dmg = target.hp - final_dmg
+
+        target.hp = max(0, target.hp - final_dmg)
         effect_msg = ""
         if is_effect_trigger and dmg_type is not None:
             effect_msg = target.apply_special_effect(dmg_type, final_dmg)
@@ -468,11 +509,11 @@ class Pet:
         msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{final_dmg}** dégâts" + effect_msg
         
         if is_effect_trigger and dmg_type == DamageType.SCRATCH:
-            heal_amount = max(1, int(final_dmg * 0.3))
+            heal_amount = int(self.real_atk * 0.3) * (2 if is_crit else 1)
             self.hp = min(self.max_hp, self.hp + heal_amount)
             msg += f" et se soigne de **{heal_amount}** PV 🩸"
 
-        thorns_dmg = int(target.real_defense * 0.2) if target.real_defense < base_dmg else 0
+        thorns_dmg = int(target.real_defense * 0.1) if target.real_defense > target.real_atk or target.real_defense > 50 else 0
         if thorns_dmg > 0:
             self.hp = max(0, self.hp - thorns_dmg)
             msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"

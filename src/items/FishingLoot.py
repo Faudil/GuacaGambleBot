@@ -34,14 +34,14 @@ class Carp(ResourceItem):
     def __init__(self):
         super().__init__(
             "Carpe", 25, "Le meilleur poisson d'eau douce.", ItemRarity.rare,
-            {"stat": "max_hp", "amount": 3} # +3 PV Max
+            {"stat": "max_hp", "amount": 3}
         )
 
 class Pufferfish(ResourceItem):
     def __init__(self):
         super().__init__(
             "Poisson-Globe", 50, "Attention, ça pique !", ItemRarity.rare,
-            {"stat": "defense", "amount": 2} # +2 Défense (Les épines !)
+            {"stat": "defense", "amount": 2}
         )
 
 class Swordfish(ResourceItem):
@@ -55,7 +55,7 @@ class Shark(ResourceItem):
     def __init__(self):
         super().__init__(
             "Requin", 100, "INCROYABLE ! Ça vaut une fortune !", ItemRarity.epic,
-            {"stat": "crit_d", "amount": 0.1}
+            {"stat": "atk", "amount": 3}
         )
 
 class Whale(ResourceItem):
