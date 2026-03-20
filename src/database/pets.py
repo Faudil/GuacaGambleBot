@@ -181,7 +181,7 @@ def get_all_pet_ranks() -> dict:
         
         if max_elo_all - min_elo_all < 600 or len(all_pets) < 10:
             relative_elo = pet_elo - min_elo_all
-            rank_group = max(3, (relative_elo // 200 + 1))
+            rank_group = min(3, (relative_elo // 200 + 1))
             rank_name = {3: "Or 🥇", 2: "Argent 🥈", 1: "Bronze 🥉"}[rank_group]
             progress = (relative_elo % 200) // 2
         else:
