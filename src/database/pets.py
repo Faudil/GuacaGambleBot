@@ -148,3 +148,48 @@ def update_pet_elo(pet_id: int, elo: int):
         conn.commit()
     finally:
         conn.close()
+
+
+def get_pet_rank(pet_id: int) -> dict:
+    conn = get_connection()
+    try:
+        rows = conn.execute("SELECT id, elo FROM user_pets WHERE level >= 5 ORDER BY elo DESC, id ASC").fetchall()
+    finally:
+        conn.close()
+
+    if not rows:
+        return {"rank": "Non classé", "progress": 0}
+
+    all_pets = [dict(row) for row in rows]
+    
+    pet_index = next((i for i, p in enumerate(all_pets) if p['id'] == pet_id), -1)
+    if pet_index == -1:
+        return {"rank": "Non classé", "progress": 0}
+        
+    pet_elo = all_pets[pet_index]['elo']
+    
+    if len(all_pets) <= 5 or pet_index < 5:
+        return {"rank": "Top 5 🌟", "progress": 100}
+        
+    rest_pets = all_pets[5:]
+    N = len(rest_pets)
+    pet_rest_index = pet_index - 5
+    pet_group = (pet_rest_index * 4) // N
+    
+    group_elos = [p['elo'] for i, p in enumerate(rest_pets) if (i * 4) // N == pet_group]
+    min_elo = min(group_elos)
+    max_elo = max(group_elos)
+    
+    if max_elo == min_elo:
+        progress = 100.0
+    else:
+        progress = (pet_elo - min_elo) / (max_elo - min_elo) * 100.0
+        
+    rank_name = {
+        0: "Diamant 💎",
+        1: "Or 🥇",
+        2: "Argent 🥈",
+        3: "Bronze 🥉"
+    }[pet_group]
+    
+    return {"rank": rank_name, "progress": int(progress)}

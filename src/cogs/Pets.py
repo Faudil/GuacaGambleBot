@@ -7,7 +7,7 @@ from src.database.achievement import check_and_unlock_achievements, format_achie
 from src.database.balance import update_balance, get_balance
 from src.database.item import has_item, remove_item_from_inventory, get_item_name_by_id
 from src.database.pets import get_all_pets, set_active_pet, get_active_pet, insert_new_pet, update_pet, get_pet_by_id, \
-    transfer_pet
+    transfer_pet, get_pet_rank
 from src.globals import ITEMS_REGISTRY
 from src.items.ForgetPotion import ForgetPotion
 from src.items.Item import ItemRarity, Item
@@ -405,10 +405,20 @@ class Pets(commands.Cog):
             rarity = rarity.value
 
         embed = discord.Embed(title=f"📊 Stats de {pet.nickname} {pet.emoji}", color=discord.Color.teal())
+        
+        if pet.level >= 5:
+            rank_data = get_pet_rank(pet.id)
+            if rank_data['rank'].startswith("Top"):
+                elo_text = f"**ELO:** {pet.elo} 🏆 | **Rang:** {rank_data['rank']}"
+            else:
+                elo_text = f"**ELO:** {pet.elo} 🏆 | **Rang:** {rank_data['rank']} (Progression: {rank_data['progress']}%)"
+        else:
+            elo_text = "Tu débloques le classement elo à partir du niveau 5"
+
         embed.description = (
             f"**Type:** {pet.pet_type.capitalize()} | **Niveau:** {pet.level} | **XP:** {pet.xp}\n"
-            f"**Bonus:** {DISPLAY_BONUS[pet.bonus]} ({pet.level // 4}%)\n" +
-            (f"**ELO (Classement):** {pet.elo} 🏆" if pet.level >= 5 else "Tu débloques le classement elo à partir du niveau 5")
+            f"**Bonus:** {DISPLAY_BONUS[pet.bonus]} ({pet.level // 4}%)\n"
+            f"{elo_text}"
         )
         
         stats_str = (

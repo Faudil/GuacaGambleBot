@@ -16,7 +16,7 @@ class EloSimulation(commands.Cog):
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:
-            pets = get_random_pet_and_opponent(min_lvl=5, elo_range=100)
+            pets = get_random_pet_and_opponent(min_lvl=5, elo_range=500)
             if len(pets) < 2:
                 return
             
@@ -43,8 +43,6 @@ class EloSimulation(commands.Cog):
             update_pet_elo(pet1.id, pet1.elo)
             update_pet_elo(pet2.id, pet2.elo)
 
-            print(pet1.nickname, pet1.elo)
-            print(pet2.nickname, pet2.elo)
 
         except Exception as e:
             logging.error(f"Error in EloSimulation loop: {e}")

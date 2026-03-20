@@ -232,6 +232,8 @@ class Pet:
         self._burning_turns = 0
         self._bleeding_turns = 0
 
+        self._thorn_multiplier = 1
+
 
 
     @classmethod
@@ -445,6 +447,14 @@ class Pet:
     def real_speed(self):
         return max(1, int(self.speed - self._speed_malus))
 
+    @property
+    def thorns_dmg(self) -> float:
+        return self.real_defense * 0.1 * self._thorn_multiplier
+
+    def proc_thorns(self) -> float:
+        self._thorn_multiplier += 1
+        return self.thorns_dmg
+
 
     def attack(self, target: 'Pet', can_crit: bool=True, can_effect: bool=True, fatigue_mult: float=1.0):
         msgs: list[str] = []
@@ -462,7 +472,7 @@ class Pet:
                 self._defense_malus = 0
             return "\n".join(msgs)
 
-        hit_chance = max(20, min(100, int(100 + (self.real_acc * 1.25) - (target.real_dge * fatigue_mult))))
+        hit_chance = max(20, min(100, int(100 + (self.real_acc * 1.0) - (target.real_dge * fatigue_mult))))
         if random.randint(1, 100) > hit_chance:
             msgs.append(f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !")
             return "\n".join(msgs)
@@ -476,28 +486,30 @@ class Pet:
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
         crit_mult = self.crit_d if is_crit else 1.0
 
-        final_dmg = int(base_dmg * crit_mult * random.uniform(0.85, 1.15))
+        base_dmg = int(base_dmg * crit_mult * random.uniform(0.9, 1.1))
 
-        new_theorical_hp = max(0, (target.hp - final_dmg))
+        new_theorical_hp = max(0, (target.hp - base_dmg))
         hundred_steps = (target.hp - 1) // 100 - new_theorical_hp // 100
         gating_msg = ""
         if hundred_steps > 0:
             tmp_dmg = 0
-            final_dmg -= 1
+            base_dmg -= 1
             target.hp -= 1
             for step in range(0, hundred_steps):
                 gate_prob = ((target.hp + 1) % 100) / 200 if step < 1 and (target.hp + 1) % 100 != 0 else 0.5
                 gate_prob *= 1 - self.real_acc / 100
                 if random.random() < gate_prob:  # Gating check sucess
-                    tmp_dmg += min(final_dmg, target.hp % 100)
-                    final_dmg = 0
+                    tmp_dmg += min(base_dmg, target.hp % 100)
+                    base_dmg = 0
                     gating_msg = f"🛡 Mais {target.nickname} se concentre et bloque les dégâts à {tmp_dmg} !!"
                     print(f"Gating on {step + 1} step")
                     break
                 else:
-                    tmp_dmg += min(final_dmg, 100)
-                    final_dmg -= min(final_dmg, 100)
-            final_dmg= tmp_dmg + final_dmg
+                    tmp_dmg += min(base_dmg, 100)
+                    base_dmg -= min(base_dmg, 100)
+            final_dmg = tmp_dmg + base_dmg
+        else:
+            final_dmg = base_dmg
 
         target.hp = max(0, target.hp - final_dmg)
         effect_msg = ""
@@ -511,10 +523,13 @@ class Pet:
             self.hp = min(self.max_hp, self.hp + heal_amount)
             msg += f" et se soigne de **{heal_amount}** PV 🩸"
 
-        thorns_dmg = int(target.real_defense * 0.1) if target.real_defense > target.real_atk or target.real_defense > 50 else 0
-        if thorns_dmg > 0:
-            self.hp = max(0, self.hp - thorns_dmg)
-            msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
+
+        proba_thorns = target.real_defense / target.real_atk
+        if random.random() < proba_thorns:
+            thorns_dmg = int(target.proc_thorns())
+            if thorns_dmg > 0:
+                self.hp = max(0, self.hp - thorns_dmg)
+                msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
 
         if is_crit:
             msgs.append(f"💥 **CRITIQUE !** {msg} !")
@@ -533,7 +548,11 @@ class Pet:
         score_opp = 1.0 - result
         diff_self = int(K * (result - expected_self))
         diff_opp = int(K * (score_opp - expected_opp))
+
         self.elo += diff_self
         opponent.elo += diff_opp
+
+        self.elo = max(0, self.elo)
+        opponent.elo = max(0, opponent.elo)
 
         return diff_self, diff_opp
