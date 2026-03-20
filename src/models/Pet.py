@@ -356,10 +356,10 @@ class Pet:
         self.level = 10
         self.max_hp = base["hp"] + 50
         self.hp = self.max_hp
-        self.atk = base["atk"] + 20
+        self.atk = base["attack"] + 20
         self.defense = base["defense"] + 10
-        self.crit_c = base["crit_c"]
-        self.crit_d = base["crit_d"]
+        self.crit_c = base["crit_chance"]
+        self.crit_d = base["crit_dmg"]
         self.acc = base["acc"]
         self.dge = base["dge"]
         self.speed = base["speed"]
