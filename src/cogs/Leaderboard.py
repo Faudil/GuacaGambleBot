@@ -17,12 +17,38 @@ class Leaderboard(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def top_elo_check_loop(self):
-        top_pets = get_top_pets(1)
+        top_pets = get_top_pets(5)
         if not top_pets:
             return
 
         current_top = top_pets[0]
         new_top_pet_id = current_top["pet_id"]
+        
+        top_5_user_ids = {int(p["user_id"]) for p in top_pets}
+        
+        for guild in self.bot.guilds:
+            role = discord.utils.get(guild.roles, name="🌟 Maître des Familiers")
+            if not role:
+                try:
+                    role = await guild.create_role(name="🌟 Maître des Familiers", color=discord.Color.gold(), hoist=True, reason="Création automatique du rôle Top 5")
+                except discord.Forbidden:
+                    pass
+            
+            if role:
+                for member in role.members:
+                    if member.id not in top_5_user_ids:
+                        try:
+                            await member.remove_roles(role, reason="Le joueur n'est plus dans le Top 5 des familiers")
+                        except discord.Forbidden:
+                            pass
+                
+                for user_id in top_5_user_ids:
+                    member = guild.get_member(user_id)
+                    if member and role not in member.roles:
+                        try:
+                            await member.add_roles(role, reason="Le joueur est entré dans le Top 5 des familiers")
+                        except discord.Forbidden:
+                            pass
 
         if self.current_top_pet_id is None:
             self.current_top_pet_id = new_top_pet_id

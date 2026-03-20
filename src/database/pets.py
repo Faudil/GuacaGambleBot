@@ -150,46 +150,73 @@ def update_pet_elo(pet_id: int, elo: int):
         conn.close()
 
 
-def get_pet_rank(pet_id: int) -> dict:
+RANK_GLORY = {
+    "Top 5 🌟": 500,
+    "Diamant 💎": 300,
+    "Or 🥇": 150,
+    "Argent 🥈": 50,
+    "Bronze 🥉": 10
+}
+
+
+def get_all_pet_ranks() -> dict:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT id, elo FROM user_pets WHERE level >= 5 ORDER BY elo DESC, id ASC").fetchall()
+        rows = conn.execute("SELECT id, user_id, elo FROM user_pets WHERE level >= 5 ORDER BY elo DESC, id ASC").fetchall()
     finally:
         conn.close()
 
     if not rows:
-        return {"rank": "Non classé", "progress": 0}
+        return {}
 
     all_pets = [dict(row) for row in rows]
+    ranks = {}
     
-    pet_index = next((i for i, p in enumerate(all_pets) if p['id'] == pet_id), -1)
-    if pet_index == -1:
-        return {"rank": "Non classé", "progress": 0}
+    max_elo_all = all_pets[0]['elo']
+    min_elo_all = all_pets[-1]['elo']
+    
+    for pet_index, pet in enumerate(all_pets):
+        pet_elo = pet['elo']
+        pet_id = pet['id']
         
-    pet_elo = all_pets[pet_index]['elo']
-    
-    if len(all_pets) <= 5 or pet_index < 5:
-        return {"rank": "Top 5 🌟", "progress": 100}
+        if max_elo_all - min_elo_all < 600 or len(all_pets) < 10:
+            relative_elo = pet_elo - min_elo_all
+            rank_group = max(3, (relative_elo // 200 + 1))
+            rank_name = {3: "Or 🥇", 2: "Argent 🥈", 1: "Bronze 🥉"}[rank_group]
+            progress = (relative_elo % 200) // 2
+        else:
+            if pet_index < 5:
+                rank_name = "Top 5 🌟"
+                progress = 100.0
+            else:
+                rest_pets = all_pets[5:]
+                N = len(rest_pets)
+                pet_rest_index = pet_index - 5
+                pet_group = (pet_rest_index * 4) // N
+                
+                group_elos = [p['elo'] for i, p in enumerate(rest_pets) if (i * 4) // N == pet_group]
+                min_elo = min(group_elos)
+                max_elo = max(group_elos)
+                
+                if max_elo == min_elo:
+                    progress = 100.0
+                else:
+                    progress = (pet_elo - min_elo) / (max_elo - min_elo) * 100.0
+                    
+                rank_name = {
+                    0: "Diamant 💎",
+                    1: "Or 🥇",
+                    2: "Argent 🥈",
+                    3: "Bronze 🥉"
+                }[pet_group]
+                
+        ranks[pet_id] = {"rank": rank_name, "progress": int(progress), "user_id": pet['user_id']}
         
-    rest_pets = all_pets[5:]
-    N = len(rest_pets)
-    pet_rest_index = pet_index - 5
-    pet_group = (pet_rest_index * 4) // N
-    
-    group_elos = [p['elo'] for i, p in enumerate(rest_pets) if (i * 4) // N == pet_group]
-    min_elo = min(group_elos)
-    max_elo = max(group_elos)
-    
-    if max_elo == min_elo:
-        progress = 100.0
-    else:
-        progress = (pet_elo - min_elo) / (max_elo - min_elo) * 100.0
-        
-    rank_name = {
-        0: "Diamant 💎",
-        1: "Or 🥇",
-        2: "Argent 🥈",
-        3: "Bronze 🥉"
-    }[pet_group]
-    
-    return {"rank": rank_name, "progress": int(progress)}
+    return ranks
+
+
+def get_pet_rank(pet_id: int) -> dict:
+    ranks = get_all_pet_ranks()
+    if pet_id in ranks:
+        return {"rank": ranks[pet_id]["rank"], "progress": ranks[pet_id]["progress"]}
+    return {"rank": "Non classé", "progress": 0}

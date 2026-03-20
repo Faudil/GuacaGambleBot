@@ -41,11 +41,11 @@ async def simulate_battle(
                 if atb_pet1 > atb_pet2:
                     attacker, defender = pet1, pet2
                     atb_pet1 -= 100
-                    atb_pet2 += pet1.real_speed
+                    atb_pet2 += pet1.real_speed // 2
                 elif atb_pet2 > atb_pet1:
                     attacker, defender = pet2, pet1
                     atb_pet2 -= 100
-                    atb_pet1 += pet2.real_speed
+                    atb_pet1 += pet2.real_speed // 2
                 else:
                     if pet1.real_speed >= pet2.real_speed:
                         attacker, defender = pet1, pet2
@@ -56,11 +56,11 @@ async def simulate_battle(
             elif atb_pet1 >= 100:
                 attacker, defender = pet1, pet2
                 atb_pet1 -= 100
-                atb_pet2 += pet1.real_speed
+                atb_pet2 += pet1.real_speed // 2
             else:
                 attacker, defender = pet2, pet1
                 atb_pet2 -= 100
-                atb_pet1 += pet2.real_speed
+                atb_pet1 += pet2.real_speed // 2
 
             fatigue_mult = 1.0
             if actions_count > 25:

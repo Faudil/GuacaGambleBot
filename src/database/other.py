@@ -59,6 +59,7 @@ def reset_user_limit(user_id, activity_name):
 
 def get_top_glory_users(limit=5):
     from src.models.Achievement import Achievement
+    from src.database.pets import get_all_pet_ranks, RANK_GLORY
     conn = get_connection()
     try:
         rows = conn.execute("SELECT user_id, achievement_id FROM user_achievements").fetchall()
@@ -74,6 +75,13 @@ def get_top_glory_users(limit=5):
             if user_id not in user_glory:
                 user_glory[user_id] = 0
             user_glory[user_id] += ach.glory
+
+    ranks = get_all_pet_ranks()
+    for pet_id, data in ranks.items():
+        user_id = data["user_id"]
+        if user_id not in user_glory:
+            user_glory[user_id] = 0
+        user_glory[user_id] += RANK_GLORY.get(data["rank"], 0)
 
     sorted_users = sorted(user_glory.items(), key=lambda x: x[1], reverse=True)
     return [{"user_id": uid, "glory": glory} for uid, glory in sorted_users[:limit]]

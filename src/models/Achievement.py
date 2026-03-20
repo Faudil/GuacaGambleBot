@@ -206,3 +206,19 @@ Achievement("pet_collector_legendary", "Dresseur de Légendes", "🐉", 500, "Po
 
 Achievement("pet_collector_all", "Maître du Monde Animal", "🌍", 1000, "Possède absolument toutes les espèces de familiers (19).",
             lambda s: s.get("collected_all_pets", 0) >= 19)
+
+# --- PET RANKS ---
+Achievement("rank_bronze", "Compétiteur Né", "🥉", 50, "Place un familier au rang Bronze.",
+            lambda s: any("Bronze" in r for r in s.get("pet_ranks", [])))
+
+Achievement("rank_silver", "Challenger", "🥈", 100, "Place un familier au rang Argent.",
+            lambda s: any("Argent" in r for r in s.get("pet_ranks", [])))
+
+Achievement("rank_gold", "Gladiateur Doré", "🥇", 500, "Place un familier au rang Or.",
+            lambda s: any("Or" in r for r in s.get("pet_ranks", [])))
+
+Achievement("rank_diamond", "L'Élite", "💎", 1000, "Place un familier au rang Diamant.",
+            lambda s: any("Diamant" in r for r in s.get("pet_ranks", [])))
+
+Achievement("rank_top5", "Maître de l'Olympe", "🌟", 5000, "Hisse un familier dans le Top 5 Mondial.",
+            lambda s: any("Top 5" in r for r in s.get("pet_ranks", [])))

@@ -24,11 +24,21 @@ class Achievements(commands.Cog):
         
         total_glory = sum(ach.glory for ach in unlocked_achievements)
         
+        from src.database.pets import get_all_pet_ranks, RANK_GLORY
+        ranks = get_all_pet_ranks()
+        pet_glory = sum(RANK_GLORY.get(data["rank"], 0) for data in ranks.values() if data["user_id"] == user_id)
+        total_glory += pet_glory
+        
         embed = discord.Embed(
             title=f"🏆 Succès de {ctx.author.display_name}", 
-            description=f"**Points de Gloire Totaux : {total_glory}** 🌟\n\n", 
+            description=f"**Points de Gloire Totaux : {total_glory}** 🌟\n", 
             color=discord.Color.gold()
         )
+        
+        if pet_glory > 0:
+            embed.description += f"*(dont {pet_glory} attribués par le rang de vos familiers)*\n\n"
+        else:
+            embed.description += "\n"
         
         if not unlocked_achievements:
             embed.description += "Vous n'avez débloqué aucun succès pour le moment."

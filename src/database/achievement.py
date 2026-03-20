@@ -45,6 +45,10 @@ def get_user_stats(user_id: int) -> dict:
             stats["collected_epic_pets"] = 0
             stats["collected_legendary_pets"] = 0
             stats["collected_all_pets"] = 0
+            
+        from src.database.pets import get_all_pet_ranks
+        ranks = get_all_pet_ranks()
+        stats["pet_ranks"] = [data["rank"] for data in ranks.values() if data["user_id"] == user_id]
         
         return stats
     finally:
