@@ -484,32 +484,31 @@ class Pet:
         base_dmg = max(min_dmg, self.real_atk - (target.real_defense * fatigue_mult))
 
         is_crit = random.randint(1, 100) <= self.crit_c if can_crit else False
-        crit_mult = self.crit_d if is_crit else 1.0
+        crit_mult = random.uniform(1 + (self.crit_d - 1) / 2, self.crit_d) if is_crit else 1.0
 
         base_dmg = int(base_dmg * crit_mult * random.uniform(0.9, 1.1))
+        final_dmg = base_dmg
 
-        new_theorical_hp = max(0, (target.hp - base_dmg))
+        new_theorical_hp = max(0, (target.hp - final_dmg))
         hundred_steps = (target.hp - 1) // 100 - new_theorical_hp // 100
         gating_msg = ""
         if hundred_steps > 0:
             tmp_dmg = 0
-            base_dmg -= 1
+            final_dmg -= 1
             target.hp -= 1
             for step in range(0, hundred_steps):
                 gate_prob = ((target.hp + 1) % 100) / 200 if step < 1 and (target.hp + 1) % 100 != 0 else 0.5
                 gate_prob *= 1 - self.real_acc / 100
                 if random.random() < gate_prob:  # Gating check sucess
-                    tmp_dmg += min(base_dmg, target.hp % 100)
-                    base_dmg = 0
+                    tmp_dmg += min(final_dmg, target.hp % 100)
+                    final_dmg = 0
                     gating_msg = f"🛡 Mais {target.nickname} se concentre et bloque les dégâts à {tmp_dmg} !!"
                     print(f"Gating on {step + 1} step")
                     break
                 else:
-                    tmp_dmg += min(base_dmg, 100)
-                    base_dmg -= min(base_dmg, 100)
-            final_dmg = tmp_dmg + base_dmg
-        else:
-            final_dmg = base_dmg
+                    tmp_dmg += min(final_dmg, 100)
+                    final_dmg -= min(final_dmg, 100)
+            final_dmg = tmp_dmg + final_dmg
 
         target.hp = max(0, target.hp - final_dmg)
         effect_msg = ""
