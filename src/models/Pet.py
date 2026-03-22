@@ -523,7 +523,7 @@ class Pet:
             msg += f" et se soigne de **{heal_amount}** PV 🩸"
 
 
-        proba_thorns = max(0.70, target.real_defense / target.real_atk)
+        proba_thorns = min(0.70, target.real_defense / target.real_atk)
         if random.random() < proba_thorns:
             thorns_dmg = int(target.proc_thorns())
             if thorns_dmg > 0:
