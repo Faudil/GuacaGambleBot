@@ -223,7 +223,7 @@ class Pets(commands.Cog):
             await ctx.send(f"❌ Impossible d'équiper ce familier. Es-tu sûr de le posséder ?")
 
 
-    @commands.command(name='pet_rename')
+    @commands.command(name='pet_rename', aliases=["petrename", "pname"])
     async def rename_pet(self, ctx, *, new_name: str):
         """Renommer ton familier actif."""
         if len(new_name) > 20: return await ctx.send("❌ Ce nom est trop long (Max 20 caractères).")
@@ -233,8 +233,8 @@ class Pets(commands.Cog):
         await ctx.send(f"🏷️ Ton familier actif s'appelle désormais **{new_name}** !")
         return None
 
-    @commands.command(name='sell_pet', aliases=['vendre_familier'])
-    async def sell_pet(self, ctx, pet_id: int, buyer: discord.Member, price: int):
+    @commands.command(name='sell_pet', aliases=['vendre_familier', "pet_sell", "petsell"])
+    async def sell_pet(self, ctx, buyer: discord.Member, pet_id: int, price: int):
         """Vendre un familier à un autre joueur."""
         if ctx.author.id == buyer.id:
             return await ctx.send("❌ Tu ne peux pas te vendre un familier à toi-même !")
@@ -312,7 +312,7 @@ class Pets(commands.Cog):
             await ctx.send(embed=format_achievements_unlocks(unlocks))
         return None
 
-    @commands.command(name='feed', aliases=['nourrir', 'booster'])
+    @commands.command(name='feed', aliases=['nourrir', 'booster', "fd"])
     async def feed_pet(self, ctx, *, item_name: str = None):
         """Nourrir ton familier pour booster ses stats."""
         if not item_name:
@@ -389,7 +389,7 @@ class Pets(commands.Cog):
         update_pet(pet)
         return await ctx.send(f"🏥 **{pet.nickname}** s'est bien reposé et a récupéré **{int(restored)} PV** ! Ses PV sont maintenant au maximum. (tu as payé {price}$)")
 
-    @commands.command(name='petstats', aliases=['pstats', 'pet_stats', 'pet_stat'])
+    @commands.command(name='petstats', aliases=['pstats', 'pet_stats', 'pet_stat', "ps"])
     async def pet_stats(self, ctx, user: discord.User = None):
         """Voir les statistiques de ton familier actif."""
         if user:
@@ -437,7 +437,7 @@ class Pets(commands.Cog):
         embed.set_footer(text=f"Estomac : {pet.food_eaten} / {pet.max_food_capacity} | Rareté : {rarity}")
         return await ctx.send(embed=embed)
 
-    @commands.command(name='pet_battle', aliases=['arene', "petbattle"])
+    @commands.command(name='pet_battle', aliases=['arene', "petbattle", "pb"])
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def pet_battle(self, ctx, opponent: discord.Member, bet: int = 0):
         """Défier un autre joueur dans un combat de familiers."""
