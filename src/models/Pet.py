@@ -449,7 +449,7 @@ class Pet:
 
     @property
     def thorns_dmg(self) -> float:
-        return self.real_defense * 0.1 * self._thorn_multiplier
+        return self.real_defense * 0.1 + (self.real_defense * 0.05 * self._thorn_multiplier)
 
     def proc_thorns(self) -> float:
         self._thorn_multiplier += 1
@@ -516,7 +516,7 @@ class Pet:
         if is_effect_trigger and dmg_type is not None:
             effect_msg = target.apply_special_effect(dmg_type, final_dmg)
 
-        msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{final_dmg}** dégâts" + effect_msg
+        msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{base_dmg}** dégâts" + effect_msg
         
         if is_effect_trigger and dmg_type == DamageType.SCRATCH:
             heal_amount = int(self.real_atk * 0.3) * (2 if is_crit else 1)
@@ -524,7 +524,7 @@ class Pet:
             msg += f" et se soigne de **{heal_amount}** PV 🩸"
 
 
-        proba_thorns = target.real_defense / target.real_atk
+        proba_thorns = max(0.70, target.real_defense / target.real_atk)
         if random.random() < proba_thorns:
             thorns_dmg = int(target.proc_thorns())
             if thorns_dmg > 0:
