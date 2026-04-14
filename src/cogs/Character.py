@@ -2,6 +2,8 @@ import discord
 from discord.ext import commands
 
 from src.database.job import get_job_data
+from src.database.settings import get_language
+from src.utils.i18n import t
 
 
 def make_progress_bar(xp, xp_needed, length=10):
@@ -26,34 +28,44 @@ class Character(commands.Cog):
     @commands.command(name='level', aliases=['levels', 'jobstats', 'profil', 'skills', 'lvl'])
     async def level(self, ctx, target: discord.Member = None):
         """Affiche le niveau et les compétences d'un joueur."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         user = target if target else ctx.author
 
         jobs_config = {
-            "miner": {"emoji": "⛏️", "name": "Mineur", "color": "⬜"},
-            "fisher": {"emoji": "🎣", "name": "Pêcheur", "color": "🟦"},
-            "farmer": {"emoji": "🚜", "name": "Fermier", "color": "🟨"},
-            "gambler": {"emoji": "🎰", "name": "Gambleur", "color": "🟨"},
-            # "crafter": {"emoji": "🛠️", "name": "Artisan", "color": "🟧"}
+            "miner": {"emoji": "⛏️"},
+            "fisher": {"emoji": "🎣"},
+            "farmer": {"emoji": "🚜"},
+            "gambler": {"emoji": "🎰"},
+            "crafter": {"emoji": "🛠️"}
         }
+        
         embed = discord.Embed(
-            title=f"📊 Compétences de {user.name}",
+            title=t("profile.title", lang, user=user.name),
             color=discord.Color.gold()
         )
-        embed.set_thumbnail(url=user.avatar.url if user.avatar else None)
+        embed.set_thumbnail(url=user.display_avatar.url)
+        
         total_level = 0
         for job_key, info in jobs_config.items():
             level, current_xp = get_job_data(user.id, job_key)
 
             xp_needed = get_xp_requirement(level)
             progress_bar = make_progress_bar(current_xp, xp_needed)
+            
+            job_name = t(f"jobs.{job_key}", lang)
+            level_label = t("profile.level_label", lang, level=level)
+            xp_label = t("profile.xp_label", lang, current=current_xp, needed=xp_needed)
+            
             embed.add_field(
-                name=f"{info['emoji']} {info['name']} (Niv. {level})",
-                value=f"`{progress_bar}`\n*XP : {current_xp} / {xp_needed}*",
+                name=f"{info['emoji']} {job_name} ({level_label})",
+                value=f"`{progress_bar}`\n*{xp_label}*",
                 inline=False
             )
             total_level += level
-        embed.set_footer(text=f"Niveau Global : {total_level} | Continue de bosser !")
+            
+        embed.set_footer(text=t("profile.footer", lang, total=total_level))
         await ctx.send(embed=embed)
+
 
 async def setup(bot):
     await bot.add_cog(Character(bot))

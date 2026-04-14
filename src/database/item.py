@@ -47,6 +47,11 @@ def remove_item_from_inventory(user_id, item_name, quantity: int = 1) -> bool:
 
 
 def add_item_to_inventory(user_id, item_name, quantity: int = 1) -> bool:
+    from src.database.housing import is_inventory_full
+    full, current, limit = is_inventory_full(user_id)
+    if current + quantity > limit:
+        return False
+        
     conn = get_connection()
     try:
         item = conn.execute("SELECT id FROM items WHERE name = ?", (item_name,)).fetchone()
@@ -160,7 +165,7 @@ def get_all_user_inventory(user_id) -> list[Dict]:
     result = []
     try:
         rows = conn.execute("""
-                            SELECT i.id, i.name, inv.quantity
+                            SELECT i.id, i.name, i.description, inv.quantity
                             FROM inventory inv
                                      JOIN items i ON inv.item_id = i.id
                             WHERE inv.user_id = ?
@@ -170,9 +175,9 @@ def get_all_user_inventory(user_id) -> list[Dict]:
             result.append({
                 "id": row['id'],
                 "name": row['name'],
+                "description": row['description'],
                 "quantity": row['quantity']
             })
-        return result
     finally:
         conn.close()
         return result

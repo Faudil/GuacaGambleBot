@@ -85,3 +85,62 @@ class StarFruit(ResourceItem):
             "Fruit Étoile", 250, "Un fruit cosmique d'une autre dimension.", ItemRarity.legendary,
             {"stat": "crit_d", "amount": 0.2}
         )
+
+# --- SEEDS ---
+
+class Seed(ResourceItem):
+    def __init__(self, name, price, desc, crop_class, grow_time, rarity=ItemRarity.common):
+        super().__init__(name, price, desc, rarity=rarity)
+        self.crop_class = crop_class
+        self.grow_time = grow_time
+
+    async def use(self, ctx, **kwargs):
+        from src.database.settings import get_language
+        from src.utils.i18n import t
+        lang = get_language(ctx.guild.id if ctx.guild else None)
+        await ctx.send(t("farm.seed_use_hint", lang, seed=self.display_name(lang)))
+        return False
+
+class WheatSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Blé", 2, "À planter pour obtenir du blé (5 min).", Wheat, 300)
+
+class OatSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine d'Avoine", 3, "À planter pour obtenir de l'avoine (10 min).", Oat, 600)
+
+class CornSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Maïs", 5, "À planter pour obtenir du maïs (30 min).", Corn, 1800)
+
+class PotatoSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Patate", 8, "À planter pour obtenir des patates (1h).", Potato, 3600, ItemRarity.rare)
+
+class TomatoSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Tomate", 10, "À planter pour obtenir des tomates (2h).", Tomato, 7200, ItemRarity.rare)
+
+class PumpkinSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Citrouille", 15, "À planter pour obtenir des citrouilles (4h).", Pumpkin, 14400, ItemRarity.rare)
+
+class CoffeeSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Café", 25, "À planter pour obtenir du café (8h).", CoffeeBean, 28800, ItemRarity.epic)
+
+class CocoaSeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Cacao", 30, "À planter pour obtenir du cacao (12h).", CocoaBean, 43200, ItemRarity.epic)
+
+class StrawberrySeed(Seed):
+    def __init__(self):
+        super().__init__("Graine de Fraise", 40, "À planter pour obtenir des fraises (18h).", Strawberry, 64800, ItemRarity.epic)
+
+class GoldenAppleSeed(Seed):
+    def __init__(self):
+        super().__init__("Pépin de Pomme Dorée", 75, "À planter pour obtenir des pommes dorées (24h).", GoldenApple, 86400, ItemRarity.epic)
+
+class StarFruitSeed(Seed):
+    def __init__(self):
+        super().__init__("Pépin de Fruit Étoile", 125, "À planter pour obtenir des fruits étoiles (48h).", StarFruit, 172800, ItemRarity.legendary)

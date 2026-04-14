@@ -9,7 +9,9 @@ from src.database.balance import update_balance, get_balance
 from src.database.bank import get_bank_data
 from src.database.loan import get_total_debt, repay_debt_logic
 from src.database.other import pay_random_broke_user
-from src.globals import DAILY_AMOUNT, CHANNEL_ID
+from src.database.settings import get_announcement_channel, get_language
+from src.globals import DAILY_AMOUNT
+from src.utils.i18n import t
 
 
 class Economy(commands.Cog):
@@ -29,13 +31,16 @@ class Economy(commands.Cog):
                 for guild in self.bot.guilds:
                     member = guild.get_member(winner_id)
                     if member:
-                        channel = guild.get_channel(CHANNEL_ID)
+                        lang = get_language(guild.id)
+                        channel_id = get_announcement_channel(guild.id)
+                        if channel_id == 0: continue
+                        channel = guild.get_channel(channel_id) if channel_id else guild.system_channel
                         if not channel and guild.text_channels:
                             channel = guild.text_channels[0]
                         if channel:
                             embed = discord.Embed(
-                                title="🍀 LE RSA 🍀",
-                                description=f"Le Guacamolistan vient en aide à un joueur fauché !\n**{member.mention}** vient de recevoir **${amount}** du glorieux régime.",
+                                title=t("economy.rsa_title", lang),
+                                description=t("economy.rsa_desc", lang, user=member.mention, amount=amount),
                                 color=discord.Color.green()
                             )
                             embed.set_thumbnail(url=member.display_avatar.url)
@@ -49,20 +54,22 @@ class Economy(commands.Cog):
     @commands.command(name='balance', aliases=['bal'])
     async def balance(self, ctx, member: discord.Member = None):
         """Voir ton solde."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         user = ctx.author if member is None else member
         wallet, bank = get_bank_data(user.id)
         interest = (bank // 100) * 10
-        embed = discord.Embed(title="🏦 Ma Banque", color=discord.Color.blue())
-        embed.add_field(name="👛 Portefeuille", value=f"${wallet}", inline=True)
-        embed.add_field(name="🔒 Coffre-fort", value=f"${bank} / 500", inline=True)
-        embed.add_field(name="📈 Intérêts Daily", value=f"+${interest} / jour", inline=False)
-        embed.set_footer(text="Commandes : !dep <montant>, !withdraw <montant>")
+        embed = discord.Embed(title=t("economy.balance_title", lang), color=discord.Color.blue())
+        embed.add_field(name=t("economy.wallet", lang), value=f"${wallet}", inline=True)
+        embed.add_field(name=t("economy.safe", lang), value=f"${bank} / 500", inline=True)
+        embed.add_field(name=t("economy.daily_interest", lang), value=f"+${interest} / jour", inline=False)
+        embed.set_footer(text=t("economy.balance_footer", lang))
         await ctx.send(embed=embed)
 
     @commands.command(name='daily')
     @daily_limit("daily", 1)
     async def daily(self, ctx):
         """Ton salaire journalier."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         user_id = str(ctx.author.id)
         _, bank_bal = get_bank_data(user_id)
 
@@ -76,14 +83,14 @@ class Economy(commands.Cog):
         new_balance = update_balance(user_id, player_gain)
         paid, lenders = repay_debt_logic(user_id, actual_repay)
 
-        embed = discord.Embed(title="💸 Voilà ta thune", color=discord.Color.green())
-        embed.add_field(name="Quantité", value=f"+${amount}")
+        embed = discord.Embed(title=t("economy.daily_title", lang), color=discord.Color.green())
+        embed.add_field(name=t("economy.quantity", lang), value=f"+${amount}")
         if debt > 0:
-            embed.add_field(name=f"\n📉 **Saisie sur salaire (remboursement des dettes)", value=f"-${actual_repay}", inline=False)
-            for lender, amount in lenders:
-                embed.add_field(name=f"\n🤵 Tu as remboursé {self.bot.get_user(int(lender)).display_name} de ", value=f"${amount}", inline=False)
-        embed.add_field(name="Ta balance", value=f"${new_balance}")
-        embed.set_footer(text="Reviens demain !")
+            embed.add_field(name=t("economy.tax_repayment", lang), value=f"-${actual_repay}", inline=False)
+            for lender, famount in lenders:
+                embed.add_field(name=t("economy.repaid_lender", lang, lender=self.bot.get_user(int(lender)).display_name), value=f"${famount}", inline=False)
+        embed.add_field(name=t("economy.your_balance", lang), value=f"${new_balance}")
+        embed.set_footer(text=t("economy.daily_footer", lang))
         await ctx.send(embed=embed)
         
         from src.database.achievement import increment_stat
@@ -91,31 +98,32 @@ class Economy(commands.Cog):
 
         unlocks = check_and_unlock_achievements(int(user_id))
         if unlocks:
-            await ctx.send(embed=format_achievements_unlocks(unlocks))
+            await ctx.send(embed=format_achievements_unlocks(unlocks, lang))
 
     @commands.command(name='give', aliases=['pay'])
     async def give(self, ctx, recipient: discord.Member, amount: int) -> None:
         """Faire un virement (donner de l'argent)."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         sender_id = ctx.author.id
         recipient_id = recipient.id
         if sender_id == recipient_id or amount <= 0:
-            return await ctx.send("❌ Transaction invalide.")
+            return await ctx.send(t("economy.give_invalid", lang))
         if get_balance(sender_id) < amount:
-            return await ctx.send("❌ T'as pas assez d'argent.")
+            return await ctx.send(t("economy.give_no_money", lang))
         update_balance(sender_id, -amount)
         update_balance(recipient_id, amount)
-        embed = discord.Embed(title="💸 Transaction complète", color=discord.Color.green())
-        embed.add_field(name="Donneur", value=ctx.author.display_name, inline=True)
-        embed.add_field(name="Receveur", value=recipient.display_name, inline=True)
-        embed.add_field(name="Quantité", value=f"**${amount}**", inline=False)
+        embed = discord.Embed(title=t("economy.give_title", lang), color=discord.Color.green())
+        embed.add_field(name=t("economy.sender", lang), value=ctx.author.display_name, inline=True)
+        embed.add_field(name=t("economy.receiver", lang), value=recipient.display_name, inline=True)
+        embed.add_field(name=t("economy.quantity", lang), value=f"**${amount}**", inline=False)
         await ctx.send(embed=embed)
 
         unlocks = check_and_unlock_achievements(sender_id)
         if unlocks:
-            await ctx.send(embed=format_achievements_unlocks(unlocks))
+            await ctx.send(embed=format_achievements_unlocks(unlocks, lang))
         unlocks = check_and_unlock_achievements(recipient_id)
         if unlocks:
-            await ctx.send(embed=format_achievements_unlocks(unlocks))
+            await ctx.send(embed=format_achievements_unlocks(unlocks, lang))
         return None
 
 

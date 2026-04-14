@@ -15,7 +15,8 @@ from src.items.Bow import Bow
 from src.items.CheatCoin import CheatCoin
 from src.items.Coffee import Coffee
 from src.items.FarmItem import Wheat, Oat, Potato, Tomato, Pumpkin, CocoaBean, Strawberry, GoldenApple, StarFruit, Corn, \
-    RottenPlant, CoffeeBean
+    RottenPlant, CoffeeBean, \
+    WheatSeed, OatSeed, CornSeed, PotatoSeed, TomatoSeed, PumpkinSeed, CoffeeSeed, CocoaSeed, StrawberrySeed, GoldenAppleSeed, StarFruitSeed
 from src.items.Fertilizer import Fertilizer
 from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
     Shark
@@ -187,6 +188,19 @@ def initialize_items():
     StarFruit().register()
     RottenPlant().register()
 
+    # Seeds
+    WheatSeed().register()
+    OatSeed().register()
+    CornSeed().register()
+    PotatoSeed().register()
+    TomatoSeed().register()
+    PumpkinSeed().register()
+    CoffeeSeed().register()
+    CocoaSeed().register()
+    StrawberrySeed().register()
+    GoldenAppleSeed().register()
+    StarFruitSeed().register()
+
     # Lands to buy
     VegetablePatchDeed().register()
     GreenhouseDeed().register()
@@ -197,8 +211,13 @@ def initialize_items():
 
     print(f"✅ {len(ITEMS_REGISTRY)} objets chargés dans le système.")
 
+from src.models.quests import initialize_quests
+from src.models.npcs import initialize_npcs
+
 async def main():
     initialize_items()
+    initialize_quests()
+    initialize_npcs()
     async with bot:
         await load_extensions()
         await bot.start(TOKEN)

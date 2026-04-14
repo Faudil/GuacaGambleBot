@@ -15,16 +15,21 @@ def add_money_to_all(amount):
         conn.close()
 
 
-def get_top_users(limit=5):
+def get_top_users(limit=5, server_member_ids=None):
     conn = get_connection()
-    rows = conn.execute("SELECT user_id, balance FROM users ORDER BY balance DESC LIMIT ?", (limit,)).fetchall()
+    if server_member_ids is not None and len(server_member_ids) > 0:
+        marks = ','.join('?' * len(server_member_ids))
+        query = f"SELECT user_id, balance FROM users WHERE user_id IN ({marks}) ORDER BY balance DESC LIMIT ?"
+        params = tuple(server_member_ids) + (limit,)
+        rows = conn.execute(query, params).fetchall()
+    else:
+        rows = conn.execute("SELECT user_id, balance FROM users ORDER BY balance DESC LIMIT ?", (limit,)).fetchall()
     conn.close()
     for row in rows:
         yield {"user_id": row[0], "balance": row[1]}
 
 
 def pay_random_broke_user(amount, max_balance=0):
-    """Sélectionne UN utilisateur fauché au hasard et le renfloue."""
     conn = get_connection()
     try:
         cursor = conn.execute(
@@ -57,12 +62,17 @@ def reset_user_limit(user_id, activity_name):
     conn.close()
 
 
-def get_top_glory_users(limit=5):
+def get_top_glory_users(limit=5, server_member_ids=None, server_id=None):
     from src.models.Achievement import Achievement
     from src.database.pets import get_all_pet_ranks, RANK_GLORY
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT user_id, achievement_id FROM user_achievements").fetchall()
+        if server_member_ids is not None and len(server_member_ids) > 0:
+            marks = ','.join('?' * len(server_member_ids))
+            query = f"SELECT user_id, achievement_id FROM user_achievements WHERE user_id IN ({marks})"
+            rows = conn.execute(query, tuple(server_member_ids)).fetchall()
+        else:
+            rows = conn.execute("SELECT user_id, achievement_id FROM user_achievements").fetchall()
     finally:
         conn.close()
     
@@ -76,9 +86,11 @@ def get_top_glory_users(limit=5):
                 user_glory[user_id] = 0
             user_glory[user_id] += ach.glory
 
-    ranks = get_all_pet_ranks()
+    ranks = get_all_pet_ranks(server_id)
     for pet_id, data in ranks.items():
         user_id = data["user_id"]
+        if server_member_ids is not None and user_id not in server_member_ids:
+            continue
         if user_id not in user_glory:
             user_glory[user_id] = 0
         user_glory[user_id] += RANK_GLORY.get(data["rank"], 0)
@@ -87,10 +99,18 @@ def get_top_glory_users(limit=5):
     return [{"user_id": uid, "glory": glory} for uid, glory in sorted_users[:limit]]
 
 
-def get_top_pets(limit=5):
+def get_top_pets(limit=5, server_id=None):
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT id, user_id, nickname, pet_type, elo FROM user_pets ORDER BY elo DESC LIMIT ?", (limit,)).fetchall()
+        if server_id:
+            rows = conn.execute("""
+                SELECT up.id, up.user_id, up.nickname, up.pet_type, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                ORDER BY elo DESC, up.id ASC LIMIT ?
+            """, (server_id, limit)).fetchall()
+        else:
+            rows = conn.execute("SELECT id, user_id, nickname, pet_type, elo FROM user_pets ORDER BY elo DESC, id ASC LIMIT ?", (limit,)).fetchall()
         return [{"pet_id": row["id"], "user_id": row["user_id"], "nickname": row["nickname"], "pet_type": row["pet_type"], "elo": row["elo"]} for row in rows]
     finally:
         conn.close()

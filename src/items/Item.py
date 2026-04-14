@@ -21,6 +21,8 @@ class ItemType(Enum):
 
 
 
+from src.utils.i18n import t, get_item_name, get_item_description
+
 class Item:
     def __init__(self, name, price, description, item_type: ItemType, rarity: ItemRarity=ItemRarity.common, image_url=None, pet_effet=None):
         self.name = name.lower()
@@ -31,6 +33,12 @@ class Item:
         self.rarity = rarity
         self.image_url = image_url
         self.pet_effect = pet_effet
+
+    def display_name(self, lang: str = 'fr'):
+        return get_item_name(self.name, lang)
+
+    def display_description(self, lang: str = 'fr'):
+        return get_item_description(self.name, lang)
 
     def get_discord_color(self):
         colors = {
@@ -60,5 +68,7 @@ class Item:
             conn.close()
 
     async def use(self, ctx, **kwargs):
-        await ctx.send(f"Cet objet ({self.name}) ne fait rien pour l'instant.")
+        from src.database.settings import get_language
+        lang = get_language(ctx.guild.id if ctx.guild else None)
+        await ctx.send(t("items.base_use_msg", lang, item_name=self.display_name(lang)))
         return False

@@ -1,8 +1,8 @@
 import random
 import enum
 from typing import Optional
-
 from src.items.Item import ItemRarity
+from src.utils.i18n import t, get_pet_name
 
 
 class PetBonus(enum.Enum):
@@ -56,7 +56,51 @@ PET_DAMAGE_TYPES = {
 
     # Legendary
     "Dragon": DamageType.FIRE,
+
+# Common
+    "Hamster": DamageType.FIRE,
+    "Fourmi": DamageType.BITE,
+    "Hérisson": DamageType.SCRATCH,
+    "Canard": DamageType.BITE,
+    "Chouette": DamageType.SCRATCH,
+    "Paresseux": DamageType.SCRATCH,
+
+
+# Rare
+    "Kangourou": DamageType.IMPACT,
+    "Iguane": DamageType.POISON,
+    "Gorille": DamageType.IMPACT,
+    "Scorpion": DamageType.POISON,
+    "Bison": DamageType.IMPACT,
+
+
+# Epic
+    "Rhino": DamageType.IMPACT,
+    "Aigle": DamageType.SCRATCH,
+    "Crocodile": DamageType.BITE,
+    "Putois": DamageType.POISON,
+    "Dauphin": DamageType.IMPACT,
+    "Léopard": DamageType.BITE,
+    "Lion": DamageType.SCRATCH,
+    "Ours polaire": DamageType.BITE,
+
+
+# Legendary
+    "Tyrannosaure": DamageType.BITE,
+    "Diplodocus": DamageType.IMPACT,
+    "Mamouth": DamageType.IMPACT,
+    "Mégalodon": DamageType.BITE,
+    "Kraken": DamageType.POISON,
+    "Licorne": DamageType.FIRE,
+    "Phoenix": DamageType.FIRE,
+    "Cerbère": DamageType.FIRE,
+    "Fenrir": DamageType.SCRATCH,
+    "Ratatosk": DamageType.SCRATCH,
+    "Nidhögg": DamageType.POISON,
+    "Bedawang": DamageType.POISON,
 }
+
+
 
 
 PETS_DB = {
@@ -174,6 +218,200 @@ PETS_DB = {
         "rarity": ItemRarity.legendary, "emoji": "🐉", "bonus": PetBonus.HUNT,
         "hp": 130, "attack": 35, "defense": 20, "speed": 20,
         "dge": 15, "acc": 25, "crit_chance": 10, "crit_dmg": 1.2
+    },
+
+# COMMON AGAIN
+
+    "Hamster": {
+        "rarity": ItemRarity.common, "emoji": "🐹", "bonus": PetBonus.FARM,
+        "hp": 25, "attack": 5, "defense": 10, "speed": 25,
+        "dge": 22, "acc": 5, "crit_chance": 10, "crit_dmg": 1.5
+    },
+
+    "Fourmi": {
+        "rarity": ItemRarity.common, "emoji": "🐜", "bonus": PetBonus.MINE,
+        "hp": 5, "attack": 5, "defense": 5, "speed": 5,
+        "dge": 5, "acc": 5, "crit_chance": 5, "crit_dmg": 1.2
+    },
+
+    "Hérisson": {
+        "rarity": ItemRarity.common, "emoji": "🦔", "bonus": PetBonus.MINE,
+        "hp": 28, "attack": 5, "defense": 26, "speed": 18,
+        "dge": 5, "acc": 5, "crit_chance": 5, "crit_dmg": 1.5
+    },
+
+    "Canard": {
+        "rarity": ItemRarity.common, "emoji": "🦆", "bonus": PetBonus.FISH,
+        "hp": 30, "attack": 10, "defense": 8, "speed": 21,
+        "dge": 9, "acc": 17, "crit_chance": 5, "crit_dmg": 1.7
+    },
+
+    "Chouette": {
+        "rarity": ItemRarity.common, "emoji": "🦉", "bonus": PetBonus.HUNT,
+        "hp": 35, "attack": 15, "defense": 5, "speed": 25,
+        "dge": 8, "acc": 20, "crit_chance": 10, "crit_dmg": 1.5
+    },
+
+    "Paresseux": {
+        "rarity": ItemRarity.common, "emoji": "🦥", "bonus": PetBonus.FISH,
+        "hp": 50, "attack": 15, "defense": 15, "speed": 2,
+        "dge": 0, "acc": 10, "crit_chance": 5, "crit_dmg": 1.2
+    },
+
+# RARE
+    "Kangourou": {
+        "rarity": ItemRarity.epic, "emoji": "🦘", "bonus": PetBonus.FARM,
+        "hp": 65, "attack": 25, "defense": 15, "speed": 27,
+        "dge": 18, "acc": 15, "crit_chance": 15, "crit_dmg": 2
+    },
+
+    "Iguane": {
+        "rarity": ItemRarity.epic, "emoji": "🦎", "bonus": PetBonus.HUNT,
+        "hp": 60, "attack": 20, "defense": 20, "speed": 20,
+        "dge": 15, "acc": 18, "crit_chance": 18, "crit_dmg": 1.7
+    },
+
+    "Gorille": {
+        "rarity": ItemRarity.rare, "emoji": "🦍", "bonus": PetBonus.FARM,
+        "hp": 70, "attack": 22, "defense": 22, "speed": 12,
+        "dge": 7, "acc": 12, "crit_chance": 10, "crit_dmg": 1.6
+    },
+
+    "Scorpion": {
+        "rarity": ItemRarity.rare, "emoji": "🦂", "bonus": PetBonus.HUNT,
+        "hp": 40, "attack": 22, "defense": 10, "speed": 25,
+        "dge": 15, "acc": 15, "crit_chance": 25, "crit_dmg": 1.8
+    },
+
+    "Bison": {
+        "rarity": ItemRarity.rare, "emoji": "🦬", "bonus": PetBonus.FARM,
+        "hp": 80, "attack": 10, "defense": 18, "speed": 25,
+        "dge": 8, "acc": 15, "crit_chance": 5, "crit_dmg": 1.6
+    },
+
+# EPIC
+
+    "Aigle": {
+        "rarity": ItemRarity.epic, "emoji": "🦅", "bonus": PetBonus.HUNT,
+        "hp": 80, "attack": 30, "defense": 10, "speed": 35,
+        "dge": 22, "acc": 25, "crit_chance": 20, "crit_dmg": 2.0
+    },
+
+    "Rhino": {
+        "rarity": ItemRarity.epic, "emoji": "🦏", "bonus": PetBonus.MINE,
+        "hp": 90, "attack": 26, "defense": 32, "speed": 12,
+        "dge": 5, "acc": 10, "crit_chance": 12, "crit_dmg": 1.7
+    },
+
+    "Crocodile": {
+        "rarity": ItemRarity.epic, "emoji": "🐊", "bonus": PetBonus.FISH,
+        "hp": 80, "attack": 30, "defense": 20, "speed": 18,
+        "dge": 17, "acc": 25, "crit_chance": 20, "crit_dmg": 2.0
+    },
+
+    "Putois": {
+        "rarity": ItemRarity.common, "emoji": "🦨", "bonus": PetBonus.FARM,
+        "hp": 90, "attack": 15, "defense": 26, "speed": 12,
+        "dge": 24, "acc": 20, "crit_chance": 15, "crit_dmg": 1.7
+    },
+
+    "Dauphin": {
+        "rarity": ItemRarity.epic, "emoji": "🐬", "bonus": PetBonus.FISH,
+        "hp": 100, "attack": 18, "defense": 15, "speed": 32,
+        "dge": 22, "acc": 30, "crit_chance": 20, "crit_dmg": 2.0
+    },
+
+    "Lépoard": {
+        "rarity": ItemRarity.epic, "emoji": "🐆", "bonus": PetBonus.HUNT,
+        "hp": 75, "attack": 35, "defense": 12, "speed": 46,
+        "dge": 16, "acc": 18, "crit_chance": 20, "crit_dmg": 1.7
+    },
+
+    "Lion": {
+        "rarity": ItemRarity.epic, "emoji": "🦁", "bonus": PetBonus.HUNT,
+        "hp": 95, "attack": 35, "defense": 18, "speed": 18,
+        "dge": 10, "acc": 22, "crit_chance": 20, "crit_dmg": 1.7
+    },
+
+    "Ours polaire": {
+        "rarity": ItemRarity.rare, "emoji": "🐻‍❄️", "bonus": PetBonus.MINE,
+        "hp": 100, "attack": 30, "defense": 20, "speed": 8,
+        "dge": 2, "acc": 10, "crit_chance": 5, "crit_dmg": 2.0
+    },
+
+
+# Legendary
+
+    "Tyrannosaure": {
+        "rarity": ItemRarity.legendary, "emoji": "🦖", "bonus": PetBonus.HUNT,
+        "hp": 120, "attack": 40, "defense": 20, "speed": 20,
+        "dge": 15, "acc": 20, "crit_chance": 15, "crit_dmg": 2.0
+    },
+
+    "Diplodocus": {
+        "rarity": ItemRarity.legendary, "emoji": "🦕", "bonus": PetBonus.FISH,
+        "hp": 140, "attack": 20, "defense": 40, "speed": 15,
+        "dge": 10, "acc": 20, "crit_chance": 10, "crit_dmg": 1.2
+    },
+
+    "Mamouth": {
+        "rarity": ItemRarity.legendary, "emoji": "🦣", "bonus": PetBonus.MINE,
+        "hp": 180, "attack": 20, "defense": 40, "speed": 10,
+        "dge": 5, "acc": 10, "crit_chance": 5, "crit_dmg": 1.5
+    },
+
+    "Mégalodon": {
+        "rarity": ItemRarity.legendary, "emoji": "🦈", "bonus": PetBonus.FISH,
+        "hp": 130, "attack": 35, "defense": 25, "speed": 18,
+        "dge": 10, "acc": 20, "crit_chance": 15, "crit_dmg": 1.5
+    },
+
+    "Kraken": {
+        "rarity": ItemRarity.legendary, "emoji": "🦑", "bonus": PetBonus.FISH,
+        "hp": 130, "attack": 25, "defense": 35, "speed": 18,
+        "dge": 20, "acc": 10, "crit_chance": 15, "crit_dmg": 1.5
+    },
+
+    "Licorne": {
+        "rarity": ItemRarity.legendary, "emoji": "🦄", "bonus": PetBonus.FARM,
+        "hp": 100, "attack": 28, "defense": 20, "speed": 32,
+        "dge": 20, "acc": 27, "crit_chance": 12, "crit_dmg": 1.2
+    },
+
+    "Phoenix": {
+        "rarity": ItemRarity.legendary, "emoji": "🐦‍🔥", "bonus": PetBonus.FARM,
+        "hp": 200, "attack": 20, "defense": 15, "speed": 30,
+        "dge": 25, "acc": 15, "crit_chance": 15, "crit_dmg": 1.5
+    },
+
+    "Cerbère": {
+        "rarity": ItemRarity.legendary, "emoji": "🐺🐺🐺", "bonus": PetBonus.HUNT,
+        "hp": 90, "attack": 35, "defense": 20, "speed": 28,
+        "dge": 15, "acc": 25, "crit_chance": 25, "crit_dmg": 1.5
+    },
+
+    "Fenrir": {
+        "rarity": ItemRarity.legendary, "emoji": "🐺⛓️", "bonus": PetBonus.MINE,
+        "hp": 100, "attack": 40, "defense": 20, "speed": 30,
+        "dge": 20, "acc": 20, "crit_chance": 20, "crit_dmg": 1.5
+    },
+
+    "Ratatosk": {
+        "rarity": ItemRarity.legendary, "emoji": "🐿️❄️", "bonus": PetBonus.MINE,
+        "hp": 90, "attack": 30, "defense": 15, "speed": 40,
+        "dge": 25, "acc": 30, "crit_chance": 25, "crit_dmg": 2.0
+    },
+
+    "Nidhögg": {
+        "rarity": ItemRarity.legendary, "emoji": "🐍⚡", "bonus": PetBonus.MINE,
+        "hp": 110, "attack": 32, "defense": 18, "speed": 20,
+        "dge": 20, "acc": 50, "crit_chance": 18, "crit_dmg": 1.7
+    },
+
+    "Bedawang": {
+        "rarity": ItemRarity.legendary, "emoji": "🐢🌳", "bonus": PetBonus.FARM,
+        "hp": 200, "attack": 25, "defense": 40, "speed": 1,
+        "dge": 0, "acc": 25, "crit_chance": 10, "crit_dmg": 1.2
     }
 }
 
@@ -196,7 +434,7 @@ class Pet:
     def __init__(self, pet_id=None, user_id=None, pet_type="Escargot", nickname=None,
                  level=1, food_eaten=0, xp=0, max_hp=50, hp=50, atk=10, defense=5,
                  speed=10, dge=5, acc=0, crit_c=5, crit_d=1.5, elo=0,
-                 bonus=0, spc_c=0, is_active=0, trs_lvl=0):
+                 bonus=0, spc_c=0, is_active=0, on_expedition=0, trs_lvl=0):
 
         self.id = pet_id
         self.user_id = user_id
@@ -208,6 +446,7 @@ class Pet:
         self.xp = xp
         self.elo = elo
         self.is_active = is_active
+        self.on_expedition = on_expedition
         self.bonus_type = bonus
 
         self.max_hp = max_hp
@@ -259,7 +498,8 @@ class Pet:
             bonus=row.get('bonus', 0),
             spc_c=row.get('spc_c', 0),
             trs_lvl=row.get('trs_lvl', 0),
-            is_active=row.get('is_active', 0)
+            is_active=row.get('is_active', 0),
+            on_expedition=row.get('on_expedition', 0)
         )
 
     @classmethod
@@ -307,11 +547,14 @@ class Pet:
     def heal_full(self):
         self.hp = self.max_hp
 
-    def feed(self, item) -> Optional[str]:
+    def display_name(self, lang: str = 'fr') -> str:
+        return get_pet_name(self.pet_type, lang)
+
+    def feed(self, item, lang: str = 'fr') -> Optional[str]:
         if self.food_eaten >= self.max_food_capacity:
-            return f"🛑 **{self.nickname}** est gavé ! Il a atteint son potentiel maximum de nourriture ({self.max_food_capacity}/{self.max_food_capacity})."
+            return t("pets.feed.full", lang, name=self.nickname, current=self.food_eaten, max=self.max_food_capacity)
         if not item.pet_effect:
-            return f"🤢 **{self.nickname}** renifle le **{item.name}** et refuse de le manger. Ce n'est pas nourrissant."
+            return t("pets.feed.refuse", lang, name=self.nickname, item=item.display_name(lang))
         stat_to_boost = item.pet_effect["stat"]
         boost_amount = item.pet_effect["amount"]
         current_stat_value = getattr(self, stat_to_boost, 0)
@@ -368,59 +611,59 @@ class Pet:
         self.food_eaten = 0
         return True
 
-    def tick_effects(self) -> str:
+    def tick_effects(self, lang: str = 'fr') -> str:
         msg_parts: list[str] = []
         if self._poisoned_turns > 0:
             dmg = max(1, int(self.max_hp * 0.05))
             self.hp = max(0, self.hp - dmg)
-            msg_parts.append(f"🧪 **{self.nickname}** souffre du poison et perd **{dmg}** PV.")
+            msg_parts.append(t("pet_combat.poison_suffers", lang, pet=self.nickname, dmg=dmg))
             self._poisoned_turns -= 1
             if self._poisoned_turns == 0:
                 self._atk_malus = 0
-                msg_parts.append(f"✨ **{self.nickname}** n'est plus empoisonné !")
+                msg_parts.append(t("pet_combat.poison_end", lang, pet=self.nickname))
 
         if self._burning_turns > 0:
             dmg = max(5, int(self.max_hp * 0.08))
             self.hp = max(0, self.hp - dmg)
-            msg_parts.append(f"🔥 **{self.nickname}** brûle et perd **{dmg}** PV.")
+            msg_parts.append(t("pet_combat.burn_suffers", lang, pet=self.nickname, dmg=dmg))
             self._burning_turns -= 1
             if self._burning_turns == 0:
                 self._dge_malus = 0
-                msg_parts.append(f"💦 **{self.nickname}** ne brûle plus !")
+                msg_parts.append(t("pet_combat.burn_end", lang, pet=self.nickname))
 
         if self._bleeding_turns > 0:
             dmg = max(2, int(self.max_hp * 0.06))
             self.hp = max(0, self.hp - dmg)
-            msg_parts.append(f"🩸 **{self.nickname}** saigne et perd **{dmg}** PV.")
+            msg_parts.append(t("pet_combat.bleed_suffers", lang, pet=self.nickname, dmg=dmg))
             self._bleeding_turns -= 1
             if self._bleeding_turns == 0:
                 self._speed_malus = 0
-                msg_parts.append(f"🩹 **{self.nickname}** ne saigne plus !")
+                msg_parts.append(t("pet_combat.bleed_end", lang, pet=self.nickname))
 
         return "\n".join(msg_parts)
 
-    def apply_special_effect(self, effect: DamageType, damage_dealt: int = 0) -> str:
+    def apply_special_effect(self, effect: DamageType, lang: str = 'fr') -> str:
         msg = ""
         if effect == DamageType.BITE:
             self._bleeding_turns = 3
             self._speed_malus = self.speed * 0.2
-            msg = " et lui inflige **Saignement** 🩸"
+            msg = t("pet_combat.bite_effect", lang)
         elif effect == DamageType.SCRATCH:
             self._acc_malus = self.acc * 0.3
             self._dge_malus = self.dge * 0.3
-            msg = " et l'**affaiblit** (Précision/Esquive réduites) 📉"
+            msg = t("pet_combat.scratch_effect", lang)
         elif effect == DamageType.POISON:
             self._poisoned_turns = 3
             self._atk_malus = self.atk * 0.3
-            msg = " et l'**Empoisonne** 🧪"
+            msg = t("pet_combat.poison_effect", lang)
         elif effect == DamageType.IMPACT:
             self._stunned_turns = random.randint(1, 2)
             self._defense_malus = self.defense * 0.2
-            msg = " et l'**Étourdit** 💫"
+            msg = t("pet_combat.impact_effect", lang)
         elif effect == DamageType.FIRE:
             self._burning_turns = 2
             self._dge_malus = self.dge * 0.8
-            msg = " et le **Brûle** 🔥"
+            msg = t("pet_combat.fire_effect", lang)
         return msg
 
     @property
@@ -456,9 +699,9 @@ class Pet:
         return self.thorns_dmg
 
 
-    def attack(self, target: 'Pet', can_crit: bool=True, can_effect: bool=True, fatigue_mult: float=1.0):
+    def attack(self, target: 'Pet', can_crit: bool=True, can_effect: bool=True, fatigue_mult: float=1.0, lang: str = 'fr'):
         msgs: list[str] = []
-        tick_msg = self.tick_effects()
+        tick_msg = self.tick_effects(lang)
         if tick_msg:
             msgs.append(tick_msg)
 
@@ -467,14 +710,14 @@ class Pet:
 
         if self.is_stunned:
             self._stunned_turns -= 1
-            msgs.append(f"💫 {self.emoji} **{self.nickname}** est assommé, il ne peut pas attaquer (tours restants: {self._stunned_turns + 1})")
+            msgs.append(t("pet_combat.stunned_log", lang, pet_emoji=self.emoji, pet=self.nickname, turns=self._stunned_turns + 1))
             if self._stunned_turns <= 0:
                 self._defense_malus = 0
             return "\n".join(msgs)
 
         hit_chance = max(20, min(100, int(100 + (self.real_acc * 1.0) - (target.real_dge * fatigue_mult))))
         if random.randint(1, 100) > hit_chance:
-            msgs.append(f"💨 {target.emoji} **{target.nickname}** esquive l'attaque de {self.nickname} !")
+            msgs.append(t("pet_combat.dodge_msg", lang, target_emoji=target.emoji, target=target.nickname, attacker=self.nickname))
             return "\n".join(msgs)
 
         dmg_type = PET_DAMAGE_TYPES.get(self.pet_type)
@@ -502,7 +745,7 @@ class Pet:
                 if random.random() < gate_prob:  # Gating check sucess
                     tmp_dmg += min(final_dmg, target.hp % 100)
                     final_dmg = 0
-                    gating_msg = f"🛡 Mais {target.nickname} se concentre et bloque les dégâts à {tmp_dmg} !!"
+                    gating_msg = t("pet_combat.gating", lang, pet=target.nickname, dmg=tmp_dmg)
                     print(f"Gating on {step + 1} step")
                     break
                 else:
@@ -513,14 +756,17 @@ class Pet:
         target.hp = max(0, target.hp - final_dmg)
         effect_msg = ""
         if is_effect_trigger and dmg_type is not None:
-            effect_msg = target.apply_special_effect(dmg_type, final_dmg)
+            effect_msg = target.apply_special_effect(dmg_type, lang)
 
-        msg = f"⚔️ {self.emoji} **{self.nickname}** inflige **{base_dmg}** dégâts" + effect_msg
+        if is_crit:
+            msg = t("pet_combat.crit_msg", lang, attacker_emoji=self.emoji, attacker=self.nickname, dmg=base_dmg) + effect_msg
+        else:
+            msg = t("pet_combat.hit_msg", lang, attacker_emoji=self.emoji, attacker=self.nickname, dmg=base_dmg) + effect_msg
         
         if is_effect_trigger and dmg_type == DamageType.SCRATCH:
             heal_amount = int(self.real_atk * 0.3) * (2 if is_crit else 1)
             self.hp = min(self.max_hp, self.hp + heal_amount)
-            msg += f" et se soigne de **{heal_amount}** PV 🩸"
+            msg += t("pet_combat.scratch_heal", lang, dmg=heal_amount)
 
 
         proba_thorns = min(0.70, target.real_defense / target.real_atk)
@@ -528,13 +774,11 @@ class Pet:
             thorns_dmg = int(target.proc_thorns())
             if thorns_dmg > 0:
                 self.hp = max(0, self.hp - thorns_dmg)
-                msg += f" mais subit **{thorns_dmg}** dégâts d'épines 🌵"
+                msg += t("pet_combat.thorns", lang, dmg=thorns_dmg)
 
-        if is_crit:
-            msgs.append(f"💥 **CRITIQUE !** {msg} !")
-        else:
-            msgs.append(f"{msg}.")
-        msgs.append(gating_msg)
+        msgs.append(msg)
+        if gating_msg:
+            msgs.append(gating_msg)
 
         return "\n".join(msgs)
 

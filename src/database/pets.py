@@ -3,17 +3,22 @@ from src.models.Pet import Pet
 
 
 def insert_new_pet(pet: Pet):
+    from src.database.housing import can_add_pet
+    can, current, limit = can_add_pet(pet.user_id)
+    if not can:
+        return None
+        
     conn = get_connection()
     try:
         cursor = conn.execute("""
                               INSERT INTO user_pets
                               (user_id, pet_type, nickname, level, xp, max_hp, hp, atk, defense, speed, dge, acc,
-                               crit_c, crit_d, elo, bonus, is_active)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                crit_c, crit_d, elo, bonus, is_active, on_expedition)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                               """, (
                                   pet.user_id, pet.pet_type, pet.nickname, pet.level, pet.xp, pet.max_hp, pet.hp,
                                   pet.atk, pet.defense, pet.speed, pet.dge, pet.acc, pet.crit_c, pet.crit_d,
-                                  pet.elo, pet.bonus_type, pet.is_active
+                                  pet.elo, pet.bonus_type, pet.is_active, pet.on_expedition
                               ))
         conn.commit()
         pet.id = cursor.lastrowid
@@ -43,22 +48,31 @@ def update_pet(pet: Pet):
                          trs_lvl=?,
                          elo=?,
                          bonus=?,
-                         food_eaten=?
+                         food_eaten=?,
+                         on_expedition=?
                      WHERE id = ?
                      """, (
                          pet.level, pet.nickname, pet.xp, pet.max_hp, pet.hp, pet.atk, pet.defense, pet.speed,
                          pet.dge, pet.acc, pet.crit_c, pet.crit_d, pet.spc_c, pet.trs_lvl, pet.elo, pet.bonus_type, pet.food_eaten,
-                         pet.id
+                         pet.on_expedition, pet.id
                      ))
         conn.commit()
     finally:
         conn.close()
 
 
-def get_active_pet(user_id) -> Pet:
+def get_active_pet(user_id, server_id=None) -> Pet:
     conn = get_connection()
     try:
-        row = conn.execute("SELECT * FROM user_pets WHERE user_id = ? AND is_active = 1", (user_id,)).fetchone()
+        if server_id:
+            row = conn.execute("""
+                SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                WHERE up.user_id = ? AND up.is_active = 1
+                """, (server_id, user_id)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM user_pets WHERE user_id = ? AND is_active = 1", (user_id,)).fetchone()
         if row:
             return Pet.from_db(dict(row))
         return None
@@ -66,10 +80,18 @@ def get_active_pet(user_id) -> Pet:
         conn.close()
 
 
-def get_all_pets(user_id) -> list[Pet]:
+def get_all_pets(user_id, server_id=None) -> list[Pet]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM user_pets WHERE user_id = ?", (user_id,)).fetchall()
+        if server_id:
+            rows = conn.execute("""
+                SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                WHERE up.user_id = ?
+                """, (server_id, user_id)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM user_pets WHERE user_id = ?", (user_id,)).fetchall()
         return [Pet.from_db(dict(row)) for row in rows]
     finally:
         conn.close()
@@ -86,10 +108,18 @@ def set_active_pet(user_id, pet_id):
         conn.close()
 
 
-def get_pet_by_id(pet_id: int) -> Pet:
+def get_pet_by_id(pet_id: int, server_id=None) -> Pet:
     conn = get_connection()
     try:
-        row = conn.execute("SELECT * FROM user_pets WHERE id = ?", (pet_id,)).fetchone()
+        if server_id:
+            row = conn.execute("""
+                SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                WHERE up.id = ?
+                """, (server_id, pet_id)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM user_pets WHERE id = ?", (pet_id,)).fetchone()
         if row:
             return Pet.from_db(dict(row))
         return None
@@ -106,6 +136,15 @@ def transfer_pet(pet_id: int, new_owner_id: int):
         conn.close()
 
 
+def delete_pet(pet_id: int):
+    conn = get_connection()
+    try:
+        conn.execute("DELETE FROM user_pets WHERE id = ?", (pet_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_random_pets(limit: int = 2, min_lvl=1) -> list[Pet]:
     conn = get_connection()
     try:
@@ -115,23 +154,36 @@ def get_random_pets(limit: int = 2, min_lvl=1) -> list[Pet]:
         conn.close()
 
 
-def get_random_pet_and_opponent(min_lvl=1, elo_range=50) -> list[Pet]:
+def get_random_pet_and_opponent(server_id: int, min_lvl=1, elo_range=50) -> list[Pet]:
     conn = get_connection()
     try:
-        pet1_row = conn.execute("SELECT * FROM user_pets WHERE level >= ? ORDER BY RANDOM() LIMIT 1", (min_lvl,)).fetchone()
+        pet1_row = conn.execute("""
+            SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+            FROM user_pets up
+            LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+            WHERE up.level >= ? AND up.is_active = 1
+            ORDER BY RANDOM() LIMIT 1
+            """, (server_id, min_lvl)).fetchone()
+        
         if not pet1_row:
             return []
             
-        pet2_row = conn.execute(
-            "SELECT * FROM user_pets WHERE level >= ? AND id != ? AND ABS(elo - ?) <= ? ORDER BY RANDOM() LIMIT 1", 
-            (min_lvl, pet1_row['id'], pet1_row['elo'], elo_range)
-        ).fetchone()
+        pet2_row = conn.execute("""
+            SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+            FROM user_pets up
+            LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+            WHERE up.level >= ? AND up.id != ? AND ABS(COALESCE(spe.elo, up.elo) - ?) <= ? AND up.is_active = 1
+            ORDER BY RANDOM() LIMIT 1
+            """, (server_id, min_lvl, pet1_row['id'], pet1_row['elo'], elo_range)).fetchone()
         
         if not pet2_row:
-            pet2_row = conn.execute(
-                "SELECT * FROM user_pets WHERE level >= ? AND id != ? ORDER BY ABS(elo - ?) ASC, RANDOM() LIMIT 1", 
-                (min_lvl, pet1_row['id'], pet1_row['elo'])
-            ).fetchone()
+            pet2_row = conn.execute("""
+                SELECT up.*, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                WHERE up.level >= ? AND up.id != ? AND up.is_active = 1
+                ORDER BY ABS(COALESCE(spe.elo, up.elo) - ?) ASC, RANDOM() LIMIT 1
+                """, (server_id, min_lvl, pet1_row['id'], pet1_row['elo'])).fetchone()
             
         if not pet2_row:
             return [Pet.from_db(dict(pet1_row))]
@@ -141,10 +193,14 @@ def get_random_pet_and_opponent(min_lvl=1, elo_range=50) -> list[Pet]:
         conn.close()
 
 
-def update_pet_elo(pet_id: int, elo: int):
+def update_pet_elo(pet_id: int, server_id: int, elo: int):
     conn = get_connection()
     try:
-        conn.execute("UPDATE user_pets SET elo = ? WHERE id = ?", (elo, pet_id))
+        conn.execute("""
+            INSERT INTO server_pet_elo (pet_id, server_id, elo)
+            VALUES (?, ?, ?)
+            ON CONFLICT(pet_id, server_id) DO UPDATE SET elo = excluded.elo
+            """, (pet_id, server_id, elo))
         conn.commit()
     finally:
         conn.close()
@@ -159,10 +215,19 @@ RANK_GLORY = {
 }
 
 
-def get_all_pet_ranks() -> dict:
+def get_all_pet_ranks(server_id: int = None) -> dict:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT id, user_id, elo FROM user_pets WHERE level >= 5 ORDER BY elo DESC, id ASC").fetchall()
+        if server_id:
+            rows = conn.execute("""
+                SELECT up.id, up.user_id, COALESCE(spe.elo, up.elo) as elo
+                FROM user_pets up
+                LEFT JOIN server_pet_elo spe ON up.id = spe.pet_id AND spe.server_id = ?
+                WHERE up.level >= 5
+                ORDER BY COALESCE(spe.elo, up.elo) DESC, up.id ASC
+            """, (server_id,)).fetchall()
+        else:
+            rows = conn.execute("SELECT id, user_id, elo FROM user_pets WHERE level >= 5 ORDER BY elo DESC, id ASC").fetchall()
     finally:
         conn.close()
 
@@ -215,8 +280,8 @@ def get_all_pet_ranks() -> dict:
     return ranks
 
 
-def get_pet_rank(pet_id: int) -> dict:
-    ranks = get_all_pet_ranks()
+def get_pet_rank(pet_id: int, server_id: int = None) -> dict:
+    ranks = get_all_pet_ranks(server_id)
     if pet_id in ranks:
         return {"rank": ranks[pet_id]["rank"], "progress": ranks[pet_id]["progress"]}
     return {"rank": "Non classé", "progress": 0}

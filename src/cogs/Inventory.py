@@ -2,8 +2,10 @@ import discord
 from discord.ext import commands
 
 from src.database.item import get_all_user_inventory
+from src.database.settings import get_language
 from src.globals import ITEMS_REGISTRY
 from src.items.Item import ItemRarity
+from src.utils.i18n import t, get_rarity_name, get_item_name
 
 
 class Inventory(commands.Cog):
@@ -23,14 +25,18 @@ class Inventory(commands.Cog):
     @commands.command(name='inventory', aliases=['inv', 'bag', 'sac'])
     async def inventory(self, ctx, user: discord.Member = None):
         """Voir ton sac à dos et tes objets."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         user = ctx.author if user is None else user
+        
+        from src.database.housing import is_inventory_full
+        full, current, limit = is_inventory_full(user.id)
+        
         inventory = get_all_user_inventory(user.id)
         if not inventory:
-            return await ctx.send(
-                f"🎒 Ton sac est vide, {user.mention} ! Va miner ou achète des trucs.")
+            return await ctx.send(t("inventory.empty", lang, user=user.mention) + f"\n📦 **Slots: `{current}/{limit}`**")
 
         embed = discord.Embed(
-            title=f"🎒 Sac à dos de {user.name}",
+            title=t("inventory.title", lang, user=user.name) + f" ({current}/{limit})",
             color=discord.Color.blue()
         )
         description_lines = []
@@ -42,11 +48,12 @@ class Inventory(commands.Cog):
             item_id = item['id']
             obj = ITEMS_REGISTRY[obj_name]
             emoji = self.get_rarity_emoji(obj.rarity)
-            line = f"🆔 `{item_id}` | {emoji} **{obj_name}** : `x{quantity}`"
+            display_name = get_item_name(obj_name, lang)
+            line = f"🆔 `{item_id}` | {emoji} **{display_name}** : `x{quantity}`"
             description_lines.append(line)
         full_text = "\n".join(description_lines)
         embed.description = full_text
-        embed.set_footer(text="Utilise !use <nom de l'objet> pour t'en servir !")
+        embed.set_footer(text=t("inventory.footer", lang))
         return await ctx.send(embed=embed)
 
 

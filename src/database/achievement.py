@@ -1,5 +1,6 @@
 from typing import Dict, Any
 from src.database.db_handler import get_connection
+from src.utils.i18n import t
 
 
 def increment_stat(user_id: int, stat_name: str, amount: int = 1):
@@ -15,6 +16,10 @@ def increment_stat(user_id: int, stat_name: str, amount: int = 1):
         conn.commit()
     finally:
         conn.close()
+
+    # -- Quest System Hook --
+    from src.utils.QuestManager import QuestManager
+    QuestManager.on_activity(user_id, stat_name, amount)
 
 
 def get_user_stats(user_id: int) -> dict:
@@ -50,6 +55,11 @@ def get_user_stats(user_id: int) -> dict:
         ranks = get_all_pet_ranks()
         stats["pet_ranks"] = [data["rank"] for data in ranks.values() if data["user_id"] == user_id]
         
+        from src.database.community import get_total_user_community_stats
+        community_stats = get_total_user_community_stats(user_id)
+        stats["community_money"] = community_stats["money"]
+        stats["community_items"] = community_stats["items"]
+        
         return stats
     finally:
         conn.close()
@@ -81,14 +91,21 @@ def check_and_unlock_achievements(user_id: int) -> list:
         conn.close()
 
 
-def format_achievements_unlocks(unlocks: list):
+def format_achievements_unlocks(unlocks: list, lang: str = "fr"):
     import discord
     if not unlocks:
         return None
     
     desc = ""
     for ach in unlocks:
-        desc += f"🎖️ **{ach.name}** {ach.emoji}\n*+{ach.glory} pts de Gloire*\n{ach.desc}\n\n"
+        ach_name = ach.name(lang)
+        ach_desc = ach.desc(lang)
+        glory_msg = t("achievements.ui.new_achievement_glory", lang, glory=ach.glory)
+        desc += f"🎖️ **{ach_name}** {ach.emoji}\n{glory_msg}\n{ach_desc}\n\n"
         
-    embed = discord.Embed(title="🎉 Nouveau Succès Débloqué !", description=desc, color=discord.Color.gold())
+    embed = discord.Embed(
+        title=t("achievements.ui.new_achievement_title", lang), 
+        description=desc, 
+        color=discord.Color.gold()
+    )
     return embed

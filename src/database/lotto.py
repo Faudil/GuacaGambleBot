@@ -4,15 +4,15 @@ from src.database.db_handler import get_connection
 from src.globals import BASE_JACKPOT
 
 
-def get_lotto_state():
+def get_lotto_state(server_id: int):
     conn = get_connection()
-    row = conn.execute("SELECT * FROM lotto_state WHERE id = 1").fetchone()
+    row = conn.execute("SELECT * FROM server_lotto_state WHERE server_id = ?", (server_id,)).fetchone()
     if not row:
         import random
         winning_number = random.randint(1, 100)
         jackpot = 500
-        conn.execute("INSERT INTO lotto_state (id, winning_number, jackpot) VALUES (1, ?, ?)",
-                     (winning_number, jackpot))
+        conn.execute("INSERT INTO server_lotto_state (server_id, winning_number, jackpot) VALUES (?, ?, ?)",
+                     (server_id, winning_number, jackpot))
         conn.commit()
         conn.close()
         return {"winning_number": winning_number, "jackpot": jackpot}
@@ -21,35 +21,39 @@ def get_lotto_state():
     return {"winning_number": row['winning_number'], "jackpot": row['jackpot']}
 
 
-def increment_lotto_jackpot(amount):
+def increment_lotto_jackpot(server_id: int, amount: int):
     conn = get_connection()
-    conn.execute("UPDATE lotto_state SET jackpot = jackpot + ? WHERE id = 1", (amount,))
+    conn.execute("UPDATE server_lotto_state SET jackpot = jackpot + ? WHERE server_id = ?", (amount, server_id))
     conn.commit()
     conn.close()
 
 
-def reset_lotto():
+def reset_lotto(server_id: int):
     import random
     new_number = random.randint(1, 100)
     conn = get_connection()
-    conn.execute("UPDATE lotto_state SET winning_number = ?, jackpot = ? WHERE id = 1", (new_number, BASE_JACKPOT))
+    conn.execute("UPDATE server_lotto_state SET winning_number = ?, jackpot = ? WHERE server_id = ?", (new_number, BASE_JACKPOT, server_id))
     conn.commit()
     conn.close()
     return new_number, BASE_JACKPOT
 
 
-def try_daily_lotto_bonus(amount):
+def try_daily_lotto_bonus(server_id: int, amount: int):
     conn = get_connection()
     today_str = datetime.now().strftime("%Y-%m-%d")
     try:
-        row = conn.execute("SELECT last_bonus_date FROM lotto_state WHERE id = 1").fetchone()
+        row = conn.execute("SELECT last_bonus_date FROM server_lotto_state WHERE server_id = ?", (server_id,)).fetchone()
+        if not row:
+            get_lotto_state(server_id)
+            row = conn.execute("SELECT last_bonus_date FROM server_lotto_state WHERE server_id = ?", (server_id,)).fetchone()
+            
         if not row or row['last_bonus_date'] != today_str:
             conn.execute("""
-                         UPDATE lotto_state
+                         UPDATE server_lotto_state
                          SET jackpot         = jackpot + ?,
                              last_bonus_date = ?
-                         WHERE id = 1
-                         """, (amount, today_str))
+                         WHERE server_id = ?
+                         """, (amount, today_str, server_id))
             conn.commit()
             return True
         return False

@@ -1,6 +1,7 @@
 import asyncio
 import discord
 from src.models.Pet import Pet
+from src.utils.i18n import t
 
 async def simulate_battle(
     pet1: Pet,
@@ -11,7 +12,8 @@ async def simulate_battle(
     sleep_time: float = 0.5,
     send_messages: bool = True,
     log_size: int = 10,
-    journal_title: str = "📜 **Journal de combat :**\n\n"
+    journal_title: str = None,
+    lang: str = 'fr'
 ):
     """
     Simulate a battle between two pets.
@@ -25,8 +27,12 @@ async def simulate_battle(
     :param send_messages: Whether to send discord message updates.
     :param log_size: Maximum number of lines in the combat log.
     :param journal_title: Title of the combat log.
+    :param lang: Language for the combat log.
     :return: None
     """
+    if journal_title is None:
+        journal_title = "📜 **" + t("pet_combat.journal_title", lang) + " :**\n\n"
+
     log = []
     actions_count = 0
     atb_pet1 = 0
@@ -66,7 +72,7 @@ async def simulate_battle(
             if actions_count > 25:
                 fatigue_mult = max(0.2, 1.0 - ((actions_count - 50) * 0.05))
                 
-            action_text = attacker.attack(defender, fatigue_mult=fatigue_mult)
+            action_text = attacker.attack(defender, fatigue_mult=fatigue_mult, lang=lang)
             log.append(action_text)
 
             if len(log) > log_size:

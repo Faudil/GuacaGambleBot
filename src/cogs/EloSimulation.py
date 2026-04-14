@@ -16,7 +16,14 @@ class EloSimulation(commands.Cog):
     async def simulation_loop(self):
         """Runs background battles between random pets to normalize Elo."""
         try:
-            pets = get_random_pet_and_opponent(min_lvl=5, elo_range=500)
+            if not self.bot.guilds:
+                return
+            
+            import random
+            guild = random.choice(self.bot.guilds)
+            server_id = guild.id
+
+            pets = get_random_pet_and_opponent(server_id=server_id, min_lvl=5, elo_range=500)
             if len(pets) < 2:
                 return
             
@@ -40,8 +47,8 @@ class EloSimulation(commands.Cog):
                 result = 0.5
 
             diff1, diff2 = pet1.update_elo(pet2, result)
-            update_pet_elo(pet1.id, pet1.elo)
-            update_pet_elo(pet2.id, pet2.elo)
+            update_pet_elo(pet1.id, server_id, pet1.elo)
+            update_pet_elo(pet2.id, server_id, pet2.elo)
 
 
         except Exception as e:

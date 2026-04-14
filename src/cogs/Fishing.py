@@ -13,13 +13,16 @@ from src.database.pets import get_active_pet
 from src.items.FishingLoot import KrakenTentacle, Swordfish, Pufferfish, Trout, Sardine, OldBoot, Salmon, Carp, Shark, \
     Whale
 from src.models.Pet import PetBonus
+from src.database.settings import get_language
+from src.utils.i18n import t
 
 
 class FishingGameView(View):
-    def __init__(self, ctx, biome_name, time_limit, loot_pool):
+    def __init__(self, ctx, biome_name, time_limit, loot_pool, lang):
         super().__init__(timeout=60)
         self.ctx = ctx
         self.biome_name = biome_name
+        self.lang = lang
 
         lvl, _ = get_job_data(self.ctx.author.id, "fisher")
         pet = get_active_pet(self.ctx.author.id)
@@ -44,13 +47,13 @@ class FishingGameView(View):
         self.start_time = time.time()
 
         button = self.children[0]
-        button.label = "🦈 ÇA MORD ! CLIQUE !"
+        button.label = t("fishing.bite_label", self.lang)
         button.style = discord.ButtonStyle.success
         button.emoji = "🎣"
 
         embed = message.embeds[0]
         embed.color = discord.Color.green()
-        embed.description = f"## 🌊 {self.biome_name.upper()} : ÇA TIRE !\n**CLIQUE VITE !**"
+        embed.description = t("fishing.bite_desc", self.lang, biome=self.biome_name.upper())
 
         await message.edit(embed=embed, view=self)
 
@@ -60,24 +63,24 @@ class FishingGameView(View):
             self.bite_active = False
             self.stop()
 
-            button.label = "Trop lent..."
+            button.label = t("fishing.too_slow_label", self.lang)
             button.style = discord.ButtonStyle.danger
             button.disabled = True
 
-            embed.description = f"❌ **Le poisson s'est échappé !**\nIl fallait réagir en moins de {self.time_limit}s."
+            embed.description = t("fishing.escaped_desc", self.lang, time=self.time_limit)
             embed.color = discord.Color.red()
             await message.edit(embed=embed, view=self)
 
-    @discord.ui.button(label="... Attendre ...", style=discord.ButtonStyle.secondary, emoji="🌊")
+    @discord.ui.button(label="wait_placeholder", style=discord.ButtonStyle.secondary, emoji="🌊")
     async def catch_button(self, interaction: discord.Interaction, button: Button):
         if interaction.user != self.ctx.author: return
 
         if not self.bite_active:
             self.stop()
             embed = interaction.message.embeds[0]
-            embed.description = "⚠️ **Tu as tiré trop tôt !** Le poisson a pris peur."
+            embed.description = t("fishing.too_early_desc", self.lang)
             embed.color = discord.Color.orange()
-            button.label = "Raté (Trop tôt)"
+            button.label = t("fishing.too_early_label", self.lang)
             button.disabled = True
             await interaction.response.edit_message(embed=embed, view=self)
             return
@@ -86,13 +89,11 @@ class FishingGameView(View):
         self.bite_active = False
         self.stop()
 
-
-
         if reaction > self.time_limit:
             embed = interaction.message.embeds[0]
-            embed.description = f"🐌 **Trop lent !** ({reaction:.2f}s)\nCe biome demande des réflexes de {self.time_limit}s."
+            embed.description = t("fishing.too_slow_reflex", self.lang, reaction=round(reaction, 2), time=self.time_limit)
             embed.color = discord.Color.red()
-            button.label = "Échappé"
+            button.label = t("fishing.escaped_label", self.lang)
             button.style = discord.ButtonStyle.danger
             button.disabled = True
             await interaction.response.edit_message(embed=embed, view=self)
@@ -106,22 +107,18 @@ class FishingGameView(View):
         add_job_xp(self.ctx.author.id, "fisher", xp_gain)
 
         embed = interaction.message.embeds[0]
-        embed.title = "🎣 PÊCHE RÉUSSIE !"
+        embed.title = t("fishing.success_title", self.lang)
         embed.color = discord.Color.gold()
-        embed.description = (
-            f"⏱️ Réflexe : **{reaction:.3f}s**\n"
-            f"🐟 Tu as attrapé : **{loot_item.name}**\n"
-            f"✨ XP Pêcheur : +{xp_gain}"
-        )
+        embed.description = t("fishing.success_desc", self.lang, reaction=f"{reaction:.3f}", item=loot_item.display_name(self.lang), xp=xp_gain)
 
-        button.label = f"Attrapé : {loot_item.name}"
+        button.label = t("fishing.caught_label", self.lang, item=loot_item.display_name(self.lang))
         button.disabled = True
 
         await interaction.response.edit_message(embed=embed, view=self)
         
         unlocks = check_and_unlock_achievements(self.ctx.author.id)
         if unlocks:
-            await interaction.channel.send(content=interaction.user.mention, embed=format_achievements_unlocks(unlocks))
+            await interaction.channel.send(content=interaction.user.mention, embed=format_achievements_unlocks(unlocks, self.lang))
 
     def get_random_loot(self, reaction):
         roll = random.random()
@@ -136,37 +133,44 @@ class FishingGameView(View):
 
 
 class FishBiomeView(View):
-    def __init__(self, ctx):
+    def __init__(self, ctx, lang):
         super().__init__(timeout=30)
         self.ctx = ctx
+        self.lang = lang
 
-    async def launch_biome(self, interaction, biome, limit, items):
+    async def launch_biome(self, interaction, biome_key, limit, items):
         if interaction.user != self.ctx.author:
             return
 
+        biome_name = t(f"fishing.{biome_key}_name", self.lang)
         embed = discord.Embed(
-            title=f"🎣 Direction : {biome}",
-            description="Ligne lancée... **Attends le signal VERT !**",
+            title=t("fishing.direction_title", self.lang, biome=biome_name),
+            description=t("fishing.cast_desc", self.lang),
             color=discord.Color.blue()
         )
-        game_view = FishingGameView(self.ctx, biome, limit, items)
+        game_view = FishingGameView(self.ctx, biome_name, limit, items, self.lang)
+        # Update button label
+        for item in game_view.children:
+            if isinstance(item, Button) and item.label == "wait_placeholder":
+                item.label = t("fishing.wait_label", self.lang)
+
         await interaction.response.edit_message(embed=embed, view=game_view)
         asyncio.create_task(game_view.start_game(interaction.message))
 
-    @discord.ui.button(label="🦆 Étang (Facile)", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="pond_placeholder", style=discord.ButtonStyle.success)
     async def pond(self, interaction: discord.Interaction, button: Button):
         items = [OldBoot(), Trout(), Salmon()]
-        await self.launch_biome(interaction, "L'Étang Paisible", 2.0, items)
+        await self.launch_biome(interaction, "pond", 2.0, items)
 
-    @discord.ui.button(label="🐟 Rivière (Moyen)", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="river_placeholder", style=discord.ButtonStyle.primary)
     async def river(self, interaction: discord.Interaction, button: Button):
         items = [Salmon(), Sardine(), Carp(), Pufferfish()]
-        await self.launch_biome(interaction, "La Rivière Agitée", 1.2, items)
+        await self.launch_biome(interaction, "river", 1.2, items)
 
-    @discord.ui.button(label="🦈 Océan (Extrême)", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="ocean_placeholder", style=discord.ButtonStyle.danger)
     async def ocean(self, interaction: discord.Interaction, button: Button):
         items = [Pufferfish(), Swordfish(), Shark(), Whale(), KrakenTentacle()]
-        await self.launch_biome(interaction, "La Haute Mer", 0.7, items)
+        await self.launch_biome(interaction, "ocean", 0.7, items)
 
 
 class Fishing(commands.Cog):
@@ -177,17 +181,32 @@ class Fishing(commands.Cog):
     @daily_limit("fish", 10)
     async def fish(self, ctx):
         """Aller à la pêche."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
+        
+        from src.database.housing import is_inventory_full
+        full, current, limit = is_inventory_full(ctx.author.id)
+        if full:
+            return await ctx.send(t("housing.inv_full_warning", lang, current=current, limit=limit))
+            
         embed = discord.Embed(
-            title="🎣 Partie de Pêche",
-            description="Où veux-tu aller pêcher aujourd'hui ?",
+            title=t("fishing.session_title", lang),
+            description=t("fishing.session_desc", lang),
             color=discord.Color.teal()
         )
-        embed.add_field(name="🦆 Étang", value="Facile. Pas de stress.", inline=True)
-        embed.add_field(name="🐟 Rivière", value="Moyen. Courant modéré.", inline=True)
-        embed.add_field(name="🦈 Océan", value="Extrême ! Pour les pêcheurs aguerris.", inline=True)
+        embed.add_field(name=t("fishing.pond_field_name", lang), value=t("fishing.pond_field_value", lang), inline=True)
+        embed.add_field(name=t("fishing.river_field_name", lang), value=t("fishing.river_field_value", lang), inline=True)
+        embed.add_field(name=t("fishing.ocean_field_name", lang), value=t("fishing.ocean_field_value", lang), inline=True)
         lvl, _ = get_job_data(ctx.author.id, "fisher")
-        embed.set_footer(text=f"Le délai augmente de 0.1s par niveau (tu es niveau {lvl})")
-        view = FishBiomeView(ctx)
+        embed.set_footer(text=t("fishing.footer", lang, lvl=lvl))
+        
+        view = FishBiomeView(ctx, lang)
+        # Update button labels
+        for item in view.children:
+            if isinstance(item, Button):
+                if item.label == "pond_placeholder": item.label = t("fishing.pond_label", lang)
+                if item.label == "river_placeholder": item.label = t("fishing.river_label", lang)
+                if item.label == "ocean_placeholder": item.label = t("fishing.ocean_label", lang)
+
         await ctx.send(embed=embed, view=view)
 
 

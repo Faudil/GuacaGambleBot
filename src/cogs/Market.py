@@ -7,7 +7,7 @@ import random
 from src.database.achievement import check_and_unlock_achievements, format_achievements_unlocks
 from src.database.balance import update_balance
 from src.database.item import remove_item_from_inventory, get_item_name_by_id, get_item_id_from_name, \
-    get_all_user_inventory, has_item
+    has_item
 from src.globals import ITEMS_REGISTRY
 from src.items.FarmItem import Wheat, Oat, Corn, Tomato, Pumpkin, Potato, CoffeeBean, CocoaBean, Strawberry, \
     GoldenApple, StarFruit, RottenPlant
@@ -15,6 +15,8 @@ from src.items.MiningLoot import Coal, IronOre, GoldNugget, Diamond, Pebble, Sil
     PlatinumOre
 from src.items.FishingLoot import OldBoot, Trout, Salmon, Pufferfish, Swordfish, Sardine, KrakenTentacle, Carp, Whale, \
     Shark
+from src.database.settings import get_language
+from src.utils.i18n import t, get_item_name
 
 
 class Market(commands.Cog):
@@ -35,66 +37,72 @@ class Market(commands.Cog):
             Strawberry(), GoldenApple(), StarFruit(),
             RottenPlant()
         ]
-        self.titles = [
-            "📈⛏️ Cours items minages",
-            "🦈 Cours items pêche",
-            "📈🚜 Cours items ferme",
-        ]
+        
         self.total_items_nbr = len(self.mining_items) + len(self.fishing_items) + len(self.farming_items)
         self.sellable_items = [self.mining_items, self.fishing_items, self.farming_items]
         self.sellable_items_names = [item.name.lower() for item in itertools.chain(*self.sellable_items)]
         self.item_multipliers = [1] * self.total_items_nbr
         self.bot = bot
-        self.market_multiplier = 1.0
+        self.guild_multipliers = {}
         self.trend = "stable"
         self.update_market_prices.start()
 
-    @tasks.loop(hours=4)
-    async def market_event(self):
-        random.random()
-
+    def cog_unload(self):
+        self.update_market_prices.cancel()
 
     @tasks.loop(minutes=5)
     async def update_market_prices(self):
-        for i in range(0, len(self.item_multipliers)):
-            change = random.choice([-0.1, -0.05, 0, 0.05, 0.1])
-            multiplier = self.item_multipliers[i]
-            multiplier += change
-            multiplier = max(0.1, min(3, multiplier))
-            self.item_multipliers[i] = multiplier
-            self.market_multiplier = self.market_multiplier * multiplier
+        for guild in self.bot.guilds:
+            if guild.id not in self.guild_multipliers:
+                self.guild_multipliers[guild.id] = [1] * self.total_items_nbr
+                
+            multipliers = self.guild_multipliers[guild.id]
+            for i in range(0, len(multipliers)):
+                change = random.choice([-0.1, -0.05, 0, 0.05, 0.1])
+                multiplier = multipliers[i]
+                multiplier += change
+                multiplier = max(0.1, min(3, multiplier))
+                multipliers[i] = multiplier
 
     @commands.command(name='market')
     async def show_market(self, ctx, to_show: str = None):
         """Voir le cours de la bourse (Krach ou Boom ?)."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         mine_tag = ["mine", "minage", "mining"]
         fish_tag = ["fish", "pêche", "fishing"]
         farm_tag = ["farm", "ferme", "farming"]
+        
         to_show_items = self.sellable_items
-        to_show_items_titles = self.titles
-        idx = 0
+        to_show_keys = ["title_mining", "title_fishing", "title_farming"]
+        
+        start_indices = [0, len(self.mining_items), len(self.mining_items) + len(self.fishing_items)]
+        
+        selected_indices = [0, 1, 2]
         if to_show in mine_tag:
-            to_show_items = [self.mining_items]
-            to_show_items_titles = [self.titles[0]]
+            selected_indices = [0]
         elif to_show in fish_tag:
-            idx = len(self.mining_items)
-            to_show_items = [self.fishing_items]
-            to_show_items_titles = [self.titles[1]]
+            selected_indices = [1]
         elif to_show in farm_tag:
-            idx = len(self.mining_items) + len(self.fishing_items)
-            to_show_items = [self.farming_items]
-            to_show_items_titles = [self.titles[2]]
+            selected_indices = [2]
 
-        for titles, items in zip(to_show_items_titles, to_show_items):
-            embed = discord.Embed(title=titles, color=discord.Color.gold())
+        guild_id = ctx.guild.id if ctx.guild else None
+        multipliers = self.guild_multipliers.get(guild_id, [1] * self.total_items_nbr) if guild_id else [1] * self.total_items_nbr
+
+        for i in selected_indices:
+            items = to_show_items[i]
+            title_key = to_show_keys[i]
+            idx = start_indices[i]
+            
+            embed = discord.Embed(title=t(f"market.{title_key}", lang), color=discord.Color.gold())
             for item in items:
                 item_id = get_item_id_from_name(item.name)
-                multiplier = self.item_multipliers[idx]
+                multiplier = multipliers[idx]
                 current_price = int(max(1, item.price * multiplier))
                 id_str = f"🆔 {item_id} | " if item_id is not None else ""
+                
                 embed.add_field(
-                    name=f"{id_str} {item.name}",
-                    value=f"Vente: **${current_price}** (Base: ${item.price})",
+                    name=f"{id_str} {get_item_name(item.name, lang)}",
+                    value=t("market.sale_price", lang, price=current_price, base=item.price),
                     inline=True
                 )
                 idx += 1
@@ -103,30 +111,41 @@ class Market(commands.Cog):
     @commands.command(name='market_sell', aliases=["ms", "m_s"])
     async def sell(self, ctx, item_name: str, amount: int = 1):
         """Vendre tes ressources au prix du marché."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
         item_name = item_name.strip()
         if item_name.isdigit():
             resolved = get_item_name_by_id(int(item_name))
             if resolved:
                 item_name = resolved
+            else:
+                return await ctx.send(t("market.invalid_id", lang))
         
         user_id = ctx.author.id
         if item_name not in ITEMS_REGISTRY:
-            await ctx.send("❌ Cet item n'existe pas !")
-        if item_name not in self.sellable_items_names:
-            await ctx.send("❌ Cet item ne peut pas être vendu sur le marché !")
-        idx = self.sellable_items_names.index(item_name)
-        final_price = max(1, int(ITEMS_REGISTRY[item_name].price * self.item_multipliers[idx]))
+            return await ctx.send(t("market.item_not_found", lang))
+            
+        if item_name.lower() not in self.sellable_items_names:
+            return await ctx.send(t("market.item_not_sellable", lang))
+            
+        idx = self.sellable_items_names.index(item_name.lower())
+        guild_id = ctx.guild.id if ctx.guild else None
+        multipliers = self.guild_multipliers.get(guild_id, [1] * self.total_items_nbr) if guild_id else [1] * self.total_items_nbr
+        final_price = max(1, int(ITEMS_REGISTRY[item_name].price * multipliers[idx]))
         total_gain = final_price * amount
+        
         if has_item(user_id, item_name, amount):
             remove_item_from_inventory(user_id, item_name, amount)
             update_balance(user_id, total_gain)
-            await ctx.send(f"💰 Tu as vendu **{amount}x {item_name}** pour **${total_gain}**.")
+            await ctx.send(t("market.sold_msg", lang, amount=amount, item=get_item_name(item_name, lang), gain=total_gain))
         else:
-            await ctx.send(f"❌ Tu ne possèdes pas cet item **{item_name}**.")
+            await ctx.send(t("market.no_item", lang, amount=amount, item=get_item_name(item_name, lang)))
+
+        from src.database.achievement import increment_stat
+        increment_stat(user_id, "items_sold_market", amount)
 
         unlocks = check_and_unlock_achievements(int(user_id))
         if unlocks:
-            await ctx.send(embed=format_achievements_unlocks(unlocks))
+            await ctx.send(embed=format_achievements_unlocks(unlocks, lang))
 
 async def setup(bot):
     await bot.add_cog(Market(bot))

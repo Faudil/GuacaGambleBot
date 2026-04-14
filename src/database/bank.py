@@ -21,6 +21,10 @@ def get_bank_data(user_id):
     return 100, 0
 
 
+import math
+from src.database.housing import get_user_housing, get_housing_upgrades
+from src.housing_data import HOUSES
+
 def deposit_money(user_id, amount):
     conn = get_connection()
     try:
@@ -28,7 +32,20 @@ def deposit_money(user_id, amount):
         if not row: return "ERROR"
 
         wallet, bank = row['balance'], row['bank']
+        # Calculate dynamic MAX_BANK
+        housing_data = get_user_housing(user_id)
         MAX_BANK = 500
+        if housing_data:
+            house_type = housing_data['house_type']
+            if house_type in HOUSES:
+                MAX_BANK = HOUSES[house_type].get('bank_capacity', 500)
+            
+            # Tree bonuses
+            upgrades = get_housing_upgrades(user_id)
+            if "merchant_office" in upgrades:
+                MAX_BANK = math.floor(MAX_BANK * 1.2)
+            if "merchant_vault" in upgrades:
+                MAX_BANK *= 2
 
         if bank >= MAX_BANK:
             return "BANK_FULL"
