@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/components"
+	"guacagamblebot/internal/store"
 )
 
 // Bot bundles the discordgo session, database and shared config for handlers.
@@ -33,6 +34,7 @@ type ModalHandler func(b *Bot, i *discordgo.InteractionCreate)
 // the same embed interface.
 type Router struct {
 	bot        *Bot
+	store      *store.Store
 	slash      map[string]SlashHandler
 	slashDefs  []*discordgo.ApplicationCommand
 	prefix     map[string]PrefixHandler
@@ -40,9 +42,13 @@ type Router struct {
 	modal      map[string]ModalHandler
 }
 
-func NewRouter(bot *Bot) *Router {
+// Session returns the underlying discordgo session.
+func (r *Router) Session() *discordgo.Session { return r.bot.Session }
+
+func NewRouter(bot *Bot, st *store.Store) *Router {
 	return &Router{
 		bot:       bot,
+		store:     st,
 		slash:     map[string]SlashHandler{},
 		slashDefs: []*discordgo.ApplicationCommand{},
 		prefix:    map[string]PrefixHandler{},
@@ -78,22 +84,40 @@ func (r *Router) Register() {
 	r.bot.Session.AddHandler(r.onMessage)
 }
 
+// DispatchInteraction routes an interaction to the registered handler. It is the
+// entry point used by the gateway and is exported so tests can drive handlers
+// without a live Discord connection.
+func (r *Router) DispatchInteraction(i *discordgo.InteractionCreate) {
+	r.onInteraction(r.bot.Session, i)
+}
+
 func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
+		// The setup command is always allowed so a disabled guild can be
+		// re-enabled from within Discord.
+		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+			return
+		}
 		if h, ok := r.slash[data.Name]; ok {
 			h(r.bot, i)
 		}
 	case discordgo.InteractionMessageComponent:
 		cid := i.MessageComponentData().CustomID
 		domain, action, _ := components.Decode(cid)
+		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+			return
+		}
 		if h, ok := r.component[domain+"::"+action]; ok {
 			h(r.bot, i)
 		}
 	case discordgo.InteractionModalSubmit:
 		cid := i.ModalSubmitData().CustomID
 		domain, action, _ := components.Decode(cid)
+		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+			return
+		}
 		if h, ok := r.modal[domain+"::"+action]; ok {
 			h(r.bot, i)
 		}
@@ -104,12 +128,22 @@ func (r *Router) onMessage(s *discordgo.Session, m *discordgo.Message) {
 	if m.Author != nil && m.Author.Bot {
 		return
 	}
-	if !strings.HasPrefix(m.Content, r.bot.Prefix) {
+	gid := ToInt64(m.GuildID)
+	prefix := r.bot.Prefix
+	if r.store != nil {
+		prefix = r.store.ServerPrefix(gid)
+	}
+	if !strings.HasPrefix(m.Content, prefix) {
 		return
 	}
-	trimmed := strings.TrimPrefix(m.Content, r.bot.Prefix)
+	trimmed := strings.TrimPrefix(m.Content, prefix)
 	parts := strings.Fields(trimmed)
 	if len(parts) == 0 {
+		return
+	}
+	// The setup command is always allowed so a disabled guild can be
+	// re-enabled from within Discord.
+	if r.store != nil && parts[0] != "setup" && !r.store.IsEnabled(gid) {
 		return
 	}
 	if h, ok := r.prefix[parts[0]]; ok {

@@ -7,6 +7,9 @@ import (
 // UserID returns the Discord ID (snowflake string) of the user who triggered
 // the interaction.
 func UserID(i *discordgo.InteractionCreate) string {
+	if i == nil || i.Interaction == nil {
+		return ""
+	}
 	if i.User != nil {
 		return i.User.ID
 	}

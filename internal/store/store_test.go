@@ -128,3 +128,66 @@ func TestDailyQuest(t *testing.T) {
 	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&q).Error)
 	assert.Equal(t, "COMPLETED", q.Status)
 }
+
+func TestServerSettingRoundTrip(t *testing.T) {
+	s := New(testDB(t), &config.Config{Prefix: "!"})
+
+	require.NoError(t, s.SaveServerSetting(&model.ServerSetting{
+		ServerID:  7,
+		ChannelID: 123,
+		Language:  "en",
+		Prefix:    "?",
+		Enabled:   true,
+	}))
+
+	ss, err := s.GetServerSetting(7)
+	require.NoError(t, err)
+	require.NotNil(t, ss)
+	assert.Equal(t, int64(123), ss.ChannelID)
+	assert.Equal(t, "en", ss.Language)
+	assert.Equal(t, "?", ss.Prefix)
+	assert.True(t, ss.Enabled)
+
+	// Upsert must update rather than duplicate. Like the handlers, we load the
+	// row, mutate a few fields, then save so untouched columns are preserved.
+	ss, err = s.GetServerSetting(7)
+	require.NoError(t, err)
+	require.NotNil(t, ss)
+	ss.ChannelID = 456
+	ss.Language = "fr"
+	ss.Prefix = "&"
+	require.NoError(t, s.SaveServerSetting(ss))
+	ss, err = s.GetServerSetting(7)
+	require.NoError(t, err)
+	assert.Equal(t, int64(456), ss.ChannelID)
+	assert.Equal(t, "fr", ss.Language)
+	assert.Equal(t, "&", ss.Prefix)
+	assert.True(t, ss.Enabled, "untouched columns keep their value on upsert")
+
+	// Missing row returns nil.
+	none, err := s.GetServerSetting(999)
+	require.NoError(t, err)
+	assert.Nil(t, none)
+}
+
+func TestServerPrefixAndEnabled(t *testing.T) {
+	s := New(testDB(t), &config.Config{Prefix: "!"})
+
+	// No row -> defaults.
+	assert.Equal(t, "!", s.ServerPrefix(1))
+	assert.True(t, s.IsEnabled(1))
+
+	// Create the row (enabled defaults to true), then disable via an upsert
+	// (the production toggle path). GORM's `default:true` tag makes an explicit
+	// false on the initial Create use the DB default, so disabling must go
+	// through the UPDATE branch.
+	require.NoError(t, s.SaveServerSetting(&model.ServerSetting{ServerID: 1, Prefix: "?"}))
+	require.NoError(t, s.SaveServerSetting(&model.ServerSetting{ServerID: 1, Prefix: "?", Enabled: false}))
+
+	assert.Equal(t, "?", s.ServerPrefix(1))
+	assert.False(t, s.IsEnabled(1))
+
+	// Guild 0 (DM) always enabled/default prefix.
+	assert.True(t, s.IsEnabled(0))
+	assert.Equal(t, "!", s.ServerPrefix(0))
+}

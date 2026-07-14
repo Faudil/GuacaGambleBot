@@ -55,7 +55,24 @@
     "no_cash": "❌ Tu n'as pas assez d'argent liquide.",
     "bank_full": "❌ Ta banque est déjà pleine (Max $500) !",
     "withdrawn": "💸 Tu as retiré **${amount}** de la banque.",
-    "no_bank_money": "❌ Tu n'as pas assez d'argent en banque."
+    "no_bank_money": "❌ Tu n'as pas assez d'argent en banque.",
+    "menu_title": "Banque",
+    "menu_desc": "Gérez votre portefeuille et votre coffre.",
+    "btn_deposit": "Déposer",
+    "btn_withdraw": "Retirer",
+    "btn_balance": "Solde",
+    "deposit_title": "Dépôt effectué",
+    "deposit_modal_title": "Dépôt dans votre coffre",
+    "amount_label": "Montant",
+    "deposit_done": "Vous avez déposé {amount}.",
+    "withdraw_title": "Retrait effectué",
+    "withdraw_done": "Vous avez retiré {amount}.",
+    "insufficient": "Fonds insuffisants.",
+    "invalid": "Montant invalide.",
+    "balance_title": "Votre solde",
+    "wallet": "Portefeuille",
+    "safe": "Coffre",
+    "daily_interest": "Intérêts quotidiens"
   },
   "inventory": {
     "empty": "🎒 Ton sac est vide, {user} ! Va miner ou achète des trucs.",
@@ -97,7 +114,13 @@
     "role_name": "🌟 Maître des Familiers",
     "role_reason": "Création automatique du rôle Top 5",
     "role_removed": "Le joueur n'est plus dans le Top 5 des familiers",
-    "role_added": "Le joueur est entré dans le Top 5 des familiers"
+    "role_added": "Le joueur est entré dans le Top 5 des familiers",
+    "menu_title": "Classement",
+    "menu_desc": "Top 10 des joueurs les plus riches par solde du portefeuille.",
+    "btn_refresh": "Actualiser",
+    "entry": "#{rank} {user} — ${balance}",
+    "empty": "Aucun joueur pour l'instant.",
+    "title": "Classement"
   },
   "loan": {
     "not_your_debt": "Ce n'est pas ta dette !",
@@ -121,7 +144,24 @@
     "repay_invalid": "❌ Somme invalide.",
     "unknown": "Inconnu",
     "sign_label": "✍️ Signer le contrat",
-    "refuse_label": "Refuser"
+    "refuse_label": "Refuser",
+    "menu_title": "Prêts",
+    "menu_desc": "Empruntez à la banque, remboursez vos dettes ou consultez-les.",
+    "btn_borrow": "Emprunter",
+    "btn_repay": "Rembourser",
+    "btn_list": "Liste",
+    "borrow_modal_title": "Emprunter",
+    "amount_label": "Montant",
+    "borrow_done": "Vous avez emprunté ${amount}.",
+    "repay_title": "Rembourser",
+    "repay_done": "Vous avez remboursé ${amount}.",
+    "list_title": "Vos prêts",
+    "list_empty": "Vous n'avez aucune dette en cours.",
+    "list_entry": "{lender} : ${amount}",
+    "bank_name": "Banque",
+    "invalid": "Montant invalide.",
+    "exceeds": "Ce montant dépasse votre dette totale.",
+    "max_loan": "Vous ne pouvez pas emprunter plus de 1000 à la fois."
   },
   "shop": {
     "buy_now_label": "🛒 ACHETER MAINTENANT !",
@@ -232,48 +272,48 @@
       "description": "Tu as mal géré ta ferme..."
     },
     "blé": {
-       "name": "Blé",
-       "description": "Indispensable pour faire du pain."
+      "name": "Blé",
+      "description": "Indispensable pour faire du pain."
     },
     "avoine": {
-       "name": "Avoine",
-       "description": "Parfait pour le petit déjeuner."
+      "name": "Avoine",
+      "description": "Parfait pour le petit déjeuner."
     },
     "maïs": {
-       "name": "Maïs",
-       "description": "Fait aussi du pop-corn !"
+      "name": "Maïs",
+      "description": "Fait aussi du pop-corn !"
     },
     "patate": {
-       "name": "Patate",
-       "description": "On peut en faire de la vodka..."
+      "name": "Patate",
+      "description": "On peut en faire de la vodka..."
     },
     "tomate": {
-       "name": "Tomate",
-       "description": "Un fruit ou un légume ? Le débat continue."
+      "name": "Tomate",
+      "description": "Un fruit ou un légume ? Le débat continue."
     },
     "citrouille": {
-       "name": "Citrouille",
-       "description": "Parfait pour Halloween."
+      "name": "Citrouille",
+      "description": "Parfait pour Halloween."
     },
     "grain de café": {
-       "name": "Grain de Café",
-       "description": "L'or noir du matin."
+      "name": "Grain de Café",
+      "description": "L'or noir du matin."
     },
     "fève de cacao": {
-       "name": "Fève de Cacao",
-       "description": "L'ingrédient principal du bonheur (chocolat)."
+      "name": "Fève de Cacao",
+      "description": "L'ingrédient principal du bonheur (chocolat)."
     },
     "fraise": {
-       "name": "Fraise",
-       "description": "Rouge, sucrée et juteuse."
+      "name": "Fraise",
+      "description": "Rouge, sucrée et juteuse."
     },
     "pomme dorée": {
-       "name": "Pomme Dorée",
-       "description": "Elle brille d'une lueur magique."
+      "name": "Pomme Dorée",
+      "description": "Elle brille d'une lueur magique."
     },
     "fruit étoile": {
-       "name": "Fruit Étoile",
-       "description": "Un fruit cosmique d'une autre dimension."
+      "name": "Fruit Étoile",
+      "description": "Un fruit cosmique d'une autre dimension."
     },
     "terrain : potager": {
       "name": "Acte de Titre (Potager)",
@@ -287,17 +327,50 @@
       "name": "Acte de Titre (Verger)",
       "description": "Permet de travailler dans ton verger céleste."
     },
-    "graine de blé": { "name": "Graine de Blé", "description": "À planter pour obtenir du blé (5 min)." },
-    "graine d'avoine": { "name": "Graine d'Avoine", "description": "À planter pour obtenir de l'avoine (10 min)." },
-    "graine de maïs": { "name": "Graine de Maïs", "description": "À planter pour obtenir du maïs (30 min)." },
-    "graine de patate": { "name": "Graine de Patate", "description": "À planter pour obtenir des patates (1h)." },
-    "graine de tomate": { "name": "Graine de Tomate", "description": "À planter pour obtenir des tomates (2h)." },
-    "graine de citrouille": { "name": "Graine de Citrouille", "description": "À planter pour obtenir des citrouilles (4h)." },
-    "graine de café": { "name": "Graine de Café", "description": "À planter pour obtenir du café (8h)." },
-    "graine de cacao": { "name": "Graine de Cacao", "description": "À planter pour obtenir du cacao (12h)." },
-    "graine de fraise": { "name": "Graine de Fraise", "description": "À planter pour obtenir des fraises (18h)." },
-    "pépin de pomme dorée": { "name": "Pépin de Pomme Dorée", "description": "À planter pour obtenir des pommes dorées (24h)." },
-    "pépin de fruit étoile": { "name": "Pépin de Fruit Étoile", "description": "À planter pour obtenir des fruits étoiles (48h)." },
+    "graine de blé": {
+      "name": "Graine de Blé",
+      "description": "À planter pour obtenir du blé (5 min)."
+    },
+    "graine d'avoine": {
+      "name": "Graine d'Avoine",
+      "description": "À planter pour obtenir de l'avoine (10 min)."
+    },
+    "graine de maïs": {
+      "name": "Graine de Maïs",
+      "description": "À planter pour obtenir du maïs (30 min)."
+    },
+    "graine de patate": {
+      "name": "Graine de Patate",
+      "description": "À planter pour obtenir des patates (1h)."
+    },
+    "graine de tomate": {
+      "name": "Graine de Tomate",
+      "description": "À planter pour obtenir des tomates (2h)."
+    },
+    "graine de citrouille": {
+      "name": "Graine de Citrouille",
+      "description": "À planter pour obtenir des citrouilles (4h)."
+    },
+    "graine de café": {
+      "name": "Graine de Café",
+      "description": "À planter pour obtenir du café (8h)."
+    },
+    "graine de cacao": {
+      "name": "Graine de Cacao",
+      "description": "À planter pour obtenir du cacao (12h)."
+    },
+    "graine de fraise": {
+      "name": "Graine de Fraise",
+      "description": "À planter pour obtenir des fraises (18h)."
+    },
+    "pépin de pomme dorée": {
+      "name": "Pépin de Pomme Dorée",
+      "description": "À planter pour obtenir des pommes dorées (24h)."
+    },
+    "pépin de fruit étoile": {
+      "name": "Pépin de Fruit Étoile",
+      "description": "À planter pour obtenir des fruits étoiles (48h)."
+    },
     "bière": {
       "name": "Bière",
       "description": "La boisson du mineur ! Réinitialise le cooldown de !mine."
@@ -355,81 +428,306 @@
     "invalid_id": "❌ ID d'objet invalide."
   },
   "achievements": {
-    "pvp_rookie": { "name": "Combattant en herbe", "desc": "Remporte ton premier combat PvP." },
-    "pvp_gladiator": { "name": "Gladiateur", "desc": "Remporte 50 combats PvP." },
-    "pvp_punching_bag": { "name": "Sac de frappe", "desc": "Perds 10 combats PvP. Courage..." },
-    "pve_hunter": { "name": "Chasseur de monstres", "desc": "Gagne 25 combats en expédition (PvE)." },
-    "eco_1k": { "name": "Nouveau Riche", "desc": "Atteins 1 000 $ sur ton compte." },
-    "eco_10k": { "name": "Rentier", "desc": "Atteins 10 000 $ sur ton compte." },
-    "eco_50k": { "name": "Loup de Wall Street", "desc": "Atteins 50 000 $ sur ton compte." },
-    "eco_100k": { "name": "Millionnaire en Devenir", "desc": "Atteins 100 000 $ sur ton compte." },
-    "eco_1m": { "name": "Billionaire", "desc": "Atteins 1 000 000 $ sur ton compte." },
-    "eco_rich": { "name": "Capitaliste", "desc": "Gagne un total cumulé de 10 000 $." },
-    "job_miner": { "name": "Nain de Moria", "desc": "Mine 100 minerais." },
-    "pet_feeder": { "name": "Chef Étoilé", "desc": "Donne 50 objets à manger à tes familiers." },
-    "pet_level_10": { "name": "Éleveur Novice", "desc": "Fais monter un familier au niveau 2." },
-    "pet_level_20": { "name": "Dresseur", "desc": "Fais monter un familier au niveau 5." },
-    "pet_level_50": { "name": "Maître des Monstres", "desc": "Fais monter un familier au niveau 10." },
-    "pet_level_100": { "name": "Légende Vivante", "desc": "Fais monter un familier au niveau 20." },
-    "coinflip_won_1k": { "name": "Chance du débutant", "desc": "Gagne 1 000 $ au Coinflip." },
-    "coinflip_won_5k": { "name": "Habitué de la pièce", "desc": "Gagne 5 000 $ au Coinflip." },
-    "coinflip_won_100k": { "name": "Double ou Rien", "desc": "Gagne 100 000 $ au Coinflip." },
-    "coinflip_won_1m": { "name": "Maître Pile ou Face", "desc": "Gagne 1 000 000 $ au Coinflip." },
-    "coinflip_lost_1k": { "name": "Mauvaise passe", "desc": "Perds 1 000 $ au Coinflip." },
-    "coinflip_lost_5k": { "name": "Poissard", "desc": "Perds 5 000 $ au Coinflip." },
-    "coinflip_lost_100k": { "name": "Ruiné par une pièce", "desc": "Perds 100 000 $ au Coinflip." },
-    "coinflip_lost_1m": { "name": "Le Dindon de la Farce", "desc": "Perds 1 000 000 $ au Coinflip." },
-    "slots_won_1k": { "name": "Tireur chanceux", "desc": "Gagne 1 000 $ aux Slots." },
-    "slots_won_5k": { "name": "Poche pleine de jetons", "desc": "Gagne 5 000 $ aux Slots." },
-    "slots_won_100k": { "name": "L'Alignement Parfait", "desc": "Gagne 100 000 $ aux Slots." },
-    "slots_won_1m": { "name": "Jackpot Ambulant", "desc": "Gagne 1 000 000 $ aux Slots." },
-    "slots_lost_1k": { "name": "La machine est truquée", "desc": "Perds 1 000 $ aux Slots." },
-    "slots_lost_5k": { "name": "Bandit Manchot", "desc": "Perds 5 000 $ aux Slots." },
-    "slots_lost_100k": { "name": "Accro au levier", "desc": "Perds 100 000 $ aux Slots." },
-    "slots_lost_1m": { "name": "Gros Donateur du Casino", "desc": "Perds 1 000 000 $ aux Slots." },
-    "blackjack_won_1k": { "name": "21 ! (1k$)", "desc": "Gagne 1 000 $ au Blackjack." },
-    "blackjack_won_5k": { "name": "Compteur de cartes (5k$)", "desc": "Gagne 5 000 $ au Blackjack." },
-    "blackjack_won_100k": { "name": "Le Croupier Pleure (100k$)", "desc": "Gagne 100 000 $ au Blackjack." },
-    "blackjack_won_1m": { "name": "As de Pique des As (1M$)", "desc": "Gagne 1 000 000 $ au Blackjack." },
-    "blackjack_lost_1k": { "name": "Trop Gourmand (1k$)", "desc": "Perds 1 000 $ au Blackjack." },
-    "blackjack_lost_5k": { "name": "Bust Constant (5k$)", "desc": "Perds 5 000 $ au Blackjack." },
-    "blackjack_lost_100k": { "name": "Dépression sur table (100k$)", "desc": "Perds 100 000 $ au Blackjack." },
-    "blackjack_lost_1m": { "name": "Tu as donné ta maison (1M$)", "desc": "Perds 1 000 000 $ au Blackjack." },
-    "roulette_won_1k": { "name": "Miraculé (1k$)", "desc": "Gagne 1 000 $ à la Roulette." },
-    "roulette_won_5k": { "name": "Trompe la Mort (5k$)", "desc": "Gagne 5 000 $ à la Roulette." },
-    "roulette_won_100k": { "name": "Immortalité (100k$)", "desc": "Gagne 100 000 $ à la Roulette." },
-    "roulette_won_1m": { "name": "Survivant Légendaire (1M$)", "desc": "Gagne 1 000 000 $ à la Roulette." },
-    "roulette_lost_1k": { "name": "Première blessure (1k$)", "desc": "Perds 1 000 $ à la Roulette." },
-    "roulette_lost_5k": { "name": "Abonné à l'hôpital (5k$)", "desc": "Perds 5 000 $ à la Roulette." },
-    "roulette_lost_100k": { "name": "Suicidaire (100k$)", "desc": "Perds 100 000 $ à la Roulette." },
-    "roulette_lost_1m": { "name": "Cimetière Personnel (1M$)", "desc": "Perds 1 000 000 $ à la Roulette." },
-    "bet_rookie": { "name": "Parieur du Dimanche", "desc": "Gagne un pari." },
-    "bet_pro": { "name": "Visionnaire", "desc": "Gagne 25 paris." },
-    "lotto_rookie": { "name": "Joueur Régulier", "desc": "Joue 10 tickets de Loto." },
-    "lotto_winner": { "name": "Le Grand Gagnant", "desc": "Remporte le Jackpot du Loto !" },
-    "daily_1": { "name": "Travailleur Engagé", "desc": "Réclame ta paye journalière pour la 1ère fois." },
-    "daily_10": { "name": "Employé du Mois", "desc": "Réclame ta paye journalière 10 fois." },
-    "daily_50": { "name": "Routine Matinale", "desc": "Réclame ta paye journalière 50 fois." },
-    "daily_100": { "name": "L'Habitude fait le Moine", "desc": "Réclame ta paye journalière 100 fois." },
-    "daily_365": { "name": "Vétéran d'un An", "desc": "Réclame ta paye journalière 365 fois (Soit 1 an complet !)." },
-    "pet_collector_common": { "name": "Zoologiste Amateur", "desc": "Possède tous les familiers Communs (8)." },
-    "pet_collector_rare": { "name": "Zoologiste Confirmé", "desc": "Possède tous les familiers Rares (6)." },
-    "pet_collector_epic": { "name": "Expert Animalier", "desc": "Possède tous les familiers Épiques (4)." },
-    "pet_collector_legendary": { "name": "Dresseur de Légendes", "desc": "Possède un familier Légendaire." },
-    "pet_collector_all": { "name": "Maître du Monde Animal", "desc": "Possède absolument toutes les espèces de familiers (19)." },
-    "rank_bronze": { "name": "Compétiteur Né", "desc": "Place un familier au rang Bronze." },
-    "rank_silver": { "name": "Challenger", "desc": "Place un familier au rang Argent." },
-    "rank_gold": { "name": "Gladiateur Doré", "desc": "Place un familier au rang Or." },
-    "rank_diamond": { "name": "L'Élite", "desc": "Place un familier au rang Diamant." },
-    "rank_top5": { "name": "Maître de l'Olympe", "desc": "Hisse un familier dans le Top 5 Mondial." },
-    "community_initiate": { "name": "Devoir Civique", "desc": "Investis 10 000 $ ou 200 objets dans la communauté." },
-    "community_supporter": { "name": "Pilier de Comptoir", "desc": "Investis 500 000 $ ou 5 000 objets dans la communauté." },
-    "community_pillar": { "name": "Le Grand Mécène", "desc": "Investis 5 000 000 $ ou 50 000 objets dans la communauté." },
-    "boss_league_1": { "name": "Badge Novice", "desc": "Bat le premier adversaire de la Ligue des Boss." },
-    "boss_league_2": { "name": "Badge de Roche", "desc": "Bat le deuxième adversaire de la Ligue des Boss." },
-    "boss_league_3": { "name": "Badge Céleste", "desc": "Bat le troisième adversaire de la Ligue des Boss." },
-    "boss_league_4": { "name": "Badge Abyssal", "desc": "Bat le quatrième adversaire de la Ligue des Boss." },
-    "boss_league_5": { "name": "Champion de la Ligue", "desc": "Deviens le Champion de la Ligue des Boss en battant le boss final !" },
+    "pvp_rookie": {
+      "name": "Combattant en herbe",
+      "desc": "Remporte ton premier combat PvP."
+    },
+    "pvp_gladiator": {
+      "name": "Gladiateur",
+      "desc": "Remporte 50 combats PvP."
+    },
+    "pvp_punching_bag": {
+      "name": "Sac de frappe",
+      "desc": "Perds 10 combats PvP. Courage..."
+    },
+    "pve_hunter": {
+      "name": "Chasseur de monstres",
+      "desc": "Gagne 25 combats en expédition (PvE)."
+    },
+    "eco_1k": {
+      "name": "Nouveau Riche",
+      "desc": "Atteins 1 000 $ sur ton compte."
+    },
+    "eco_10k": {
+      "name": "Rentier",
+      "desc": "Atteins 10 000 $ sur ton compte."
+    },
+    "eco_50k": {
+      "name": "Loup de Wall Street",
+      "desc": "Atteins 50 000 $ sur ton compte."
+    },
+    "eco_100k": {
+      "name": "Millionnaire en Devenir",
+      "desc": "Atteins 100 000 $ sur ton compte."
+    },
+    "eco_1m": {
+      "name": "Billionaire",
+      "desc": "Atteins 1 000 000 $ sur ton compte."
+    },
+    "eco_rich": {
+      "name": "Capitaliste",
+      "desc": "Gagne un total cumulé de 10 000 $."
+    },
+    "job_miner": {
+      "name": "Nain de Moria",
+      "desc": "Mine 100 minerais."
+    },
+    "pet_feeder": {
+      "name": "Chef Étoilé",
+      "desc": "Donne 50 objets à manger à tes familiers."
+    },
+    "pet_level_10": {
+      "name": "Éleveur Novice",
+      "desc": "Fais monter un familier au niveau 2."
+    },
+    "pet_level_20": {
+      "name": "Dresseur",
+      "desc": "Fais monter un familier au niveau 5."
+    },
+    "pet_level_50": {
+      "name": "Maître des Monstres",
+      "desc": "Fais monter un familier au niveau 10."
+    },
+    "pet_level_100": {
+      "name": "Légende Vivante",
+      "desc": "Fais monter un familier au niveau 20."
+    },
+    "coinflip_won_1k": {
+      "name": "Chance du débutant",
+      "desc": "Gagne 1 000 $ au Coinflip."
+    },
+    "coinflip_won_5k": {
+      "name": "Habitué de la pièce",
+      "desc": "Gagne 5 000 $ au Coinflip."
+    },
+    "coinflip_won_100k": {
+      "name": "Double ou Rien",
+      "desc": "Gagne 100 000 $ au Coinflip."
+    },
+    "coinflip_won_1m": {
+      "name": "Maître Pile ou Face",
+      "desc": "Gagne 1 000 000 $ au Coinflip."
+    },
+    "coinflip_lost_1k": {
+      "name": "Mauvaise passe",
+      "desc": "Perds 1 000 $ au Coinflip."
+    },
+    "coinflip_lost_5k": {
+      "name": "Poissard",
+      "desc": "Perds 5 000 $ au Coinflip."
+    },
+    "coinflip_lost_100k": {
+      "name": "Ruiné par une pièce",
+      "desc": "Perds 100 000 $ au Coinflip."
+    },
+    "coinflip_lost_1m": {
+      "name": "Le Dindon de la Farce",
+      "desc": "Perds 1 000 000 $ au Coinflip."
+    },
+    "slots_won_1k": {
+      "name": "Tireur chanceux",
+      "desc": "Gagne 1 000 $ aux Slots."
+    },
+    "slots_won_5k": {
+      "name": "Poche pleine de jetons",
+      "desc": "Gagne 5 000 $ aux Slots."
+    },
+    "slots_won_100k": {
+      "name": "L'Alignement Parfait",
+      "desc": "Gagne 100 000 $ aux Slots."
+    },
+    "slots_won_1m": {
+      "name": "Jackpot Ambulant",
+      "desc": "Gagne 1 000 000 $ aux Slots."
+    },
+    "slots_lost_1k": {
+      "name": "La machine est truquée",
+      "desc": "Perds 1 000 $ aux Slots."
+    },
+    "slots_lost_5k": {
+      "name": "Bandit Manchot",
+      "desc": "Perds 5 000 $ aux Slots."
+    },
+    "slots_lost_100k": {
+      "name": "Accro au levier",
+      "desc": "Perds 100 000 $ aux Slots."
+    },
+    "slots_lost_1m": {
+      "name": "Gros Donateur du Casino",
+      "desc": "Perds 1 000 000 $ aux Slots."
+    },
+    "blackjack_won_1k": {
+      "name": "21 ! (1k$)",
+      "desc": "Gagne 1 000 $ au Blackjack."
+    },
+    "blackjack_won_5k": {
+      "name": "Compteur de cartes (5k$)",
+      "desc": "Gagne 5 000 $ au Blackjack."
+    },
+    "blackjack_won_100k": {
+      "name": "Le Croupier Pleure (100k$)",
+      "desc": "Gagne 100 000 $ au Blackjack."
+    },
+    "blackjack_won_1m": {
+      "name": "As de Pique des As (1M$)",
+      "desc": "Gagne 1 000 000 $ au Blackjack."
+    },
+    "blackjack_lost_1k": {
+      "name": "Trop Gourmand (1k$)",
+      "desc": "Perds 1 000 $ au Blackjack."
+    },
+    "blackjack_lost_5k": {
+      "name": "Bust Constant (5k$)",
+      "desc": "Perds 5 000 $ au Blackjack."
+    },
+    "blackjack_lost_100k": {
+      "name": "Dépression sur table (100k$)",
+      "desc": "Perds 100 000 $ au Blackjack."
+    },
+    "blackjack_lost_1m": {
+      "name": "Tu as donné ta maison (1M$)",
+      "desc": "Perds 1 000 000 $ au Blackjack."
+    },
+    "roulette_won_1k": {
+      "name": "Miraculé (1k$)",
+      "desc": "Gagne 1 000 $ à la Roulette."
+    },
+    "roulette_won_5k": {
+      "name": "Trompe la Mort (5k$)",
+      "desc": "Gagne 5 000 $ à la Roulette."
+    },
+    "roulette_won_100k": {
+      "name": "Immortalité (100k$)",
+      "desc": "Gagne 100 000 $ à la Roulette."
+    },
+    "roulette_won_1m": {
+      "name": "Survivant Légendaire (1M$)",
+      "desc": "Gagne 1 000 000 $ à la Roulette."
+    },
+    "roulette_lost_1k": {
+      "name": "Première blessure (1k$)",
+      "desc": "Perds 1 000 $ à la Roulette."
+    },
+    "roulette_lost_5k": {
+      "name": "Abonné à l'hôpital (5k$)",
+      "desc": "Perds 5 000 $ à la Roulette."
+    },
+    "roulette_lost_100k": {
+      "name": "Suicidaire (100k$)",
+      "desc": "Perds 100 000 $ à la Roulette."
+    },
+    "roulette_lost_1m": {
+      "name": "Cimetière Personnel (1M$)",
+      "desc": "Perds 1 000 000 $ à la Roulette."
+    },
+    "bet_rookie": {
+      "name": "Parieur du Dimanche",
+      "desc": "Gagne un pari."
+    },
+    "bet_pro": {
+      "name": "Visionnaire",
+      "desc": "Gagne 25 paris."
+    },
+    "lotto_rookie": {
+      "name": "Joueur Régulier",
+      "desc": "Joue 10 tickets de Loto."
+    },
+    "lotto_winner": {
+      "name": "Le Grand Gagnant",
+      "desc": "Remporte le Jackpot du Loto !"
+    },
+    "daily_1": {
+      "name": "Travailleur Engagé",
+      "desc": "Réclame ta paye journalière pour la 1ère fois."
+    },
+    "daily_10": {
+      "name": "Employé du Mois",
+      "desc": "Réclame ta paye journalière 10 fois."
+    },
+    "daily_50": {
+      "name": "Routine Matinale",
+      "desc": "Réclame ta paye journalière 50 fois."
+    },
+    "daily_100": {
+      "name": "L'Habitude fait le Moine",
+      "desc": "Réclame ta paye journalière 100 fois."
+    },
+    "daily_365": {
+      "name": "Vétéran d'un An",
+      "desc": "Réclame ta paye journalière 365 fois (Soit 1 an complet !)."
+    },
+    "pet_collector_common": {
+      "name": "Zoologiste Amateur",
+      "desc": "Possède tous les familiers Communs (8)."
+    },
+    "pet_collector_rare": {
+      "name": "Zoologiste Confirmé",
+      "desc": "Possède tous les familiers Rares (6)."
+    },
+    "pet_collector_epic": {
+      "name": "Expert Animalier",
+      "desc": "Possède tous les familiers Épiques (4)."
+    },
+    "pet_collector_legendary": {
+      "name": "Dresseur de Légendes",
+      "desc": "Possède un familier Légendaire."
+    },
+    "pet_collector_all": {
+      "name": "Maître du Monde Animal",
+      "desc": "Possède absolument toutes les espèces de familiers (19)."
+    },
+    "rank_bronze": {
+      "name": "Compétiteur Né",
+      "desc": "Place un familier au rang Bronze."
+    },
+    "rank_silver": {
+      "name": "Challenger",
+      "desc": "Place un familier au rang Argent."
+    },
+    "rank_gold": {
+      "name": "Gladiateur Doré",
+      "desc": "Place un familier au rang Or."
+    },
+    "rank_diamond": {
+      "name": "L'Élite",
+      "desc": "Place un familier au rang Diamant."
+    },
+    "rank_top5": {
+      "name": "Maître de l'Olympe",
+      "desc": "Hisse un familier dans le Top 5 Mondial."
+    },
+    "community_initiate": {
+      "name": "Devoir Civique",
+      "desc": "Investis 10 000 $ ou 200 objets dans la communauté."
+    },
+    "community_supporter": {
+      "name": "Pilier de Comptoir",
+      "desc": "Investis 500 000 $ ou 5 000 objets dans la communauté."
+    },
+    "community_pillar": {
+      "name": "Le Grand Mécène",
+      "desc": "Investis 5 000 000 $ ou 50 000 objets dans la communauté."
+    },
+    "boss_league_1": {
+      "name": "Badge Novice",
+      "desc": "Bat le premier adversaire de la Ligue des Boss."
+    },
+    "boss_league_2": {
+      "name": "Badge de Roche",
+      "desc": "Bat le deuxième adversaire de la Ligue des Boss."
+    },
+    "boss_league_3": {
+      "name": "Badge Céleste",
+      "desc": "Bat le troisième adversaire de la Ligue des Boss."
+    },
+    "boss_league_4": {
+      "name": "Badge Abyssal",
+      "desc": "Bat le quatrième adversaire de la Ligue des Boss."
+    },
+    "boss_league_5": {
+      "name": "Champion de la Ligue",
+      "desc": "Deviens le Champion de la Ligue des Boss en battant le boss final !"
+    },
     "ui": {
       "glory_total": "**Points de Gloire Totaux : {total}** 🌟",
       "pet_glory_info": "*(dont {glory} attribués par le rang de vos familiers)*",
@@ -439,7 +737,14 @@
       "new_achievement_glory": "*+{glory} pts de Gloire*",
       "unknown_user": "Inconnu",
       "succes_title": "🏆 Succès de {user}"
-    }
+    },
+    "list_title": "Succès",
+    "menu_desc": "Voir les trophées que vous avez débloqués.",
+    "btn_show": "Afficher",
+    "unlocked": "Débloqué",
+    "locked": "Verrouillé",
+    "empty": "Vous n'avez débloqué aucun succès pour l'instant.",
+    "entry": "{emoji} **{name}** (+{glory} Gloire) — {status}"
   },
   "duel": {
     "no_bot": "🤖 Tu ne peux pas défier un bot (ils trichent).",
@@ -472,56 +777,156 @@
     "crafter": "Artisan"
   },
   "pet_types": {
-    "Escargot": { "name": "Escargot" },
-    "Souris": { "name": "Souris" },
-    "Cochon": { "name": "Cochon" },
-    "Grenouille": { "name": "Grenouille" },
-    "Taupe": { "name": "Taupe" },
-    "Pélican": { "name": "Pélican" },
-    "Mouton": { "name": "Mouton" },
-    "Abeille": { "name": "Abeille" },
-    "Chien": { "name": "Chien" },
-    "Chat": { "name": "Chat" },
-    "Cheval": { "name": "Cheval" },
-    "Renard": { "name": "Renard" },
-    "Singe": { "name": "Singe" },
-    "Ours": { "name": "Ours" },
-    "Chameau": { "name": "Chameau" },
-    "Panda": { "name": "Panda" },
-    "Tigre": { "name": "Tigre" },
-    "Pieuvre": { "name": "Pieuvre" },
-    "Dragon": { "name": "Dragon" },
-    "Hamster": { "name": "Hamster" },
-    "Fourmi": { "name": "Fourmi" },
-    "Hérisson": { "name": "Hérisson" },
-    "Canard": { "name": "Canard" },
-    "Chouette": { "name": "Chouette" },
-    "Paresseux": { "name": "Paresseux" },
-    "Kangourou": { "name": "Kangourou" },
-    "Iguane": { "name": "Iguane" },
-    "Gorille": { "name": "Gorille" },
-    "Scorpion": { "name": "Scorpion" },
-    "Bison": { "name": "Bison" },
-    "Aigle": { "name": "Aigle" },
-    "Rhino": { "name": "Rhino" },
-    "Crocodile": { "name": "Crocodile" },
-    "Putois": { "name": "Putois" },
-    "Dauphin": { "name": "Dauphin" },
-    "Léopard": { "name": "Léopard" },
-    "Lion": { "name": "Lion" },
-    "Ours polaire": { "name": "Ours polaire" },
-    "Tyrannosaure": { "name": "Tyrannosaure" },
-    "Diplodocus": { "name": "Diplodocus" },
-    "Mamouth": { "name": "Mamouth" },
-    "Mégalodon": { "name": "Mégalodon" },
-    "Kraken": { "name": "Kraken" },
-    "Licorne": { "name": "Licorne" },
-    "Phoenix": { "name": "Phoenix" },
-    "Cerbère": { "name": "Cerbère" },
-    "Fenrir": { "name": "Fenrir" },
-    "Ratatosk": { "name": "Ratatosk" },
-    "Nidhögg": { "name": "Nidhögg" },
-    "Bedawang": { "name": "Bedawang" }
+    "Escargot": {
+      "name": "Escargot"
+    },
+    "Souris": {
+      "name": "Souris"
+    },
+    "Cochon": {
+      "name": "Cochon"
+    },
+    "Grenouille": {
+      "name": "Grenouille"
+    },
+    "Taupe": {
+      "name": "Taupe"
+    },
+    "Pélican": {
+      "name": "Pélican"
+    },
+    "Mouton": {
+      "name": "Mouton"
+    },
+    "Abeille": {
+      "name": "Abeille"
+    },
+    "Chien": {
+      "name": "Chien"
+    },
+    "Chat": {
+      "name": "Chat"
+    },
+    "Cheval": {
+      "name": "Cheval"
+    },
+    "Renard": {
+      "name": "Renard"
+    },
+    "Singe": {
+      "name": "Singe"
+    },
+    "Ours": {
+      "name": "Ours"
+    },
+    "Chameau": {
+      "name": "Chameau"
+    },
+    "Panda": {
+      "name": "Panda"
+    },
+    "Tigre": {
+      "name": "Tigre"
+    },
+    "Pieuvre": {
+      "name": "Pieuvre"
+    },
+    "Dragon": {
+      "name": "Dragon"
+    },
+    "Hamster": {
+      "name": "Hamster"
+    },
+    "Fourmi": {
+      "name": "Fourmi"
+    },
+    "Hérisson": {
+      "name": "Hérisson"
+    },
+    "Canard": {
+      "name": "Canard"
+    },
+    "Chouette": {
+      "name": "Chouette"
+    },
+    "Paresseux": {
+      "name": "Paresseux"
+    },
+    "Kangourou": {
+      "name": "Kangourou"
+    },
+    "Iguane": {
+      "name": "Iguane"
+    },
+    "Gorille": {
+      "name": "Gorille"
+    },
+    "Scorpion": {
+      "name": "Scorpion"
+    },
+    "Bison": {
+      "name": "Bison"
+    },
+    "Aigle": {
+      "name": "Aigle"
+    },
+    "Rhino": {
+      "name": "Rhino"
+    },
+    "Crocodile": {
+      "name": "Crocodile"
+    },
+    "Putois": {
+      "name": "Putois"
+    },
+    "Dauphin": {
+      "name": "Dauphin"
+    },
+    "Léopard": {
+      "name": "Léopard"
+    },
+    "Lion": {
+      "name": "Lion"
+    },
+    "Ours polaire": {
+      "name": "Ours polaire"
+    },
+    "Tyrannosaure": {
+      "name": "Tyrannosaure"
+    },
+    "Diplodocus": {
+      "name": "Diplodocus"
+    },
+    "Mamouth": {
+      "name": "Mamouth"
+    },
+    "Mégalodon": {
+      "name": "Mégalodon"
+    },
+    "Kraken": {
+      "name": "Kraken"
+    },
+    "Licorne": {
+      "name": "Licorne"
+    },
+    "Phoenix": {
+      "name": "Phoenix"
+    },
+    "Cerbère": {
+      "name": "Cerbère"
+    },
+    "Fenrir": {
+      "name": "Fenrir"
+    },
+    "Ratatosk": {
+      "name": "Ratatosk"
+    },
+    "Nidhögg": {
+      "name": "Nidhögg"
+    },
+    "Bedawang": {
+      "name": "Bedawang"
+    }
   },
   "pet_combat": {
     "hit_msg": "⚔️ {attacker_emoji} **{attacker}** inflige **{dmg}** dégâts",
@@ -1034,7 +1439,7 @@
       "step2_chest": "Trouve un trésor caché",
       "completed": "Tutoriel terminé !"
     },
-    "day0_welcome":{
+    "day0_welcome": {
       "title": "Bienvenue à HoakHaven",
       "description": "Introduction au Village.",
       "step0_dialogue": "Bienvenue à HoakHaven ! C'est un petit village paisible où on cultive, on mine et on s'amuse. Commence ta nouvelle vie ici !",
@@ -1250,5 +1655,38 @@
       "advice": "Sois rapide ! La pêche en mer demande d'excellents réflexes, mais c'est là que se cachent les poissons les plus légendaires.",
       "chat": "Je regarde l'horizon... On regarde s'il y a un Kraken géant qui rôde dans les eaux profondes quand le ciel s'assombrit."
     }
+  },
+  "character": {
+    "menu_title": "Personnage",
+    "menu_desc": "Affiche ton profil de joueur.",
+    "btn_show": "Afficher le profil",
+    "title": "Profil du joueur",
+    "wallet": "Portefeuille",
+    "bank": "Banque",
+    "crowns": "Couronnes",
+    "achievements": "Succès"
+  },
+  "onboarding": {
+    "menu_title": "Bienvenue sur GuacaGambleBot ! 🎰",
+    "menu_desc": "Configurons le bot pour votre serveur. Choisissez le salon où je peux parler, une langue et ajustez quelques options.",
+    "field_channel": "Salon",
+    "field_language": "Langue",
+    "field_prefix": "Préfixe",
+    "field_status": "Statut",
+    "channel_placeholder": "Sélectionnez un salon…",
+    "language_placeholder": "Sélectionnez une langue",
+    "btn_advanced": "Avancé",
+    "btn_enable": "Activer le bot",
+    "btn_disable": "Désactiver le bot",
+    "btn_finish": "Terminer",
+    "btn_reconfigure": "Reconfigurer",
+    "advanced_title": "Paramètres avancés",
+    "prefix_label": "Préfixe des commandes",
+    "configured_title": "Configuration terminée ✅",
+    "configured_desc": "Le bot est prêt ! J'utiliserai {channel} comme salon principal. Tapez /economy pour commencer.",
+    "need_channel": "Veuillez choisir un salon avant de terminer.",
+    "status_enabled": "Activé",
+    "status_disabled": "Désactivé",
+    "setup_desc": "Configure le bot pour ce serveur."
   }
 }

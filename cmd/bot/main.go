@@ -15,7 +15,13 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/store"
 
+	achievementscog "guacagamblebot/internal/cogs/achievements"
+	bankcog "guacagamblebot/internal/cogs/bank"
+	charactercog "guacagamblebot/internal/cogs/character"
 	economycog "guacagamblebot/internal/cogs/economy"
+	leadercog "guacagamblebot/internal/cogs/leaderboard"
+	loancog "guacagamblebot/internal/cogs/loan"
+	"guacagamblebot/internal/onboarding"
 )
 
 func main() {
@@ -46,10 +52,16 @@ func main() {
 		discordgo.IntentMessageContent
 
 	bot := &interaction.Bot{Session: dg, DB: database, Prefix: cfg.Prefix}
-	router := interaction.NewRouter(bot)
-
 	str := store.New(database, cfg)
+	router := interaction.NewRouter(bot, str)
+
 	economycog.Register(router, str, cfg)
+	bankcog.Register(router, str, cfg)
+	loancog.Register(router, str, cfg)
+	leadercog.Register(router, str, cfg)
+	achievementscog.Register(router, str, cfg)
+	charactercog.Register(router, str, cfg)
+	onboarding.Register(router, str, cfg)
 
 	router.Register()
 

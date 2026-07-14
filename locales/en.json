@@ -55,7 +55,24 @@
     "no_cash": "❌ You don't have enough cash.",
     "bank_full": "❌ Your bank is already full (Max $500) !",
     "withdrawn": "💸 You withdrawn **${amount}** from the bank.",
-    "no_bank_money": "❌ You don't have enough money in the bank."
+    "no_bank_money": "❌ You don't have enough money in the bank.",
+    "menu_title": "Bank",
+    "menu_desc": "Manage your wallet and safe.",
+    "btn_deposit": "Deposit",
+    "btn_withdraw": "Withdraw",
+    "btn_balance": "Balance",
+    "deposit_title": "Deposit complete",
+    "deposit_modal_title": "Deposit into your safe",
+    "amount_label": "Amount",
+    "deposit_done": "You deposited {amount}.",
+    "withdraw_title": "Withdrawal complete",
+    "withdraw_done": "You withdrew {amount}.",
+    "insufficient": "Insufficient funds.",
+    "invalid": "Invalid amount.",
+    "balance_title": "Your balance",
+    "wallet": "Wallet",
+    "safe": "Safe",
+    "daily_interest": "Daily interest"
   },
   "inventory": {
     "empty": "🎒 Your bag is empty, {user}! Go mining or buy some stuff.",
@@ -98,7 +115,13 @@
     "role_name": "🌟 Master of Pets",
     "role_reason": "Automatic creation of Top 5 role",
     "role_removed": "The player is no longer in the Top 5 pets",
-    "role_added": "The player has entered the Top 5 pets"
+    "role_added": "The player has entered the Top 5 pets",
+    "menu_title": "Leaderboard",
+    "menu_desc": "Top 10 richest players by wallet balance.",
+    "btn_refresh": "Refresh",
+    "entry": "#{rank} {user} — ${balance}",
+    "empty": "No players yet.",
+    "title": "Leaderboard"
   },
   "loan": {
     "not_your_debt": "This is not your debt!",
@@ -122,7 +145,24 @@
     "repay_invalid": "❌ Invalid amount.",
     "unknown": "Unknown",
     "sign_label": "✍️ Sign the contract",
-    "refuse_label": "Refuse"
+    "refuse_label": "Refuse",
+    "menu_title": "Loans",
+    "menu_desc": "Borrow from the bank, repay your debts or list them.",
+    "btn_borrow": "Borrow",
+    "btn_repay": "Repay",
+    "btn_list": "List",
+    "borrow_modal_title": "Borrow",
+    "amount_label": "Amount",
+    "borrow_done": "You borrowed ${amount}.",
+    "repay_title": "Repay",
+    "repay_done": "You repaid ${amount}.",
+    "list_title": "Your loans",
+    "list_empty": "You have no outstanding loans.",
+    "list_entry": "{lender}: ${amount}",
+    "bank_name": "Bank",
+    "invalid": "Invalid amount.",
+    "exceeds": "That amount exceeds your total debt.",
+    "max_loan": "You cannot borrow more than 1000 at once."
   },
   "items": {
     "base_use_msg": "This item ({item_name}) does nothing for now.",
@@ -219,48 +259,48 @@
       "description": "You poorly managed your farm..."
     },
     "blé": {
-       "name": "Wheat",
-       "description": "Essential for making bread."
+      "name": "Wheat",
+      "description": "Essential for making bread."
     },
     "avoine": {
-       "name": "Oat",
-       "description": "Perfect for breakfast."
+      "name": "Oat",
+      "description": "Perfect for breakfast."
     },
     "maïs": {
-       "name": "Corn",
-       "description": "Also makes popcorn!"
+      "name": "Corn",
+      "description": "Also makes popcorn!"
     },
     "patate": {
-       "name": "Potato",
-       "description": "You can make vodka out of it..."
+      "name": "Potato",
+      "description": "You can make vodka out of it..."
     },
     "tomate": {
-       "name": "Tomato",
-       "description": "A fruit or a vegetable? The debate continues."
+      "name": "Tomato",
+      "description": "A fruit or a vegetable? The debate continues."
     },
     "citrouille": {
-       "name": "Pumpkin",
-       "description": "Perfect for Halloween."
+      "name": "Pumpkin",
+      "description": "Perfect for Halloween."
     },
     "grain de café": {
-       "name": "Coffee Bean",
-       "description": "Morning black gold."
+      "name": "Coffee Bean",
+      "description": "Morning black gold."
     },
     "fève de cacao": {
-       "name": "Cocoa Bean",
-       "description": "The main ingredient of happiness (chocolate)."
+      "name": "Cocoa Bean",
+      "description": "The main ingredient of happiness (chocolate)."
     },
     "fraise": {
-       "name": "Strawberry",
-       "description": "Red, sweet, and juicy."
+      "name": "Strawberry",
+      "description": "Red, sweet, and juicy."
     },
     "pomme dorée": {
-       "name": "Golden Apple",
-       "description": "It glows with a magical aura."
+      "name": "Golden Apple",
+      "description": "It glows with a magical aura."
     },
     "fruit étoile": {
-       "name": "Starfruit",
-       "description": "A cosmic fruit from another dimension."
+      "name": "Starfruit",
+      "description": "A cosmic fruit from another dimension."
     },
     "terrain : potager": {
       "name": "Vegetable Patch Deed",
@@ -274,17 +314,50 @@
       "name": "Orchard Deed",
       "description": "Allows you to work in your celestial orchard."
     },
-    "graine de blé": { "name": "Wheat Seed", "description": "Needs to be planted to get wheat (5 min)." },
-    "graine d'avoine": { "name": "Oat Seed", "description": "Needs to be planted to get oats (10 min)." },
-    "graine de maïs": { "name": "Corn Seed", "description": "Needs to be planted to get corn (30 min)." },
-    "graine de patate": { "name": "Potato Seed", "description": "Needs to be planted to get potatoes (1h)." },
-    "graine de tomate": { "name": "Tomato Seed", "description": "Needs to be planted to get tomatoes (2h)." },
-    "graine de citrouille": { "name": "Pumpkin Seed", "description": "Needs to be planted to get pumpkins (4h)." },
-    "graine de café": { "name": "Coffee Seed", "description": "Needs to be planted to get coffee beans (8h)." },
-    "graine de cacao": { "name": "Cocoa Seed", "description": "Needs to be planted to get cocoa beans (12h)." },
-    "graine de fraise": { "name": "Strawberry Seed", "description": "Needs to be planted to get strawberries (18h)." },
-    "pépin de pomme dorée": { "name": "Golden Apple Seed", "description": "Needs to be planted to get golden apples (24h)." },
-    "pépin de fruit étoile": { "name": "Starfruit Seed", "description": "Needs to be planted to get starfruits (48h)." },
+    "graine de blé": {
+      "name": "Wheat Seed",
+      "description": "Needs to be planted to get wheat (5 min)."
+    },
+    "graine d'avoine": {
+      "name": "Oat Seed",
+      "description": "Needs to be planted to get oats (10 min)."
+    },
+    "graine de maïs": {
+      "name": "Corn Seed",
+      "description": "Needs to be planted to get corn (30 min)."
+    },
+    "graine de patate": {
+      "name": "Potato Seed",
+      "description": "Needs to be planted to get potatoes (1h)."
+    },
+    "graine de tomate": {
+      "name": "Tomato Seed",
+      "description": "Needs to be planted to get tomatoes (2h)."
+    },
+    "graine de citrouille": {
+      "name": "Pumpkin Seed",
+      "description": "Needs to be planted to get pumpkins (4h)."
+    },
+    "graine de café": {
+      "name": "Coffee Seed",
+      "description": "Needs to be planted to get coffee beans (8h)."
+    },
+    "graine de cacao": {
+      "name": "Cocoa Seed",
+      "description": "Needs to be planted to get cocoa beans (12h)."
+    },
+    "graine de fraise": {
+      "name": "Strawberry Seed",
+      "description": "Needs to be planted to get strawberries (18h)."
+    },
+    "pépin de pomme dorée": {
+      "name": "Golden Apple Seed",
+      "description": "Needs to be planted to get golden apples (24h)."
+    },
+    "pépin de fruit étoile": {
+      "name": "Starfruit Seed",
+      "description": "Needs to be planted to get starfruits (48h)."
+    },
     "bière": {
       "name": "Beer",
       "description": "The miner's drink! Resets the !mine cooldown."
@@ -331,56 +404,156 @@
     }
   },
   "pet_types": {
-    "Escargot": { "name": "Snail" },
-    "Souris": { "name": "Mouse" },
-    "Cochon": { "name": "Pig" },
-    "Grenouille": { "name": "Frog" },
-    "Taupe": { "name": "Mole" },
-    "Pélican": { "name": "Pelican" },
-    "Mouton": { "name": "Sheep" },
-    "Abeille": { "name": "Bee" },
-    "Chien": { "name": "Dog" },
-    "Chat": { "name": "Cat" },
-    "Cheval": { "name": "Horse" },
-    "Renard": { "name": "Fox" },
-    "Singe": { "name": "Monkey" },
-    "Ours": { "name": "Bear" },
-    "Chameau": { "name": "Camel" },
-    "Panda": { "name": "Panda" },
-    "Tigre": { "name": "Tiger" },
-    "Pieuvre": { "name": "Octopus" },
-    "Dragon": { "name": "Dragon" },
-    "Hamster": { "name": "Hamster" },
-    "Fourmi": { "name": "Ant" },
-    "Hérisson": { "name": "Hedgehog" },
-    "Canard": { "name": "Duck" },
-    "Chouette": { "name": "Owl" },
-    "Paresseux": { "name": "Sloth" },
-    "Kangourou": { "name": "Kangaroo" },
-    "Iguane": { "name": "Iguana" },
-    "Gorille": { "name": "Gorilla" },
-    "Scorpion": { "name": "Scorpion" },
-    "Bison": { "name": "Bison" },
-    "Aigle": { "name": "Eagle" },
-    "Rhino": { "name": "Rhino" },
-    "Crocodile": { "name": "Crocodile" },
-    "Putois": { "name": "Skunk" },
-    "Dauphin": { "name": "Dolphin" },
-    "Léopard": { "name": "Leopard" },
-    "Lion": { "name": "Lion" },
-    "Ours polaire": { "name": "Polar Bear" },
-    "Tyrannosaure": { "name": "Tyrannosaurus" },
-    "Diplodocus": { "name": "Diplodocus" },
-    "Mamouth": { "name": "Mammoth" },
-    "Mégalodon": { "name": "Megalodon" },
-    "Kraken": { "name": "Kraken" },
-    "Licorne": { "name": "Unicorn" },
-    "Phoenix": { "name": "Phoenix" },
-    "Cerbère": { "name": "Cerberus" },
-    "Fenrir": { "name": "Fenrir" },
-    "Ratatosk": { "name": "Ratatosk" },
-    "Nidhögg": { "name": "Nidhogg" },
-    "Bedawang": { "name": "Bedawang" }
+    "Escargot": {
+      "name": "Snail"
+    },
+    "Souris": {
+      "name": "Mouse"
+    },
+    "Cochon": {
+      "name": "Pig"
+    },
+    "Grenouille": {
+      "name": "Frog"
+    },
+    "Taupe": {
+      "name": "Mole"
+    },
+    "Pélican": {
+      "name": "Pelican"
+    },
+    "Mouton": {
+      "name": "Sheep"
+    },
+    "Abeille": {
+      "name": "Bee"
+    },
+    "Chien": {
+      "name": "Dog"
+    },
+    "Chat": {
+      "name": "Cat"
+    },
+    "Cheval": {
+      "name": "Horse"
+    },
+    "Renard": {
+      "name": "Fox"
+    },
+    "Singe": {
+      "name": "Monkey"
+    },
+    "Ours": {
+      "name": "Bear"
+    },
+    "Chameau": {
+      "name": "Camel"
+    },
+    "Panda": {
+      "name": "Panda"
+    },
+    "Tigre": {
+      "name": "Tiger"
+    },
+    "Pieuvre": {
+      "name": "Octopus"
+    },
+    "Dragon": {
+      "name": "Dragon"
+    },
+    "Hamster": {
+      "name": "Hamster"
+    },
+    "Fourmi": {
+      "name": "Ant"
+    },
+    "Hérisson": {
+      "name": "Hedgehog"
+    },
+    "Canard": {
+      "name": "Duck"
+    },
+    "Chouette": {
+      "name": "Owl"
+    },
+    "Paresseux": {
+      "name": "Sloth"
+    },
+    "Kangourou": {
+      "name": "Kangaroo"
+    },
+    "Iguane": {
+      "name": "Iguana"
+    },
+    "Gorille": {
+      "name": "Gorilla"
+    },
+    "Scorpion": {
+      "name": "Scorpion"
+    },
+    "Bison": {
+      "name": "Bison"
+    },
+    "Aigle": {
+      "name": "Eagle"
+    },
+    "Rhino": {
+      "name": "Rhino"
+    },
+    "Crocodile": {
+      "name": "Crocodile"
+    },
+    "Putois": {
+      "name": "Skunk"
+    },
+    "Dauphin": {
+      "name": "Dolphin"
+    },
+    "Léopard": {
+      "name": "Leopard"
+    },
+    "Lion": {
+      "name": "Lion"
+    },
+    "Ours polaire": {
+      "name": "Polar Bear"
+    },
+    "Tyrannosaure": {
+      "name": "Tyrannosaurus"
+    },
+    "Diplodocus": {
+      "name": "Diplodocus"
+    },
+    "Mamouth": {
+      "name": "Mammoth"
+    },
+    "Mégalodon": {
+      "name": "Megalodon"
+    },
+    "Kraken": {
+      "name": "Kraken"
+    },
+    "Licorne": {
+      "name": "Unicorn"
+    },
+    "Phoenix": {
+      "name": "Phoenix"
+    },
+    "Cerbère": {
+      "name": "Cerberus"
+    },
+    "Fenrir": {
+      "name": "Fenrir"
+    },
+    "Ratatosk": {
+      "name": "Ratatosk"
+    },
+    "Nidhögg": {
+      "name": "Nidhogg"
+    },
+    "Bedawang": {
+      "name": "Bedawang"
+    }
   },
   "pet_combat": {
     "hit_msg": "⚔️ {attacker_emoji} **{attacker}** deals **{dmg}** damage",
@@ -532,91 +705,323 @@
     "invalid_id": "❌ Invalid Item ID."
   },
   "achievements": {
-    "pvp_rookie": { "name": "Budding Fighter", "desc": "Win your first PvP fight." },
-    "pvp_gladiator": { "name": "Gladiator", "desc": "Win 50 PvP fights." },
-    "pvp_punching_bag": { "name": "Punching Bag", "desc": "Lose 10 PvP fights. Hang in there..." },
-    "pve_hunter": { "name": "Monster Hunter", "desc": "Win 25 expedition fights (PvE)." },
-    "eco_1k": { "name": "New Rich", "desc": "Reach $1,000 in your account." },
-    "eco_10k": { "name": "Annuity Holder", "desc": "Reach $10,000 in your account." },
-    "eco_50k": { "name": "Wolf of Wall Street", "desc": "Reach $50,000 in your account." },
-    "eco_100k": { "name": "Millionaire in the Making", "desc": "Reach $100,000 in your account." },
-    "eco_1m": { "name": "Billionaire", "desc": "Reach $1,000,000 in your account." },
-    "eco_rich": { "name": "Capitalist", "desc": "Earn a cumulative total of $10,000." },
-    "job_miner": { "name": "Dwarf of Moria", "desc": "Mine 100 ores." },
-    "pet_feeder": { "name": "Starred Chef", "desc": "Feed 50 items to your pets." },
-    "pet_level_10": { "name": "Novice Breeder", "desc": "Level up a pet to level 2." },
-    "pet_level_20": { "name": "Trainer", "desc": "Level up a pet to level 5." },
-    "pet_level_50": { "name": "Monster Master", "desc": "Level up a pet to level 10." },
-    "pet_level_100": { "name": "Living Legend", "desc": "Level up a pet to level 20." },
-    "coinflip_won_1k": { "name": "Beginner's Luck", "desc": "Win $1,000 in Coinflip." },
-    "coinflip_won_5k": { "name": "Coin Regular", "desc": "Win $5,000 in Coinflip." },
-    "coinflip_won_100k": { "name": "Double or Nothing", "desc": "Win $100,000 in Coinflip." },
-    "coinflip_won_1m": { "name": "Heads or Tails Master", "desc": "Win $1,000,000 in Coinflip." },
-    "coinflip_lost_1k": { "name": "Bad Streak", "desc": "Lose $1,000 in Coinflip." },
-    "coinflip_lost_5k": { "name": "Unlucky", "desc": "Lose $5,000 in Coinflip." },
-    "coinflip_lost_100k": { "name": "Ruined by a Coin", "desc": "Lose $100,000 in Coinflip." },
-    "coinflip_lost_1m": { "name": "The Fall Guy", "desc": "Lose $1,000,000 in Coinflip." },
-    "slots_won_1k": { "name": "Lucky Shooter", "desc": "Win $1,000 in Slots." },
-    "slots_won_5k": { "name": "Pocket Full of Tokens", "desc": "Win $5,000 in Slots." },
-    "slots_won_100k": { "name": "The Perfect Alignment", "desc": "Win $100,000 in Slots." },
-    "slots_won_1m": { "name": "Walking Jackpot", "desc": "Win $1,000,000 in Slots." },
-    "slots_lost_1k": { "name": "The Machine Is Rigged", "desc": "Lose $1,000 in Slots." },
-    "slots_lost_5k": { "name": "One-Armed Bandit", "desc": "Lose $5,000 in Slots." },
-    "slots_lost_100k": { "name": "Lever Addict", "desc": "Lose $100,000 in Slots." },
-    "slots_lost_1m": { "name": "Casino Big Donor", "desc": "Lose $1,000,000 in Slots." },
-    "blackjack_won_1k": { "name": "21! ($1k)", "desc": "Win $1,000 in Blackjack." },
-    "blackjack_won_5k": { "name": "Card Counter ($5k)", "desc": "Win $5,000 in Blackjack." },
-    "blackjack_won_100k": { "name": "The Dealer Cries ($100k)", "desc": "Win $100,000 in Blackjack." },
-    "blackjack_won_1m": { "name": "Ace of Spades of Aces ($1M)", "desc": "Win $1,000,000 in Blackjack." },
-    "blackjack_lost_1k": { "name": "Too Greedy ($1k)", "desc": "Lose $1,000 in Blackjack." },
-    "blackjack_lost_5k": { "name": "Constant Bust ($5k)", "desc": "Lose $5,000 in Blackjack." },
-    "blackjack_lost_100k": { "name": "Table Depression ($100k)", "desc": "Lose $100,000 in Blackjack." },
-    "blackjack_lost_1m": { "name": "You Gave Away Your House ($1M)", "desc": "Lose $1,000,000 in Blackjack." },
-    "roulette_won_1k": { "name": "Miraculous ($1k)", "desc": "Win $1,000 in Roulette." },
-    "roulette_won_5k": { "name": "Death-Defying ($5k)", "desc": "Win $5,000 in Roulette." },
-    "roulette_won_100k": { "name": "Immortality ($100k)", "desc": "Win $100,000 in Roulette." },
-    "roulette_won_1m": { "name": "Legendary Survivor ($1M)", "desc": "Win $1,000,000 in Roulette." },
-    "roulette_lost_1k": { "name": "First Injury ($1k)", "desc": "Lose $1,000 in Roulette." },
-    "roulette_lost_5k": { "name": "Hospital Regular ($5k)", "desc": "Lose $5,000 in Roulette." },
-    "roulette_lost_100k": { "name": "Suicidal ($100k)", "desc": "Lose $100,000 in Roulette." },
-    "roulette_lost_1m": { "name": "Personal Cemetery ($1M)", "desc": "Lose $1,000,000 in Roulette." },
-    "bet_rookie": { "name": "Sunday Bettor", "desc": "Win a bet." },
-    "bet_pro": { "name": "Visionary", "desc": "Win 25 bets." },
-    "lotto_rookie": { "name": "Regular Player", "desc": "Play 10 Lotto tickets." },
-    "lotto_winner": { "name": "The Big Winner", "desc": "Win the Lotto Jackpot!" },
-    "daily_1": { "name": "Engaged Worker", "desc": "Claim your daily pay for the 1st time." },
-    "daily_10": { "name": "Employee of the Month", "desc": "Claim your daily pay 10 times." },
-    "daily_50": { "name": "Morning Routine", "desc": "Claim your daily pay 50 times." },
-    "daily_100": { "name": "Habit Makes the Monk", "desc": "Claim your daily pay 100 times." },
-    "daily_365": { "name": "One-Year Veteran", "desc": "Claim your daily pay 365 times (That's 1 full year!)." },
-    "pet_collector_common": { "name": "Amateur Zoologist", "desc": "Own all Common pets (8)." },
-    "pet_collector_rare": { "name": "Confirmed Zoologist", "desc": "Own all Rare pets (6)." },
-    "pet_collector_epic": { "name": "Animal Expert", "desc": "Own all Epic pets (4)." },
-    "pet_collector_legendary": { "name": "Legend Trainer", "desc": "Own a Legendary pet." },
-    "pet_collector_all": { "name": "Master of the Animal World", "desc": "Own absolutely all pet species (19)." },
-    "rank_bronze": { "name": "Born Competitor", "desc": "Place a pet in Bronze rank." },
-    "rank_silver": { "name": "Challenger", "desc": "Place a pet in Silver rank." },
-    "rank_gold": { "name": "Golden Gladiator", "desc": "Place a pet in Gold rank." },
-    "rank_diamond": { "name": "The Elite", "desc": "Place a pet in Diamond rank." },
-    "rank_top5": { "name": "Master of Olympus", "desc": "Take a pet to the World Top 5." },
-    "community_initiate": { "name": "Civic Duty", "desc": "Invest 10,000 coins or 200 items in a community project." },
-    "community_supporter": { "name": "Pillar of the Community", "desc": "Invest 500,000 coins or 5,000 items in a community project." },
-    "community_pillar": { "name": "The Patron", "desc": "Invest 5,000,000 coins or 50,000 items in a community project." },
-    "boss_league_1": { "name": "Novice Badge", "desc": "Defeat the first Boss League opponent." },
-    "boss_league_2": { "name": "Stone Badge", "desc": "Defeat the second Boss League opponent." },
-    "boss_league_3": { "name": "Sky Badge", "desc": "Defeat the third Boss League opponent." },
-    "boss_league_4": { "name": "Abyss Badge", "desc": "Defeat the fourth Boss League opponent." },
-    "boss_league_5": { "name": "League Champion", "desc": "Become the Boss League Champion by defeating the final boss!" },
+    "pvp_rookie": {
+      "name": "Budding Fighter",
+      "desc": "Win your first PvP fight."
+    },
+    "pvp_gladiator": {
+      "name": "Gladiator",
+      "desc": "Win 50 PvP fights."
+    },
+    "pvp_punching_bag": {
+      "name": "Punching Bag",
+      "desc": "Lose 10 PvP fights. Hang in there..."
+    },
+    "pve_hunter": {
+      "name": "Monster Hunter",
+      "desc": "Win 25 expedition fights (PvE)."
+    },
+    "eco_1k": {
+      "name": "New Rich",
+      "desc": "Reach $1,000 in your account."
+    },
+    "eco_10k": {
+      "name": "Annuity Holder",
+      "desc": "Reach $10,000 in your account."
+    },
+    "eco_50k": {
+      "name": "Wolf of Wall Street",
+      "desc": "Reach $50,000 in your account."
+    },
+    "eco_100k": {
+      "name": "Millionaire in the Making",
+      "desc": "Reach $100,000 in your account."
+    },
+    "eco_1m": {
+      "name": "Billionaire",
+      "desc": "Reach $1,000,000 in your account."
+    },
+    "eco_rich": {
+      "name": "Capitalist",
+      "desc": "Earn a cumulative total of $10,000."
+    },
+    "job_miner": {
+      "name": "Dwarf of Moria",
+      "desc": "Mine 100 ores."
+    },
+    "pet_feeder": {
+      "name": "Starred Chef",
+      "desc": "Feed 50 items to your pets."
+    },
+    "pet_level_10": {
+      "name": "Novice Breeder",
+      "desc": "Level up a pet to level 2."
+    },
+    "pet_level_20": {
+      "name": "Trainer",
+      "desc": "Level up a pet to level 5."
+    },
+    "pet_level_50": {
+      "name": "Monster Master",
+      "desc": "Level up a pet to level 10."
+    },
+    "pet_level_100": {
+      "name": "Living Legend",
+      "desc": "Level up a pet to level 20."
+    },
+    "coinflip_won_1k": {
+      "name": "Beginner's Luck",
+      "desc": "Win $1,000 in Coinflip."
+    },
+    "coinflip_won_5k": {
+      "name": "Coin Regular",
+      "desc": "Win $5,000 in Coinflip."
+    },
+    "coinflip_won_100k": {
+      "name": "Double or Nothing",
+      "desc": "Win $100,000 in Coinflip."
+    },
+    "coinflip_won_1m": {
+      "name": "Heads or Tails Master",
+      "desc": "Win $1,000,000 in Coinflip."
+    },
+    "coinflip_lost_1k": {
+      "name": "Bad Streak",
+      "desc": "Lose $1,000 in Coinflip."
+    },
+    "coinflip_lost_5k": {
+      "name": "Unlucky",
+      "desc": "Lose $5,000 in Coinflip."
+    },
+    "coinflip_lost_100k": {
+      "name": "Ruined by a Coin",
+      "desc": "Lose $100,000 in Coinflip."
+    },
+    "coinflip_lost_1m": {
+      "name": "The Fall Guy",
+      "desc": "Lose $1,000,000 in Coinflip."
+    },
+    "slots_won_1k": {
+      "name": "Lucky Shooter",
+      "desc": "Win $1,000 in Slots."
+    },
+    "slots_won_5k": {
+      "name": "Pocket Full of Tokens",
+      "desc": "Win $5,000 in Slots."
+    },
+    "slots_won_100k": {
+      "name": "The Perfect Alignment",
+      "desc": "Win $100,000 in Slots."
+    },
+    "slots_won_1m": {
+      "name": "Walking Jackpot",
+      "desc": "Win $1,000,000 in Slots."
+    },
+    "slots_lost_1k": {
+      "name": "The Machine Is Rigged",
+      "desc": "Lose $1,000 in Slots."
+    },
+    "slots_lost_5k": {
+      "name": "One-Armed Bandit",
+      "desc": "Lose $5,000 in Slots."
+    },
+    "slots_lost_100k": {
+      "name": "Lever Addict",
+      "desc": "Lose $100,000 in Slots."
+    },
+    "slots_lost_1m": {
+      "name": "Casino Big Donor",
+      "desc": "Lose $1,000,000 in Slots."
+    },
+    "blackjack_won_1k": {
+      "name": "21! ($1k)",
+      "desc": "Win $1,000 in Blackjack."
+    },
+    "blackjack_won_5k": {
+      "name": "Card Counter ($5k)",
+      "desc": "Win $5,000 in Blackjack."
+    },
+    "blackjack_won_100k": {
+      "name": "The Dealer Cries ($100k)",
+      "desc": "Win $100,000 in Blackjack."
+    },
+    "blackjack_won_1m": {
+      "name": "Ace of Spades of Aces ($1M)",
+      "desc": "Win $1,000,000 in Blackjack."
+    },
+    "blackjack_lost_1k": {
+      "name": "Too Greedy ($1k)",
+      "desc": "Lose $1,000 in Blackjack."
+    },
+    "blackjack_lost_5k": {
+      "name": "Constant Bust ($5k)",
+      "desc": "Lose $5,000 in Blackjack."
+    },
+    "blackjack_lost_100k": {
+      "name": "Table Depression ($100k)",
+      "desc": "Lose $100,000 in Blackjack."
+    },
+    "blackjack_lost_1m": {
+      "name": "You Gave Away Your House ($1M)",
+      "desc": "Lose $1,000,000 in Blackjack."
+    },
+    "roulette_won_1k": {
+      "name": "Miraculous ($1k)",
+      "desc": "Win $1,000 in Roulette."
+    },
+    "roulette_won_5k": {
+      "name": "Death-Defying ($5k)",
+      "desc": "Win $5,000 in Roulette."
+    },
+    "roulette_won_100k": {
+      "name": "Immortality ($100k)",
+      "desc": "Win $100,000 in Roulette."
+    },
+    "roulette_won_1m": {
+      "name": "Legendary Survivor ($1M)",
+      "desc": "Win $1,000,000 in Roulette."
+    },
+    "roulette_lost_1k": {
+      "name": "First Injury ($1k)",
+      "desc": "Lose $1,000 in Roulette."
+    },
+    "roulette_lost_5k": {
+      "name": "Hospital Regular ($5k)",
+      "desc": "Lose $5,000 in Roulette."
+    },
+    "roulette_lost_100k": {
+      "name": "Suicidal ($100k)",
+      "desc": "Lose $100,000 in Roulette."
+    },
+    "roulette_lost_1m": {
+      "name": "Personal Cemetery ($1M)",
+      "desc": "Lose $1,000,000 in Roulette."
+    },
+    "bet_rookie": {
+      "name": "Sunday Bettor",
+      "desc": "Win a bet."
+    },
+    "bet_pro": {
+      "name": "Visionary",
+      "desc": "Win 25 bets."
+    },
+    "lotto_rookie": {
+      "name": "Regular Player",
+      "desc": "Play 10 Lotto tickets."
+    },
+    "lotto_winner": {
+      "name": "The Big Winner",
+      "desc": "Win the Lotto Jackpot!"
+    },
+    "daily_1": {
+      "name": "Engaged Worker",
+      "desc": "Claim your daily pay for the 1st time."
+    },
+    "daily_10": {
+      "name": "Employee of the Month",
+      "desc": "Claim your daily pay 10 times."
+    },
+    "daily_50": {
+      "name": "Morning Routine",
+      "desc": "Claim your daily pay 50 times."
+    },
+    "daily_100": {
+      "name": "Habit Makes the Monk",
+      "desc": "Claim your daily pay 100 times."
+    },
+    "daily_365": {
+      "name": "One-Year Veteran",
+      "desc": "Claim your daily pay 365 times (That's 1 full year!)."
+    },
+    "pet_collector_common": {
+      "name": "Amateur Zoologist",
+      "desc": "Own all Common pets (8)."
+    },
+    "pet_collector_rare": {
+      "name": "Confirmed Zoologist",
+      "desc": "Own all Rare pets (6)."
+    },
+    "pet_collector_epic": {
+      "name": "Animal Expert",
+      "desc": "Own all Epic pets (4)."
+    },
+    "pet_collector_legendary": {
+      "name": "Legend Trainer",
+      "desc": "Own a Legendary pet."
+    },
+    "pet_collector_all": {
+      "name": "Master of the Animal World",
+      "desc": "Own absolutely all pet species (19)."
+    },
+    "rank_bronze": {
+      "name": "Born Competitor",
+      "desc": "Place a pet in Bronze rank."
+    },
+    "rank_silver": {
+      "name": "Challenger",
+      "desc": "Place a pet in Silver rank."
+    },
+    "rank_gold": {
+      "name": "Golden Gladiator",
+      "desc": "Place a pet in Gold rank."
+    },
+    "rank_diamond": {
+      "name": "The Elite",
+      "desc": "Place a pet in Diamond rank."
+    },
+    "rank_top5": {
+      "name": "Master of Olympus",
+      "desc": "Take a pet to the World Top 5."
+    },
+    "community_initiate": {
+      "name": "Civic Duty",
+      "desc": "Invest 10,000 coins or 200 items in a community project."
+    },
+    "community_supporter": {
+      "name": "Pillar of the Community",
+      "desc": "Invest 500,000 coins or 5,000 items in a community project."
+    },
+    "community_pillar": {
+      "name": "The Patron",
+      "desc": "Invest 5,000,000 coins or 50,000 items in a community project."
+    },
+    "boss_league_1": {
+      "name": "Novice Badge",
+      "desc": "Defeat the first Boss League opponent."
+    },
+    "boss_league_2": {
+      "name": "Stone Badge",
+      "desc": "Defeat the second Boss League opponent."
+    },
+    "boss_league_3": {
+      "name": "Sky Badge",
+      "desc": "Defeat the third Boss League opponent."
+    },
+    "boss_league_4": {
+      "name": "Abyss Badge",
+      "desc": "Defeat the fourth Boss League opponent."
+    },
+    "boss_league_5": {
+      "name": "League Champion",
+      "desc": "Become the Boss League Champion by defeating the final boss!"
+    },
     "ui": {
-        "glory_total": "**Total Glory Points: {total}** 🌟",
-        "pet_glory_info": "*(including {glory} awarded by your pets' rank)*",
-        "no_achievements": "You haven't unlocked any achievements yet.",
-        "ach_line": "{emoji} **{name}** (+{glory} Glory)\n*{desc}*",
-        "new_achievement_title": "🎉 New Achievement Unlocked !",
-        "new_achievement_glory": "*+{glory} Glory pts*",
-        "unknown_user": "Unknown",
-        "succes_title": "🏆 {user}'s Achievements"
-    }
+      "glory_total": "**Total Glory Points: {total}** 🌟",
+      "pet_glory_info": "*(including {glory} awarded by your pets' rank)*",
+      "no_achievements": "You haven't unlocked any achievements yet.",
+      "ach_line": "{emoji} **{name}** (+{glory} Glory)\n*{desc}*",
+      "new_achievement_title": "🎉 New Achievement Unlocked !",
+      "new_achievement_glory": "*+{glory} Glory pts*",
+      "unknown_user": "Unknown",
+      "succes_title": "🏆 {user}'s Achievements"
+    },
+    "list_title": "Achievements",
+    "menu_desc": "View the trophies you have earned.",
+    "btn_show": "Show",
+    "unlocked": "Unlocked",
+    "locked": "Locked",
+    "empty": "You haven't unlocked any achievements yet.",
+    "entry": "{emoji} **{name}** (+{glory} Glory) — {status}"
   },
   "duel": {
     "no_bot": "🤖 You cannot challenge a bot (they cheat).",
@@ -1106,57 +1511,57 @@
       "step0_dialogue": "Welcome to HoakHaven! It's a peaceful little village where we farm, mine, and play games. Let's start your new life here and have some fun."
     },
     "day1_strata": {
-        "title": "Day 1: Getting Your Hands Dirty",
-        "description": "Introduction to Thorek and Mining.",
-        "step0_dialogue": "Hey there! I'm Thorek. If you want to survive here, you need to work. Grab a pickaxe and let's see what you can find in the mines.",
-        "step1_activity": "Goal: Use `!mine` 10 times to gather some resources.",
-        "step2_dialogue": "Not bad! You're a natural. Go see Elara now, she knows what to do with dirt."
+      "title": "Day 1: Getting Your Hands Dirty",
+      "description": "Introduction to Thorek and Mining.",
+      "step0_dialogue": "Hey there! I'm Thorek. If you want to survive here, you need to work. Grab a pickaxe and let's see what you can find in the mines.",
+      "step1_activity": "Goal: Use `!mine` 10 times to gather some resources.",
+      "step2_dialogue": "Not bad! You're a natural. Go see Elara now, she knows what to do with dirt."
     },
     "day2_alchemy": {
-        "title": "Day 2: Planting the Seeds",
-        "description": "Introduction to Elara and Farming.",
-        "step0_dialogue": "Hi, I'm Elara! Mining is great, but farming is where the real money is. Let's plant some seeds and watch them grow!",
-        "step1_activity": "Goal: Plant crops using `!farm` 10 times.",
-        "step2_choice": "Are you ready to be a great farmer?",
-        "choice_a_label": "Yes, absolutely!",
-        "choice_b_label": "I'll do my best.",
-        "choice_a_response": "That's the spirit!",
-        "choice_b_response": "That's all we ask!"
+      "title": "Day 2: Planting the Seeds",
+      "description": "Introduction to Elara and Farming.",
+      "step0_dialogue": "Hi, I'm Elara! Mining is great, but farming is where the real money is. Let's plant some seeds and watch them grow!",
+      "step1_activity": "Goal: Plant crops using `!farm` 10 times.",
+      "step2_choice": "Are you ready to be a great farmer?",
+      "choice_a_label": "Yes, absolutely!",
+      "choice_b_label": "I'll do my best.",
+      "choice_a_response": "That's the spirit!",
+      "choice_b_response": "That's all we ask!"
     },
     "day3_base": {
-        "title": "Day 3: Settling Down",
-        "description": "Economy and Housing.",
-        "step0_req": "Goal: Accumulate 500 Money and 2 Iron Ore to prove your commitment.",
-        "step1_activity": "Goal: Buy your first House (The Starter Shack) using `!house shop`.",
-        "step2_dialogue": "You're doing great! It's time to settle down properly. Go ahead and buy yourself a little shack."
+      "title": "Day 3: Settling Down",
+      "description": "Economy and Housing.",
+      "step0_req": "Goal: Accumulate 500 Money and 2 Iron Ore to prove your commitment.",
+      "step1_activity": "Goal: Buy your first House (The Starter Shack) using `!house shop`.",
+      "step2_dialogue": "You're doing great! It's time to settle down properly. Go ahead and buy yourself a little shack."
     },
     "day4_will": {
-        "title": "Day 4: Exploring the Wilds",
-        "description": "Introduction to Irian and Hunting/Pets.",
-        "step0_dialogue": "Hey, I'm Irian. The woods can be dangerous, but if you're lucky, you might find a cute pet out there. Let's go hunting!",
-        "step1_activity": "Goal: Hunt 10 times using `!hunt`.",
-        "step2_dialogue": "You found one! A Mystery Egg. Let's take good care of it."
+      "title": "Day 4: Exploring the Wilds",
+      "description": "Introduction to Irian and Hunting/Pets.",
+      "step0_dialogue": "Hey, I'm Irian. The woods can be dangerous, but if you're lucky, you might find a cute pet out there. Let's go hunting!",
+      "step1_activity": "Goal: Hunt 10 times using `!hunt`.",
+      "step2_dialogue": "You found one! A Mystery Egg. Let's take good care of it."
     },
     "day5_odds": {
-        "title": "Day 5: Testing Your Luck",
-        "description": "Introduction to GambleBot and the Casino.",
-        "step0_dialogue": "Beep boop! I'm GambleBot. Working hard is cool, but winning big is cooler. Come try your luck at the Casino!",
-        "step1_activity": "Goal: Play 5 Casino Mini-games.",
-        "step2_dialogue": "Win or lose, it's all about having fun! Keep rolling those dice."
+      "title": "Day 5: Testing Your Luck",
+      "description": "Introduction to GambleBot and the Casino.",
+      "step0_dialogue": "Beep boop! I'm GambleBot. Working hard is cool, but winning big is cooler. Come try your luck at the Casino!",
+      "step1_activity": "Goal: Play 5 Casino Mini-games.",
+      "step2_dialogue": "Win or lose, it's all about having fun! Keep rolling those dice."
     },
     "day6_contribution": {
-        "title": "Day 6: Pitching In",
-        "description": "Community Building/Village Goals.",
-        "step0_dialogue": "The village needs your help! The central generator is running out of juice. Let's all chip in to keep the lights on.",
-        "step1_req": "Goal: Donate 5 Iron Ore and 5 Wheat to the Village Power Grid."
+      "title": "Day 6: Pitching In",
+      "description": "Community Building/Village Goals.",
+      "step0_dialogue": "The village needs your help! The central generator is running out of juice. Let's all chip in to keep the lights on.",
+      "step1_req": "Goal: Donate 5 Iron Ore and 5 Wheat to the Village Power Grid."
     },
     "day7_sprout": {
-        "title": "Day 7: Defending the Village",
-        "description": "Combat Tutorial and Season Teaser.",
-        "step0_event": "Uh oh! The generator powered up, but it woke up a grumpy old robot! Get your pet and defend the village!",
-        "step1_boss": "Goal: Defend the village with your pet against the Grumpy Robot.",
-        "step2_dialogue_team": "\n*Thorek*: Nice job! We did it.\n\n*Elara*: That was close, but everyone is safe.\n\n*Irian*: Good fighting out there.\n\n*GambleBot*: Beep boop! Threat eliminated. Great teamwork!",
-        "step3_dialogue_unknown": "*Incoming Message* : Beep boop... I'll be back... \n\n[TUTORIAL COMPLETE. HAVE FUN PLAYING THE BOT!]"
+      "title": "Day 7: Defending the Village",
+      "description": "Combat Tutorial and Season Teaser.",
+      "step0_event": "Uh oh! The generator powered up, but it woke up a grumpy old robot! Get your pet and defend the village!",
+      "step1_boss": "Goal: Defend the village with your pet against the Grumpy Robot.",
+      "step2_dialogue_team": "\n*Thorek*: Nice job! We did it.\n\n*Elara*: That was close, but everyone is safe.\n\n*Irian*: Good fighting out there.\n\n*GambleBot*: Beep boop! Threat eliminated. Great teamwork!",
+      "step3_dialogue_unknown": "*Incoming Message* : Beep boop... I'll be back... \n\n[TUTORIAL COMPLETE. HAVE FUN PLAYING THE BOT!]"
     }
   },
   "boss_league": {
@@ -1238,5 +1643,38 @@
       "advice": "Be fast! Ocean fishing has a very narrow bite window, but it's where the most legendary beasts dwell.",
       "chat": "Just looking at the horizon... They say a giant Kraken roams the deep waters when the sky turns dark."
     }
+  },
+  "character": {
+    "menu_title": "Character",
+    "menu_desc": "View your player profile.",
+    "btn_show": "Show profile",
+    "title": "Player profile",
+    "wallet": "Wallet",
+    "bank": "Bank",
+    "crowns": "Crowns",
+    "achievements": "Achievements"
+  },
+  "onboarding": {
+    "menu_title": "Welcome to GuacaGambleBot! 🎰",
+    "menu_desc": "Let's set up the bot for your server. Pick the channel where I can talk, choose a language, and tweak a few options.",
+    "field_channel": "Channel",
+    "field_language": "Language",
+    "field_prefix": "Prefix",
+    "field_status": "Status",
+    "channel_placeholder": "Select a channel…",
+    "language_placeholder": "Select a language",
+    "btn_advanced": "Advanced",
+    "btn_enable": "Enable bot",
+    "btn_disable": "Disable bot",
+    "btn_finish": "Finish setup",
+    "btn_reconfigure": "Reconfigure",
+    "advanced_title": "Advanced settings",
+    "prefix_label": "Command prefix",
+    "configured_title": "Setup complete ✅",
+    "configured_desc": "The bot is ready! I'll use {channel} as my home channel. Type /economy to get started.",
+    "need_channel": "Please choose a channel before finishing setup.",
+    "status_enabled": "Enabled",
+    "status_disabled": "Disabled",
+    "setup_desc": "Configure the bot for this server."
   }
 }

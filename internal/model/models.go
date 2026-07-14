@@ -153,9 +153,13 @@ type ServerPetElo struct {
 }
 
 type ServerSetting struct {
-	ServerID              int64  `gorm:"primaryKey;column:server_id"`
-	AnnouncementChannelID int64  `gorm:"column:announcement_channel_id"`
-	Language              string `gorm:"column:language;default:fr"`
+	ServerID              int64      `gorm:"primaryKey;column:server_id"`
+	AnnouncementChannelID int64      `gorm:"column:announcement_channel_id"`
+	ChannelID             int64      `gorm:"column:channel_id"`
+	Language              string     `gorm:"column:language;default:fr"`
+	Prefix                string     `gorm:"column:prefix"`
+	Enabled               bool       `gorm:"column:enabled"`
+	OnboardedAt           *time.Time `gorm:"column:onboarded_at"`
 }
 
 type ServerLottoState struct {

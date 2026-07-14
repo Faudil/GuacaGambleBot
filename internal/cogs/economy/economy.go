@@ -35,14 +35,14 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(toInt64(i.GuildID))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
-	lang := c.store.GetLanguage(toInt64(m.GuildID))
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	embed, comps := c.menu(lang)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
@@ -68,11 +68,11 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 }
 
 func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(toInt64(i.GuildID))
-	userID := toInt64(interaction.UserID(i))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	res, err := c.svc.Balance(userID)
 	if err != nil {
-		respondError(b, i, lang, "economy.give_no_money")
+		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
 	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
@@ -88,11 +88,11 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(toInt64(i.GuildID))
-	userID := toInt64(interaction.UserID(i))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	res, err := c.svc.Daily(userID)
 	if err != nil {
-		respondError(b, i, lang, "economy.give_no_money")
+		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
 	embed := components.Embed(i18n.T("economy.daily_title", lang), "", 0x2ecc71)
@@ -103,7 +103,7 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		fields = append(fields, components.Field(i18n.T("economy.tax_repayment", lang), "-$"+strconv.Itoa(res.Repaid), false))
 		for _, l := range res.Lenders {
 			fields = append(fields, components.Field(
-				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": mention(l.LenderID)}),
+				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.Mention(l.LenderID)}),
 				"$"+strconv.Itoa(l.Amount), false))
 		}
 	}
@@ -115,12 +115,12 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 
 	if len(res.Unlocks) > 0 {
-		sendAchievements(b, i, lang, res.Unlocks)
+		interaction.SendAchievements(b, i, lang, res.Unlocks)
 	}
 }
 
 func (c *Cog) onGiveOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(toInt64(i.GuildID))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	modal := components.ModalResponse(
 		components.Encode("economy", "give_submit"),
 		i18n.T("economy.give_modal_title", lang),
@@ -134,35 +134,35 @@ func (c *Cog) onGiveOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) onGiveSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(toInt64(i.GuildID))
-	sender := toInt64(interaction.UserID(i))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	sender := interaction.ToInt64(interaction.UserID(i))
 	values := interaction.ModalValues(i)
-	recipient, ok := parseUserID(values["recipient"])
+	recipient, ok := interaction.ParseUserID(values["recipient"])
 	if !ok {
-		respondError(b, i, lang, "economy.give_invalid")
+		interaction.RespondError(b, i, lang, "economy.give_invalid")
 		return
 	}
 	amount, err := strconv.Atoi(strings.TrimSpace(values["amount"]))
 	if err != nil || amount <= 0 {
-		respondError(b, i, lang, "economy.give_invalid")
+		interaction.RespondError(b, i, lang, "economy.give_invalid")
 		return
 	}
 	sb, rb, gerr := c.svc.Give(sender, recipient, amount)
 	if gerr != nil {
 		switch gerr {
 		case economysvc.ErrSelf:
-			respondError(b, i, lang, "economy.give_invalid")
+			interaction.RespondError(b, i, lang, "economy.give_invalid")
 		case economysvc.ErrNoMoney:
-			respondError(b, i, lang, "economy.give_no_money")
+			interaction.RespondError(b, i, lang, "economy.give_no_money")
 		default:
-			respondError(b, i, lang, "economy.give_invalid")
+			interaction.RespondError(b, i, lang, "economy.give_invalid")
 		}
 		return
 	}
 	embed := components.Embed(i18n.T("economy.give_title", lang), "", 0x2ecc71)
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("economy.sender", lang), mention(sender), true),
-		components.Field(i18n.T("economy.receiver", lang), mention(recipient), true),
+		components.Field(i18n.T("economy.sender", lang), interaction.Mention(sender), true),
+		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
 		components.Field(i18n.T("economy.quantity", lang), "**$"+strconv.Itoa(amount)+"**", false),
 	}
 	_, comps := c.menu(lang)
@@ -172,53 +172,9 @@ func (c *Cog) onGiveSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	// Achievements for both parties (mirrors the Python behaviour).
 	for _, uid := range []int64{sender, recipient} {
 		if unlocks, uerr := achievement.CheckAndUnlock(b.DB, uid); uerr == nil && len(unlocks) > 0 {
-			sendAchievements(b, i, lang, unlocks)
+			interaction.SendAchievements(b, i, lang, unlocks)
 		}
 	}
 	_ = rb
 	_ = sb
-}
-
-func respondError(b *interaction.Bot, i *discordgo.InteractionCreate, lang, key string) {
-	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: i18n.T(key, lang),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
-}
-
-func sendAchievements(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, unlocks []*achievement.Achievement) {
-	desc := ""
-	for _, a := range unlocks {
-		name := i18n.T("achievements."+a.ID+".name", lang)
-		adesc := i18n.T("achievements."+a.ID+".desc", lang)
-		glory := i18n.T("achievements.ui.new_achievement_glory", lang, map[string]any{"glory": a.Glory})
-		desc += "🎖️ **" + name + "** " + a.Emoji + "\n" + glory + "\n" + adesc + "\n\n"
-	}
-	embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, 0xf1c40f)
-	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Embeds: []*discordgo.MessageEmbed{embed}})
-}
-
-func mention(id int64) string {
-	return "<@" + strconv.FormatInt(id, 10) + ">"
-}
-
-func parseUserID(s string) (int64, bool) {
-	s = strings.TrimSpace(s)
-	s = strings.TrimPrefix(s, "<@")
-	s = strings.TrimPrefix(s, "!")
-	s = strings.TrimSuffix(s, ">")
-	s = strings.TrimSpace(s)
-	id, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return 0, false
-	}
-	return id, true
-}
-
-func toInt64(s string) int64 {
-	id, _ := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
-	return id
 }

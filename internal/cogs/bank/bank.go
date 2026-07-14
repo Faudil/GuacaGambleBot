@@ -1,0 +1,172 @@
+package bank
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/bwmarrin/discordgo"
+
+	"guacagamblebot/internal/components"
+	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/interaction"
+	banksvc "guacagamblebot/internal/service/bank"
+	"guacagamblebot/internal/store"
+)
+
+// Cog implements the Bank "embed interface": a menu with deposit, withdraw and
+// balance actions.
+type Cog struct {
+	store *store.Store
+	cfg   *config.Config
+	svc   *banksvc.Service
+}
+
+// Register wires the cog into the router under both slash and prefix triggers.
+func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
+	c := &Cog{store: s, cfg: cfg, svc: banksvc.New(s, cfg)}
+	r.Slash("bank", "Banque : dépôt, retrait, solde.", c.onSlashMenu)
+	r.Prefix("bank", c.onPrefixMenu)
+	r.Component("bank", "deposit", c.onDepositOpen)
+	r.Component("bank", "withdraw", c.onWithdrawOpen)
+	r.Component("bank", "balance", c.onBalance)
+	r.Modal("bank", "deposit_submit", c.onDepositSubmit)
+	r.Modal("bank", "withdraw_submit", c.onWithdrawSubmit)
+}
+
+func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	embed, comps := c.menu(lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	embed, comps := c.menu(lang)
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: comps,
+	})
+}
+
+func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	embed := components.Embed(
+		i18n.T("bank.menu_title", lang),
+		i18n.T("bank.menu_desc", lang),
+		0xf1c40f,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("bank.btn_deposit", lang), components.Encode("bank", "deposit"), discordgo.PrimaryButton),
+			components.Button(i18n.T("bank.btn_withdraw", lang), components.Encode("bank", "withdraw"), discordgo.SecondaryButton),
+			components.Button(i18n.T("bank.btn_balance", lang), components.Encode("bank", "balance"), discordgo.SuccessButton),
+		),
+	}
+	return embed, comps
+}
+
+func (c *Cog) onDepositOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	modal := components.ModalResponse(
+		components.Encode("bank", "deposit_submit"),
+		i18n.T("bank.deposit_modal_title", lang),
+		components.TextInput("amount", i18n.T("bank.amount_label", lang), true, "100", discordgo.TextInputShort, 1, 12),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+func (c *Cog) onWithdrawOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	modal := components.ModalResponse(
+		components.Encode("bank", "withdraw_submit"),
+		i18n.T("bank.withdraw_title", lang),
+		components.TextInput("amount", i18n.T("bank.amount_label", lang), true, "100", discordgo.TextInputShort, 1, 12),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	values := interaction.ModalValues(i)
+	amount, err := strconv.Atoi(strings.TrimSpace(values["amount"]))
+	if err != nil || amount <= 0 {
+		interaction.RespondError(b, i, lang, "bank.invalid")
+		return
+	}
+	wallet, bank, derr := c.svc.Deposit(int(userID), amount)
+	if derr != nil {
+		switch derr {
+		case banksvc.ErrNoMoney:
+			interaction.RespondError(b, i, lang, "bank.insufficient")
+		default:
+			interaction.RespondError(b, i, lang, "bank.invalid")
+		}
+		return
+	}
+	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
+	embed.Fields = []*discordgo.MessageEmbedField{
+		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+	}
+	_, comps := c.menu(lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onWithdrawSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	values := interaction.ModalValues(i)
+	amount, err := strconv.Atoi(strings.TrimSpace(values["amount"]))
+	if err != nil || amount <= 0 {
+		interaction.RespondError(b, i, lang, "bank.invalid")
+		return
+	}
+	wallet, bank, werr := c.svc.Withdraw(int(userID), amount)
+	if werr != nil {
+		switch werr {
+		case banksvc.ErrNoMoney:
+			interaction.RespondError(b, i, lang, "bank.insufficient")
+		default:
+			interaction.RespondError(b, i, lang, "bank.invalid")
+		}
+		return
+	}
+	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", 0xe67e22)
+	embed.Fields = []*discordgo.MessageEmbedField{
+		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+	}
+	_, comps := c.menu(lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	wallet, bank, interest, err := c.svc.Info(userID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "bank.invalid")
+		return
+	}
+	embed := components.Embed(i18n.T("bank.balance_title", lang), "", 0x3498db)
+	embed.Fields = []*discordgo.MessageEmbedField{
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+		components.Field(i18n.T("bank.daily_interest", lang), "+$"+strconv.Itoa(interest)+" / jour", false),
+	}
+	_, comps := c.menu(lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}

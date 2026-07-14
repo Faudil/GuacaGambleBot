@@ -19,12 +19,13 @@ type RepaidLender struct {
 
 // Store is the data-access layer over GORM.
 type Store struct {
-	DB               *gorm.DB
+	DB            *gorm.DB
 	StartingBalance int
+	DefaultPrefix   string
 }
 
 func New(db *gorm.DB, cfg *config.Config) *Store {
-	return &Store{DB: db, StartingBalance: cfg.StartingBalance}
+	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix}
 }
 
 // ensureUser creates the user row with the starting balance if missing.
@@ -79,6 +80,25 @@ func (s *Store) GetBankData(userID int64) (wallet, bank int, err error) {
 		return 0, 0, err
 	}
 	return u.Balance, u.Bank, nil
+}
+
+// AdjustColumn atomically adjusts a numeric user column (e.g. "bank") by delta
+// and returns the new value. It guarantees the user row exists first.
+func (s *Store) AdjustColumn(userID int64, column string, delta int) (int, error) {
+	if err := s.ensureUser(userID); err != nil {
+		return 0, err
+	}
+	if err := s.DB.Model(&model.User{}).
+		Where("user_id = ?", userID).
+		UpdateColumn(column, gorm.Expr(column+" + ?", delta)).Error; err != nil {
+		return 0, err
+	}
+	var v int
+	if err := s.DB.Model(&model.User{}).
+		Where("user_id = ?", userID).Pluck(column, &v).Error; err != nil {
+		return 0, err
+	}
+	return v, nil
 }
 
 // GetTotalDebt returns the sum of all open loans for a borrower.
@@ -200,6 +220,55 @@ func (s *Store) GetLanguage(serverID int64) string {
 		return "fr"
 	}
 	return ss.Language
+}
+
+// GetServerSetting returns the guild settings row, or nil when none exists.
+func (s *Store) GetServerSetting(serverID int64) (*model.ServerSetting, error) {
+	var ss model.ServerSetting
+	err := s.DB.Where("server_id = ?", serverID).First(&ss).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &ss, nil
+}
+
+// SaveServerSetting upserts a guild settings row keyed by server_id.
+func (s *Store) SaveServerSetting(ss *model.ServerSetting) error {
+	return s.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "server_id"}},
+		DoUpdates: clause.AssignmentColumns([]string{
+			"announcement_channel_id", "channel_id", "language", "prefix", "enabled", "onboarded_at",
+		}),
+	}).Create(ss).Error
+}
+
+// ServerPrefix returns the command prefix configured for a guild, falling back
+// to the global default when no guild-specific prefix is set.
+func (s *Store) ServerPrefix(serverID int64) string {
+	if serverID == 0 {
+		return s.DefaultPrefix
+	}
+	ss, err := s.GetServerSetting(serverID)
+	if err != nil || ss == nil || ss.Prefix == "" {
+		return s.DefaultPrefix
+	}
+	return ss.Prefix
+}
+
+// IsEnabled reports whether the bot is active in a guild. Guilds without a
+// settings row (or with server_id 0, i.e. DMs) are enabled by default.
+func (s *Store) IsEnabled(serverID int64) bool {
+	if serverID == 0 {
+		return true
+	}
+	ss, err := s.GetServerSetting(serverID)
+	if err != nil || ss == nil {
+		return true
+	}
+	return ss.Enabled
 }
 
 // StartDailyQuest initialises (or resets) the active daily quest for a user.
