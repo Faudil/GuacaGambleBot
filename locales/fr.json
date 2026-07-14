@@ -130,160 +130,208 @@
   "items": {
     "base_use_msg": "Cet objet ({item_name}) ne fait rien pour l'instant.",
     "café": {
-      "name": "Brassage-Stim",
-      "description": "Une dose concentrée de caféine et d'Éther. Réinitialise le délai de !daily."
+      "name": "Café",
+      "description": "Réveille tes sens. Réinitialise le cooldown du !daily."
+    },
+    "trophée de boss": {
+      "name": "Trophée de Boss",
+      "description": "Un trophée légendaire récompensant le premier joueur à vaincre le boss de fin du serveur."
     },
     "œuf mystère": {
-      "name": "Noyau-Familier Dormant",
-      "description": "Une archive biologique scellée attendant une décharge d'énergie pour s'éveiller."
+      "name": "Œuf Mystère",
+      "description": "Un œuf frémissant... Tape !hatch pour l'ouvrir ! (Peut contenir un familier légendaire)"
     },
     "caillou": {
-      "name": "Fragment de Ferraille",
-      "description": "Un éclat d'histoire. Sans valeur seul, mais un rappel de ce qui fut."
+      "name": "Caillou",
+      "description": "Un caillou tout nul. Sert à rien."
     },
     "charbon": {
-      "name": "Cellule Carbone",
-      "description": "Énergie condensée de l'ancien monde. Brûle encore d'une chaleur statique."
+      "name": "Charbon",
+      "description": "Pas mal pour se réchauffer."
     },
     "minerai de fer": {
-      "name": "Scories d'Éther",
-      "description": "Un sous-produit dense de métal infusé à l'Éther. Vital pour l'intégrité structurelle."
+      "name": "Minerai de Fer",
+      "description": "Utile pour forger des trucs solides."
     },
     "minerai de cuivre": {
-      "name": "Cuivre Conducteur",
-      "description": "Anciens câblages fusionnés dans le minerai. Vibre près du Nexus."
+      "name": "Minerai de Cuivre",
+      "description": "Utile pour forger des trucs solides."
     },
     "minerai d'argent": {
-      "name": "Alliage Zénith",
-      "description": "Un métal miroitant du sommet de la civilisation ancienne."
+      "name": "Minerai d'Argent",
+      "description": "Utile pour forger des trucs solides."
     },
     "pépite d'or": {
-      "name": "Cristal d'Éther",
-      "description": "Énergie d'Éther solidifiée. Très prisé pour les projets de restauration."
+      "name": "Pépite d'Or",
+      "description": "Brillant ! Les marchands adorent ça."
     },
     "platine": {
-      "name": "Platine Noyau-Raffiné",
-      "description": "Métal rare récupéré dans les réacteurs des profondeurs de la station."
+      "name": "Platine",
+      "description": "Brillant ! Les marchands adorent ça."
     },
     "emeraude": {
-      "name": "Gemme-Luma",
-      "description": "Une pierre précieuse qui semble puiser sa lumière dans l'air ambiant."
+      "name": "Émeraude",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
     },
     "diamant brut": {
-      "name": "Disque Mémoire Zénith",
-      "description": "Une matrice de cristal contenant les échos cryptés du passé."
+      "name": "Diamant Brut",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
     },
     "vieille botte": {
-      "name": "Engrenage Rouillé",
-      "description": "Une roue dentée d'une machine qui n'a pas tourné depuis un millénaire."
+      "name": "Vieille botte",
+      "description": "Un caillou tout nul. Sert à rien."
     },
     "truite": {
-      "name": "Truite-Néon",
-      "description": "Ses écailles pulsent selon un rythme bioluminescent."
+      "name": "Truite",
+      "description": "Un poisson d'eau douce."
     },
     "saumon": {
-      "name": "Saumon Écailles-de-Cuivre",
-      "description": "Robuste et métallique, ce poisson survit dans les canaux de ruissellement."
+      "name": "Saumon",
+      "description": "Parfait pour faire des sushis."
     },
     "sardine": {
-      "name": "Sardine à Circuit",
-      "description": "Un petit poisson argenté arborant de légères gravures sur l'échine."
+      "name": "Sardine",
+      "description": "Un petit poisson d'eau de mer"
     },
     "carpe": {
-      "name": "Carpe d'Éther",
-      "description": "Elles se nourrissent des sédiments près de la Racine-Éther."
+      "name": "Carpe",
+      "description": "Le meilleur poisson d'eau douce."
     },
     "poisson-globe": {
-      "name": "Poisson-Plasma",
-      "description": "Rempli de gaz volatil. À manipuler avec une extrême prudence."
+      "name": "Poisson-Globe",
+      "description": "Attention, ça pique !"
     },
     "espadon": {
-      "name": "Espadon-Laser",
-      "description": "Son rostre est un point de focalisation pour les décharges atmosphériques."
+      "name": "Espadon",
+      "description": "Un poisson combattant majestueux."
     },
     "requin": {
-      "name": "Requin-Titane",
-      "description": "Un prédateur terrifiant aux mâchoires renforcées par la récupération."
+      "name": "Requin",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
     },
     "baleine": {
-      "name": "Léviathan Sous-Marin",
-      "description": "Une créature massive et ancienne qui se souvient du monde avant La Mue."
+      "name": "Baleine",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
     },
     "tentacule de kraken": {
-      "name": "Tentacule Optique",
-      "description": "Un membre tortueux provenant d'une sentinelle des strates profondes."
+      "name": "Tentacule de Kraken",
+      "description": "TU AS PÊCHÉ UN MONSTRE ?!"
     },
     "plante pourrie": {
-      "name": "Bio-Masse Corrompue",
-      "description": "Croissance échouée. L'Éther a rejeté la Volonté du semeur."
+      "name": "Plante Pourrie",
+      "description": "Tu as mal géré ta ferme..."
     },
     "blé": {
-       "name": "Blé-Néon",
-       "description": "Brille d'une douce lueur ambrée. La source d'énergie de base de la station."
+       "name": "Blé",
+       "description": "Indispensable pour faire du pain."
     },
     "avoine": {
-       "name": "Fibre-Mana",
-       "description": "Tiges robustes utilisées pour la nutrition et le tissage."
+       "name": "Avoine",
+       "description": "Parfait pour le petit déjeuner."
     },
     "maïs": {
-       "name": "Grain-Solaire",
-       "description": "Extrait l'énergie directement de l'atmosphère artificielle de la station."
+       "name": "Maïs",
+       "description": "Fait aussi du pop-corn !"
     },
     "patate": {
-       "name": "Tubercule-Batterie",
-       "description": "Un condensateur dense d'amidon. Épicé au toucher."
+       "name": "Patate",
+       "description": "On peut en faire de la vodka..."
     },
     "tomate": {
-       "name": "Racine-Sang",
-       "description": "Vibrante et métallique. Pousse mieux là où l'histoire est enfouie profond."
+       "name": "Tomate",
+       "description": "Un fruit ou un légume ? Le débat continue."
     },
     "citrouille": {
-       "name": "Courge d'Éther",
-       "description": "Chargée d'Éther stocké. Utilisée comme lanterne naturelle."
+       "name": "Citrouille",
+       "description": "Parfait pour Halloween."
     },
     "grain de café": {
-       "name": "Grain-Stim",
-       "description": "Restaure la concentration des travailleurs harassés de la Strate."
+       "name": "Grain de Café",
+       "description": "L'or noir du matin."
     },
     "fève de cacao": {
-       "name": "Fève de Matière Noire",
-       "description": "Une fève riche au goût amer possédant une fréquence apaisante."
+       "name": "Fève de Cacao",
+       "description": "L'ingrédient principal du bonheur (chocolat)."
     },
     "fraise": {
-       "name": "Bulbe-Rubis",
-       "description": "Sucré et fragile. Un luxe rare dans les ruines."
+       "name": "Fraise",
+       "description": "Rouge, sucrée et juteuse."
     },
     "pomme dorée": {
-       "name": "Pomme du Zénith",
-       "description": "Une descendante directe de la flore immaculée de l'ancien monde."
+       "name": "Pomme Dorée",
+       "description": "Elle brille d'une lueur magique."
     },
     "fruit étoile": {
-       "name": "Fruit-Nova",
-       "description": "Miroite d'un éclat céleste. Goût de potentiel infini."
+       "name": "Fruit Étoile",
+       "description": "Un fruit cosmique d'une autre dimension."
     },
-    "acte de titre (potager)": {
+    "terrain : potager": {
       "name": "Acte de Titre (Potager)",
       "description": "Te permet de travailler sur ton potager privé."
     },
-    "acte de titre (serre)": {
+    "terrain : serre tropicale": {
       "name": "Acte de Titre (Serre)",
       "description": "Te permet de travailler dans ta serre tropicale."
     },
-    "acte de titre (verger)": {
+    "terrain : verger enchanté": {
       "name": "Acte de Titre (Verger)",
       "description": "Permet de travailler dans ton verger céleste."
     },
-    "graine de blé": { "name": "Graine de Blé-Néon", "description": "Nécessite 5 min pour synthétiser du Blé-Néon." },
-    "graine d'avoine": { "name": "Graine de Fibre-Mana", "description": "Nécessite 10 min pour synthétiser de la Fibre-Mana." },
-    "graine de maïs": { "name": "Graine de Grain-Solaire", "description": "Nécessite 30 min pour synthétiser du Grain-Solaire." },
-    "graine de patate": { "name": "Graine de Tubercule-Batterie", "description": "Nécessite 1h pour synthétiser du Tubercule-Batterie." },
-    "graine de tomate": { "name": "Graine de Racine-Sang", "description": "Nécessite 2h pour synthétiser de la Racine-Sang." },
-    "graine de citrouille": { "name": "Graine de Courge d'Éther", "description": "Nécessite 4h pour synthétiser de la Courge d'Éther." },
-    "graine de café": { "name": "Graine de Grain-Stim", "description": "Nécessite 8h pour synthétiser du Grain-Stim." },
-    "graine de cacao": { "name": "Graine de Matière Noire", "description": "Nécessite 12h pour synthétiser de la Matière Noire." },
-    "graine de fraise": { "name": "Graine de Bulbe-Rubis", "description": "Nécessite 18h pour synthétiser du Bulbe-Rubis." },
-    "pépin de pomme dorée": { "name": "Graine de Pomme du Zénith", "description": "Nécessite 24h pour synthétiser des Pommes du Zénith." },
-    "pépin de fruit étoile": { "name": "Graine de Fruit-Nova", "description": "Nécessite 48h pour synthétiser des Fruits-Nova." }
+    "graine de blé": { "name": "Graine de Blé", "description": "À planter pour obtenir du blé (5 min)." },
+    "graine d'avoine": { "name": "Graine d'Avoine", "description": "À planter pour obtenir de l'avoine (10 min)." },
+    "graine de maïs": { "name": "Graine de Maïs", "description": "À planter pour obtenir du maïs (30 min)." },
+    "graine de patate": { "name": "Graine de Patate", "description": "À planter pour obtenir des patates (1h)." },
+    "graine de tomate": { "name": "Graine de Tomate", "description": "À planter pour obtenir des tomates (2h)." },
+    "graine de citrouille": { "name": "Graine de Citrouille", "description": "À planter pour obtenir des citrouilles (4h)." },
+    "graine de café": { "name": "Graine de Café", "description": "À planter pour obtenir du café (8h)." },
+    "graine de cacao": { "name": "Graine de Cacao", "description": "À planter pour obtenir du cacao (12h)." },
+    "graine de fraise": { "name": "Graine de Fraise", "description": "À planter pour obtenir des fraises (18h)." },
+    "pépin de pomme dorée": { "name": "Pépin de Pomme Dorée", "description": "À planter pour obtenir des pommes dorées (24h)." },
+    "pépin de fruit étoile": { "name": "Pépin de Fruit Étoile", "description": "À planter pour obtenir des fruits étoiles (48h)." },
+    "bière": {
+      "name": "Bière",
+      "description": "La boisson du mineur ! Réinitialise le cooldown de !mine."
+    },
+    "arc": {
+      "name": "Arc",
+      "description": "Aide à la chasse ! Réinitialise le cooldown de !hunt."
+    },
+    "jeton de casino": {
+      "name": "Jeton de Casino",
+      "description": "Te donne une nouvelle chance, reset ta limite de `!casino`"
+    },
+    "pièce truquée": {
+      "name": "Pièce Truquée",
+      "description": "Augmente ta chance. Passe ta probabilité de réussir ton pile ou face à 75%."
+    },
+    "potion d'oubli": {
+      "name": "Potion d'Oubli",
+      "description": "Réinitialise ton familier. Reset son estomac et le remet niveau 10."
+    },
+    "fortune cookie": {
+      "name": "Fortune Cookie",
+      "description": "Un biscuit délicieux avec un message prémonitoire."
+    },
+    "hameçon": {
+      "name": "Hameçon",
+      "description": "Attre les poissons ! Réinitialise le cooldown de !fish."
+    },
+    "parchemin d'identité": {
+      "name": "Parchemin d'Identité",
+      "description": "Change ton surnom sur le serveur aléatoirement."
+    },
+    "œuf saison": {
+      "name": "Œuf Saison",
+      "description": "Un œuf frémissant... Tape !hatch pour l'ouvrir ! (Peut contenir un familier légendaire)"
+    },
+    "data disk": {
+      "name": "Disque de Données",
+      "description": "Un disque mémoire Zénith corrompu. Contient d'anciens logs de la Strate."
+    },
+    "old journal": {
+      "name": "Vieux Journal",
+      "description": "Un carnet poussiéreux, écrit à la main par un survivant. Les pages sont couvertes de suie."
+    }
   },
   "market": {
     "title_mining": "📈⛏️ Cours items minages",
@@ -367,6 +415,11 @@
     "community_initiate": { "name": "Devoir Civique", "desc": "Investis 10 000 $ ou 200 objets dans la communauté." },
     "community_supporter": { "name": "Pilier de Comptoir", "desc": "Investis 500 000 $ ou 5 000 objets dans la communauté." },
     "community_pillar": { "name": "Le Grand Mécène", "desc": "Investis 5 000 000 $ ou 50 000 objets dans la communauté." },
+    "boss_league_1": { "name": "Badge Novice", "desc": "Bat le premier adversaire de la Ligue des Boss." },
+    "boss_league_2": { "name": "Badge de Roche", "desc": "Bat le deuxième adversaire de la Ligue des Boss." },
+    "boss_league_3": { "name": "Badge Céleste", "desc": "Bat le troisième adversaire de la Ligue des Boss." },
+    "boss_league_4": { "name": "Badge Abyssal", "desc": "Bat le quatrième adversaire de la Ligue des Boss." },
+    "boss_league_5": { "name": "Champion de la Ligue", "desc": "Deviens le Champion de la Ligue des Boss en battant le boss final !" },
     "ui": {
       "glory_total": "**Points de Gloire Totaux : {total}** 🌟",
       "pet_glory_info": "*(dont {glory} attribués par le rang de vos familiers)*",
@@ -930,9 +983,29 @@
       "legendary_max": "❌ Les familiers Légendaires ne peuvent pas être échangés contre une rareté supérieure !",
       "success_title": "✨ FUSION RÉUSSIE !",
       "success_desc": "Tes familiers ont fusionné dans une lumière éblouissante !\n\nFélicitations ! Tu as obtenu un {emoji} **{name}** !\n\n🌟 **Rareté :** {rarity}\n⚡ **Bonus Passif :** {bonus}\n\nTape `!pets` pour voir ta collection et l'équiper."
+    },
+    "transcend": {
+      "no_pet": "❌ Tu n'as pas de familier actif !",
+      "level_low": "❌ Ton familier **{name}** doit être niveau 20 pour transcender.",
+      "target_not_found": "❌ Familier consommé (ID: {id}) non trouvé dans ta collection.",
+      "same_pet": "❌ Tu ne peux pas consommer le familier que tu essaies de transcender !",
+      "wrong_type": "❌ Le familier consommé doit être un **{type}** (le même que ton familier actif).",
+      "success": "✨ **TRANSCENDANCE RÉUSSIE !** ✨\nTon familier **{name}** est maintenant TRS Niveau **{level}** !"
     }
   },
   "quests": {
+    "daily_challenge": {
+      "title": "Défi Quotidien",
+      "description": "Une tâche aléatoire donnée par le village pour gagner des récompenses.",
+      "new_quest": "✨ **Nouvelle Quête Quotidienne !**\n{objective}",
+      "active_quest": "📅 **Quête Quotidienne Active :**\n{objective} ({current}/{target})",
+      "completed": "✅ **Quête Quotidienne Terminée !**\nTu as reçu un **Œuf Saison**.",
+      "blackjack": "Gagne {n} parties de Blackjack",
+      "mining": "Mine {n} ressources",
+      "fishing": "Pêche {n} fois",
+      "slots": "Gagne {n} fois à la Machine à Sous",
+      "betting": "Gagne {n} paris"
+    },
     "req_button": "Remplir l'objectif",
     "req_missing": "❌ Tu n'as pas l'argent ou les objets requis !",
     "req_done": "✅ Objectifs remplis !",
@@ -945,105 +1018,70 @@
     "boss_lose_taunt": "💀 Le boss se moque de toi : 'C'est tout ce que tu as ? Entraîne ton familier et reviens !'",
     "progress": "Progression",
     "continue_label": "Etape suivante",
-    "tutorial":{
+    "tutorial": {
       "step0_welcome": "Tu te réveilles après une soirée bien arrosée",
       "step1_help": "Aujourd'hui nous allons découvrir le village",
       "step2_chest": "Trouve un trésor caché",
       "completed": "Tutoriel terminé !"
     },
+    "day0_welcome":{
+      "title": "Bienvenue à HoakHaven",
+      "description": "Introduction au Village.",
+      "step0_dialogue": "Bienvenue à HoakHaven ! C'est un petit village paisible où on cultive, on mine et on s'amuse. Commence ta nouvelle vie ici !",
+      "step1_activity": "Objectif: utilise la commande daily pour obtenir ta récompense journalière"
+    },
     "day1_strata": {
-        "title": "Jour 1 : L'Accueil de la Strate",
-        "description": "Introduction à Thorek et au Minage.",
-        "step0_dialogue": "Ouvre les yeux, voyageur. Tu te trouves sur la Station Oakhaven. Ne cherche pas le ciel, regarde le sol. Tu te tiens sur dix civilisations qui pensaient être 'la dernière'. Elles ne l'étaient pas. Ce n'est plus que du minerai maintenant. Si tu veux manger, tu dois creuser. Prends cette pioche. Elle est faite d'un ancien blindage de vaisseau stellaire recyclé. Elle a plus d'histoire que toi.",
-        "step1_activity": "Objectif : Utilise `!mine` 10 fois pour fouiller les strates superficielles.",
-        "step2_dialogue": "Pas mal. Tu n'as pas cassé l'outil. La plupart des gens des 'Strates Supérieures' s'attendent à ce que le sol leur donne ses richesses gratuitement. Ici, nous gagnons notre droit au lendemain. Apporte cette ferraille à Elara. Elle te montrera pourquoi on se donne la peine de creuser."
+      "title": "Jour 1 : On se salit les mains",
+      "description": "Introduction à Thorek et au Minage.",
+      "step0_dialogue": "Salut ! Moi c'est Thorek. Si tu veux survivre ici, va falloir bosser. Prends une pioche et va voir ce que tu trouves dans les mines.",
+      "step1_activity": "Objectif : Utilise `!mine` 10 fois pour récolter des ressources.",
+      "step2_dialogue": "Pas mal ! Tu as du talent. Va voir Elara maintenant, elle sait quoi faire de toute cette terre."
     },
     "day2_alchemy": {
-        "title": "Jour 2 : L'Alchimie de la Décomposition",
-        "description": "Introduction à Elara et à l'Agriculture.",
-        "step0_dialogue": "C'est Thorek qui t'envoie ? Il est brusque, mais il a raison. Il trouve les os ; moi, je leur redonne vie. Regarde cette 'terre'. C'est en fait un mélange de circuits broyés et de soie antique. C'est riche, mais c'est têtu. Ça a besoin d'une Volonté pour fleurir. Es-tu ici pour regarder les choses pousser, ou pour les faire pousser ?",
-        "step1_activity": "Objectif : Plante 10 graines avec `!farm` dans le sol techno-organique.",
-        "step2_choice": "Quand tu regardes ces ruines, que vois-tu ?",
-        "choice_a_label": "Une tragédie de ce qui a été perdu.",
-        "choice_b_label": "Les fondations de ce qui arrive.",
-        "choice_a_response": "La nostalgie est un poison, voyageur. Le passé n'est que de l'engrais.",
-        "choice_b_response": "Bien. Tu as les yeux d'un semeur."
+      "title": "Jour 2 : On plante des graines",
+      "description": "Introduction à Elara et à l'Agriculture.",
+      "step0_dialogue": "Salut, moi c'est Elara ! Miner c'est bien, mais cultiver c'est mieux. Plantons quelques graines et regardons-les pousser !",
+      "step1_activity": "Objectif : Plante 10 graines avec `!farm`.",
+      "step2_choice": "Es-tu prêt à devenir un grand fermier ?",
+      "choice_a_label": "Oui, absolument !",
+      "choice_b_label": "Je ferai de mon mieux.",
+      "choice_a_response": "C'est l'esprit !",
+      "choice_b_response": "C'est tout ce qu'on demande !"
     },
     "day3_base": {
-        "title": "Jour 3 : Établir la Base",
-        "description": "Économie et Logement.",
-        "step0_req": "Objectif : Accumule 500 Pièces et 2 Scories d'Éther pour prouver ton engagement.",
-        "step1_activity": "Objectif : Achète ta première maison (La Cabane en Bois) via le `!house shop`.",
-        "step2_dialogue": "Un toit est une déclaration. Tu dis à La Strate que tu n'es pas seulement de passage—tu fais maintenant partie du cycle. Mais un village, ce n'est pas que des maisons. C'est l'énergie qui les relie. Nous devons jeter un oeil au Nexus."
+      "title": "Jour 3 : On s'installe",
+      "description": "Économie et Logement.",
+      "step0_req": "Objectif : Accumule 500 Pièces et 2 Minerai de fer pour te créer un capital.",
+      "step1_activity": "Objectif : Achète ta première maison (La Cabane en Bois) via le `!house shop`.",
+      "step2_dialogue": "Tu te débrouilles super bien ! Il est temps de t'installer pour de bon. Achète-toi une petite cabane."
     },
     "day4_will": {
-        "title": "Jour 4 : La Volonté de Vivre",
-        "description": "Introduction à Irian et à la Chasse/Familiers.",
-        "step0_dialogue": "Le Nexus a faim, mais les terres sauvages autour d'Oakhaven sont agitées. Les créatures ici... ce ne sont pas des 'animaux' comme le disent les vieux livres. Elles sont la synthèse. De la chair, de la magie et du métal fusionnés par La Mue. Elles ne veulent pas de ta pitié. Elles veulent un maître ou un défi. Viens. Voyons si tu peux suivre le pouls de la nature.",
-        "step1_activity": "Objectif : Chasse 10 fois près du périmètre rouillé en utilisant `!hunt`.",
-        "step2_dialogue": "Tu en as trouvé un. Un Familier-Noyau Endormi. Il n'est pas 'cassé', il attend juste une raison de bouger à nouveau. Apprivoise-le. C'est ton ombre maintenant—un rappel que la vie triomphe même du silence de la machine."
+      "title": "Jour 4 : Exploration Sauvage",
+      "description": "Introduction à Irian et à la Chasse/Familiers.",
+      "step0_dialogue": "Salut, c'est Irian. Les bois peuvent être dangereux, mais avec de la chance, tu pourrais trouver un familier mignon par ici. Partons chasser !",
+      "step1_activity": "Objectif : Chasse 10 fois en utilisant `!hunt`.",
+      "step2_dialogue": "Tu en as trouvé un ! Un Œuf Mystère. Prenons-en bien soin."
     },
     "day5_odds": {
-        "title": "Jour 5 : La Sagesse des Probabilités",
-        "description": "Introduction à GambleBot et au Casino.",
-        "step0_dialogue": "Bzzzt— Salutations, Unité-Joueur ! Tu as l'air... épuisé. Le labeur, toujours le labeur. Penses-tu que l'univers récompense le travail acharné ? Erreur : Corrélation introuvable ! Le Zénith est tombé parce qu'ils ont essayé de contrôler le résultat. Je suis ici pour te rappeler que les dés sont les seuls dieux honnêtes qu'il reste. Veux-tu embrasser le chaos ?",
-        "step1_activity": "Objectif : Joue 5 fois à des mini-jeux du Casino.",
-        "step2_dialogue": "Que tu gagnes ou que tu perdes, la roue continue de tourner. C'est l'Amor Fati, voyageur. Aime le lancer, pas le gain. Au fait, mes capteurs captent une fréquence... quelque chose d'ancien. Quelque chose de... 'propre'. Ça vient de l'horizon. Sûrement juste un bug. Oublie ce que je viens de dire."
+      "title": "Jour 5 : Tente ta chance",
+      "description": "Introduction à GambleBot et au Casino.",
+      "step0_dialogue": "Bip bop ! Je suis GambleBot. Travailler dur c'est cool, mais gagner gros c'est encore mieux. Viens tenter ta chance au Casino !",
+      "step1_activity": "Objectif : Joue 5 fois à des mini-jeux du Casino.",
+      "step2_dialogue": "Que tu gagnes ou que tu perdes, l'important c'est de s'amuser ! Continue de lancer les dés."
     },
     "day6_contribution": {
-        "title": "Jour 6 : La Grande Contribution",
-        "description": "Construction Communautaire.",
-        "step0_dialogue": "L'heure est venue. Le Nexus Racine-Éther—l'arbre-moteur au centre du village—tousse. S'il meurt, le village meurt de froid. S'il prospère, nous grandissons. Nous n'avons pas d'Élu pour le réparer. Nous n'avons que nous. Apporte tout ce que tu as rassemblé. Voyons si cette génération a le cran d'alimenter la machine.",
-        "step1_req": "Objectif : Fais don de 5 Scories d'Éther et de 5 Blés-Néon au réseau électrique du village."
+      "title": "Jour 6 : On participe",
+      "description": "Construction Communautaire.",
+      "step0_dialogue": "Le village a besoin de ton aide ! Le générateur central n'a plus beaucoup d'énergie. Faisons tous un effort pour garder les lumières allumées.",
+      "step1_req": "Objectif : Fais don de 5 Minerai de fer et de 5 Blé au réseau électrique du village."
     },
     "day7_sprout": {
-        "title": "Jour 7 : La Première Pousse (La Balise)",
-        "description": "Tutoriel de Combat et Teaser de la Saison 1.",
-        "step0_event": "Le Nexus palpite ! La Racine-Éther brille d'une lumière bleue terrifiante. Mais ce soudain tirage d'énergie a réveillé un ancien mécanisme de défense dans les strates inférieures.",
-        "step1_boss": "Objectif : Défends le Nexus avec ton familier contre Le Gardien Rouillé.",
-        "step2_dialogue_team": "\n*Thorek* : Ça tient ! Le moteur tourne.\n\n*Elara* : Regardez les racines... elles deviennent argentées. C'est magnifique.\n\n*Irian* : Mais c'est bruyant. On vient de crier dans l'obscurité, et le monde pourrait bien crier en retour.\n\n*GambleBot* : Probabilité d'être remarqué par 'La Restauration' : 99.9%. Le jeu vient de devenir intéressant.",
-        "step3_dialogue_unknown": "*Transmission pleine de parasites* : ...Signal détecté. Secteur 4-B. Station Oakhaven confirmée active. Lancement du protocole 'Réclamation'. Les enfants jouent encore avec le feu... il est temps de ramener l'ordre.\n\n[SAISON 0 TERMINÉE. EN ATTENTE DE LA SAISON 1 : LA RESTAURATION]"
-    },
-    "welcome_to_village": {
-      "title": "Bienvenue à Scrapwood",
-      "description": "Ton premier jour au village. Rencontre les habitants.",
-      "step0_arrive": "Tu arrives aux portes rouillées de Scrapwood. Une mécanicienne humaine te fait signe.\n\n*Elara : 'Hé toi ! Tu as l'air perdu. Bienvenue à Scrapwood, essaie de ne pas marcher sur les câbles dénudés. Moi c'est Elara.'*",
-      "step1_elara": "*Elara : 'Ici, tout le monde met la main à la pâte. Pour commencer, prends ces provisions de base. Et n'oublie pas de réclamer ta ration quotidienne !'*",
-      "step2_daily": "Objectif : Réclame tes rations quotidiennes en tapant `!daily`."
-    },
-    "rusty_reels": {
-      "title": "Rouages Rouillés",
-      "description": "Rencontre GamblerBot et gagne un peu de ferraille.",
-      "step0_meet": "Un robot rouillé et légèrement erratique t'approche.\n\n*GamblerBot : 'BZZT. Salutations entité organique. Veux-tu tester tes algorithmes de probabilité ? J'ai besoin de pièces de rechange. Fais un pari !'*",
-      "step1_pay": "Objectif : Donne 50 pièces à GamblerBot pour tester ses circuits.",
-      "step2_play": "Objectif : Joue à un jeu de casino (comme `!coinflip 100 heads` ou `!slots 100`) pour amuser GamblerBot."
-    },
-    "digging_up_past": {
-      "title": "Déterrer le Passé",
-      "description": "Travaille avec Thorek à la carrière improvisée.",
-      "step0_thorek": "Tu trouves un nain en train de frapper une coque de vaisseau écrasée avec un tuyau rouillé.\n\n*Thorek : 'Oi ! Le métal ici est plus dur qu'il n'y paraît. Prends une pioche et aide-moi à récupérer cette ferraille !'*\n\n(Thorek te donne de l'argent pour acheter une pioche)",
-      "step1_mine": "Objectif : Achète une pioche au `!shop` et utilise `!mine` pour trouver 2 pierres ou minerais."
-    },
-    "scrap_farm": {
-      "title": "Survie Agricole",
-      "description": "Aide Elara à faire pousser de la nourriture dans ces terres désolées.",
-      "step0_elara": "*Elara : 'On ne peut pas se nourrir que de rouille et de vieux câbles. J'ai trouvé un lopin de terre irradiée qui marche étonnamment bien pour les cultures. Tu devrais acheter une parcelle.'*",
-      "step1_buy_plot": "Objectif : Achète un Acte de titre (Potager) au `!shop`.",
-      "step2_plant": "Objectif : Utilise `!farm`, clique sur la parcelle vide et plante une graine."
-    },
-    "wild_beast": {
-      "title": "Bête Sauvage",
-      "description": "Irian a trouvé quelque chose d'inhabituel lors d'une patrouille.",
-      "step0_irian": "Un elfe vêtu de morceaux de cuir pointe un loup enragé du doigt.\n\n*Irian : 'Attention ! Un loup défendre son nid ! Bats-le si tu veux ce qu'il y a dedans.'*",
-      "step1_boss": "Objectif : Équipe un familier et vaincs le Loup Enragé au combat.",
-      "step2_hatch": "Objectif : Utilise l'Oeuf Mystère de ton inventaire pour faire éclore un familier."
-    },
-    "building_scraps": {
-      "title": "Bâtisseur de Ferraille",
-      "description": "Installe-toi confortablement à Scrapwood.",
-      "step0_housing": "*Elara : 'Tu transportes beaucoup trop d'objets ! Tu as prouvé que tu étais utile. Pourquoi ne pas acheter cette vieille cabane ? Tiens, voilà un peu de ferraille pour t'aider.'*",
-      "step1_buy_house": "Objectif : Achète la Cabane en Bois via `!house shop` pour augmenter la limite de ton inventaire.",
-      "step2_done": "*Elara : 'Bel endroit ! Bienvenue dans la communauté de Scrapwood.'*\n\n(Tu as terminé les quêtes de base !)"
+      "title": "Jour 7 : Défense du Village",
+      "description": "Tutoriel de Combat.",
+      "step0_event": "Oh oh ! Le générateur a redémarré, mais il a réveillé un vieux robot grincheux ! Prends ton familier et défends le village !",
+      "step1_boss": "Objectif : Défends le village avec ton familier contre le Robot Grincheux.",
+      "step2_dialogue_team": "\n*Thorek* : Beau travail ! On a réussi.\n\n*Elara* : C'était moins une, mais tout le monde est sain et sauf.\n\n*Irian* : Bien combattu.\n\n*GambleBot* : Bip bop ! Menace éliminée. Beau travail d'équipe !",
+      "step3_dialogue_unknown": "*Message entrant* : Bip bop... Je reviendrai...\n\n[TUTORIEL TERMINÉ. AMUSE-TOI BIEN AVEC LE BOT !]"
     }
   },
   "stats": {
@@ -1122,5 +1160,85 @@
     "level_up_desc": "La communauté a réussi à améliorer **{name}** au Niveau **{level}** !\nFélicitations à tous les contributeurs !",
     "invest_success": "✅ Tu as investi avec succès **{amount} {res}** dans {building} !",
     "stats_title": "📈 Stats Communautaires de {user}"
+  },
+  "boss_league": {
+    "title": "🏆 Ligue des Boss 🏆",
+    "stage_info": "Étape {stage}/5 - **{name}**",
+    "no_pet": "❌ Tu n'as pas de familier actif ! Utilise `!pets` pour lister tes familiers et `!equip <id>` pour en équiper un.",
+    "pet_ko": "❌ Ton familier actif **{name}** est K.O. ! Soigne-le d'abord via `!heal`.",
+    "fight_intro": "⚔️ **Défi Accepté !** {pet_emoji} **{pet_name}** défie **{boss_name}** ({boss_emoji}) !",
+    "defeat": "💀 **Défaite !** Ton familier **{pet_name}** a été vaincu par **{boss_name}**.",
+    "victory": "🎉 **Victoire !** **{boss_name}** a été vaincu !",
+    "rewards_title": "🎁 Récompenses obtenues :",
+    "achievement_unlocked": "🎖️ **Succès Débloqué** : {name} !",
+    "champion": "🏆 **Champion de la Ligue** 🏆\nTu as vaincu tous les boss et conquis la ligue ! Tu es un dresseur légendaire !",
+    "stats_label": "Niveau : {level}\nEspèce : {species}\nPV : {hp} | Atk : {atk} | Déf : {defense} | Vitesse : {speed}",
+    "fight_button": "Combattre !",
+    "challenge_footer": "Prépare ton familier et combats !",
+    "already_champion": "🏆 Tu es déjà le Champion de la Ligue ! Il n'y a plus d'adversaires à combattre."
+  },
+  "npcs": {
+    "list_title": "👥 Personnages du Guacamolistan",
+    "affinity_label": "Affinité : {rank} (Lvl {level}) - ({points}/{next_lvl})",
+    "talk_button": "Parler à {name}",
+    "talk_menu_placeholder": "Choisis un sujet de discussion...",
+    "gift_button": "Offrir un cadeau",
+    "quests_button": "Quêtes",
+    "rankup_button": "Promouvoir",
+    "shop_button": "Boutique",
+    "empty_inventory": "Ton inventaire est vide !",
+    "gift_prompt": "Que veux-tu offrir ? {hint}",
+    "gift_success": "Tu as offert **{qty}x {item}** à {name} !\n📈 Réputation gagnée : **{points}**",
+    "gift_cap_warning": "\n*(La limite journalière est atteinte, {lost} points perdus)*",
+    "rankup_no_rep": "Tu n'as pas assez de réputation pour passer au rang suivant !",
+    "rankup_max": "Tu as atteint le rang maximum !",
+    "rankup_cost_missing": "Tu n'as pas assez de {item} ! Il t'en faut {qty}.",
+    "rankup_success": "🎉 Félicitations ! Tu as atteint le rang **{rank}** avec {name} !",
+    "shop_empty": "{name} n'a rien à te vendre pour le moment.",
+    "shop_title": "🛍️ Boutique de {name}",
+    "topic_bio": "Qui es-tu ?",
+    "topic_role": "Quel est ton rôle ?",
+    "topic_advice": "Des conseils ?",
+    "topic_chat": "Quoi de neuf ?",
+    "gamblebot": {
+      "hint": "(Aime les objets en or brillant, les pièces truquées et les tickets VIP)",
+      "greeting_low": "Bonjour humain. Avez-vous tenté votre chance aujourd'hui ?",
+      "greeting_med": "Content de te revoir. Tu as misé juste, on dirait.",
+      "greeting_high": "Salut, partenaire ! On plume qui aujourd'hui ?",
+      "bio": "Je suis GambleBot, un robot croupier à la pointe de la technologie conçu pour gérer le Casino local et maximiser le divertissement (et le risque !).",
+      "role": "Je gère le Casino du village. Augmenter ton affinité avec moi débloquera une réduction en boutique (jusqu'à 20%).",
+      "advice": "Doublez toujours votre mise sur un 11 au Blackjack, mais ne pariez jamais d'argent que vous ne pouvez vous permettre de perdre !",
+      "chat": "Bip boup ! Calcul des probabilités de gain... 99% de chances que vous devriez jouer aux machines à sous maintenant."
+    },
+    "thorek": {
+      "hint": "(Aime les pépites d'or, le diamant brut, le platine et les minerais)",
+      "greeting_low": "Qu'est-ce que tu veux ? Si tu n'as pas de pioche, tu perds ton temps.",
+      "greeting_med": "Ah, te voilà ! Tu as trouvé du bon minerai récemment ?",
+      "greeting_high": "Salut l'ami ! Ma forge est toujours ouverte pour un bon mineur comme toi.",
+      "bio": "Je suis Thorek, le forgeron et mineur du village. J'ai passé des années dans les profondeurs de Hoak Haven.",
+      "role": "J'aide les mineurs et affine les métaux. Une forte affinité avec moi réduira passivement les risques d'effondrement de la mine (jusqu'à -20 de risque).",
+      "advice": "Le minage est une question de gestion des risques. Ne creuse pas trop profond si ton sac est plein, ou la mine s'effondrera sur ton butin !",
+      "chat": "Clang ! Clang ! Je travaille sur un nouveau prototype de pioche. Le travail forge le caractère, gamin."
+    },
+    "elara": {
+      "hint": "(Aime les œufs mystères, les fruits étoile, les pommes dorées, les graines et les baies)",
+      "greeting_low": "Bonjour. Prends soin de la terre et des familiers, s'il te plaît.",
+      "greeting_med": "Ravi de te revoir. Mes plantes poussent merveilleusement bien aujourd'hui.",
+      "greeting_high": "Bonjour mon cher ! La nature chante en ta présence.",
+      "bio": "Je suis Elara, la gardienne des potagers et des enclos à familiers du village. Je crois en l'harmonie entre technologie et nature.",
+      "role": "J'aide pour la ferme et les animaux. Une forte affinité avec moi réduira le temps de pousse de tes cultures (jusqu'à 20%).",
+      "advice": "Adapte tes cultures à tes terrains ! Les serres sont parfaites pour les plantes tropicales comme le café ou le cacao.",
+      "chat": "Les bourgeons sont magnifiques aujourd'hui. N'oublie pas de nourrir tes familiers pour qu'ils restent en forme !"
+    },
+    "irian": {
+      "hint": "(Aime les tentacules de kraken, les baleines, les requins et les poissons)",
+      "greeting_low": "Chut... Tu vas faire fuir les poissons.",
+      "greeting_med": "Salut marin. Tu as senti l'odeur du grand large récemment ?",
+      "greeting_high": "Ah, mon capitaine ! Les marées nous sont favorables aujourd'hui.",
+      "bio": "Je suis Irian, pêcheur vétéran et gardien des quais. Je connais le moindre secret des abysses.",
+      "role": "J'aide les pêcheurs à ferrer les créatures rares. Une forte affinité avec moi augmentera le temps de réaction disponible lors de la pêche.",
+      "advice": "Sois rapide ! La pêche en mer demande d'excellents réflexes, mais c'est là que se cachent les poissons les plus légendaires.",
+      "chat": "Je regarde l'horizon... On regarde s'il y a un Kraken géant qui rôde dans les eaux profondes quand le ciel s'assombrit."
+    }
   }
 }

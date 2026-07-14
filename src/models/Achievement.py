@@ -236,3 +236,19 @@ Achievement("community_supporter", "🏛️", 50,
 
 Achievement("community_pillar", "🏛️", 150,
             lambda s: s.get("community_money", 0) >= 5000000 or s.get("community_items", 0) >= 50000)
+
+# --- BOSS LEAGUE ---
+Achievement("boss_league_1", "⚔️", 20,
+            lambda s: s.get("boss_league_stage", 0) >= 1)
+
+Achievement("boss_league_2", "🏹", 50,
+            lambda s: s.get("boss_league_stage", 0) >= 2)
+
+Achievement("boss_league_3", "🛡️", 100,
+            lambda s: s.get("boss_league_stage", 0) >= 3)
+
+Achievement("boss_league_4", "⚡", 200,
+            lambda s: s.get("boss_league_stage", 0) >= 4)
+
+Achievement("boss_league_5", "🏆", 500,
+            lambda s: s.get("boss_league_stage", 0) >= 5)

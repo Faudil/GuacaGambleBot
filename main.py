@@ -30,6 +30,8 @@ from src.items.MiningLoot import Emerald, PlatinumOre, GoldNugget, SilverOre, Co
 from src.items.MysteryEgg import MysteryEgg
 from src.items.ScratchTicket import ScratchTicket
 from src.items.VipTicket import VipTicket
+from src.items.Trophy import BossTrophy
+from src.items.LoreLog import DataDisk, OldJournal
 from src.globals import CHANNEL_ID
 
 load_dotenv()
@@ -149,7 +151,8 @@ def initialize_items():
     ScratchTicket().register()
     Bow().register()
     ForgetPotion().register()
-
+    DataDisk().register()
+    OldJournal().register()
 
     # Mining resources
     Pebble().register()
@@ -208,6 +211,9 @@ def initialize_items():
 
     # Pet
     MysteryEgg().register()
+    
+    # Trophy
+    BossTrophy().register()
 
     print(f"✅ {len(ITEMS_REGISTRY)} objets chargés dans le système.")
 

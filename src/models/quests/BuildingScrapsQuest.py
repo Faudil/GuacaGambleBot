@@ -10,7 +10,7 @@ class BuildingScrapsQuest(Quest):
             QuestStep(
                 step_type=QuestStepType.DIALOGUE,
                 text_key="quests.building_scraps.step0_housing",
-                rewards=QuestReward(money=1500) # Helps them buy the shack
+                rewards=QuestReward(money=1500)
             ),
             QuestStep(
                 step_type=QuestStepType.ACTIVITY,

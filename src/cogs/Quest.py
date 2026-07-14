@@ -262,9 +262,17 @@ class Quest(commands.Cog):
 
         step = quest.steps[step_idx]
         
+        # Formatting for Daily Quest
+        fmt_args = {}
+        if quest_id == "daily_quest":
+            c_data = progress.get('custom_data', {})
+            obj_key = c_data.get('text_key', "quests.daily_challenge.objective")
+            target = c_data.get('target_count', 1)
+            fmt_args['objective'] = t(obj_key, lang, n=target)
+
         embed = discord.Embed(
             title=f"{quest.get_title(lang)}",
-            description=step.get_text(lang),
+            description=step.get_text(lang, **fmt_args),
             color=discord.Color.blue()
         )
         embed.set_footer(text=t("quests.step_progress", lang, current=step_idx+1, total=len(quest.steps)))

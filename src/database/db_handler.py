@@ -20,13 +20,15 @@ def init_db():
                      balance INTEGER DEFAULT 100,
                      crowns INTEGER DEFAULT 0,
                      extra_inv_slots INTEGER DEFAULT 0,
-                     extra_pet_slots INTEGER DEFAULT 0
+                     extra_pet_slots INTEGER DEFAULT 0,
+                     boss_league_stage INTEGER DEFAULT 0
                  )""")
 
     # Existing tables migration
     for col, type_def in [("crowns", "INTEGER DEFAULT 0"),
                           ("extra_inv_slots", "INTEGER DEFAULT 0"),
-                          ("extra_pet_slots", "INTEGER DEFAULT 0")]:
+                          ("extra_pet_slots", "INTEGER DEFAULT 0"),
+                          ("boss_league_stage", "INTEGER DEFAULT 0")]:
         try:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} {type_def}")
         except sqlite3.OperationalError:

@@ -13,6 +13,9 @@ from src.database.settings import get_announcement_channel, get_language
 from src.globals import DAILY_AMOUNT
 from src.utils.i18n import t
 
+from src.models.quests.DailyQuest import DailyQuest
+from src.database.quest import start_quest
+
 
 class Economy(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -92,6 +95,27 @@ class Economy(commands.Cog):
         embed.add_field(name=t("economy.your_balance", lang), value=f"${new_balance}")
         embed.set_footer(text=t("economy.daily_footer", lang))
         await ctx.send(embed=embed)
+        
+        # --- Daily Quest System ---
+        from src.database.quest import has_daily_quest_today
+        if not has_daily_quest_today(int(user_id)):
+            try:
+                objective = random.choice(DailyQuest.OBJECTIVES)
+                start_quest(int(user_id), 'daily_quest', custom_data={
+                    'target_stat': objective['stat'],
+                    'target_count': objective['count'],
+                    'text_key': objective['text_key']
+                })
+                
+                obj_text = t(objective['text_key'], lang, n=objective['count'])
+                quest_embed = discord.Embed(
+                    title=t("quests.daily_challenge.title", lang),
+                    description=t("quests.daily_challenge.new_quest", lang, objective=obj_text),
+                    color=discord.Color.blue()
+                )
+                await ctx.send(embed=quest_embed)
+            except Exception as e:
+                print(f"Error starting daily quest: {e}")
         
         from src.database.achievement import increment_stat
         increment_stat(int(user_id), "daily_uses", 1)

@@ -36,18 +36,30 @@ def get_quest_progress(user_id: int, quest_id: str) -> Optional[Dict[str, Any]]:
     finally:
         conn.close()
 
-def start_quest(user_id: int, quest_id: str):
+def start_quest(user_id: int, quest_id: str, custom_data: Optional[Dict[str, Any]] = None):
     """Initialize a quest for a user."""
     conn = get_connection()
     try:
         conn.execute(
-            "INSERT OR IGNORE INTO user_quests (user_id, quest_id, status) VALUES (?, ?, 'ACTIVE')",
+            "INSERT OR REPLACE INTO user_quests (user_id, quest_id, status, started_at) VALUES (?, ?, 'ACTIVE', CURRENT_TIMESTAMP)",
             (user_id, quest_id)
         )
+        c_data_json = json.dumps(custom_data) if custom_data else '{}'
         conn.execute(
-            "INSERT OR IGNORE INTO user_quest_data (user_id, quest_id) VALUES (?, ?)",
-            (user_id, quest_id)
+            "INSERT OR REPLACE INTO user_quest_data (user_id, quest_id, step_index, progress_value, custom_data) VALUES (?, ?, 0, 0, ?)",
+            (user_id, quest_id, c_data_json)
         )
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_quest(user_id: int, quest_id: str):
+    """Remove a quest and its data for a user."""
+    conn = get_connection()
+    try:
+        conn.execute("DELETE FROM user_quests WHERE user_id = ? AND quest_id = ?", (user_id, quest_id))
+        # user_quest_data should be deleted by CASCADE, but let's be safe
+        conn.execute("DELETE FROM user_quest_data WHERE user_id = ? AND quest_id = ?", (user_id, quest_id))
         conn.commit()
     finally:
         conn.close()
@@ -107,3 +119,16 @@ def is_quest_completed(user_id: int, quest_id: str) -> bool:
         return row is not None
     finally:
         conn.close()
+
+def has_daily_quest_today(user_id: int) -> bool:
+    """Check if the user has already received or completed a daily quest today."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM user_quests WHERE user_id = ? AND quest_id = 'daily_quest' AND date(started_at, 'localtime') = date('now', 'localtime')",
+            (user_id,)
+        ).fetchone()
+        return row is not None
+    finally:
+        conn.close()
+

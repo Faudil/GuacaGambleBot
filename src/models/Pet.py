@@ -429,6 +429,36 @@ RARITY_FOOD_CAPACITY = {
     ItemRarity.legendary: 2
 }
 
+CLASSIC_POOL = [
+    "Escargot", "Souris", "Cochon", "Grenouille", "Taupe", "Pélican", "Mouton", "Abeille",
+    "Chien", "Chat", "Cheval", "Renard", "Singe", "Ours",
+    "Chameau", "Panda", "Tigre", "Pieuvre",
+    "Dragon"
+]
+
+SEASONAL_POOLS = {
+    "season_1": [
+        "Hamster", "Hérisson", "Kangourou", "Gorille", "Rhino", "Ours polaire", "Mamouth", "Licorne"
+    ],
+    "season_2": [
+        "Fourmi", "Paresseux", "Iguane", "Scorpion", "Putois", "Lépoard", "Tyrannosaure", "Fenrir", "Ratatosk"
+    ],
+    "season_3": [
+        "Canard", "Chouette", "Bison", "Aigle", "Lion", "Cerbère", "Phoenix", "Nidhögg", "Bedawang"
+    ],
+    "season_4": [
+        "Crocodile", "Dauphin", "Diplodocus", "Mégalodon", "Kraken"
+    ]
+}
+
+def get_current_season_pets():
+    import datetime
+    # Returns the current seasonal pool name based on a 3-week rotation
+    week = datetime.datetime.now().isocalendar()[1]
+    rotation_index = (week // 3) % len(SEASONAL_POOLS)
+    season_keys = list(SEASONAL_POOLS.keys())
+    return SEASONAL_POOLS[season_keys[rotation_index]]
+
 
 class Pet:
     def __init__(self, pet_id=None, user_id=None, pet_type="Escargot", nickname=None,
@@ -568,7 +598,7 @@ class Pet:
         return None
 
     def add_xp(self, amount: int):
-        if self.level >= 20:
+        if (self.level >= 20 and self.trs_lvl == 0) or self.level >= 30:
             self.xp = 0
             return False
         self.xp += amount
@@ -576,21 +606,22 @@ class Pet:
 
         while self.xp >= self.level * rarity_xp_multiplier[self.rarity] * 100 and self.level < 20:
             self.xp -= self.level * rarity_xp_multiplier[self.rarity] * 100
-            self.level += 1
-            self.max_hp += 5
-            self.hp += 5
-            self.atk += 2
-            self.defense += 1
+            if self.level <= 20:
+                self.level += 1
+                self.max_hp += 5
+                self.hp += 5
+                self.atk += 2
+                self.defense += 1
+                if self.level == 5:
+                    self.elo = 1000
+                    self.spc_c = 5
+                elif self.level == 10:
+                    self.spc_c = 10
+                elif self.level == 20:
+                    self.spc_c = 15
+            elif self.trs_lvl == 1:
+                self.spc_c += 1
             leveled_up = True
-            if self.level == 5:
-                self.elo = 1000
-                self.spc_c = 5
-            elif self.level == 10:
-                self.spc_c = 10
-            elif self.level == 20:
-                self.spc_c = 15
-        if self.level >= 20:
-            self.xp = 0
         return leveled_up
 
     def forget_xp(self) -> bool:

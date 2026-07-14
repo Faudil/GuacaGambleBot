@@ -24,6 +24,7 @@ from src.items.Magnet import Magnet, RustyMagnet, ElectricMagnet
 from src.items.MysteryEgg import MysteryEgg
 from src.items.ScratchTicket import ScratchTicket
 from src.items.VipTicket import VipTicket
+from src.items.LoreLog import DataDisk, OldJournal
 from src.items.FarmItem import (
     WheatSeed, OatSeed, CornSeed, PotatoSeed, TomatoSeed,
     PumpkinSeed, CoffeeSeed, CocoaSeed, StrawberrySeed,
@@ -128,6 +129,7 @@ class Shop(commands.Cog):
                  FortuneCookie(), CheatCoin(), Magnet(),
                  RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                  VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed(), MysteryEgg(),
+                 DataDisk(), OldJournal(),
                  WheatSeed(), OatSeed(), CornSeed(), PotatoSeed(), TomatoSeed(),
                  PumpkinSeed(), CoffeeSeed(), CocoaSeed(), StrawberrySeed(),
                  GoldenAppleSeed(), StarFruitSeed()]
@@ -177,6 +179,7 @@ class Shop(commands.Cog):
                  FortuneCookie(), CheatCoin(), Magnet(),
                  RustyMagnet(), ElectricMagnet(), ScratchTicket(),
                  VegetablePatchDeed(), GreenhouseDeed(), OrchardDeed(), MysteryEgg(),
+                 DataDisk(), OldJournal(),
                  WheatSeed(), OatSeed(), CornSeed(), PotatoSeed(), TomatoSeed(),
                  PumpkinSeed(), CoffeeSeed(), CocoaSeed(), StrawberrySeed(),
                  GoldenAppleSeed(), StarFruitSeed()]

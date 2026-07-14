@@ -30,7 +30,12 @@ class FishingGameView(View):
             pet_bonus = pet.level // 4 if pet.bonus == PetBonus.FISH else 0
         else:
             pet_bonus = 0
-        self.time_limit = time_limit + (lvl + pet_bonus) * 0.1
+            
+        from src.utils.NPCManager import NPCManager
+        npc_bonuses = NPCManager.get_user_bonuses(self.ctx.author.id)
+        fishing_bonus = npc_bonuses.get("fishing_time_bonus", 0.0)
+        
+        self.time_limit = time_limit + (lvl + pet_bonus) * 0.1 + fishing_bonus
 
         self.loot_pool = loot_pool
         self.bite_active = False

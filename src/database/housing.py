@@ -181,7 +181,6 @@ def get_user_capacities(user_id):
         conn.close()
 
 def is_inventory_full(user_id):
-    """Vérifie si l'inventaire de l'utilisateur est plein."""
     capacities = get_user_capacities(user_id)
     
     conn = get_connection()
@@ -195,7 +194,6 @@ def is_inventory_full(user_id):
         conn.close()
 
 def can_add_pet(user_id):
-    """Vérifie si l'utilisateur peut ajouter un nouveau pet."""
     capacities = get_user_capacities(user_id)
     
     conn = get_connection()
@@ -208,7 +206,6 @@ def can_add_pet(user_id):
         conn.close()
 
 def add_extra_slots(user_id, inv_slots=0, pet_slots=0):
-    """Ajoute des slots supplémentaires achetés avec des Crowns."""
     conn = get_connection()
     try:
         conn.execute("""

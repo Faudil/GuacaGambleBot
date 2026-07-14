@@ -5,7 +5,7 @@ from src.database.item import get_all_user_inventory
 from src.database.settings import get_language
 from src.globals import ITEMS_REGISTRY
 from src.items.Item import ItemRarity
-from src.utils.i18n import t, get_rarity_name, get_item_name
+from src.utils.i18n import t, get_item_name
 
 
 class Inventory(commands.Cog):

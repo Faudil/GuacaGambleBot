@@ -14,8 +14,8 @@ from src.database.pets import (
 from src.globals import ITEMS_REGISTRY
 from src.items.ForgetPotion import ForgetPotion
 from src.items.Item import ItemRarity, Item
-from src.items.MysteryEgg import MysteryEgg
-from src.models.Pet import PETS_DB, Pet, PetBonus
+from src.items.MysteryEgg import MysteryEgg, SeasonnalEgg
+from src.models.Pet import PETS_DB, Pet, PetBonus, CLASSIC_POOL, get_current_season_pets
 from src.utils.embed_utils import generate_hp_bar
 from src.utils.battle import simulate_battle
 from src.utils.i18n import t, get_pet_name, get_rarity_name
@@ -113,19 +113,30 @@ class Pets(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def roll_gacha_pet(self, target_rarity=None):
+    def roll_gacha_pet(self, target_rarity=None, pool="classic"):
         if not target_rarity:
             roll = random.random()
             if roll < 0.05: target_rarity = ItemRarity.legendary
             elif roll < 0.15: target_rarity = ItemRarity.epic
             elif roll < 0.40: target_rarity = ItemRarity.rare
             else: target_rarity = ItemRarity.common
-        possible_pets = [name for name, data in PETS_DB.items() if data["rarity"] == target_rarity]
+        
+        if pool == "seasonal":
+            pet_names = get_current_season_pets()
+        else:
+            pet_names = CLASSIC_POOL
+            
+        possible_pets = [name for name in pet_names if PETS_DB[name]["rarity"] == target_rarity]
+        
+        # Fallback if no pet of that rarity exists in the current pool
+        if not possible_pets:
+            possible_pets = [name for name, data in PETS_DB.items() if data["rarity"] == target_rarity]
+            
         return random.choice(possible_pets)
 
     @commands.command(name='hatch', aliases=['eclore'])
-    async def hatch(self, ctx):
-        """Faire éclore un Œuf Mystère."""
+    async def hatch(self, ctx, *, egg_type: str = None):
+        """Faire éclore un Œuf Mystère ou un Œuf Saison."""
         lang = get_language(ctx.guild.id if ctx.guild else None)
         user_id = ctx.author.id
         
@@ -135,10 +146,30 @@ class Pets(commands.Cog):
             return await ctx.send(t("housing.pet_full_warning", lang, current=current, limit=limit))
             
         me_name = MysteryEgg().name
-        if not has_item(user_id, me_name, 1):
+        se_name = SeasonnalEgg().name
+        
+        target_egg = None
+        pool_type = "classic"
+        
+        if egg_type:
+            if "saison" in egg_type.lower() or "season" in egg_type.lower():
+                target_egg = se_name
+                pool_type = "seasonal"
+            else:
+                target_egg = me_name
+        else:
+            if has_item(user_id, se_name, 1):
+                target_egg = se_name
+                pool_type = "seasonal"
+            elif has_item(user_id, me_name, 1):
+                target_egg = me_name
+            else:
+                target_egg = me_name
+                
+        if not has_item(user_id, target_egg, 1):
             return await ctx.send(t("pets.hatch.no_egg", lang))
 
-        remove_item_from_inventory(user_id, me_name, 1)
+        remove_item_from_inventory(user_id, target_egg, 1)
         embed = discord.Embed(title=t("pets.hatch.hatching_title", lang), color=discord.Color.light_grey())
         embed.description = t("pets.hatch.step1", lang)
         msg = await ctx.send(embed=embed)
@@ -148,7 +179,7 @@ class Pets(commands.Cog):
         await msg.edit(embed=embed)
 
         await asyncio.sleep(2)
-        pet_name = self.roll_gacha_pet()
+        pet_name = self.roll_gacha_pet(pool=pool_type)
         pet_data = PETS_DB[pet_name]
         insert_new_pet(Pet.create_new(user_id, pet_name, pet_name))
 
@@ -256,7 +287,7 @@ class Pets(commands.Cog):
         await ctx.send(t("pets.play.success", lang, name=pet.nickname, xp=xp_gain))
 
     @commands.command(name='feed', aliases=['nourrir'])
-    async def feed_pet(self, ctx, *, item_name: str = None):
+    async def feed_pet(self, ctx, *, item_name: str = None, amount: int = 1):
         """Nourrir ton familier pour booster ses stats ou le reset."""
         lang = get_language(ctx.guild.id if ctx.guild else None)
         if item_name is None: return await ctx.send(t("pets.feed.no_item", lang))
@@ -275,16 +306,24 @@ class Pets(commands.Cog):
             else: await ctx.send(t("pets.feed.forget_fail", lang))
             return
 
-        if not has_item(ctx.author.id, item.name, 1): return await ctx.send(t("pets.feed.no_inventory", lang, name=item.display_name(lang)))
-        msg_error = pet.feed(item, lang)
-        if msg_error: return await ctx.send(msg_error)
-        remove_item_from_inventory(ctx.author.id, item.name, 1)
-        update_pet(pet)
-        stat_name = t(f"stats.{item.pet_effect['stat']}", lang)
-        sign = "+" if item.pet_effect["amount"] >= 0 else ""
-        embed = discord.Embed(title=t("pets.feed.miam_title", lang), color=discord.Color.green())
-        embed.description = t("pets.feed.miam_desc", lang, item=item.display_name(lang), emoji=pet.emoji, name=pet.nickname, stat=stat_name, sign=sign, amount=item.pet_effect['amount'], food=pet.food_eaten, max_food=pet.max_food_capacity)
-        await ctx.send(embed=embed)
+        if not has_item(ctx.author.id, item.name, amount):
+            return await ctx.send(t("pets.feed.no_inventory", lang, name=item.display_name(lang)))
+        fed_amount = 0
+        for i in range(0, amount):
+            msg_error = pet.feed(item, lang)
+            if msg_error:
+                await ctx.send(msg_error)
+                break
+            fed_amount += 1
+        if fed_amount > 0:
+            remove_item_from_inventory(ctx.author.id, item.name, fed_amount)
+            update_pet(pet)
+            stat_name = t(f"stats.{item.pet_effect['stat']}", lang)
+            sign = "+" if item.pet_effect["amount"] >= 0 else ""
+            embed = discord.Embed(title=t("pets.feed.miam_title", lang), color=discord.Color.green())
+            embed.description = t("pets.feed.miam_desc", lang, item=item.display_name(lang), emoji=pet.emoji, name=pet.nickname, stat=stat_name, sign=sign, amount=item.pet_effect['amount'], food=pet.food_eaten, max_food=pet.max_food_capacity)
+            await ctx.send(embed=embed)
+        return None
 
     @commands.command(name='heal', aliases=['soigner'])
     async def heal_pet(self, ctx):
@@ -453,6 +492,45 @@ class Pets(commands.Cog):
         embed = discord.Embed(title=t("pets.tradeup.success_title", lang), color=discord.Color.gold())
         embed.description = t("pets.tradeup.success_desc", lang, emoji=pet_data['emoji'], name=loc_new_name, rarity=loc_rarity_new, bonus=loc_bonus)
         return await ctx.send(embed=embed)
+
+    @commands.command(name='transcend')
+    async def transcend(self, ctx, pet_id: int):
+        """Augmenter le TRS Level de ton familier actif en sacrifiant un autre pet identique."""
+        lang = get_language(ctx.guild.id if ctx.guild else None)
+        server_id = ctx.guild.id if ctx.guild else None
+        
+        # 1. Get active pet
+        active_pet = get_active_pet(ctx.author.id, server_id)
+        if not active_pet:
+            return await ctx.send(t("pets.transcend.no_pet", lang))
+            
+        # 2. Check active pet level
+        if active_pet.level < 20:
+            return await ctx.send(t("pets.transcend.level_low", lang, name=active_pet.nickname))
+            
+        # 3. Get consumed pet
+        consumed_pet = get_pet_by_id(pet_id)
+        if not consumed_pet or consumed_pet.user_id != ctx.author.id:
+            return await ctx.send(t("pets.transcend.target_not_found", lang, id=pet_id))
+            
+        # 4. Same pet check
+        if consumed_pet.id == active_pet.id:
+            return await ctx.send(t("pets.transcend.same_pet", lang))
+            
+        # 5. Same type check
+        if consumed_pet.pet_type != active_pet.pet_type:
+            loc_type = get_pet_name(active_pet.pet_type, lang)
+            return await ctx.send(t("pets.transcend.wrong_type", lang, type=loc_type))
+            
+        # 6. Action
+        active_pet.trs_lvl += 1
+        delete_pet(consumed_pet.id)
+        update_pet(active_pet)
+        
+        # 7. Success message
+        embed = discord.Embed(title="✨ Transcendence ✨", color=discord.Color.purple())
+        embed.description = t("pets.transcend.success", lang, name=active_pet.nickname, level=active_pet.trs_lvl)
+        await ctx.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Pets(bot))

@@ -60,6 +60,9 @@ def get_user_stats(user_id: int) -> dict:
         stats["community_money"] = community_stats["money"]
         stats["community_items"] = community_stats["items"]
         
+        stage_row = conn.execute("SELECT boss_league_stage FROM users WHERE user_id = ?", (user_id,)).fetchone()
+        stats["boss_league_stage"] = stage_row["boss_league_stage"] if stage_row else 0
+
         return stats
     finally:
         conn.close()

@@ -1,15 +1,15 @@
 from src.models.Quest import QuestRegistry
-from .TutorialQuest import TutorialQuest
-from .Day1StrataGreetingQuest import Day1StrataGreetingQuest
-from .Day2AlchemyDecayQuest import Day2AlchemyDecayQuest
-from .Day3EstablishingBaseQuest import Day3EstablishingBaseQuest
-from .Day4WillToLifeQuest import Day4WillToLifeQuest
-from .Day5WisdomOddsQuest import Day5WisdomOddsQuest
-from .Day6GreatContributionQuest import Day6GreatContributionQuest
-from .Day7FirstSproutQuest import Day7FirstSproutQuest
+from .main.Day0WelcomeToHoakHaven import Day0WelcomeToHoakHavenQuest
+from .main.Day1StrataGreetingQuest import Day1StrataGreetingQuest
+from .main.Day2AlchemyDecayQuest import Day2AlchemyDecayQuest
+from .main.Day3EstablishingBaseQuest import Day3EstablishingBaseQuest
+from .main.Day4WillToLifeQuest import Day4WillToLifeQuest
+from .main.Day5WisdomOddsQuest import Day5WisdomOddsQuest
+from .main.Day6GreatContributionQuest import Day6GreatContributionQuest
+from .main.Day7FirstSproutQuest import Day7FirstSproutQuest
 
 def initialize_quests():
-    QuestRegistry.register(TutorialQuest())
+    QuestRegistry.register(Day0WelcomeToHoakHavenQuest())
     QuestRegistry.register(Day1StrataGreetingQuest())
     QuestRegistry.register(Day2AlchemyDecayQuest())
     QuestRegistry.register(Day3EstablishingBaseQuest())

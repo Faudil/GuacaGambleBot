@@ -40,6 +40,12 @@ class SeedSelect(Select):
 
         level, _ = get_job_data(interaction.user.id, "farmer")
         reduction = min(0.5, level * 0.01)
+        
+        from src.utils.NPCManager import NPCManager
+        npc_bonuses = NPCManager.get_user_bonuses(interaction.user.id)
+        reduction += npc_bonuses.get("farming_speed_boost", 0.0)
+        reduction = min(0.8, reduction) # Cap at 80% total reduction
+        
         final_grow_time = int(seed.grow_time * (1 - reduction))
 
         plant_seed(interaction.user.id, self.zone_key, self.plot_index, seed.name, final_grow_time)
