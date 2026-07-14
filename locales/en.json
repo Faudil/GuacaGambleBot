@@ -36,7 +36,17 @@
     "give_no_money": "❌ You don't have enough money.",
     "give_title": "💸 Transaction complete",
     "sender": "Sender",
-    "receiver": "Receiver"
+    "receiver": "Receiver",
+    "menu_title": "🏦 Economy",
+    "menu_desc": "Manage your money. Pick an action below:",
+    "menu_footer": "Use the buttons to interact.",
+    "btn_balance": "💰 Balance",
+    "btn_daily": "📅 Daily",
+    "btn_give": "💸 Give",
+    "give_modal_title": "Gift money",
+    "give_recipient_label": "Recipient (mention or ID)",
+    "give_amount_label": "Amount",
+    "give_done": "Money sent!"
   },
   "bank": {
     "invalid_amount": "❌ Invalid amount.",
