@@ -66,6 +66,12 @@ type Job struct {
 	XP      int    `gorm:"column:xp;default:0"`
 }
 
+type PetHistoryEntry struct {
+	Time   time.Time `json:"time"`
+	Event  string    `json:"event"`
+	Detail string    `json:"detail"`
+}
+
 type UserPet struct {
 	ID           int64   `gorm:"primaryKey;column:id;autoIncrement"`
 	UserID       int64   `gorm:"column:user_id"`
@@ -89,6 +95,19 @@ type UserPet struct {
 	Elo          int     `gorm:"column:elo;default:1000"`
 	IsActive     bool    `gorm:"column:is_active;default:false"`
 	OnExpedition bool    `gorm:"column:on_expedition;default:false"`
+
+	// New fields for pet rework
+	BondLevel    int    `gorm:"column:bond_level;default:0"`
+	History      string `gorm:"column:history;default:'[]'"`
+	Title        string `gorm:"column:title;default:''"`
+	SkillPoints  int    `gorm:"column:skill_points;default:0"`
+	Personality  string `gorm:"column:personality;default:brave"`
+}
+
+type UserPetSkill struct {
+	PetID   int64  `gorm:"primaryKey;column:pet_id"`
+	Slot    int    `gorm:"primaryKey;column:slot"`
+	SkillID string `gorm:"column:skill_id"`
 }
 
 type UserStat struct {
@@ -259,6 +278,42 @@ type Loan struct {
 	CreatedAt  string `gorm:"column:created_at"`
 }
 
+// UserCharacter holds the RPG character progression data.
+type UserCharacter struct {
+	UserID      int64 `gorm:"primaryKey;column:user_id"`
+	Level       int   `gorm:"column:level;default:1"`
+	XP          int   `gorm:"column:xp;default:0"`
+	SkillPoints int   `gorm:"column:skill_points;default:0"`
+	STR         int   `gorm:"column:str;default:5"`
+	DEX         int   `gorm:"column:dex;default:5"`
+	INT         int   `gorm:"column:int;default:5"`
+	VIT         int   `gorm:"column:vit;default:5"`
+	LUK         int   `gorm:"column:luk;default:5"`
+}
+
+// CharacterEquipment tracks which items a player has equipped.
+type CharacterEquipment struct {
+	UserID int64  `gorm:"primaryKey;column:user_id"`
+	Slot   string `gorm:"primaryKey;column:slot"` // "weapon", "armor", "accessory"
+	ItemID string `gorm:"column:item_id"`
+}
+
+// ActiveBuff records an active skill buff that will be consumed on next use.
+type ActiveBuff struct {
+	UserID    int64     `gorm:"primaryKey;column:user_id"`
+	SkillID   string    `gorm:"primaryKey;column:skill_id"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+}
+
+// UserLoreEntry records a lore fragment discovered by a player.
+type UserLoreEntry struct {
+	UserID       int64     `gorm:"primaryKey;column:user_id"`
+	LoreID       string    `gorm:"primaryKey;column:lore_id"`
+	DiscoveredAt time.Time `gorm:"column:discovered_at;autoCreateTime"`
+}
+
+func (UserLoreEntry) TableName() string { return "user_lore" }
+
 func (User) TableName() string                      { return "users" }
 func (Cooldown) TableName() string                  { return "cooldowns" }
 func (GameLimit) TableName() string                 { return "game_limits" }
@@ -267,7 +322,7 @@ func (Wager) TableName() string                     { return "wagers" }
 func (Inventory) TableName() string                 { return "inventory" }
 func (LottoState) TableName() string                { return "lotto_state" }
 func (Job) TableName() string                       { return "jobs" }
-func (UserPet) TableName() string                   { return "user_pets" }
+func (UserPetSkill) TableName() string              { return "user_pet_skills" }
 func (UserStat) TableName() string                  { return "user_stats" }
 func (UserAchievement) TableName() string           { return "user_achievements" }
 func (ServerPetElo) TableName() string              { return "server_pet_elo" }
@@ -285,3 +340,6 @@ func (ServerProject) TableName() string             { return "server_projects" }
 func (ServerProjectContribution) TableName() string { return "server_project_contributions" }
 func (UserCommunityStat) TableName() string         { return "user_community_stats" }
 func (Loan) TableName() string                      { return "loans" }
+func (UserCharacter) TableName() string             { return "user_characters" }
+func (CharacterEquipment) TableName() string         { return "character_equipment" }
+func (ActiveBuff) TableName() string                 { return "active_buffs" }

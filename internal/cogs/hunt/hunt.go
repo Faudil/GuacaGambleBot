@@ -1,7 +1,9 @@
 package hunt
 
 import (
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -10,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	petsvc "guacagamblebot/internal/service/pets"
 	huntsvc "guacagamblebot/internal/service/hunt"
 	"guacagamblebot/internal/store"
 )
@@ -94,6 +97,58 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	psvc := petsvc.New(c.store, c.cfg)
+	pet, _ := psvc.GetActivePet(userID)
+	if pet != nil {
+		// Interaction trigger after hunt
+		ready, _ := c.store.CheckCooldown(userID, "pet_interaction", 180*time.Minute)
+		if ready {
+			interact := petsvc.MaybeTriggerInteraction(pet, "hunt")
+			if interact != nil {
+				opts := make([]discordgo.SelectMenuOption, 0, len(interact.Choices))
+				for _, ch := range interact.Choices {
+					opts = append(opts, discordgo.SelectMenuOption{
+						Label: ch.Emoji + " " + ch.Label,
+						Value: ch.ID,
+					})
+				}
+				if len(opts) > 0 {
+					embed := components.Embed("💬 "+pet.Nickname+" wants your attention!", interact.Intro, 0x9b59b6)
+					_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+						Embeds: []*discordgo.MessageEmbed{embed},
+						Components: []discordgo.MessageComponent{
+							components.ActionRow(
+								discordgo.SelectMenu{
+									CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
+									Placeholder: "What do you do?",
+									Options:     opts,
+								},
+							),
+						},
+						Flags: discordgo.MessageFlagsEphemeral,
+					})
+				}
+			}
+		}
+	}
+	if pet != nil && res.XP > 0 {
+		lvlRes := psvc.AddXP(pet, res.XP)
+		if lvlRes.Leveled {
+			res.LeveledUp = true
+			res.NewLevel = lvlRes.NewLevel
+		}
+		if res.PlayerWon {
+			psvc.AddBond(pet, 1)
+			psvc.RecordHistory(pet, "hunt_win",
+				"⚔️ **"+pet.Nickname+"** won a fight in the **"+zoneKey+"** zone and earned **"+itoa(res.XP)+" XP**.")
+		} else {
+			psvc.AddBond(pet, 1)
+			psvc.RecordHistory(pet, "hunt_loss",
+				"😰 **"+pet.Nickname+"** was defeated while hunting in the **"+zoneKey+"** zone...")
+		}
+		psvc.UpdatePet(pet)
+	}
+
 	zone := huntsvc.Zones[zoneKey]
 	zoneName := i18n.T("hunt."+zone.Key, lang)
 	color := 0x00FF00
@@ -135,4 +190,16 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if uerr == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
 	}
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	out := ""
+	for n > 0 {
+		out = string(rune('0'+n%10)) + out
+		n /= 10
+	}
+	return out
 }

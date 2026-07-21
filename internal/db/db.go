@@ -36,6 +36,7 @@ func Migrate(db *gorm.DB) error {
 		&model.LottoState{},
 		&model.Job{},
 		&model.UserPet{},
+		&model.UserPetSkill{},
 		&model.UserStat{},
 		&model.UserAchievement{},
 		&model.ServerPetElo{},
@@ -53,5 +54,9 @@ func Migrate(db *gorm.DB) error {
 		&model.ServerProjectContribution{},
 		&model.UserCommunityStat{},
 		&model.Loan{},
+		&model.UserCharacter{},
+		&model.CharacterEquipment{},
+		&model.ActiveBuff{},
+		&model.UserLoreEntry{},
 	)
 }

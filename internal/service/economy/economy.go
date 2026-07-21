@@ -6,6 +6,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -104,6 +105,8 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 			return nil, err
 		}
 	}
+
+	charsvc.AddXP(s.store, userID, 5)
 
 	if err := achievement.IncrementStat(s.store.DB, userID, "daily_uses", 1); err != nil {
 		return nil, err

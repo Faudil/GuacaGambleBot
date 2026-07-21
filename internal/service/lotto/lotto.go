@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -140,6 +141,7 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 		res.NewJackpot = state.Jackpot + s.TicketPrice
 	}
 
+	charsvc.AddXP(s.store, userID, 10)
 	res.Unlocks, _ = achievement.CheckAndUnlock(s.store.DB, userID)
 	return res, nil
 }

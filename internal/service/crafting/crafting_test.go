@@ -117,6 +117,16 @@ func TestLevelUpCheckNotEnoughXP(t *testing.T) {
 	assert.Equal(t, 3, level)
 }
 
+func TestCraftAddsCharacterXP(t *testing.T) {
+	svc, st := testService(t)
+	craftSetup(t, st, 7)
+	require.NoError(t, svc.Craft(7, "beer", 1))
+
+	c, err := st.GetCharacter(7)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
 func TestLevelUpCheckSuccess(t *testing.T) {
 	svc, st := testService(t)
 	require.NoError(t, st.DB.Create(&model.Job{UserID: 1, JobName: "crafter", Level: 3, XP: 300}).Error)

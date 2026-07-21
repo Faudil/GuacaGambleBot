@@ -62,3 +62,24 @@ func TestCheckCooldown(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, time.Duration(0), d)
 }
+
+func TestFishAddsCharacterXP(t *testing.T) {
+	svc, s := testService(t)
+	_, err := svc.CastLine(1, "pond")
+	require.NoError(t, err)
+
+	c, err := s.GetCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
+func TestFishScavengerBuffGivesExtraItem(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.SetActiveBuff(1, "scavenger")
+
+	_, err := svc.CastLine(1, "pond")
+	require.NoError(t, err)
+
+	has, _ := s.HasActiveBuff(1, "scavenger")
+	assert.False(t, has, "scavenger should be consumed after cast")
+}

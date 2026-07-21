@@ -9,6 +9,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -163,6 +164,7 @@ func (s *Service) GetActive(userID int64) (*model.PetExpedition, error) {
 }
 
 func (s *Service) Claim(exp *model.PetExpedition) error {
+	charsvc.AddXP(s.store, exp.UserID, exp.RewardXP/2)
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.PetExpedition{}).
 			Where("id = ?", exp.ID).

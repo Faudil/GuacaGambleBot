@@ -4,11 +4,13 @@ import (
 	"errors"
 	"math"
 
-	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/model"
-	"guacagamblebot/internal/store"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
+	"guacagamblebot/internal/store"
 )
 
 var (
@@ -73,16 +75,33 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 		return ErrNoLevel
 	}
 
-	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+	intMult := charsvc.GetINTBonus(s.store, userID)
+	charXP := int(float64(recipe.XP*amount) * intMult)
+	totalXP := recipe.XP * amount
+
+	effectiveAmount := amount
+	ingMultiplier := 1.0
+	if charsvc.HasBuff(s.store, userID, "efficiency") {
+		ingMultiplier = 0.5
+		charsvc.ConsumeBuff(s.store, userID, "efficiency")
+	}
+
+	if charsvc.HasBuff(s.store, userID, "perfect_forge") {
+		charsvc.ConsumeBuff(s.store, userID, "perfect_forge")
+		// perfect forge makes the output quality higher (represented by double output)
+		effectiveAmount = amount * 2
+	}
+
+	if err := s.store.DB.Transaction(func(tx *gorm.DB) error {
 		for ing, qty := range recipe.Ingredients {
-			req := qty * amount
+			req := max(1, int(float64(qty*amount)*ingMultiplier))
 			var inv model.Inventory
 			if err := tx.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, ing, req).First(&inv).Error; err != nil {
 				return ErrNoIngredients
 			}
 		}
 		for ing, qty := range recipe.Ingredients {
-			req := qty * amount
+			req := max(1, int(float64(qty*amount)*ingMultiplier))
 			if err := tx.Model(&model.Inventory{}).
 				Where("user_id = ? AND item_id = ?", userID, ing).
 				UpdateColumn("quantity", gorm.Expr("quantity - ?", req)).Error; err != nil {
@@ -91,19 +110,24 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 		}
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: recipe.Result, Quantity: amount}).Error; err != nil {
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", effectiveAmount)}),
+		}).Create(&model.Inventory{UserID: userID, ItemID: recipe.Result, Quantity: effectiveAmount}).Error; err != nil {
 			return err
 		}
 		tx.Where("user_id = ? AND job_name = ?", userID, "crafter").
 			FirstOrCreate(&model.Job{UserID: userID, JobName: "crafter", Level: 1, XP: 0})
 		if err := tx.Model(&model.Job{}).
 			Where("user_id = ? AND job_name = ?", userID, "crafter").
-			UpdateColumn("xp", gorm.Expr("xp + ?", recipe.XP*amount)).Error; err != nil {
+			UpdateColumn("xp", gorm.Expr("xp + ?", totalXP)).Error; err != nil {
 			return err
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	charsvc.AddXP(s.store, userID, charXP)
+	return nil
 }
 
 func (s *Service) LevelUpCheck(userID int64) (bool, int) {

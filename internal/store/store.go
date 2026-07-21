@@ -372,6 +372,29 @@ func (s *Store) GetRandomActivePetPair(minLevel, eloRange int) (pet1, pet2 *mode
 	return &p1, &p2, nil
 }
 
+// CheckCooldown returns true if the cooldown for the given activity has elapsed.
+func (s *Store) CheckCooldown(userID int64, activity string, duration time.Duration) (bool, error) {
+	var cd model.Cooldown
+	err := s.DB.Where("user_id = ? AND activity_name = ?", userID, activity).First(&cd).Error
+	if err == gorm.ErrRecordNotFound {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return time.Since(cd.LastUsed) >= duration, nil
+}
+
+// SetCooldown records the current time as the last use of an activity.
+func (s *Store) SetCooldown(userID int64, activity string) error {
+	return s.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "activity_name"}},
+		DoUpdates: clause.Assignments(map[string]any{"last_used": time.Now()}),
+	}).Create(&model.Cooldown{
+		UserID: userID, ActivityName: activity, LastUsed: time.Now(),
+	}).Error
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

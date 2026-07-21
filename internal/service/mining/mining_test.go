@@ -66,3 +66,52 @@ func TestLeaveMineEmpty(t *testing.T) {
 	assert.Empty(t, res.Bag)
 	assert.Equal(t, 0, res.XP)
 }
+
+func TestLeaveMineAddsCharacterXP(t *testing.T) {
+	svc, s := testService(t)
+	bag := []BagEntry{{Name: "pebble", Count: 3}}
+	_, err := svc.LeaveMine(1, bag)
+	require.NoError(t, err)
+
+	c, err := s.GetCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
+func TestMineReinforceBuffPreventsCollapse(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.SetActiveBuff(1, "reinforce")
+
+	// Descend at a depth where collapse would normally happen
+	collapsed := false
+	res, err := svc.Descend(1, 50, nil, 0)
+	require.NoError(t, err)
+	if res.Collapsed {
+		collapsed = true
+	}
+	// reinforce should prevent collapse, even at very high depth
+	assert.False(t, collapsed, "reinforce should prevent collapse")
+
+	has, _ := s.HasActiveBuff(1, "reinforce")
+	assert.False(t, has, "reinforce should be consumed after one descend")
+}
+
+func TestMineScavengerBuffDoublesItems(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.SetActiveBuff(1, "scavenger")
+
+	bag := []BagEntry{{Name: "pebble", Count: 2}, {Name: "coal", Count: 1}}
+	res, err := svc.LeaveMine(1, bag)
+	require.NoError(t, err)
+
+	assert.GreaterOrEqual(t, len(res.Bag), 2)
+	// scavenger adds 50% more to each entry
+	for _, e := range res.Bag {
+		if e.Name == "pebble" {
+			assert.Greater(t, e.Count, 2)
+		}
+	}
+
+	has, _ := s.HasActiveBuff(1, "scavenger")
+	assert.False(t, has, "scavenger should be consumed after leave")
+}

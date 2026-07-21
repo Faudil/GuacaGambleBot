@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -107,7 +108,8 @@ func (s *Service) CastLine(userID int64, biome string) (*CastResult, error) {
 	}
 
 	roll := rand.Float64()
-	reaction := rand.Float64()*2.0 + 0.3
+	dexBonus := charsvc.GetDEXBonus(s.store, userID)
+	reaction := (rand.Float64()*2.0 + 0.3) / dexBonus
 	isPerfect := reaction < 1.0
 	var item FishItem
 	if isPerfect && roll < 0.20 {
@@ -119,6 +121,14 @@ func (s *Service) CastLine(userID int64, biome string) (*CastResult, error) {
 	}
 
 	xp := 10 + rand.Intn(11)
+
+	if charsvc.HasBuff(s.store, userID, "scavenger") {
+		charsvc.ConsumeBuff(s.store, userID, "scavenger")
+		_ = s.store.DB.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + 1")}),
+		}).Create(&model.Inventory{UserID: userID, ItemID: item.Name, Quantity: 1}).Error
+	}
 
 	if err := s.store.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
@@ -164,6 +174,8 @@ func (s *Service) CastLine(userID int64, biome string) (*CastResult, error) {
 	if err := s.SetCooldown(userID); err != nil {
 		return nil, err
 	}
+
+	charsvc.AddXP(s.store, userID, xp)
 
 	return &CastResult{ItemName: item.Name, Value: item.Value, XP: xp, Reaction: reaction}, nil
 }

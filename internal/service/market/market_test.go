@@ -65,6 +65,18 @@ func TestSellItemInsufficientQuantity(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoItem)
 }
 
+func TestSellItemAddsCharacterXP(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
+
+	_, err := svc.SellItem(1, "coal", 3)
+	require.NoError(t, err)
+
+	c, err := st.GetCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
 func TestSellItemSuccess(t *testing.T) {
 	svc, st := testService(t)
 	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)

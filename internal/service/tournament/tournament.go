@@ -82,6 +82,7 @@ func toBattlePet(pet *model.UserPet) *battle.BattlePet {
 		Level: pet.Level, HP: pet.MaxHP, MaxHP: pet.MaxHP,
 		Atk: pet.Atk, Defense: pet.Defense, Speed: pet.Speed,
 		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,
+		// Skills not loaded here - could be extended later
 	}
 }
 

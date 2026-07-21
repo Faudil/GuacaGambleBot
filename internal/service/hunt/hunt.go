@@ -9,6 +9,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -158,6 +159,30 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	petAtk := pet.Atk
 	petDef := pet.Defense
 
+	strBonus := charsvc.GetSTRBonus(s.store, userID)
+	vitBonus := charsvc.GetVITReduction(s.store, userID)
+	petAtk = int(float64(petAtk) * strBonus)
+	petHP = int(float64(petHP) * (1.0 + vitBonus))
+	if petHP > petMaxHP {
+		petHP = petMaxHP
+	}
+
+	if charsvc.HasBuff(s.store, userID, "pet_bond") {
+		petAtk = int(float64(petAtk) * 1.25)
+		petHP = int(float64(petHP) * 1.25)
+		petDef = int(float64(petDef) * 1.25)
+		if petHP > petMaxHP*125/100 {
+			petHP = petMaxHP * 125 / 100
+		}
+		charsvc.ConsumeBuff(s.store, userID, "pet_bond")
+	}
+
+	if charsvc.HasBuff(s.store, userID, "bulwark") {
+		petHP = petMaxHP
+		// first round immunity: skip the enemy's first attack
+		charsvc.ConsumeBuff(s.store, userID, "bulwark")
+	}
+
 	var log []BattleLogEntry
 
 	for petHP > 0 && enemy.HP > 0 {
@@ -228,29 +253,26 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		xp = int(float64(baseXP) * zone.XPMult)
 	}
 
-	pet.XP += xp
-	next := 100 + pet.Level*50
-	if pet.XP >= next {
-		pet.XP -= next
-		pet.Level++
-		pet.MaxHP += 10
-		pet.HP = petHP + 10
-		if pet.HP > pet.MaxHP {
-			pet.HP = pet.MaxHP
-		}
-		pet.Atk += 2
-		pet.Defense += 1
-		leveledUp = true
-		newLevel = pet.Level
+	// Persist HP changes; XP and leveling are handled by the caller via petsvc.AddXP
+	s.store.DB.Model(&pet).Update("hp", petHP)
 
-		s.store.DB.Model(&pet).Updates(map[string]any{
-			"xp": pet.XP, "level": pet.Level, "max_hp": pet.MaxHP,
-			"hp": pet.HP, "atk": pet.Atk, "defense": pet.Defense,
-		})
-	} else {
-		s.store.DB.Model(&pet).Updates(map[string]any{
-			"xp": pet.XP, "hp": petHP,
-		})
+	charsvc.AddXP(s.store, userID, xp)
+
+	if playerWon && charsvc.HasBuff(s.store, userID, "scavenger") {
+		for _, loot := range zone.LootTable {
+			if rand.Float64() < loot.Chance {
+				qty := rand.Intn(loot.MaxQty) + 1
+				for i := 0; i < qty; i++ {
+					s.store.DB.Exec(
+						`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
+						 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
+						userID, loot.Item,
+					)
+					lootItems = append(lootItems, loot.Item)
+				}
+			}
+		}
+		charsvc.ConsumeBuff(s.store, userID, "scavenger")
 	}
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)

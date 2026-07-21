@@ -100,6 +100,43 @@ var RarityXP = map[string]float64{
 	RarityLegendary: 2.0,
 }
 
+type PersonalityTrait struct {
+	Name        string
+	Emoji       string
+	Rarity      string // "common" or "uncommon"
+	Description string
+}
+
+var PersonalityTraits = map[string]*PersonalityTrait{
+	"brave":       {Name: "Brave", Emoji: "⚔️", Rarity: "common", Description: "Bold and fearless in battle."},
+	"playful":     {Name: "Playful", Emoji: "🎾", Rarity: "common", Description: "Full of energy and always up for fun."},
+	"grumpy":      {Name: "Grumpy", Emoji: "😤", Rarity: "common", Description: "Easily annoyed but deeply loyal."},
+	"curious":     {Name: "Curious", Emoji: "🔍", Rarity: "common", Description: "Always exploring and finding new things."},
+	"gentle":      {Name: "Gentle", Emoji: "🤲", Rarity: "common", Description: "Soft-hearted and caring."},
+	"timid":       {Name: "Timid", Emoji: "😰", Rarity: "common", Description: "Skittish but quick on its feet."},
+	"fierce":      {Name: "Fierce", Emoji: "🔥", Rarity: "uncommon", Description: "Aggressive and relentless in combat."},
+	"sleepy":      {Name: "Sleepy", Emoji: "💤", Rarity: "uncommon", Description: "Always napping, but surprisingly resilient."},
+	"loyal":       {Name: "Loyal", Emoji: "❤️", Rarity: "uncommon", Description: "Devoted companion that never wavers."},
+	"mischievous": {Name: "Mischievous", Emoji: "😈", Rarity: "uncommon", Description: "Loves pranks and causing harmless trouble."},
+}
+
+func RandomPersonality() string {
+	// Common personalities: 70% chance, uncommon: 30%
+	common := make([]string, 0)
+	uncommon := make([]string, 0)
+	for id, t := range PersonalityTraits {
+		if t.Rarity == "common" {
+			common = append(common, id)
+		} else {
+			uncommon = append(uncommon, id)
+		}
+	}
+	if rand.Float64() < 0.70 {
+		return common[rand.Intn(len(common))]
+	}
+	return uncommon[rand.Intn(len(uncommon))]
+}
+
 var RarityFoodCapacity = map[string]int{
 	RarityCommon:   5,
 	RarityRare:     4,

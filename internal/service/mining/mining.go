@@ -10,6 +10,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -65,6 +66,15 @@ func New(s *store.Store, cfg *config.Config) *Service {
 func (s *Service) Descend(userID int64, depth int, bag []BagEntry, riskReduc int) (*DescendResult, error) {
 	risk := (depth - 1) * 5
 	risk -= riskReduc
+
+	vitReduc := int(charsvc.GetVITReduction(s.store, userID) * 100)
+	risk -= vitReduc
+
+	if charsvc.HasBuff(s.store, userID, "reinforce") {
+		risk = 0
+		charsvc.ConsumeBuff(s.store, userID, "reinforce")
+	}
+
 	if risk < 0 {
 		risk = 0
 	}
@@ -79,6 +89,32 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, riskReduc int
 		lvl = len(DepthLoot) - 1
 	}
 	pool := DepthLoot[lvl]
+
+	if charsvc.HasBuff(s.store, userID, "midas_touch") {
+		var filtered []MineItem
+		for _, it := range pool {
+			if it.Value >= 50 {
+				filtered = append(filtered, it)
+			}
+		}
+		if len(filtered) > 0 {
+			pool = filtered
+			charsvc.ConsumeBuff(s.store, userID, "midas_touch")
+		}
+	} else if charsvc.HasBuff(s.store, userID, "nose_for_treasure") {
+		var filtered []MineItem
+		for _, it := range pool {
+			if it.Value >= 100 {
+				filtered = append(filtered, it)
+			}
+		}
+		if len(filtered) > 0 {
+			pool = filtered
+		}
+		// always consume, even if pool empty — buff is used up
+		charsvc.ConsumeBuff(s.store, userID, "nose_for_treasure")
+	}
+
 	item := pool[rand.Intn(len(pool))]
 
 	found := false
@@ -97,6 +133,20 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, riskReduc int
 }
 
 func (s *Service) LeaveMine(userID int64, bag []BagEntry) (*LeaveResult, error) {
+	strMult := charsvc.GetSTRBonus(s.store, userID)
+	if strMult > 1.0 {
+		for i := range bag {
+			bag[i].Count = int(float64(bag[i].Count) * strMult)
+		}
+	}
+
+	if charsvc.HasBuff(s.store, userID, "scavenger") {
+		for i := range bag {
+			bag[i].Count += bag[i].Count / 2
+		}
+		charsvc.ConsumeBuff(s.store, userID, "scavenger")
+	}
+
 	totalXP := len(bag) * 10
 	for _, e := range bag {
 		totalXP += e.Count * 5
@@ -142,6 +192,8 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry) (*LeaveResult, error) 
 			return nil, err
 		}
 	}
+
+	charsvc.AddXP(s.store, userID, totalXP)
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {

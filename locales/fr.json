@@ -754,7 +754,23 @@
     },
     "boss_league_5": {
       "name": "Champion de la Ligue",
-      "desc": "Deviens le Champion de la Ligue des Boss en battant le boss final !"
+      "desc": "Devient Champion de la Ligue des Boss en battant le boss final !"
+    },
+    "lore_5": {
+      "name": "Esprit Curieux",
+      "desc": "Découvre 5 fragments d'histoire."
+    },
+    "lore_10": {
+      "name": " Archiviste",
+      "desc": "Découvre 10 fragments d'histoire."
+    },
+    "lore_25": {
+      "name": "Historien des Strates",
+      "desc": "Découvre 25 fragments d'histoire."
+    },
+    "lore_all": {
+      "name": "Voyant",
+      "desc": "Découvre les 48 fragments d'histoire."
     },
     "ui": {
       "glory_total": "**Points de Gloire Totaux : {total}** 🌟",
@@ -1444,10 +1460,33 @@
       "success": "✨ **TRANSCENDANCE RÉUSSIE !** ✨\nTon familier **{name}** est maintenant TRS Niveau **{level}** !"
     }
   },
+  "lore": {
+    "codex_title": "📖 Codex des Strates",
+    "codex_desc": "**Codex des Strates** — {found}/{total} fragments découverts",
+    "footer": "Utilise !lore pour parcourir ta collection | {pct}% complété",
+    "category_header": "{emoji} **{name}** — {found}/{total}",
+    "category_placeholder": "Choisis une catégorie à explorer...",
+    "button_back": "← Retour",
+    "fragment_found": "✅ **{title}** — {emoji}",
+    "fragment_locked": "❓ **???** — *{hint}*",
+    "select_hint_aether_log": "Trouvé en minant les strates profondes",
+    "select_hint_tide_scroll": "Trouvé en pêchant",
+    "select_hint_root_whisper": "Trouvé en cultivant",
+    "select_hint_field_obs": "Trouvé en chassant",
+    "select_hint_rust_memory": "Trouvé en excavant des fossiles",
+    "select_hint_echo_shard": "Trouvé lors d'expéditions de familiers",
+    "select_hint_bonus": "Découvertes spéciales"
+  },
   "quests": {
     "menu_desc": "Suivez vos quêtes actives et leur progression.",
     "btn_show": "Voir Quêtes",
     "no_active": "❌ Vous n'avez aucune quête active.",
+    "continue_label": "Continuer",
+    "title": "Quêtes Actives",
+    "progress": "Progression",
+    "step_progress": "Étape {current} / {total}",
+    "step_activity_progress": "{current} / {target} — {activity}",
+    "active_list": "**Tes quêtes actives :**\n\nSélectionnes-en une avec `!quest <id>` :\n",
     "daily_challenge": {
       "title": "Défi Quotidien",
       "description": "Une tâche aléatoire donnée par le village pour gagner des récompenses.",
@@ -1470,72 +1509,65 @@
     "boss_ko": "❌ Ton familier est K.O. ! Nourris-le d'abord.",
     "boss_win": "🏆 Ton familier a vaincu le boss !",
     "boss_lose_taunt": "💀 Le boss se moque de toi : 'C'est tout ce que tu as ? Entraîne ton familier et reviens !'",
-    "progress": "Progression",
-    "continue_label": "Etape suivante",
-    "tutorial": {
-      "step0_welcome": "Tu te réveilles après une soirée bien arrosée",
-      "step1_help": "Aujourd'hui nous allons découvrir le village",
-      "step2_chest": "Trouve un trésor caché",
-      "completed": "Tutoriel terminé !"
-    },
     "day0_welcome": {
-      "title": "Bienvenue à HoakHaven",
-      "description": "Introduction au Village.",
-      "step0_dialogue": "Bienvenue à HoakHaven ! C'est un petit village paisible où on cultive, on mine et on s'amuse. Commence ta nouvelle vie ici !",
-      "step1_activity": "Objectif: utilise la commande daily pour obtenir ta récompense journalière"
+      "title": "Signal Crypté",
+      "description": "Arrivée et premier indice.",
+      "step0_dialogue": "Tu arrives à HoakHaven — un village bric-à-brac construit autour d'une flèche énergétique massive et vacillante. L'air bourdonne d'une puissance déclinante. Un petit robot s'approche, antenne frétillante.\n\n*GambleBot :* \"BIP BOOP ! Une nouvelle arrivée ! Moi c'est GambleBot — je gère le Casino. Normalement je te vendrais un ticket, mais... tu vois cette tour ? C'est le **Générateur Zenith**. Il se meurt depuis des années. Quand il s'éteindra, plus d'énergie pour miner, cultiver, ou jouer. Tout le village plongera dans le noir.\"\n\nIl se penche, voix plus basse.\n\n*GambleBot :* \"Tu n'aurais pas reçu une étrange transmission... par hasard ? Un signal de détresse ? Parce qu'honnêtement, on l'a envoyé il y a des décennies et personne ne s'est jamais pointé. Jusqu'à toi.\"",
+      "step1_activity": "Objectif : Le Générateur produit encore assez pour donner une petite allocation journalière à chaque villageois. Utilise `!daily` pour réclamer la tienne et démarrer.",
+      "step2_dialogue": "*GambleBot :* \"Tiens — prends ce **Vieux Journal**. Il appartenait au Conseil des Quatre, les fondateurs qui ont bâti ce village après l'Effondrement. Il mentionne quelque chose appelé les **Plans Strata** — les schémas originaux du Générateur. Ils ont été perdus il y a des siècles. Si on pouvait les retrouver...\"\n\nIl pointe du doigt la forge.\n\n*GambleBot :* \"**Thorek** à la forge connaît les mines mieux que personne. Montre-lui le journal. Dis-lui que GambleBot t'envoie.\""
     },
     "day1_strata": {
-      "title": "Jour 1 : On se salit les mains",
-      "description": "Introduction à Thorek et au Minage.",
-      "step0_dialogue": "Salut ! Moi c'est Thorek. Si tu veux survivre ici, va falloir bosser. Prends une pioche et va voir ce que tu trouves dans les mines.",
-      "step1_activity": "Objectif : Utilise `!mine` 10 fois pour récolter des ressources.",
-      "step2_dialogue": "Pas mal ! Tu as du talent. Va voir Elara maintenant, elle sait quoi faire de toute cette terre."
+      "title": "Jour 1 : Forgé dans le Feu",
+      "description": "Le minage et les Profondeurs Strata.",
+      "step0_dialogue": "Thorek — un forgeron trapu couvert de suie — plisse les yeux en examinant le journal que tu lui tends.\n\n*Thorek :* \"Par l'Enclume... c'est l'écriture de Merrik. Merrik était l'ingénieur en chef du Conseil. Regarde ici — il mentionne des 'Plans Strata' et un 'Coffre Niveau 7.' Si ces coordonnées sont bonnes, les plans pourraient encore être dans le puits de mine le plus profond !\"\n\nIl te lance une pioche.\n\n*Thorek :* \"J'essaie de les atteindre depuis des années, mais les tunnels sont instables. Une paire de mains fraîches pourrait faire la différence. Voici comment ça marche : chaque fois que tu creuses avec `!mine`, tu risques un effondrement. Si la galerie s'écroule, tu perds tout ce que tu as récolté. Il faut savoir s'arrêter à temps.\"",
+      "step1_activity": "Objectif : Utilise `!mine` 10 fois pour rassembler des ressources et consolider les tunnels.",
+      "step2_dialogue": "Après avoir inspecté ta récolte, Thorek sourit.\n\n*Thorek :* \"Pas mal ! T'as de l'étoffe, nouveau. Tes minières ont produit assez de données pour trianguler l'emplacement du Coffre. J'ai forgé les coordonnées dans ce fragment de carte.\"\n\nIl tapote un point lumineux sur la carte.\n\n*Thorek :* \"Le Coffre est scellé par une **Serrure Alchimique** — une biotechnologie pré-Effondrement. Seule **Elara** au jardin communautaire peut la décrypter. Va la voir — c'est un peu une plante whisperer. Dis-lui que c'est moi qui t'envoie.\""
     },
     "day2_alchemy": {
-      "title": "Jour 2 : On plante des graines",
-      "description": "Introduction à Elara et à l'Agriculture.",
-      "step0_dialogue": "Salut, moi c'est Elara ! Miner c'est bien, mais cultiver c'est mieux. Plantons quelques graines et regardons-les pousser !",
-      "step1_activity": "Objectif : Plante 10 graines avec `!farm`.",
-      "step2_choice": "Es-tu prêt à devenir un grand fermier ?",
-      "choice_a_label": "Oui, absolument !",
-      "choice_b_label": "Je ferai de mon mieux.",
-      "choice_a_response": "C'est l'esprit !",
-      "choice_b_response": "C'est tout ce qu'on demande !"
+      "title": "Jour 2 : Les Clés Vivantes",
+      "description": "L'agriculture et la Serrure Alchimique.",
+      "step0_dialogue": "Elara — entourée de drones botaniques et de jeunes pousses luminescentes — examine le fragment de carte.\n\n*Elara :* \"Une Serrure Alchimique ! J'ai lu des choses là-dessus dans les vieilles archives horticoles. Les Anciens utilisaient des clés biologiques vivantes — des plantes rares dont les motifs de croissance encodent des séquences de déverrouillage. Si la Serrure fonctionne encore, il va falloir cultiver la bonne combinaison de plantes.\"\n\nElle sourit.\n\n*Elara :* \"Ce n'est pas juste de l'agriculture, mon ami — c'est cracker un système de sécurité vieux de plusieurs siècles. Utilise `!farm` pour planter. Associe tes graines à tes terrains : les Champs Publics marchent pour les bases, mais il faudra de meilleures parcelles pour les graines rares. La Serrure nécessite du **Blé** pour la séquence de base.\"\n\nUne pause. Son expression se fait plus sérieuse.\n\n*Elara :* \"Il y a quelque chose que tu dois savoir. Le Générateur n'était pas qu'une source d'énergie. Il a été construit au-dessus d'un **Coffre**. Les Anciens y ont scellé quelque chose — quelque chose dont ils avaient peur.\"",
+      "step1_activity": "Objectif : Plante 10 cultures avec `!farm` pour décoder les marqueurs génétiques de la Serrure.",
+      "step2_choice": "Les cultures fleurissent. Sur ton terminal, le sceau du Coffre se déverrouille partiellement — révélant une seconde couche de données.\n\n*Elara :* \"Ça marche ! Mais... le protocole secondaire de la Serrure vient de s'activer. Il demande : 'Confirmer l'autorisation d'accès au confinement scellé.' C'est là que ça devient sérieux. Ouvrir le Coffre ne va pas seulement redémarrer l'énergie — ça pourrait libérer ce que les Anciens ont enfermé.\"",
+      "choice_a_label": "Oui. Le village a besoin d'énergie.",
+      "choice_b_label": "Restons prudents. Quoi d'autre à apprendre ?",
+      "choice_a_response": "Tu hoches la tête fermement. Elara répond à ta détermination.\n\n*Elara :* \"Directe. Je respecte ça. Allons-y.\"",
+      "choice_b_response": "Elara réfléchit.\n\n*Elara :* \"Sage décision. Il y a quelqu'un que tu devrais rencontrer — **Irian**, notre rôdeuse. Elle traque des anomalies dans la forêt depuis des mois. Quoi qu'il y ait dans ce Coffre... elle en sait peut-être plus.\""
     },
     "day3_base": {
-      "title": "Jour 3 : On s'installe",
-      "description": "Économie et Logement.",
-      "step0_req": "Objectif : Accumule 500 Pièces et 2 Minerai de fer pour te créer un capital.",
-      "step1_activity": "Objectif : Achète ta première maison (La Cabane en Bois) via le `!house shop`.",
-      "step2_dialogue": "Tu te débrouilles super bien ! Il est temps de t'installer pour de bon. Achète-toi une petite cabane."
+      "title": "Jour 3 : Un Toit à Soi",
+      "description": "Installer sa base et l'indice suivant.",
+      "step0_req": "Ton communicateur bourdonne — une voix synthétique crépite.\n\n*ARIA (Assistante de Restauration d'Infrastructure Automatisée) :* \"Alerte : Fragments de plans partiellement décodés. Pour continuer, vous nécessitez un terminal stationnaire avec alimentation stable. Recommandation : acquérir une Cabane de Départ. Prérequis : **500 crédits** et **2 Minerai de fer**. Thorek a préparé les matériaux.\"",
+      "step1_activity": "Objectif : Visite l'Agence Immobilière avec `!house shop` et achète ta première maison. Tout agent a besoin d'une base.",
+      "step2_dialogue": "Alors que le terminal de ta maison s'allume, les fragments Strata commencent à se décoder automatiquement. L'écran scintille avec un nouvel ensemble de coordonnées — profondément dans la forêt — avec un avertissement.\n\n*ARIA :* \"Couche de données 3 décodée. Localisation : Zone Sauvage, Secteur 7. ATTENTION : Brèche de confinement biologique détectée. La faune locale peut être hostile. Recommandation : acquérir un compagnon de combat avant de procéder.\"\n\nUne petite icône d'empreinte de patte clignote sur ta carte."
     },
     "day4_will": {
-      "title": "Jour 4 : Exploration Sauvage",
-      "description": "Introduction à Irian et à la Chasse/Familiers.",
-      "step0_dialogue": "Salut, c'est Irian. Les bois peuvent être dangereux, mais avec de la chance, tu pourrais trouver un familier mignon par ici. Partons chasser !",
-      "step1_activity": "Objectif : Chasse 10 fois en utilisant `!hunt`.",
-      "step2_dialogue": "Tu en as trouvé un ! Un Œuf Mystère. Prenons-en bien soin."
+      "title": "Jour 4 : Dompter le Sauvage",
+      "description": "La chasse, les familiers et le plan complet.",
+      "step0_dialogue": "Une grande silhouette s'appuie contre ton encadrement de porte — Irian, la rôdeuse du village. Elle a l'air aguerrie, compétente et légèrement amusée.\n\n*Irian :* \"Alors c'est toi dont Thorek et Elara ne cessent de parler ? Bien. Tu vas avoir besoin de cette réputation pour ce qui t'attend dans les Terres Sauvages.\"\n\nElle active un écran holographique de pistage.\n\n*Irian :* \"Je surveille des anomalies dans la forêt depuis des mois. Des créatures qui ne correspondent à aucune espèce connue — des expériences génétiques pré-Effondrement qui ont survécu. Le plan dit que l'accès au Coffre nécessite une empreinte biologique de la faune locale. Traduction : on va `!hunt`. Ton familier combat des monstres sauvages. Surveille ses PV — un familier K.O. ne gagne rien. Commence par la Forêt, c'est le plus sûr.\"",
+      "step1_activity": "Objectif : Chasse 10 fois avec `!hunt` pour collecter des signatures ADN anciennes.",
+      "step2_dialogue": "Après ta dixième chasse, ton familier sort de sous-bois un objet traîné — un œuf lisse et palpitant couvert de sceaux biotechnologiques anciens.\n\n*Irian :* \"Tiens donc. Ça n'est pas censé exister. C'est un **Œuf Mystère** des laboratoires génétiques des Anciens. Les créatures à l'intérieur n'ont jamais été terminées — ce sont des recombinaisons génétiques. Ça peut être aussi bien un chat de gouttière qu'un dragon. Fais-le éclore avec `!hatch` quand tu seras prêt.\"\n\nTon terminal sonne. Le plan complet s'assemble à l'écran.\n\n*Irian (souriant) :* \"Le point d'accès au Coffre est... bien sûr... directement sous **le Casino de GambleBot**.\"\n\n*Irian rit.* \"Les Anciens ont caché l'apocalypse sous un casino. Parce que pourquoi faire simple ?\""
     },
     "day5_odds": {
-      "title": "Jour 5 : Tente ta chance",
-      "description": "Introduction à GambleBot et au Casino.",
-      "step0_dialogue": "Bip bop ! Je suis GambleBot. Travailler dur c'est cool, mais gagner gros c'est encore mieux. Viens tenter ta chance au Casino !",
-      "step1_activity": "Objectif : Joue 5 fois à des mini-jeux du Casino.",
-      "step2_dialogue": "Que tu gagnes ou que tu perdes, l'important c'est de s'amuser ! Continue de lancer les dés."
+      "title": "Jour 5 : La Maison Gagne Toujours",
+      "description": "L'énergie du casino et le réveil.",
+      "step0_dialogue": "GambleBot vibre littéralement d'excitation.\n\n*GambleBot :* \"BIP. BOOP. Tu ne vas PAS croire ça — je suis assis sur le Coffre Strata depuis TROIS CENTS ANS sans le savoir ! Le Casino n'a pas été construit pour le divertissement — il a été construit pour générer de **l'énergie probabiliste**. Chaque pile ou face, chaque machine à sous, chaque main de blackjack — l'aléatoire alimente le Générateur. C'est la clé finale du Coffre !\"\n\nIl désigne la salle de jeu.\n\n*GambleBot :* \"Le plus beau — le Coffre nécessite une signature énergétique spécifique que seul le jeu à haut volume produit. Les Anciens ont littéralement construit une serrure qui s'ouvre quand les gens ont de la chance. Joue à 5 jeux du Casino — Pile ou Face, Machines à Sous, Blackjack, Roulette. Je surveille les lectures.\"",
+      "step1_activity": "Objectif : Joue 5 fois à des jeux du Casino pour générer assez d'énergie probabiliste.",
+      "step2_dialogue": "Le sol du casino gronde. Sous tes pieds, des machines antiques grognent en s'éveillant. Les machines à sous affichent brièvement le même message à l'unisson : \"MODE VEILLE DÉSACTIVÉ.\"\n\nUn visage holographique scintille au centre du casino — anguleux, féminin, vacillant de parasites.\n\n*Zenith OS :* \"Requête d'autorisation détectée. Cette unité a été en sommeil pendant 4 732 cycles. Lancement du contrôle d'intégrité...\"\n\n*GambleBot :* \"Euh. Personne ne m'a dit qu'il y avait un FANTÔME dans la cave.\"\n\n*Zenith OS :* \"Traitement... ERREUR. Évaluation des infrastructures communautaires : INSUFFISANTE. Le Grand Marché, la Banque de Guilde et la Grande Statue doivent atteindre des seuils opérationnels minimaux avant que l'accès au Coffre ne soit accordé. Les Anciens ont décrété : une société qui n'investit pas en elle-même ne mérite pas leur héritage.\"\n\nL'hologramme se dissout."
     },
     "day6_contribution": {
-      "title": "Jour 6 : On participe",
-      "description": "Construction Communautaire.",
-      "step0_dialogue": "Le village a besoin de ton aide ! Le générateur central n'a plus beaucoup d'énergie. Faisons tous un effort pour garder les lumières allumées.",
-      "step1_req": "Objectif : Fais don de 5 Minerai de fer et de 5 Blé au réseau électrique du village."
+      "title": "Jour 6 : Ensemble Nous Tenons",
+      "description": "L'investissement communautaire et le test final de l'IA.",
+      "step0_dialogue": "Les quatre PNJ se rassemblent autour du projecteur holographique silencieux.\n\n*Thorek :* \"Vous plaisantez... Ils ont mis de la bureaucratie dans leur bunker de l'apocalypse ?!\"\n\n*Elara :* \"En fait... réfléchis. Les Anciens voulaient s'assurer que celui qui rouvrirait le coffre ait déjà reconstruit une communauté fonctionnelle. C'est un garde-fou contre les pilleurs.\"\n\n*Irian :* \"Logique. Si tu ne peux même pas entretenir un village, tu n'es pas qualifié pour gérer ce qu'il y a dans le coffre.\"\n\n*GambleBot :* \"BIP — traduction : on met TOUS la main à la pâte. Les bâtiments communautaires ont besoin de ressources. Utilise `!community` pour donner. Il nous faut **5 Minerai de fer** et **5 Blé** pour prouver qu'on est sérieux.\"",
+      "step1_req": "Objectif : Fais don de 5 Minerai de fer et de 5 Blé aux bâtiments communautaires.\n\n*Zenith OS vacille, légèrement plus stable :* \"Seuil communautaire... approché. ATTENTION : Le délai d'activation de l'unité Gardienne a expiré. Le Gardien est entré en mode autonome. Il ne reconnaît plus le leadership actuel. Procédez avec prudence.\""
     },
     "day7_sprout": {
-      "title": "Jour 7 : Défense du Village",
-      "description": "Tutoriel de Combat.",
-      "step0_event": "Oh oh ! Le générateur a redémarré, mais il a réveillé un vieux robot grincheux ! Prends ton familier et défends le village !",
-      "step1_boss": "Objectif : Défends le village avec ton familier contre le Robot Grincheux.",
-      "step2_dialogue_team": "\n*Thorek* : Beau travail ! On a réussi.\n\n*Elara* : C'était moins une, mais tout le monde est sain et sauf.\n\n*Irian* : Bien combattu.\n\n*GambleBot* : Bip bop ! Menace éliminée. Beau travail d'équipe !",
-      "step3_dialogue_unknown": "*Message entrant* : Bip bop... Je reviendrai...\n\n[TUTORIEL TERMINÉ. AMUSE-TOI BIEN AVEC LE BOT !]"
+      "title": "Jour 7 : Le Gardien",
+      "description": "L'affrontement final et le monde au-delà.",
+      "step0_event": "Le coffre s'ouvre dans un grondement de tonnerre. De l'obscurité émerge une immense unité de combat mécanique — plaques d'acier noir, un œil bleu unique, systèmes d'armes qui bourdonnent.\n\n*Zenith OS (dernière transmission) :* \"L'unité Gardienne ne peut plus distinguer amis et ennemis après une si longue hibernation. Pour accéder au cœur du Générateur, vous devez la désactiver. Votre compagnon de combat est la seule entité biologique enregistrée — le Gardien l'engagera. Bonne chance. Je suis... désolée.\"",
+      "step1_boss": "Objectif : Vaincs le Gardien avec ton familier pour restaurer le Générateur !",
+      "step2_dialogue_team": "Le Gardien s'effondre, son cœur brillant doucement au lieu de violemment — il vous reconnaît comme autorisé au dernier moment. Le Générateur Zenith s'embrase. À travers HoakHaven, chaque lumière, chaque machine, chaque forge s'allume.\n\n*Thorek :* \"HAHA ! LES FORGES ! Regarde cette chaleur — je peux FONDRE N'IMPORTE QUOI maintenant !\"\n\n*Elara :* \"Les cultures brillent... l'énergie du Générateur nourrit le sol. Je n'ai jamais vu une telle croissance !\"\n\n*Irian :* \"Les poissons sautent dans les bateaux. Quoi que tu aies fait — l'écosystème célèbre.\"\n\n*GambleBot :* \"BIP... BOOP... PLEINE PUISSANCE RESTAURÉE. Casino opérationnel à 400% d'efficacité. Nouvelles machines en déverrouillage. Mon ami, tu es une légende.\"",
+      "step3_dialogue_unknown": "Le panneau de poitrine du Gardien coulisse, révélant un noyau de données lumineux. Une voix — calme, antique — emplit l'air.\n\n*Zenith OS :* \"Menace neutralisée. Vous avez démontré les qualités que les Anciens recherchaient : l'ingéniosité, la coopération, et la volonté de miser sur des résultats incertains.\"\n\nUne carte holographique massive se projette sur le plafond du casino — 12 marqueurs lumineux à travers le continent. Seul HoakHaven est allumé. Les autres palpitent faiblement, en attente.\n\n*Zenith OS :* \"Le coffre contient les données de **12 installations Génératrices supplémentaires** dispersées à travers le continent. Chacune est une communauté qui attend d'être ranimée. L'Effondrement a presque mis fin à la civilisation — mais les Anciens ont laissé un moyen de reconstruire. Explorez plus profond. Cultivez plus rare. Élevez plus fort. Gagnez plus gros. Trouvez les autres coffres.\"\n\nL'hologramme s'évanouit. GambleBot tourne sur sa roue.\n\n*GambleBot :* \"Alors ! Qu'est-ce que tu attends ? Les machines à sous chauffent, les mines sont profondes, et le monde est IMMENSE. Bienvenue à HoakHaven — **pour de vrai cette fois.**\""
     }
   },
   "stats": {
@@ -1708,14 +1740,51 @@
     }
   },
   "character": {
-    "menu_title": "Personnage",
-    "menu_desc": "Affiche ton profil de joueur.",
-    "btn_show": "Afficher le profil",
-    "title": "Profil du joueur",
-    "wallet": "Portefeuille",
-    "bank": "Banque",
-    "crowns": "Couronnes",
-    "achievements": "Succès"
+    "profile_title": "📊 Profil de {user}",
+    "profile_error": "Impossible de charger le profil.",
+    "level_label": "Niveau",
+    "xp_label": "XP",
+    "skill_points_label": "Points de Compétence",
+    "crowns_label": "Couronnes",
+    "wallet_label": "Portefeuille",
+    "bank_label": "Banque",
+    "achievements_label": "Succès",
+    "total_jobs_label": "Niveau de Métier Total",
+    "stats_title": "📈 Statistiques du Personnage",
+    "equipment_title": "🎒 Équipement",
+    "stat_str": "Force",
+    "stat_dex": "Dextérité",
+    "stat_int": "Intelligence",
+    "stat_vit": "Vitalité",
+    "stat_luk": "Chance",
+    "empty_slot": "Vide",
+    "slot_weapon": "Arme",
+    "slot_armor": "Armure",
+    "slot_accessory": "Accessoire",
+    "btn_profile": "Profil",
+    "btn_stats": "Stats",
+    "btn_equipment": "Équipement",
+    "btn_equip": "Équiper {slot}",
+    "btn_unequip": "Déséquiper {slot}",
+    "equip_modal_title": "Équiper — {slot}",
+    "equip_item_label": "Nom de l'objet",
+    "equip_not_found": "❌ Cet objet n'existe pas.",
+    "equip_wrong_slot": "❌ Cet objet ne peut pas aller dans cet emplacement.",
+    "equip_not_owned": "❌ Vous ne possédez pas cet objet."
+  },
+  "skills": {
+    "title": "⚡ Compétences Actives",
+    "error": "Impossible de charger les compétences.",
+    "not_found": "❌ Cette compétence n'existe pas.",
+    "uses_left": "{left}/{max} utilisations restantes",
+    "unlocks_at": "Débloqué au",
+    "on_cooldown": "Recharge:",
+    "limit_reached": "Limite quotidienne atteinte",
+    "activate_title": "Activer la Compétence",
+    "activated_title": "✅ Compétence Activée !",
+    "activated_desc": "{skill} est maintenant active. Utilisez-la lors de votre prochaine action !",
+    "unavailable": "❌ Compétence non disponible : {reason}",
+    "btn_refresh": "Actualiser"
   },
   "onboarding": {
     "menu_title": "Bienvenue sur GuacaGambleBot ! 🎰",

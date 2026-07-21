@@ -1017,6 +1017,22 @@
       "name": "League Champion",
       "desc": "Become the Boss League Champion by defeating the final boss!"
     },
+    "lore_5": {
+      "name": "Curious Mind",
+      "desc": "Discover 5 lore fragments."
+    },
+    "lore_10": {
+      "name": "Archivist",
+      "desc": "Discover 10 lore fragments."
+    },
+    "lore_25": {
+      "name": "Historian of the Strata",
+      "desc": "Discover 25 lore fragments."
+    },
+    "lore_all": {
+      "name": "Seer",
+      "desc": "Discover all 48 lore fragments."
+    },
     "ui": {
       "glory_total": "**Total Glory Points: {total}** 🌟",
       "pet_glory_info": "*(including {glory} awarded by your pets' rank)*",
@@ -1514,10 +1530,33 @@
     "invest_success": "✅ You successfully invested **{amount} {res}** into {building}!",
     "stats_title": "📈 {user}'s Community Stats"
   },
+  "lore": {
+    "codex_title": "📖 Lore Codex",
+    "codex_desc": "**Codex of the Strata** — {found}/{total} fragments discovered",
+    "footer": "Use !lore to browse your collection | {pct}% complete",
+    "category_header": "{emoji} **{name}** — {found}/{total}",
+    "category_placeholder": "Choose a category to explore...",
+    "button_back": "← Back",
+    "fragment_found": "✅ **{title}** — {emoji}",
+    "fragment_locked": "❓ **???** — *{hint}*",
+    "select_hint_aether_log": "Found while mining deep strata",
+    "select_hint_tide_scroll": "Found while fishing",
+    "select_hint_root_whisper": "Found while farming",
+    "select_hint_field_obs": "Found while hunting",
+    "select_hint_rust_memory": "Found while excavating fossils",
+    "select_hint_echo_shard": "Found during pet expeditions",
+    "select_hint_bonus": "Special discoveries"
+  },
   "quests": {
     "menu_desc": "Track your active quests and progress.",
     "btn_show": "Show Quests",
     "no_active": "❌ You have no active quests.",
+    "continue_label": "Continue",
+    "title": "Active Quests",
+    "progress": "Progress",
+    "step_progress": "Step {current} / {total}",
+    "step_activity_progress": "{current} / {target} — {activity}",
+    "active_list": "**Your Active Quests:**\n\nSelect one with `!quest <id>`:\n",
     "daily_challenge": {
       "title": "Daily Challenge",
       "description": "A random task given by the village to earn rewards.",
@@ -1541,62 +1580,64 @@
     "boss_win": "🏆 Your pet defeated the boss!",
     "boss_lose_taunt": "💀 The boss laughs at you: 'Is that all you got? Train your pet and come back!'",
     "day0_welcome": {
-      "title": "Welcome to HoakHaven",
-      "description": "Introduction to the Village.",
-      "step0_dialogue": "Welcome to HoakHaven! It's a peaceful little village where we farm, mine, and play games. Let's start your new life here and have some fun."
+      "title": "Crypted Signal",
+      "description": "Arrival and the first clue.",
+      "step0_dialogue": "You arrive at HoakHaven — a ramshackle village built around a massive, flickering energy spire. The air hums with fading power. A small robot rolls up, antenna twitching.\n\n*GambleBot:* \"BEEP BOOP! A new arrival! Name's GambleBot — I run the Casino. Normally I'd sell you a ticket, but... see that tower? That's the **Zenith Generator**. It's been dying for years. When it goes, no more power for mining, farming, or gaming. This whole village goes dark.\"\n\nHe leans closer, voice dropping.\n\n*GambleBot:* \"You wouldn't happen to have received a strange transmission... would you? A distress signal? Because honestly, we sent it out decades ago and nobody ever showed up. Until you.\"",
+      "step1_activity": "Goal: The Generator still produces enough to give every villager a small daily stipend. Use `!daily` to claim yours and get started.",
+      "step2_dialogue": "*GambleBot:* \"Here — take this **Old Journal**. It belonged to the Council of Four, the founders who built this village after the Collapse. It mentions something called the **Strata Blueprints** — the original schematics for the Generator. They were lost centuries ago. If we could find them...\"\n\nHe points toward the forge.\n\n*GambleBot:* \"**Thorek** at the smithy knows the mines better than anyone. Show him the journal. Tell him GambleBot sent you.\""
     },
     "day1_strata": {
-      "title": "Day 1: Getting Your Hands Dirty",
-      "description": "Introduction to Thorek and Mining.",
-      "step0_dialogue": "Hey there! I'm Thorek. If you want to survive here, you need to work. Grab a pickaxe and let's see what you can find in the mines.",
-      "step1_activity": "Goal: Use `!mine` 10 times to gather some resources.",
-      "step2_dialogue": "Not bad! You're a natural. Go see Elara now, she knows what to do with dirt."
+      "title": "Day 1: Forged in Fire",
+      "description": "Mining and the Strata Depths.",
+      "step0_dialogue": "Thorek — a stout, soot-covered blacksmith — squints at the journal you hand him.\n\n*Thorek:* \"By the Anvil... this is Merrik's handwriting. Merrik was the Council's chief engineer. See here — he mentions 'Strata Blueprints' and 'Vault Level 7.' If those coordinates are right, the blueprints might still be in the deepest mineshaft!\"\n\nHe tosses you a pickaxe.\n\n*Thorek:* \"I've been trying to reach them for years, but the tunnels are unstable. A fresh pair of hands might make the difference. Here's how mining works: every time you dig deeper with `!mine`, you risk a cave-in. If the gallery collapses, you lose everything you've gathered. Know when to walk away.\"",
+      "step1_activity": "Goal: Use `!mine` 10 times to gather resources and reinforce the tunnels.",
+      "step2_dialogue": "After inspecting your haul, Thorek grins.\n\n*Thorek:* \"Not bad! You've got grit, newcomer. Your digging produced enough data to triangulate the Vault's location. I've forged the coordinates into this map fragment.\"\n\nHe taps a glowing point on the map.\n\n*Thorek:* \"The Vault is sealed with an **Alchemical Lock** — some kind of pre-Collapse biotech. Only **Elara** in the community garden can crack that. Go see her — she's a bit of a plant whisperer. Tell her I sent you.\""
     },
     "day2_alchemy": {
-      "title": "Day 2: Planting the Seeds",
-      "description": "Introduction to Elara and Farming.",
-      "step0_dialogue": "Hi, I'm Elara! Mining is great, but farming is where the real money is. Let's plant some seeds and watch them grow!",
-      "step1_activity": "Goal: Plant crops using `!farm` 10 times.",
-      "step2_choice": "Are you ready to be a great farmer?",
-      "choice_a_label": "Yes, absolutely!",
-      "choice_b_label": "I'll do my best.",
-      "choice_a_response": "That's the spirit!",
-      "choice_b_response": "That's all we ask!"
+      "title": "Day 2: Living Keys",
+      "description": "Farming and the Alchemical Lock.",
+      "step0_dialogue": "Elara — surrounded by hovering botanical drones and glowing saplings — examines the map fragment.\n\n*Elara:* \"An Alchemical Lock! I've read about these in the old horticulture archives. The Ancients used living biological keys — rare plants whose growth patterns encode unlock sequences. If the Lock is still functioning, we'll need to grow the right combination of crops.\"\n\nShe smiles.\n\n*Elara:* \"This isn't just farming, friend — it's cracking a centuries-old security system. Use `!farm` to plant crops. Match your seeds to your lands: Public Fields work for basics, but you'll need better plots for rare seeds. The Lock requires **Wheat** for the base sequence.\"\n\nA pause. Her expression shifts.\n\n*Elara:* \"There's something you should know. The Generator wasn't just a power source. It was built above a **Vault**. The Ancients sealed something inside — something they were afraid of.\"",
+      "step1_activity": "Goal: Plant 10 crops using `!farm` to decode the Lock's genetic markers.",
+      "step2_choice": "The crops bloom. On your terminal, the Vault's seal partially unlocks — revealing a second data layer.\n\n*Elara:* \"It's working! But... the Lock's secondary protocol just activated. It's asking me: 'Confirm authorization to access sealed containment.' This is where it gets serious. Opening the Lock doesn't just restart the power — it might release whatever the Ancients locked away.\"",
+      "choice_a_label": "Yes. The village needs power.",
+      "choice_b_label": "Let's be careful. What else is there to learn?",
+      "choice_a_response": "You nod firmly. Elara matches your resolve.\n\n*Elara:* \"Straightforward. I respect that. Let's do this.\"",
+      "choice_b_response": "Elara considers this.\n\n*Elara:* \"Smart. There's someone you should talk to — **Irian**, our ranger. She's been tracking anomalies in the forest for months. Whatever's in that Vault... she might know more.\""
     },
     "day3_base": {
-      "title": "Day 3: Settling Down",
-      "description": "Economy and Housing.",
-      "step0_req": "Goal: Accumulate 500 Money and 2 Iron Ore to prove your commitment.",
-      "step1_activity": "Goal: Buy your first House (The Starter Shack) using `!house shop`.",
-      "step2_dialogue": "You're doing great! It's time to settle down properly. Go ahead and buy yourself a little shack."
+      "title": "Day 3: A Place to Call Home",
+      "description": "Setting up base and the next clue.",
+      "step0_req": "Your comms device buzzes — a synthesized voice crackles through.\n\n*ARIA (Automated Restoration Intelligence Assistant):* \"Alert: Partial blueprint fragments decoded. To proceed, you require a stationary terminal with stable power. Recommendation: acquire a Starter Shack. Requirements: **500 credits** and **2 Iron Ore**. Thorek has prepped the materials.\"",
+      "step1_activity": "Goal: Visit the Real Estate Agency with `!house shop` and purchase your first home. Every operative needs a base.",
+      "step2_dialogue": "As your house's terminal powers up, the Strata fragments begin auto-decoding. The screen flickers with a new coordinate set — deep in the forest — with a warning overlay.\n\n*ARIA:* \"Data layer 3 decoded. Location: Wilds Zone, Sector 7. WARNING: Biological containment breach detected. Native fauna may be hostile. Recommendation: acquire a combat companion before proceeding.\"\n\nA small icon of a paw print blinks on your map display."
     },
     "day4_will": {
-      "title": "Day 4: Exploring the Wilds",
-      "description": "Introduction to Irian and Hunting/Pets.",
-      "step0_dialogue": "Hey, I'm Irian. The woods can be dangerous, but if you're lucky, you might find a cute pet out there. Let's go hunting!",
-      "step1_activity": "Goal: Hunt 10 times using `!hunt`.",
-      "step2_dialogue": "You found one! A Mystery Egg. Let's take good care of it."
+      "title": "Day 4: Taming the Wild",
+      "description": "Hunting, pets, and the full blueprint.",
+      "step0_dialogue": "A tall figure leans against your doorway — Irian, the village ranger. She looks weathered, competent, and slightly amused.\n\n*Irian:* \"So you're the one Thorek and Elara won't shut up about. Good. You'll need that kind of reputation for what's in the Wilds.\"\n\nShe pulls up a holographic tracker display.\n\n*Irian:* \"I've been monitoring anomalies in the forest for months. Creatures that don't match any known species — pre-Collapse genetic experiments that survived. The blueprint says Vault access requires a biological imprint from local fauna. Translation: we go `!hunt`. Your pet fights wild monsters. Keep an eye on its HP — a K.O.'d pet gets nothing. Start with the Forest, it's safest.\"",
+      "step1_activity": "Goal: Hunt 10 times using `!hunt` to collect Ancient DNA signatures.",
+      "step2_dialogue": "After your tenth hunt, your pet drags something from the undergrowth — a sleek, pulsing egg covered in ancient biotech seals.\n\n*Irian:* \"Well. That's not supposed to exist. This is a **Mystery Egg** from the Ancients' gene labs. The creatures inside were never finished — they're genetic recombinations. Could be anything from a house cat to a dragon. Hatch it with `!hatch` when you're ready.\"\n\nYour terminal chimes. The full blueprint assembles on screen.\n\n*Irian (grinning):* \"The Vault access point is... of course it is... directly beneath **GambleBot's Casino**.\"\n\n*Irian laughs.* \"The Ancients hid the apocalypse under a casino. Because why make it easy?\""
     },
     "day5_odds": {
-      "title": "Day 5: Testing Your Luck",
-      "description": "Introduction to GambleBot and the Casino.",
-      "step0_dialogue": "Beep boop! I'm GambleBot. Working hard is cool, but winning big is cooler. Come try your luck at the Casino!",
-      "step1_activity": "Goal: Play 5 Casino Mini-games.",
-      "step2_dialogue": "Win or lose, it's all about having fun! Keep rolling those dice."
+      "title": "Day 5: The House Always Wins",
+      "description": "Casino energy and the awakening.",
+      "step0_dialogue": "GambleBot is practically vibrating with excitement.\n\n*GambleBot:* \"BEEP. BOOP. You are NOT going to believe this — I've been sitting on top of the Strata Vault for THREE HUNDRED YEARS and never knew it! The Casino wasn't built for entertainment — it was built to generate **probabilistic energy**. Every coin flip, every slot pull, every blackjack hand — the randomness feeds the Generator. It's the final key to the Vault!\"\n\nHe gestures at the casino floor.\n\n*GambleBot:* \"Here's the beautiful part — the Vault requires a specific energy signature that only high-volume gambling produces. The Ancients literally built a lock that opens when people get lucky. Play any casino game 5 times — Coinflip, Slots, Blackjack, Roulette. I'll monitor the readings.\"",
+      "step1_activity": "Goal: Play 5 Casino mini-games to generate enough probabilistic energy.",
+      "step2_dialogue": "The casino floor rumbles. Beneath your feet, ancient machinery groans awake. The slot machines briefly display the same message in unison: \"STANDBY MODE DEACTIVATED.\"\n\nA holographic face shimmers in the center of the casino — angular, feminine, flickering with static.\n\n*Zenith OS:* \"Authorization query detected. This unit has been dormant for 4,732 cycles. Initiating integrity check...\"\n\n*GambleBot:* \"Uh. Nobody told me there was a GHOST in the basement.\"\n\n*Zenith OS:* \"Processing... ERROR. Community infrastructure rating: INSUFFICIENT. The Grand Market, Guild Bank, and Great Statue must reach minimum operational thresholds before Vault access is granted. The Ancients decreed: a society that does not invest in itself does not deserve their legacy.\"\n\nThe hologram dissolves."
     },
     "day6_contribution": {
-      "title": "Day 6: Pitching In",
-      "description": "Community Building/Village Goals.",
-      "step0_dialogue": "The village needs your help! The central generator is running out of juice. Let's all chip in to keep the lights on.",
-      "step1_req": "Goal: Donate 5 Iron Ore and 5 Wheat to the Village Power Grid."
+      "title": "Day 6: Together We Stand",
+      "description": "Community investment and the AI's final test.",
+      "step0_dialogue": "All four NPCs gather around the silent hologram projector.\n\n*Thorek:* \"You've GOT to be kidding me. They installed bureaucracy into their apocalypse bunker?!\"\n\n*Elara:* \"Actually... think about it. The Ancients wanted to make sure whoever reopened the Vault had already rebuilt a functioning community. It's a failsafe against raiders and looters.\"\n\n*Irian:* \"Makes sense. If you can't even maintain a village, you're not qualified to handle whatever's in the Vault.\"\n\n*GambleBot:* \"BEEP — translation: we ALL pitch in. The community buildings need resources. Use `!community` to donate. We need **5 Iron Ore** and **5 Wheat** to prove we're serious.\"",
+      "step1_req": "Goal: Donate 5 Iron Ore and 5 Wheat to the community buildings.\n\n*Zenith OS flickers back, slightly more stable:* \"Community threshold... approaching. WARNING: Primary Guardian unit activation delay has expired. The Guardian has entered autonomous mode. It no longer recognizes current leadership. Proceed with caution.\""
     },
     "day7_sprout": {
-      "title": "Day 7: Defending the Village",
-      "description": "Combat Tutorial and Season Teaser.",
-      "step0_event": "Uh oh! The generator powered up, but it woke up a grumpy old robot! Get your pet and defend the village!",
-      "step1_boss": "Goal: Defend the village with your pet against the Grumpy Robot.",
-      "step2_dialogue_team": "\n*Thorek*: Nice job! We did it.\n\n*Elara*: That was close, but everyone is safe.\n\n*Irian*: Good fighting out there.\n\n*GambleBot*: Beep boop! Threat eliminated. Great teamwork!",
-      "step3_dialogue_unknown": "*Incoming Message* : Beep boop... I'll be back... \n\n[TUTORIAL COMPLETE. HAVE FUN PLAYING THE BOT!]"
+      "title": "Day 7: The Guardian",
+      "description": "Final confrontation and the world beyond.",
+      "step0_event": "The Vault opens with a thunderous groan. From the darkness, a massive combat mech unit rises — angular plates of black metal, a single blue eye, weapons systems humming.\n\n*Zenith OS (final transmission):* \"The Guardian unit cannot distinguish friend from foe after extended hibernation. To access the Generator core, you must disable it. Your combat companion is the only registered biological entity — the Guardian will engage. Good luck. I am... sorry.\"",
+      "step1_boss": "Goal: Defeat the Guardian with your pet to restore the Generator!",
+      "step2_dialogue_team": "The Guardian collapses, its core glowing softly instead of violently — recognizing you as authorized at the last moment. The Zenith Generator blazes to life. Across HoakHaven, every light, every machine, every forge fires up.\n\n*Thorek:* \"HAHA! THE FORGE FIRES! Look at that heat — I can smelt ANYTHING now!\"\n\n*Elara:* \"The crops are glowing... the Generator's energy is nourishing the soil. I've never seen growth rates like this!\"\n\n*Irian:* \"Fish are practically jumping into the boats. Whatever you just did — the ecosystem is celebrating.\"\n\n*GambleBot:* \"BEEP... BOOP... FULL POWER RESTORED. Casino operational at 400% efficiency. New games unlocking. You, my friend, are a legend.\"",
+      "step3_dialogue_unknown": "The Guardian's chest panel slides open, revealing a glowing data core. A voice — calm, ancient — fills the air.\n\n*Zenith OS:* \"Threat neutralized. You have demonstrated the qualities the Ancients sought: resourcefulness, cooperation, and the willingness to gamble on uncertain outcomes.\"\n\nA massive holographic map projects onto the casino ceiling — 12 glowing markers across the continent. Only HoakHaven is lit. The others pulse faintly, waiting.\n\n*Zenith OS:* \"The Vault contains data on **12 additional Generator installations** spread across the continent. Each one is a community waiting for revival. The Collapse nearly ended civilization — but the Ancients left a way to rebuild. Explore deeper. Grow rarer. Hatch stronger. Win bigger. Find the other Vaults.\"\n\nThe hologram fades. GambleBot spins on his wheel.\n\n*GambleBot:* \"Well! What are you waiting for? The slots are hot, the mines are deep, and the world is HUGE. Welcome to HoakHaven — **for real this time.**\""
     }
   },
   "boss_league": {
@@ -1680,14 +1721,51 @@
     }
   },
   "character": {
-    "menu_title": "Character",
-    "menu_desc": "View your player profile.",
-    "btn_show": "Show profile",
-    "title": "Player profile",
-    "wallet": "Wallet",
-    "bank": "Bank",
-    "crowns": "Crowns",
-    "achievements": "Achievements"
+    "profile_title": "📊 {user}'s Profile",
+    "profile_error": "Could not load profile data.",
+    "level_label": "Level",
+    "xp_label": "XP",
+    "skill_points_label": "Skill Points",
+    "crowns_label": "Crowns",
+    "wallet_label": "Wallet",
+    "bank_label": "Bank",
+    "achievements_label": "Achievements",
+    "total_jobs_label": "Total Job Level",
+    "stats_title": "📈 Character Stats",
+    "equipment_title": "🎒 Equipment",
+    "stat_str": "Strength",
+    "stat_dex": "Dexterity",
+    "stat_int": "Intelligence",
+    "stat_vit": "Vitality",
+    "stat_luk": "Luck",
+    "empty_slot": "Empty",
+    "slot_weapon": "Weapon",
+    "slot_armor": "Armor",
+    "slot_accessory": "Accessory",
+    "btn_profile": "Profile",
+    "btn_stats": "Stats",
+    "btn_equipment": "Equipment",
+    "btn_equip": "Equip {slot}",
+    "btn_unequip": "Unequip {slot}",
+    "equip_modal_title": "Equip — {slot}",
+    "equip_item_label": "Item name",
+    "equip_not_found": "❌ That item doesn't exist.",
+    "equip_wrong_slot": "❌ That item can't go in this slot.",
+    "equip_not_owned": "❌ You don't own that item."
+  },
+  "skills": {
+    "title": "⚡ Active Skills",
+    "error": "Could not load skills.",
+    "not_found": "❌ That skill doesn't exist.",
+    "uses_left": "{left}/{max} uses left",
+    "unlocks_at": "Unlocks at",
+    "on_cooldown": "Cooldown:",
+    "limit_reached": "Daily limit reached",
+    "activate_title": "Activate Skill",
+    "activated_title": "✅ Skill Activated!",
+    "activated_desc": "{skill} is now active. Use it on your next relevant action!",
+    "unavailable": "❌ Skill not available: {reason}",
+    "btn_refresh": "Refresh"
   },
   "onboarding": {
     "menu_title": "Welcome to GuacaGambleBot! 🎰",

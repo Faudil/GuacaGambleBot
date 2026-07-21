@@ -77,6 +77,32 @@ func TestCoinflipPlay(t *testing.T) {
 	assert.Contains(t, []string{"pile", "face"}, res.Result)
 }
 
+func TestSlotsAddsCharacterXP(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 1000)
+	require.NoError(t, err)
+
+	_, err = svc.SpinSlots(1, 50)
+	require.NoError(t, err)
+
+	c, err := st.GetCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
+func TestCoinflipAddsCharacterXP(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 500)
+	require.NoError(t, err)
+
+	_, err = svc.Coinflip(1, "pile", 100, false)
+	require.NoError(t, err)
+
+	c, err := st.GetCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
 func TestCoinflipChoiceNormalization(t *testing.T) {
 	svc := &Service{}
 	assert.Equal(t, "face", svc.normalizeChoice("heads"))

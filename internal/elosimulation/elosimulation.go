@@ -75,7 +75,7 @@ func simulateRound(st *store.Store) {
 }
 
 func toBattlePet(p *model.UserPet) *battle.BattlePet {
-	return &battle.BattlePet{
+	bp := &battle.BattlePet{
 		ID:       p.ID,
 		Nickname: p.Nickname,
 		Level:    p.Level,
@@ -90,4 +90,7 @@ func toBattlePet(p *model.UserPet) *battle.BattlePet {
 		CritD:    p.CritD,
 		SpcC:     p.SpcC,
 	}
+	// ELO simulation doesn't load skills from DB (background sim), so no skills here.
+	// This is fine - skills are a player-facing feature for their bonded pet.
+	return bp
 }

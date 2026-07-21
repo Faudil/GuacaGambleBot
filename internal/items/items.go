@@ -11,6 +11,7 @@ const (
 	Tools      Category = "tools"
 	Materials  Category = "materials"
 	Special    Category = "special"
+	Equipment  Category = "equipment"
 )
 
 type Item struct {
@@ -22,6 +23,12 @@ type Item struct {
 	EffectType  string
 	Droppable   bool
 	Category    Category
+	EquipSlot   string // "weapon", "armor", "accessory", or ""
+	StatSTR     int
+	StatDEX     int
+	StatINT     int
+	StatVIT     int
+	StatLUK     int
 }
 
 var all = []Item{
@@ -91,6 +98,9 @@ var all = []Item{
 	{ID: "fertilizer",      Name: "Fertilizer",        Emoji: "🧪", Price: 200,  Description: "Accelerates crop growth! Resets !farm cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "hook",            Name: "Hook",              Emoji: "🪝", Price: 200,  Description: "Attracts fish! Resets !fish cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "forget_potion",   Name: "Forget Potion",     Emoji: "🧪", Price: 2500, Description: "Resets your pet to level 10.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "skill_scroll",    Name: "Skill Scroll",      Emoji: "📜", Price: 5000, Description: "Resets all your active pet's learned skills.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "bond_treat",      Name: "Bond Treat",        Emoji: "🍬", Price: 150,  Description: "Increases your active pet's bond level by 5.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "personality_mirror", Name: "Personality Mirror", Emoji: "🪞", Price: 7500, Description: "Mysteriously changes your pet's personality.", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "fortune_cookie",  Name: "Fortune Cookie",    Emoji: "🥠", Price: 20,   Description: "A delicious cookie with a premonitory message.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "rusty_magnet",    Name: "Rusty Magnet",      Emoji: "🧲", Price: 30,   Description: "Use it to find some pocket change.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "magnet",          Name: "Magnet",            Emoji: "🧲", Price: 50,   Description: "Use it to find money on the ground.", EffectType: "consumable", Droppable: false, Category: Tools},
@@ -111,6 +121,20 @@ var all = []Item{
 	{ID: "garden_plot",      Name: "Garden Plot",       Emoji: "🌿", Price: 500,   Description: "A patch of fertile soil for growing vegetables.", EffectType: "permanent", Droppable: false, Category: Special},
 	{ID: "tropical_greenhouse", Name: "Tropical Greenhouse", Emoji: "🌿", Price: 1000, Description: "A heated glass structure for coffee and cocoa.", EffectType: "permanent", Droppable: false, Category: Special},
 	{ID: "enchanted_orchard",   Name: "Enchanted Orchard",   Emoji: "🌿", Price: 10000, Description: "A magical floating island. Only legendary fruits grow here.", EffectType: "permanent", Droppable: false, Category: Special},
+
+	// --- Equipment ---
+	{ID: "stick",          Name: "Wooden Stick",     Emoji: "🪵", Price: 50,   Description: "A sturdy branch. Decent for a start. (+1 STR)",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 1},
+	{ID: "iron_pickaxe",   Name: "Iron Pickaxe",     Emoji: "⛏️", Price: 500,  Description: "A miner's best friend. (+3 STR)",                               EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 3},
+	{ID: "leather_armor",  Name: "Leather Armor",    Emoji: "🦺", Price: 300,  Description: "Basic protection. (+2 VIT)",                                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 2},
+	{ID: "lucky_charm",    Name: "Lucky Charm",      Emoji: "🍀", Price: 400,  Description: "A four-leaf clover. (+3 LUK)",                                  EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 3},
+	{ID: "miner_helmet",   Name: "Miner's Helmet",   Emoji: "⛑️", Price: 800,  Description: "Thick steel helmet. (+2 STR, +1 VIT)",                          EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatSTR: 2, StatVIT: 1},
+	{ID: "fishing_rod",    Name: "Fishing Rod",      Emoji: "🎣", Price: 500,  Description: "A quality rod. (+3 DEX)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatDEX: 3},
+	{ID: "hunters_bow",    Name: "Hunter's Bow",     Emoji: "🏹", Price: 1200, Description: "A precise bow. (+5 STR)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 5},
+	{ID: "hunter_cloak",   Name: "Hunter's Cloak",   Emoji: "🧥", Price: 1500, Description: "Warm and agile. (+3 DEX, +2 VIT)",                              EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatDEX: 3, StatVIT: 2},
+	{ID: "golden_ring",    Name: "Golden Ring",      Emoji: "💍", Price: 2000, Description: "Glows with fortune. (+5 LUK)",                                 EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 5},
+	{ID: "ancient_amulet", Name: "Ancient Amulet",   Emoji: "📿", Price: 3000, Description: "Humming with ancient magic. (+2 INT, +2 LUK)",                   EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatINT: 2, StatLUK: 2},
+	{ID: "crystal_staff",  Name: "Crystal Staff",    Emoji: "🔮", Price: 2500, Description: "Pulsing with arcane energy. (+4 INT)",                           EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatINT: 4},
+	{ID: "enchanted_robe", Name: "Enchanted Robe",   Emoji: "👘", Price: 3000, Description: "Woven with wisdom. (+4 INT, +2 DEX)",                            EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatINT: 4, StatDEX: 2},
 }
 
 var byID = func() map[string]*Item {

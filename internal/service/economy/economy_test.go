@@ -33,6 +33,16 @@ func TestBalance(t *testing.T) {
 	assert.Equal(t, 0, res.Interest)
 }
 
+func TestDailyAddsCharacterXP(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.Daily(1)
+	require.NoError(t, err)
+
+	c, err := svc.store.EnsureCharacter(1)
+	require.NoError(t, err)
+	assert.Greater(t, c.XP, 0)
+}
+
 func TestDailyNoDebt(t *testing.T) {
 	svc, _ := testService(t)
 	res, err := svc.Daily(1)

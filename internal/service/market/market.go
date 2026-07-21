@@ -6,12 +6,14 @@ import (
 	"math/rand"
 	"time"
 
+	"gorm.io/gorm"
+
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
-	"gorm.io/gorm"
 )
 
 var (
@@ -100,6 +102,16 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 		return 0, ErrNoItem
 	}
 
+	if charsvc.HasBuff(s.store, userID, "golden_touch") {
+		totalGain *= 2
+		charsvc.ConsumeBuff(s.store, userID, "golden_touch")
+	}
+
+	if charsvc.HasBuff(s.store, userID, "insider_trading") {
+		totalGain = totalGain * 15 / 10
+		charsvc.ConsumeBuff(s.store, userID, "insider_trading")
+	}
+
 	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.Inventory{}).
 			Where("user_id = ? AND item_id = ?", userID, itemName).
@@ -123,6 +135,7 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 	if err != nil {
 		return 0, err
 	}
+	charsvc.AddXP(s.store, userID, amount)
 	return totalGain, nil
 }
 

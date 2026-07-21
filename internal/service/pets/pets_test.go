@@ -48,8 +48,8 @@ func TestAddXPLevelUp(t *testing.T) {
 	svc, _ := testService(t)
 	pet, err := svc.CreatePet(1, "Escargot")
 	require.NoError(t, err)
-	leveled := svc.AddXP(pet, 1000)
-	assert.True(t, leveled)
+	res := svc.AddXP(pet, 1000)
+	assert.True(t, res.Leveled)
 	assert.Greater(t, pet.Level, 1)
 }
 

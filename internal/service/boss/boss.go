@@ -6,6 +6,7 @@ import (
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -99,6 +100,7 @@ func (s *Service) GetStage(userID int64) (int, error) {
 }
 
 func (s *Service) SetStage(userID int64, stage int) error {
+	charsvc.AddXP(s.store, userID, stage*50)
 	return s.store.DB.Model(&model.User{}).
 		Where("user_id = ?", userID).
 		Update("boss_league_stage", stage).Error

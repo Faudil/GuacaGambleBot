@@ -43,10 +43,10 @@ func init() {
 
 	register("job_miner", "⛏️", 30, func(s map[string]any) bool { return num(s, "items_mined") >= 100 })
 	register("pet_feeder", "🍖", 20, func(s map[string]any) bool { return num(s, "pets_fed") >= 50 })
-	register("pet_level_10", "🥚", 20, func(s map[string]any) bool { return num(s, "max_pet_level") >= 2 })
-	register("pet_level_20", "🐾", 50, func(s map[string]any) bool { return num(s, "max_pet_level") >= 5 })
-	register("pet_level_50", "🐉", 100, func(s map[string]any) bool { return num(s, "max_pet_level") >= 10 })
-	register("pet_level_100", "✨", 300, func(s map[string]any) bool { return num(s, "max_pet_level") >= 20 })
+	register("pet_level_10", "🥚", 20, func(s map[string]any) bool { return num(s, "max_pet_level") >= 10 })
+	register("pet_level_20", "🐾", 50, func(s map[string]any) bool { return num(s, "max_pet_level") >= 20 })
+	register("pet_level_50", "🐉", 100, func(s map[string]any) bool { return num(s, "max_pet_level") >= 35 })
+	register("pet_level_100", "✨", 300, func(s map[string]any) bool { return num(s, "max_pet_level") >= 50 })
 
 	register("coinflip_won_1k", "🪙", 10, func(s map[string]any) bool { return num(s, "coinflip_money_won") >= 1000 })
 	register("coinflip_won_5k", "🪙", 20, func(s map[string]any) bool { return num(s, "coinflip_money_won") >= 5000 })
@@ -116,11 +116,21 @@ func init() {
 	register("boss_league_2", "🏹", 50, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 2 })
 	register("boss_league_3", "🛡️", 100, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 3 })
 	register("boss_league_4", "⚡", 200, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 4 })
-	register("boss_league_5", "🏆", 500, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 5 })
+	register("boss_league_5", "🏆", 500,
+		func(s map[string]any) bool { return num(s, "boss_league_stage") >= 5 })
+
+	// --- LORE COLLECTION ---
+	register("lore_5", "📖", 20,
+		func(s map[string]any) bool { return num(s, "lore_count") >= 5 })
+	register("lore_10", "📚", 40,
+		func(s map[string]any) bool { return num(s, "lore_count") >= 10 })
+	register("lore_25", "📜", 80,
+		func(s map[string]any) bool { return num(s, "lore_count") >= 25 })
+	register("lore_all", "👁️", 200,
+		func(s map[string]any) bool { return num(s, "lore_count") >= 48 })
 
 	_ = has
 }
-
 func anyRank(s map[string]any, label string) bool {
 	ranks, ok := s["pet_ranks"].([]string)
 	if !ok {
@@ -162,6 +172,30 @@ func Get(id string) (*Achievement, bool) {
 	return a, ok
 }
 
+// localPetRarity returns the rarity of a pet type without importing the pets package.
+func localPetRarity(petType string) string {
+	m := map[string]string{
+		"Escargot": "common", "Souris": "common", "Cochon": "common", "Grenouille": "common",
+		"Taupe": "common", "Pélican": "common", "Mouton": "common", "Abeille": "common",
+		"Hamster": "common", "Fourmi": "common", "Hérisson": "common", "Canard": "common",
+		"Chouette": "common", "Paresseux": "common", "Putois": "common", "Bison": "common",
+		"Chien": "rare", "Chat": "rare", "Cheval": "rare", "Renard": "rare",
+		"Singe": "rare", "Ours": "rare", "Gorille": "rare", "Scorpion": "rare",
+		"Ours polaire": "rare",
+		"Chameau": "epic", "Panda": "epic", "Tigre": "epic", "Pieuvre": "epic",
+		"Kangourou": "epic", "Iguane": "epic", "Aigle": "epic", "Rhino": "epic",
+		"Crocodile": "epic", "Dauphin": "epic", "Léopard": "epic", "Lion": "epic",
+		"Dragon": "legendary", "Tyrannosaure": "legendary", "Diplodocus": "legendary",
+		"Mamouth": "legendary", "Mégalodon": "legendary", "Kraken": "legendary",
+		"Licorne": "legendary", "Phoenix": "legendary", "Cerbère": "legendary",
+		"Fenrir": "legendary", "Ratatosk": "legendary", "Nidhögg": "legendary", "Bedawang": "legendary",
+	}
+	if r, ok := m[petType]; ok {
+		return r
+	}
+	return "common"
+}
+
 // BuildStats gathers the player's stats used for achievement evaluation.
 // Derived fields (pet collection, community, ranks) default to zero and are
 // filled in by their respective systems as they are ported.
@@ -169,6 +203,7 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 	stats := map[string]any{
 		"balance":              0,
 		"boss_league_stage":    0,
+		"lore_count":           0,
 		"max_pet_level":        0,
 		"pet_ranks":            []string{},
 		"collected_common_pets": 0,
@@ -225,6 +260,32 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 		stats["roulette_money_lost"] = us.RouletteMoneyLost
 		stats["daily_uses"] = us.DailyUses
 	}
+
+	// Pet collection stats (computed from PetTypes rarity map)
+	var userPets []model.UserPet
+	db.Where("user_id = ?", userID).Find(&userPets)
+	collectedTypes := make(map[string]bool)
+	collectedRarity := map[string]int{"common": 0, "rare": 0, "epic": 0, "legendary": 0}
+	maxPetLvl := 0
+	for _, p := range userPets {
+		collectedTypes[p.PetType] = true
+		if p.Level > maxPetLvl {
+			maxPetLvl = p.Level
+		}
+		r := localPetRarity(p.PetType)
+		collectedRarity[r]++
+	}
+	stats["max_pet_level"] = maxPetLvl
+	stats["collected_common_pets"] = collectedRarity["common"]
+	stats["collected_rare_pets"] = collectedRarity["rare"]
+	stats["collected_epic_pets"] = collectedRarity["epic"]
+	stats["collected_legendary_pets"] = collectedRarity["legendary"]
+	stats["collected_all_pets"] = len(collectedTypes)
+
+	var loreCount int64
+	db.Model(&model.UserLoreEntry{}).Where("user_id = ?", userID).Count(&loreCount)
+	stats["lore_count"] = int(loreCount)
+
 	return stats, nil
 }
 

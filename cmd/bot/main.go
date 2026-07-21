@@ -47,6 +47,8 @@ import (
 	questscog "guacagamblebot/internal/cogs/quests"
 	roulettecog "guacagamblebot/internal/cogs/roulette"
 	shopcog "guacagamblebot/internal/cogs/shop"
+	lorecog "guacagamblebot/internal/cogs/lore"
+	skillscog "guacagamblebot/internal/cogs/skills"
 	tournamentcog "guacagamblebot/internal/cogs/tournament"
 	"guacagamblebot/internal/onboarding"
 )
@@ -114,6 +116,8 @@ func main() {
 	questscog.Register(router, str, cfg)
 	roulettecog.Register(router, str, cfg)
 	shopcog.Register(router, str, cfg)
+	lorecog.Register(router, str, cfg)
+	skillscog.Register(router, str, cfg)
 	tournamentcog.Register(router, str, cfg)
 	onboarding.Register(router, str, cfg)
 

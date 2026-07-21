@@ -32,6 +32,8 @@ type BattlePet struct {
 	CritD    float64
 	SpcC     int
 
+	Skills []string
+
 	defenseMalus  int
 	accMalus      int
 	dgeMalus      int
@@ -42,6 +44,9 @@ type BattlePet struct {
 	burningTurns  int
 	bleedingTurns int
 	thornMult     int
+
+	// PerkInt is a scratch map for skill-proc tracking during a battle.
+	PerkInt map[string]int
 }
 
 func (p *BattlePet) IsAlive() bool { return p.HP > 0 }
@@ -67,6 +72,7 @@ func (p *BattlePet) healFull() {
 	p.burningTurns = 0
 	p.bleedingTurns = 0
 	p.thornMult = 1
+	p.PerkInt = make(map[string]int)
 }
 
 type BattleResult struct {
@@ -81,6 +87,9 @@ type BattleResult struct {
 func Simulate(p1, p2 *BattlePet) *BattleResult {
 	p1.healFull()
 	p2.healFull()
+
+	applyBattleStartSkills(p1.Skills, p1, p2)
+	applyBattleStartSkills(p2.Skills, p2, p1)
 
 	log := make([]string, 0, 10)
 	actions := 0
@@ -158,6 +167,17 @@ func Simulate(p1, p2 *BattlePet) *BattleResult {
 		Pet2:   p2,
 		Log:    log,
 	}
+	// Phoenix Rebirth check
+	if !p1.IsAlive() && p1.PerkInt["rebirth"] > 0 {
+		p1.PerkInt["rebirth"] = 0
+		p1.HP = p1.MaxHP * 3 / 10
+		result.Pet1HP = p1.HP
+	}
+	if !p2.IsAlive() && p2.PerkInt["rebirth"] > 0 {
+		p2.PerkInt["rebirth"] = 0
+		p2.HP = p2.MaxHP * 3 / 10
+		result.Pet2HP = p2.HP
+	}
 	if !p1.IsAlive() && p2.IsAlive() {
 		result.WinnerID = p2.ID
 	} else if p1.IsAlive() && !p2.IsAlive() {
@@ -191,13 +211,36 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		return joinParts(parts)
 	}
 
-	baseDmg := max(float64(attacker.realAtk())*0.2, float64(attacker.realAtk())-float64(defender.realDefense())*fatigueMult)
+	defForDmg := float64(defender.realDefense())
+	if attacker.PerkInt["piercing"] > 0 {
+		defForDmg *= 0.60
+	}
+	baseDmg := max(float64(attacker.realAtk())*0.2, float64(attacker.realAtk())-defForDmg*fatigueMult)
 	isCrit := rand.Intn(100)+1 <= attacker.CritC
 	critMult := 1.0
 	if isCrit {
 		critMult = 1 + (attacker.CritD-1)/2 + rand.Float64()*(attacker.CritD-(1+(attacker.CritD-1)/2))
 	}
 	baseDmg = baseDmg * critMult * (0.9 + rand.Float64()*0.2)
+
+	// Last Stand: 2x damage when below 25% HP
+	if attacker.PerkInt["last_stand"] > 0 && attacker.HP < attacker.MaxHP/4 {
+		baseDmg *= 2.0
+	}
+	// Dragon's Fury: first attack deals 2x
+	if attacker.PerkInt["dragon_fury"] > 0 {
+		baseDmg *= 2.0
+		attacker.PerkInt["dragon_fury"] = 0 // consumed
+	}
+	// Berserker: +3% crit per 10% HP lost
+	if attacker.PerkInt["berserker"] > 0 {
+		hpPct := 100 - (attacker.HP*100)/attacker.MaxHP
+		critBonus := (hpPct / 10) * 3
+		if rand.Intn(100)+1 <= critBonus {
+			baseDmg *= attacker.CritD
+		}
+	}
+
 	finalDmg := int(math.Round(baseDmg))
 	if finalDmg < 1 {
 		finalDmg = 1
@@ -228,13 +271,30 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		parts[len(parts)-1] += fmt.Sprintf(" and heals for **%d** HP 🩸", heal)
 	}
 
-	thornsProb := min(0.70, float64(defender.realDefense())/max(float64(1), float64(defender.realAtk())))
-	if rand.Float64() < thornsProb {
+	// Counter: 30% chance to reflect 50% damage back to attacker
+	if defender.PerkInt["counter"] > 0 && rand.Float64() < 0.30 {
+		counterDmg := max(1, finalDmg/2)
+		attacker.HP = max(0, attacker.HP-counterDmg)
+		parts = append(parts, fmt.Sprintf(" 🛡️ **%s** counters for **%d** damage!", dn, counterDmg))
+	}
+
+	// Thornmail: always procs, no probability check
+	if defender.PerkInt["thornmail"] > 0 {
 		defender.thornMult++
 		td := int(math.Round(defender.thornsDmg()))
 		if td > 0 {
 			attacker.HP = max(0, attacker.HP-td)
 			parts = append(parts, fmt.Sprintf(" but takes **%d** thorn damage 🌵", td))
+		}
+	} else {
+		thornsProb := min(0.70, float64(defender.realDefense())/max(float64(1), float64(defender.realAtk())))
+		if rand.Float64() < thornsProb {
+			defender.thornMult++
+			td := int(math.Round(defender.thornsDmg()))
+			if td > 0 {
+				attacker.HP = max(0, attacker.HP-td)
+				parts = append(parts, fmt.Sprintf(" but takes **%d** thorn damage 🌵", td))
+			}
 		}
 	}
 
@@ -242,7 +302,15 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 }
 
 func tickEffects(p *BattlePet) string {
-	parts := make([]string, 0, 3)
+	parts := make([]string, 0, 4)
+	if regen, ok := p.PerkInt["regeneration"]; ok {
+		p.PerkInt["regeneration"] = (regen + 1) % 3
+		if regen == 2 { // every 3rd tick
+			heal := max(1, p.MaxHP/20)
+			p.HP = min(p.MaxHP, p.HP+heal)
+			parts = append(parts, fmt.Sprintf("💚 **%s** regenerates **%d** HP.", p.Nickname, heal))
+		}
+	}
 	if p.poisonedTurns > 0 {
 		dmg := max(1, int(float64(p.MaxHP)*0.05))
 		p.HP = max(0, p.HP-dmg)
@@ -329,6 +397,35 @@ func getDamageType(name string) *DamageType {
 		return &dt
 	}
 	return nil
+}
+
+func applyBattleStartSkills(skills []string, owner, opponent *BattlePet) {
+	for _, skillID := range skills {
+		switch skillID {
+		case "iron_shell":
+			owner.Defense = int(float64(owner.Defense) * 1.20)
+		case "keen_edge":
+			owner.Atk = int(float64(owner.Atk) * 1.15)
+		case "evasive":
+			owner.DGE = int(float64(owner.DGE) * 1.20)
+		case "last_stand":
+			owner.PerkInt["last_stand"] = 1
+		case "regeneration":
+			owner.PerkInt["regeneration"] = 0
+		case "counter":
+			owner.PerkInt["counter"] = 1
+		case "piercing_strike":
+			owner.PerkInt["piercing"] = 1
+		case "berserker":
+			owner.PerkInt["berserker"] = 1
+		case "thornmail":
+			owner.PerkInt["thornmail"] = 1
+		case "phoenix_rebirth":
+			owner.PerkInt["rebirth"] = 1
+		case "dragon_fury":
+			owner.PerkInt["dragon_fury"] = 1
+		}
+	}
 }
 
 func joinParts(parts []string) string {

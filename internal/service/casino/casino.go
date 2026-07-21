@@ -6,6 +6,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -93,11 +94,21 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		return nil, err
 	}
 
+	lukBonus := charsvc.GetLUKBonus(s.store, userID)
+	luckyBreak := charsvc.HasBuff(s.store, userID, "lucky_break")
+	jackpotFever := charsvc.HasBuff(s.store, userID, "jackpot_fever")
+
 	r1 := wheel[rand.Intn(len(wheel))]
 	r2 := wheel[rand.Intn(len(wheel))]
 	r3 := wheel[rand.Intn(len(wheel))]
 
 	res := &SlotsResult{Symbol1: r1, Symbol2: r2, Symbol3: r3}
+
+	// LUK slightly improves odds: reroll one losing symbol if luck is high
+	if r1 != r2 && r2 != r3 && r1 != r3 && lukBonus > 0.5 && rand.Float64() < lukBonus*0.05 {
+		r3 = r1
+		res.Symbol3 = r3
+	}
 
 	if r1 == r2 && r2 == r3 {
 		res.IsWin = true
@@ -128,6 +139,14 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	}
 
 	if res.IsWin {
+		if luckyBreak {
+			res.Payout = int(float64(res.Payout) * 1.5)
+			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
+		}
+		if jackpotFever {
+			res.Payout *= 3
+			charsvc.ConsumeBuff(s.store, userID, "jackpot_fever")
+		}
 		if _, err := s.store.UpdateBalance(userID, res.Payout); err != nil {
 			return nil, err
 		}
@@ -147,6 +166,7 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
 	}
 
+	charsvc.AddXP(s.store, userID, res.XpGain)
 	return res, nil
 }
 
@@ -205,6 +225,28 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		win = result == choice
 	}
 
+	lukBonus := charsvc.GetLUKBonus(s.store, userID)
+	luckyBreak := charsvc.HasBuff(s.store, userID, "lucky_break")
+
+	if !useRigged && !win && lukBonus > 0.5 && rand.Float64() < lukBonus*0.03 {
+		win = true
+		if choice == "pile" {
+			result = "pile"
+		} else {
+			result = "face"
+		}
+	}
+
+	if luckyBreak && !win && rand.Float64() < 0.5 {
+		win = true
+		if choice == "pile" {
+			result = "pile"
+		} else {
+			result = "face"
+		}
+		charsvc.ConsumeBuff(s.store, userID, "lucky_break")
+	}
+
 	res := &CoinflipResult{Result: result, Win: win}
 	if win {
 		if _, err := s.store.UpdateBalance(userID, amount); err != nil {
@@ -222,6 +264,7 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		res.XpGain = 30
 	}
 
+	charsvc.AddXP(s.store, userID, res.XpGain)
 	return res, nil
 }
 

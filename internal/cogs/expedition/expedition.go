@@ -195,7 +195,11 @@ func (c *Cog) claim(userID int64, lang string) (*discordgo.MessageEmbed, []disco
 	}
 
 	petSvc := petsvc.New(c.store, c.cfg)
-	leveled := petSvc.AddXP(pet, exp.RewardXP)
+	lvlRes := petSvc.AddXP(pet, exp.RewardXP)
+	leveled := lvlRes.Leveled
+	petSvc.AddBond(pet, 2)
+	petSvc.RecordHistory(pet, "expedition",
+		"🧭 **"+pet.Nickname+"** returned from an expedition with **"+itoa(exp.RewardXP)+" XP**!")
 	_ = petSvc.UpdatePet(pet)
 
 	var items []string

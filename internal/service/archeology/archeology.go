@@ -99,6 +99,7 @@ func (s *Service) ApplyAction(state *GameState, action ActionType) *ActionOutcom
 		finalRisk = riskChance / 2
 	}
 
+
 	damaged := false
 	if finalRisk > 0 && rand.Intn(100) < finalRisk {
 		state.Integrity -= intLoss

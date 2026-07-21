@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -190,7 +191,19 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 
 	level := s.getFarmerLevel(userID)
 	quantity := 1
-	if rand.Float64() < float64(level)*0.02 {
+	intBonus := charsvc.GetINTBonus(s.store, userID)
+	doubleChance := float64(level)*0.02 + (intBonus-1.0)*0.5
+	if rand.Float64() < doubleChance {
+		quantity++
+	}
+
+	if charsvc.HasBuff(s.store, userID, "scavenger") {
+		quantity += quantity / 2
+		charsvc.ConsumeBuff(s.store, userID, "scavenger")
+	}
+
+	lukBonus := charsvc.GetLUKBonus(s.store, userID)
+	if lukBonus > 0 && rand.Float64() < lukBonus*0.1 {
 		quantity++
 	}
 
@@ -228,6 +241,8 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "farmer").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level})
 	}
+
+	charsvc.AddXP(s.store, userID, xp)
 
 	return &HarvestResult{CropName: crop.Name, Quantity: quantity, XP: xp}, nil
 }
