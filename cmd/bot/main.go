@@ -11,6 +11,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/elosimulation"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/store"
@@ -79,6 +80,7 @@ func main() {
 
 	bot := &interaction.Bot{Session: dg, DB: database, Prefix: cfg.Prefix}
 	str := store.New(database, cfg)
+	go elosimulation.Run(str)
 	router := interaction.NewRouter(bot, str)
 
 	admincog.Register(router, str, cfg)

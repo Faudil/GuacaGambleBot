@@ -342,6 +342,36 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 	return nil
 }
 
+// GetRandomActivePetPair returns two active (is_active=1) pets with level >=
+// minLevel, preferring a pair whose Elo difference is within eloRange. If the
+// range-constrained query fails it falls back to the closest Elo match, exactly
+// as the Python get_random_pet_and_opponent does.
+func (s *Store) GetRandomActivePetPair(minLevel, eloRange int) (pet1, pet2 *model.UserPet, err error) {
+	var p1, p2 model.UserPet
+	if err := s.DB.
+		Where("level >= ? AND is_active = ?", minLevel, true).
+		Order("RANDOM()").
+		First(&p1).Error; err != nil {
+		return nil, nil, err
+	}
+
+	if err := s.DB.
+		Where("level >= ? AND id != ? AND ABS(elo - ?) <= ? AND is_active = ?", minLevel, p1.ID, p1.Elo, eloRange, true).
+		Order("RANDOM()").
+		First(&p2).Error; err == nil {
+		return &p1, &p2, nil
+	}
+
+	// Fallback: closest Elo match.
+	if err := s.DB.
+		Where("level >= ? AND id != ? AND is_active = ?", minLevel, p1.ID, true).
+		Order(gorm.Expr("ABS(elo - ?) ASC, RANDOM()", p1.Elo)).
+		First(&p2).Error; err != nil {
+		return &p1, nil, nil
+	}
+	return &p1, &p2, nil
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a
