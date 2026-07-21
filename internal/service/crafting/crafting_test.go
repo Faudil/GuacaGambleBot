@@ -43,44 +43,35 @@ func TestCraftNoRecipe(t *testing.T) {
 
 func TestCraftLevelTooLow(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "œuf mystère", 1)
+	err := svc.Craft(1, "mystery_egg", 1)
 	assert.ErrorIs(t, err, ErrNoLevel)
 }
 
 func TestCraftMissingIngredients(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "bière", 1)
+	err := svc.Craft(1, "beer", 1)
 	assert.ErrorIs(t, err, ErrNoIngredients)
 }
 
-func craftSetup(t *testing.T, st *store.Store, userID int64) model.Item {
+func craftSetup(t *testing.T, st *store.Store, userID int64) string {
 	require.NoError(t, st.DB.Create(&model.Job{UserID: userID, JobName: "crafter", Level: 2, XP: 0}).Error)
-	ble := model.Item{Name: "blé", Price: 2, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&ble).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: userID, ItemID: ble.ID, Quantity: 10}).Error)
-	return ble
-}
-
-func itemID(t *testing.T, st *store.Store, name string) int64 {
-	var it model.Item
-	require.NoError(t, st.DB.Where("name = ?", name).First(&it).Error)
-	return it.ID
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: userID, ItemID: "wheat", Quantity: 10}).Error)
+	return "wheat"
 }
 
 func TestCraftSuccess(t *testing.T) {
 	svc, st := testService(t)
-	ble := craftSetup(t, st, 1)
+	wheatID := craftSetup(t, st, 1)
 
-	err := svc.Craft(1, "bière", 1)
+	err := svc.Craft(1, "beer", 1)
 	require.NoError(t, err)
 
-	biereID := itemID(t, st, "bière")
 	var inv model.Inventory
-	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, biereID).First(&inv).Error)
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, "beer").First(&inv).Error)
 	assert.Equal(t, 1, inv.Quantity)
 
 	var invBle model.Inventory
-	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, ble.ID).First(&invBle).Error)
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, wheatID).First(&invBle).Error)
 	assert.Equal(t, 7, invBle.Quantity)
 }
 
@@ -88,7 +79,7 @@ func TestCraftAddsXP(t *testing.T) {
 	svc, st := testService(t)
 	craftSetup(t, st, 2)
 
-	require.NoError(t, svc.Craft(2, "bière", 1))
+	require.NoError(t, svc.Craft(2, "beer", 1))
 
 	var job model.Job
 	st.DB.Where("user_id = ? AND job_name = ?", 2, "crafter").First(&job)
@@ -97,17 +88,16 @@ func TestCraftAddsXP(t *testing.T) {
 
 func TestCraftMultiple(t *testing.T) {
 	svc, st := testService(t)
-	ble := craftSetup(t, st, 3)
+	wheatID := craftSetup(t, st, 3)
 
-	require.NoError(t, svc.Craft(3, "bière", 3))
+	require.NoError(t, svc.Craft(3, "beer", 3))
 
-	biereID := itemID(t, st, "bière")
 	var inv model.Inventory
-	st.DB.Where("user_id = ? AND item_id = ?", 3, biereID).First(&inv)
+	st.DB.Where("user_id = ? AND item_id = ?", 3, "beer").First(&inv)
 	assert.Equal(t, 3, inv.Quantity)
 
 	var invBle model.Inventory
-	st.DB.Where("user_id = ? AND item_id = ?", 3, ble.ID).First(&invBle)
+	st.DB.Where("user_id = ? AND item_id = ?", 3, wheatID).First(&invBle)
 	assert.Equal(t, 1, invBle.Quantity)
 }
 

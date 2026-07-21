@@ -29,15 +29,13 @@ func TestTransferItemSuccess(t *testing.T) {
 	_, err := st.UpdateBalance(2, 500)
 	require.NoError(t, err)
 
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 3}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 3}).Error)
 
-	result := svc.TransferItem(1, 2, "charbon", 50)
+	result := svc.TransferItem(1, 2, "coal", 50)
 	assert.Equal(t, TradeSuccess, result)
 
 	var sellerInv model.Inventory
-	st.DB.Where("user_id = ? AND item_id = ?", 1, dbItem.ID).First(&sellerInv)
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&sellerInv)
 	assert.Equal(t, 2, sellerInv.Quantity)
 
 	buyerBal, _ := st.GetBalance(2)
@@ -53,7 +51,7 @@ func TestTransferItemNoItem(t *testing.T) {
 	assert.Equal(t, TradeNoItem, result)
 }
 
-func setQty(t *testing.T, st *store.Store, userID, itemID int64, qty int) {
+func setQty(t *testing.T, st *store.Store, userID int64, itemID string, qty int) {
 	t.Helper()
 	require.NoError(t, st.DB.Model(&model.Inventory{}).
 		Where("user_id = ? AND item_id = ?", userID, itemID).
@@ -62,24 +60,20 @@ func setQty(t *testing.T, st *store.Store, userID, itemID int64, qty int) {
 
 func TestTransferItemInsufficientQuantity(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID}).Error)
-	setQty(t, st, 1, dbItem.ID, 0)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal"}).Error)
+	setQty(t, st, 1, "coal", 0)
 
-	result := svc.TransferItem(1, 2, "charbon", 50)
+	result := svc.TransferItem(1, 2, "coal", 50)
 	assert.Equal(t, TradeNoItem, result)
 }
 
 func TestTransferItemNoMoney(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID}).Error)
-	setQty(t, st, 1, dbItem.ID, 3)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal"}).Error)
+	setQty(t, st, 1, "coal", 3)
 	_, err := st.UpdateBalance(2, -100) // set buyer balance to 0
 	require.NoError(t, err)
 
-	result := svc.TransferItem(1, 2, "charbon", 50)
+	result := svc.TransferItem(1, 2, "coal", 50)
 	assert.Equal(t, TradeNoMoney, result)
 }

@@ -69,12 +69,12 @@ const (
 )
 
 type ActionOutcome struct {
-	State     GameState
-	DepthRem  int
+	State      GameState
+	DepthRem   int
 	RiskChance int
-	IntLoss   int
-	Damaged   bool
-	Finished  bool
+	IntLoss    int
+	Damaged    bool
+	Finished   bool
 }
 
 func (s *Service) ApplyAction(state *GameState, action ActionType) *ActionOutcome {
@@ -112,54 +112,54 @@ func (s *Service) ApplyAction(state *GameState, action ActionType) *ActionOutcom
 	state.Finished = finished
 
 	return &ActionOutcome{
-		State:     *state,
-		DepthRem:  depthRem,
+		State:      *state,
+		DepthRem:   depthRem,
 		RiskChance: riskChance,
-		IntLoss:   intLoss,
-		Damaged:   damaged,
-		Finished:  finished,
+		IntLoss:    intLoss,
+		Damaged:    damaged,
+		Finished:   finished,
 	}
 }
 
 func (s *Service) Resolve(state *GameState) *DigResult {
 	if state.Integrity <= 0 {
-		return &DigResult{ItemName: "Poussière d'os", Value: 1}
+		return &DigResult{ItemName: "bone_dust", Value: 1}
 	}
 	if state.Depth > 0 && state.Actions <= 0 {
-		return &DigResult{ItemName: "Poussière d'os", Value: 1}
+		return &DigResult{ItemName: "bone_dust", Value: 1}
 	}
 
 	if state.Integrity < 50 {
-		return &DigResult{ItemName: "Fossile Abîmé", Value: 50}
+		return &DigResult{ItemName: "damaged_fossil", Value: 50}
 	}
 
 	if state.Integrity == 100 {
-		return &DigResult{ItemName: "ADN Pur", Value: 3000}
+		return &DigResult{ItemName: "pure_dna", Value: 3000}
 	}
 
 	if state.PermitType == "safe" {
 		roll := rand.Float64()
 		if roll < 0.60 {
-			return &DigResult{ItemName: "Fossile Commun", Value: 150}
+			return &DigResult{ItemName: "common_fossil", Value: 150}
 		} else if roll < 0.90 {
-			return &DigResult{ItemName: "Fossile Rare", Value: 300}
+			return &DigResult{ItemName: "rare_fossil", Value: 300}
 		} else {
-			return &DigResult{ItemName: "Fossile Épique", Value: 500}
+			return &DigResult{ItemName: "epic_fossil", Value: 500}
 		}
 	}
 
-	return &DigResult{ItemName: "Fragment Légendaire", Value: 1000}
+	return &DigResult{ItemName: "legendary_fragment", Value: 1000}
 }
 
 var ReanimatePools = map[string]struct {
 	ItemName string
 	Pets     []string
 }{
-	"commun":    {ItemName: "Fossile Commun", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
-	"rare":      {ItemName: "Fossile Rare", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
-	"epic":      {ItemName: "Fossile Épique", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
-	"legendary": {ItemName: "Fragment Légendaire", Pets: []string{"Dragon", "Tyrannosaure", "Diplodocus", "Mamouth"}},
-	"pure_dna":  {ItemName: "ADN Pur", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
+	"commun":    {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
+	"rare":      {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
+	"epic":      {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
+	"legendary": {ItemName: "legendary_fragment", Pets: []string{"Dragon", "Tyrannosaure", "Diplodocus", "Mamouth"}},
+	"pure_dna":  {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
 }
 
 func (s *Service) Reanimate(userID int64, rarity string) (string, error) {
@@ -168,16 +168,8 @@ func (s *Service) Reanimate(userID int64, rarity string) (string, error) {
 		return "", errors.New("invalid rarity")
 	}
 
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", pool.ItemName).First(&dbItem).Error; err != nil {
-		return "", errors.New("item not found")
-	}
-
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).First(&inv).Error; err != nil {
-		return "", errors.New("not enough parts")
-	}
-	if inv.Quantity < 5 {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, pool.ItemName, 5).First(&inv).Error; err != nil {
 		return "", errors.New("not enough parts")
 	}
 

@@ -56,11 +56,11 @@ var Houses = map[string]*HouseType{
 }
 
 var BaseProduction = map[string]map[string]float64{
-	"cardboard_box": {"blé": 0.1},
-	"wooden_shack":  {"blé": 0.5, "avoine": 0.2},
-	"brick_house":   {"minerai de fer": 0.5, "charbon": 1.0},
-	"mansion":       {"minerai d'argent": 0.5, "pépite d'or": 0.2},
-	"gilded_palace": {"platine": 0.2, "émeraude": 0.1},
+	"cardboard_box": {"wheat": 0.1},
+	"wooden_shack":  {"wheat": 0.5, "oat": 0.2},
+	"brick_house":   {"iron_ore": 0.5, "coal": 1.0},
+	"mansion":       {"silver_ore": 0.5, "gold_nugget": 0.2},
+	"gilded_palace": {"platinum": 0.2, "emerald": 0.1},
 }
 
 type UpgradeDef struct {
@@ -75,12 +75,12 @@ type UpgradeDef struct {
 }
 
 var UpgradesTree = map[string]*UpgradeDef{
-	"merchant_office":    {ID: "merchant_office", Name: "Bureau de Négociant", Branch: "merchant", CostMoney: 5000, CostItems: map[string]int{"charbon": 20, "minerai de cuivre": 10}, TimeHours: 4, BonusDesc: "+20% Capacité Banque, +15% Revenus"},
-	"merchant_vault":     {ID: "merchant_vault", Name: "Chambre Forte", Branch: "merchant", CostMoney: 25000, CostItems: map[string]int{"pépite d'or": 5, "minerai d'argent": 20}, TimeHours: 24, Requires: "merchant_office", BonusDesc: "Capacité Banque doublée"},
-	"industrial_workshop": {ID: "industrial_workshop", Name: "Atelier Industriel", Branch: "industrial", CostMoney: 4000, CostItems: map[string]int{"caillou": 100, "minerai de fer": 20}, TimeHours: 6, BonusDesc: "Production de ressources x2"},
-	"industrial_drill":   {ID: "industrial_drill", Name: "Foreuse Automatique", Branch: "industrial", CostMoney: 30000, CostItems: map[string]int{"platine": 2, "minerai de fer": 100}, TimeHours: 48, Requires: "industrial_workshop", BonusDesc: "Donne parfois des minerais rares"},
-	"mystic_altar":       {ID: "mystic_altar", Name: "Autel Mystique", Branch: "mystic", CostMoney: 7500, CostItems: map[string]int{"poisson-globe": 5, "plante pourrie": 20}, TimeHours: 12, BonusDesc: "-5% Coûts de Craft, Régénération Pet"},
-	"mystic_laboratory":  {ID: "mystic_laboratory", Name: "Laboratoire d'Alchimie", Branch: "mystic", CostMoney: 50000, CostItems: map[string]int{"émeraude": 5, "potion d'oubli": 1}, TimeHours: 72, Requires: "mystic_altar", BonusDesc: "-15% Coûts de Craft, Chance XP Pet augmentée"},
+	"merchant_office":    {ID: "merchant_office", Name: "Bureau de Négociant", Branch: "merchant", CostMoney: 5000, CostItems: map[string]int{"coal": 20, "copper_ore": 10}, TimeHours: 4, BonusDesc: "+20% Capacité Banque, +15% Revenus"},
+	"merchant_vault":     {ID: "merchant_vault", Name: "Chambre Forte", Branch: "merchant", CostMoney: 25000, CostItems: map[string]int{"gold_nugget": 5, "silver_ore": 20}, TimeHours: 24, Requires: "merchant_office", BonusDesc: "Capacité Banque doublée"},
+	"industrial_workshop": {ID: "industrial_workshop", Name: "Atelier Industriel", Branch: "industrial", CostMoney: 4000, CostItems: map[string]int{"pebble": 100, "iron_ore": 20}, TimeHours: 6, BonusDesc: "Production de ressources x2"},
+	"industrial_drill":   {ID: "industrial_drill", Name: "Foreuse Automatique", Branch: "industrial", CostMoney: 30000, CostItems: map[string]int{"platinum": 2, "iron_ore": 100}, TimeHours: 48, Requires: "industrial_workshop", BonusDesc: "Donne parfois des minerais rares"},
+	"mystic_altar":       {ID: "mystic_altar", Name: "Autel Mystique", Branch: "mystic", CostMoney: 7500, CostItems: map[string]int{"pufferfish": 5, "rotten_plant": 20}, TimeHours: 12, BonusDesc: "-5% Coûts de Craft, Régénération Pet"},
+	"mystic_laboratory":  {ID: "mystic_laboratory", Name: "Laboratoire d'Alchimie", Branch: "mystic", CostMoney: 50000, CostItems: map[string]int{"emerald": 5, "forget_potion": 1}, TimeHours: 72, Requires: "mystic_altar", BonusDesc: "-15% Coûts de Craft, Chance XP Pet augmentée"},
 }
 
 type Service struct {

@@ -20,16 +20,16 @@ type MineItem struct {
 
 var DepthLoot = [][]MineItem{
 	{},
-	{{"Caillou", 1}, {"Charbon", 5}},
-	{{"Charbon", 5}, {"Minerai de Fer", 10}, {"Minerai de Cuivre", 15}},
-	{{"Minerai de Cuivre", 15}, {"Minerai de Fer", 10}, {"Pépite d'Or", 50}},
-	{{"Minerai de Cuivre", 15}, {"Minerai d'argent", 25}, {"Pépite d'Or", 50}},
-	{{"Minerai d'argent", 25}, {"Pépite d'Or", 50}},
-	{{"Minerai d'argent", 25}, {"Pépite d'Or", 50}},
-	{{"Pépite d'Or", 50}, {"Platine", 75}, {"Emeraude", 100}},
-	{{"Pépite d'Or", 50}, {"Platine", 75}, {"Emeraude", 100}},
-	{{"Pépite d'Or", 50}, {"Platine", 75}, {"Emeraude", 100}},
-	{{"Platine", 75}, {"Emeraude", 100}, {"Diamant Brut", 300}},
+	{{"pebble", 1}, {"coal", 5}},
+	{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}},
+	{{"copper_ore", 15}, {"iron_ore", 10}, {"gold_nugget", 50}},
+	{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}},
+	{{"silver_ore", 25}, {"gold_nugget", 50}},
+	{{"silver_ore", 25}, {"gold_nugget", 50}},
+	{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}},
+	{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}},
+	{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}},
+	{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}},
 }
 
 type BagEntry struct {
@@ -103,14 +103,10 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry) (*LeaveResult, error) 
 	}
 
 	for _, e := range bag {
-		var dbItem model.Item
-		if err := s.store.DB.Where("name = ?", e.Name).First(&dbItem).Error; err != nil {
-			return nil, err
-		}
 		if err := s.store.DB.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", e.Count)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: e.Count}).Error; err != nil {
+		}).Create(&model.Inventory{UserID: userID, ItemID: e.Name, Quantity: e.Count}).Error; err != nil {
 			return nil, err
 		}
 	}

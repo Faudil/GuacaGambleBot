@@ -46,18 +46,10 @@ type Wager struct {
 	Amount int    `gorm:"column:amount"`
 }
 
-type Item struct {
-	ID          int64  `gorm:"primaryKey;column:id;autoIncrement"`
-	Name        string `gorm:"column:name;uniqueIndex"`
-	Price       int    `gorm:"column:price"`
-	Description string `gorm:"column:description"`
-	EffectType  string `gorm:"column:effect_type"`
-}
-
 type Inventory struct {
-	UserID   int64 `gorm:"primaryKey;column:user_id"`
-	ItemID   int64 `gorm:"primaryKey;column:item_id"`
-	Quantity int   `gorm:"column:quantity;default:1"`
+	UserID   int64  `gorm:"primaryKey;column:user_id"`
+	ItemID   string `gorm:"primaryKey;column:item_id"`
+	Quantity int    `gorm:"column:quantity;default:0"`
 }
 
 type LottoState struct {
@@ -272,7 +264,6 @@ func (Cooldown) TableName() string                  { return "cooldowns" }
 func (GameLimit) TableName() string                 { return "game_limits" }
 func (Bet) TableName() string                       { return "bets" }
 func (Wager) TableName() string                     { return "wagers" }
-func (Item) TableName() string                      { return "items" }
 func (Inventory) TableName() string                 { return "inventory" }
 func (LottoState) TableName() string                { return "lotto_state" }
 func (Job) TableName() string                       { return "jobs" }

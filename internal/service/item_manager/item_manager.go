@@ -7,6 +7,7 @@ import (
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Service struct {
@@ -21,19 +22,15 @@ func New(s *store.Store, cfg *config.Config) *Service {
 type TradeResult string
 
 const (
-	TradeSuccess  TradeResult = "SUCCESS"
-	TradeNoMoney  TradeResult = "NO_MONEY"
-	TradeNoItem   TradeResult = "NO_ITEM"
-	TradeUnknown  TradeResult = "UNKNOWN"
+	TradeSuccess TradeResult = "SUCCESS"
+	TradeNoMoney TradeResult = "NO_MONEY"
+	TradeNoItem  TradeResult = "NO_ITEM"
+	TradeUnknown TradeResult = "UNKNOWN"
 )
 
 func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price int) TradeResult {
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", itemName).First(&dbItem).Error; err != nil {
-		return TradeNoItem
-	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", sellerID, dbItem.ID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", sellerID, itemName).First(&inv).Error; err != nil {
 		return TradeNoItem
 	}
 	if inv.Quantity < 1 {
@@ -55,13 +52,14 @@ func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price i
 			return err
 		}
 		if err := tx.Model(&model.Inventory{}).
-			Where("user_id = ? AND item_id = ?", sellerID, dbItem.ID).
+			Where("user_id = ? AND item_id = ?", sellerID, itemName).
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", 1)).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("user_id = ? AND item_id = ?", buyerID, dbItem.ID).
-			FirstOrCreate(&model.Inventory{UserID: buyerID, ItemID: dbItem.ID, Quantity: 0}).
-			UpdateColumn("quantity", gorm.Expr("quantity + ?", 1)).Error; err != nil {
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+			DoUpdates: clause.Assignments(map[string]interface{}{"quantity": gorm.Expr("inventory.quantity + ?", 1)}),
+		}).Create(&model.Inventory{UserID: buyerID, ItemID: itemName, Quantity: 1}).Error; err != nil {
 			return err
 		}
 		return nil

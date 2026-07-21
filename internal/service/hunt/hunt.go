@@ -45,9 +45,9 @@ var Zones = map[string]Zone{
 			{Name: "Sanglier Sauvage", Emoji: "🐗", HP: 35, Atk: 8, Def: 5, Spd: 10},
 		},
 		LootTable: []LootEntry{
-			{Item: "Caillou", Chance: 0.50, MaxQty: 3},
-			{Item: "Tomate", Chance: 0.30, MaxQty: 2},
-			{Item: "Charbon", Chance: 0.15, MaxQty: 1},
+			{Item: "pebble", Chance: 0.50, MaxQty: 3},
+			{Item: "tomato", Chance: 0.30, MaxQty: 2},
+			{Item: "coal", Chance: 0.15, MaxQty: 1},
 		},
 	},
 	"medium": {
@@ -57,9 +57,9 @@ var Zones = map[string]Zone{
 			{Name: "Araignée Géante", Emoji: "🕷️", HP: 50, Atk: 15, Def: 8, Spd: 30},
 		},
 		LootTable: []LootEntry{
-			{Item: "Charbon", Chance: 0.60, MaxQty: 3},
-			{Item: "Minerai de Fer", Chance: 0.40, MaxQty: 2},
-			{Item: "Sardine", Chance: 0.20, MaxQty: 1},
+			{Item: "coal", Chance: 0.60, MaxQty: 3},
+			{Item: "iron_ore", Chance: 0.40, MaxQty: 2},
+			{Item: "sardine", Chance: 0.20, MaxQty: 1},
 		},
 	},
 	"hard": {
@@ -69,21 +69,21 @@ var Zones = map[string]Zone{
 			{Name: "Drake de Feu", Emoji: "🐉", HP: 80, Atk: 35, Def: 12, Spd: 25},
 		},
 		LootTable: []LootEntry{
-			{Item: "Minerai de Cuivre", Chance: 0.50, MaxQty: 5},
-			{Item: "Pépite d'Or", Chance: 0.30, MaxQty: 3},
-			{Item: "Diamant Brut", Chance: 0.20, MaxQty: 2},
+			{Item: "copper_ore", Chance: 0.50, MaxQty: 5},
+			{Item: "gold_nugget", Chance: 0.30, MaxQty: 3},
+			{Item: "rough_diamond", Chance: 0.20, MaxQty: 2},
 		},
 	},
 }
 
 type Combatant struct {
-	Name   string
-	Emoji  string
-	HP     int
-	MaxHP  int
-	Atk    int
-	Def    int
-	Level  int
+	Name    string
+	Emoji   string
+	HP      int
+	MaxHP   int
+	Atk     int
+	Def     int
+	Level   int
 	IsAlive bool
 }
 
@@ -92,13 +92,13 @@ func NewEnemy(zoneKey string) *Combatant {
 	t := zone.Enemies[rand.Intn(len(zone.Enemies))]
 	lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
 	return &Combatant{
-		Name:   t.Name,
-		Emoji:  t.Emoji,
-		HP:     t.HP + lvl*5,
-		MaxHP:  t.HP + lvl*5,
-		Atk:    t.Atk + lvl*2,
-		Def:    t.Def + lvl*1,
-		Level:  lvl,
+		Name:    t.Name,
+		Emoji:   t.Emoji,
+		HP:      t.HP + lvl*5,
+		MaxHP:   t.HP + lvl*5,
+		Atk:     t.Atk + lvl*2,
+		Def:     t.Def + lvl*1,
+		Level:   lvl,
 		IsAlive: true,
 	}
 }
@@ -108,9 +108,9 @@ type BattleLogEntry struct {
 }
 
 type BattleResult struct {
-	PetHP    int
-	PetMaxHP int
-	EnemyHP  int
+	PetHP      int
+	PetMaxHP   int
+	EnemyHP    int
 	EnemyMaxHP int
 	PlayerWon  bool
 	EnemyWon   bool
@@ -209,16 +209,13 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		for _, loot := range zone.LootTable {
 			if rand.Float64() < loot.Chance {
 				qty := rand.Intn(loot.MaxQty) + 1
-				var dbItem model.Item
-				if err := s.store.DB.Where("name = ?", loot.Item).First(&dbItem).Error; err == nil {
-					for i := 0; i < qty; i++ {
-						if err := s.store.DB.Exec(
-							`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-							 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-							userID, dbItem.ID,
-						).Error; err == nil {
-							lootItems = append(lootItems, loot.Item)
-						}
+				for i := 0; i < qty; i++ {
+					if err := s.store.DB.Exec(
+						`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
+						 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
+						userID, loot.Item,
+					).Error; err == nil {
+						lootItems = append(lootItems, loot.Item)
 					}
 				}
 			}

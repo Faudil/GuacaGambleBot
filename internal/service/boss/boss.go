@@ -49,7 +49,7 @@ var BossLeague = []BossStage{
 		DGE: 5, ACC: 5, CritC: 5, CritD: 1.5, SpcC: 0,
 		DescFR: "Un débutant enthousiaste avec une Souris rapide. Un bon test de départ !",
 		DescEN: "An enthusiastic beginner with a quick Mouse. A good starting test!",
-		RewardMoney: 200, RewardItems: map[string]int{"café": 1, "œuf mystère": 1},
+		RewardMoney: 200, RewardItems: map[string]int{"coffee": 1, "mystery_egg": 1},
 		Achievement: "boss_league_1",
 	},
 	{
@@ -58,7 +58,7 @@ var BossLeague = []BossStage{
 		DGE: 2, ACC: 10, CritC: 5, CritD: 2.0, SpcC: 0,
 		DescFR: "Un Ours robuste doté d'une défense impressionnante. Vous devrez percer sa carapace.",
 		DescEN: "A sturdy Bear with impressive defense. You'll need to break through its guard.",
-		RewardMoney: 500, RewardItems: map[string]int{"ticket vip": 2, "terrain : potager": 1},
+		RewardMoney: 500, RewardItems: map[string]int{"vip_ticket": 2, "garden_plot": 1},
 		Achievement: "boss_league_2",
 	},
 	{
@@ -67,7 +67,7 @@ var BossLeague = []BossStage{
 		DGE: 22, ACC: 25, CritC: 20, CritD: 2.0, SpcC: 0,
 		DescFR: "Un Aigle féroce qui attaque à une vitesse fulgurante et inflige de lourds dégâts critiques.",
 		DescEN: "A fierce Eagle attacking at lightning speed and inflicting heavy critical damage.",
-		RewardMoney: 1000, RewardItems: map[string]int{"terrain : verger enchanté": 1, "fortune cookie": 2},
+		RewardMoney: 1000, RewardItems: map[string]int{"enchanted_orchard": 1, "fortune_cookie": 2},
 		Achievement: "boss_league_3",
 	},
 	{
@@ -76,7 +76,7 @@ var BossLeague = []BossStage{
 		DGE: 20, ACC: 10, CritC: 15, CritD: 1.5, SpcC: 5,
 		DescFR: "Le Kraken mythique des profondeurs. Ses attaques de type POISON affaibliront votre familier sur la durée.",
 		DescEN: "The mythical Kraken of the deep. Its POISON-type attacks will wear down your pet over time.",
-		RewardMoney: 2500, RewardItems: map[string]int{"terrain : serre tropicale": 1, "potion d'oubli": 1},
+		RewardMoney: 2500, RewardItems: map[string]int{"tropical_greenhouse": 1, "forget_potion": 1},
 		Achievement: "boss_league_4",
 	},
 	{
@@ -85,7 +85,7 @@ var BossLeague = []BossStage{
 		DGE: 25, ACC: 15, CritC: 15, CritD: 1.5, SpcC: 10,
 		DescFR: "L'ultime boss de la ligue. Le Phénix renaît de ses cendres avec des stats colossales et des attaques de FEU.",
 		DescEN: "The final league boss. The Phoenix rises with colossal stats and FIRE attacks.",
-		RewardMoney: 5000, RewardItems: map[string]int{"trophée de boss": 1},
+		RewardMoney: 5000, RewardItems: map[string]int{"boss_trophy": 1},
 		Achievement: "boss_league_5",
 	},
 }

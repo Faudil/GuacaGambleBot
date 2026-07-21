@@ -22,10 +22,6 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	svc := New(s, cfg)
-	for _, name := range []string{"Caillou", "Tomate", "Charbon", "Minerai de Fer", "Sardine",
-		"Minerai de Cuivre", "Pépite d'Or", "Diamant Brut"} {
-		_ = s.DB.Create(&model.Item{Name: name, Price: 1})
-	}
 	return svc, s
 }
 

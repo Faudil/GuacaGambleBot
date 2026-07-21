@@ -11,7 +11,6 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
-	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -22,11 +21,6 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	svc := New(s, cfg)
-	items := []string{"Caillou", "Charbon", "Minerai de Fer", "Minerai de Cuivre",
-		"Minerai d'argent", "Pépite d'Or", "Platine", "Emeraude", "Diamant Brut"}
-	for _, name := range items {
-		_ = s.DB.Create(&model.Item{Name: name, Price: 1})
-	}
 	return svc, s
 }
 
@@ -58,7 +52,7 @@ func TestDescendCollapse(t *testing.T) {
 
 func TestLeaveMine(t *testing.T) {
 	svc, _ := testService(t)
-	bag := []BagEntry{{Name: "Caillou", Count: 3}, {Name: "Charbon", Count: 1}}
+	bag := []BagEntry{{Name: "pebble", Count: 3}, {Name: "coal", Count: 1}}
 	res, err := svc.LeaveMine(1, bag)
 	require.NoError(t, err)
 	assert.Equal(t, bag, res.Bag)

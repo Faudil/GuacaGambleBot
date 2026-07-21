@@ -12,7 +12,6 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
-	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -23,16 +22,6 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	s := store.New(d, cfg)
 	svc := New(s, cfg)
-	_ = s.DB.Create(&model.Item{Name: "Vieille botte", Price: 1, Description: "An old boot"})
-	_ = s.DB.Create(&model.Item{Name: "Truite", Price: 10, Description: "Trout"})
-	_ = s.DB.Create(&model.Item{Name: "Saumon", Price: 10, Description: "Salmon"})
-	_ = s.DB.Create(&model.Item{Name: "Sardine", Price: 15, Description: "Sardine"})
-	_ = s.DB.Create(&model.Item{Name: "Carpe", Price: 25, Description: "Carp"})
-	_ = s.DB.Create(&model.Item{Name: "Poisson-Globe", Price: 50, Description: "Pufferfish"})
-	_ = s.DB.Create(&model.Item{Name: "Espadon", Price: 150, Description: "Swordfish"})
-	_ = s.DB.Create(&model.Item{Name: "Requin", Price: 100, Description: "Shark"})
-	_ = s.DB.Create(&model.Item{Name: "Baleine", Price: 300, Description: "Whale"})
-	_ = s.DB.Create(&model.Item{Name: "Tentacule de Kraken", Price: 500, Description: "Kraken"})
 	return svc, s
 }
 
@@ -57,8 +46,8 @@ func TestCastLineLimit(t *testing.T) {
 func TestBiomeSpecificLoot(t *testing.T) {
 	svc, _ := testService(t)
 	oceanItems := map[string]bool{
-		"Poisson-Globe": true, "Espadon": true, "Requin": true,
-		"Baleine": true, "Tentacule de Kraken": true,
+		"pufferfish": true, "swordfish": true, "shark": true,
+		"whale": true, "kraken_tentacle": true,
 	}
 	for i := 0; i < 5; i++ {
 		res, err := svc.CastLine(99, "ocean")

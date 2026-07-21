@@ -76,16 +76,10 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 		if _, err := s.store.UpdateBalance(userID, -totalCost); err != nil {
 			return err
 		}
-		var dbItem model.Item
-		if err := tx.Where("name = ?", itemName).FirstOrCreate(&dbItem, model.Item{
-			Name: itemName, Price: it.Price, Description: it.Description, EffectType: it.EffectType,
-		}).Error; err != nil {
-			return err
-		}
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
-			)}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: quantity}).Error
+			)}).Create(&model.Inventory{UserID: userID, ItemID: itemName, Quantity: quantity}).Error
 	})
 }
 

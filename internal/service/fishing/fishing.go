@@ -20,24 +20,24 @@ type FishItem struct {
 }
 
 var PondFish = []FishItem{
-	{"Vieille botte", 1},
-	{"Truite", 10},
-	{"Saumon", 10},
+	{"old_boot", 1},
+	{"trout", 10},
+	{"salmon", 10},
 }
 
 var RiverFish = []FishItem{
-	{"Saumon", 10},
-	{"Sardine", 15},
-	{"Carpe", 25},
-	{"Poisson-Globe", 50},
+	{"salmon", 10},
+	{"sardine", 15},
+	{"carp", 25},
+	{"pufferfish", 50},
 }
 
 var OceanFish = []FishItem{
-	{"Poisson-Globe", 50},
-	{"Espadon", 150},
-	{"Requin", 100},
-	{"Baleine", 300},
-	{"Tentacule de Kraken", 500},
+	{"pufferfish", 50},
+	{"swordfish", 150},
+	{"shark", 100},
+	{"whale", 300},
+	{"kraken_tentacle", 500},
 }
 
 type CastResult struct {
@@ -120,15 +120,10 @@ func (s *Service) CastLine(userID int64, biome string) (*CastResult, error) {
 
 	xp := 10 + rand.Intn(11)
 
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", item.Name).First(&dbItem).Error; err != nil {
-		return nil, err
-	}
-
 	if err := s.store.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + 1")}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 1}).Error; err != nil {
+	}).Create(&model.Inventory{UserID: userID, ItemID: item.Name, Quantity: 1}).Error; err != nil {
 		return nil, err
 	}
 

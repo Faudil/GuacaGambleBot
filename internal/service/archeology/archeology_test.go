@@ -11,7 +11,6 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
-	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -22,13 +21,6 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	svc := New(s, cfg)
-	_ = s.DB.Create(&model.Item{Name: "Poussière d'os", Price: 1})
-	_ = s.DB.Create(&model.Item{Name: "Fossile Abîmé", Price: 50})
-	_ = s.DB.Create(&model.Item{Name: "Fossile Commun", Price: 150})
-	_ = s.DB.Create(&model.Item{Name: "Fossile Rare", Price: 300})
-	_ = s.DB.Create(&model.Item{Name: "Fossile Épique", Price: 500})
-	_ = s.DB.Create(&model.Item{Name: "Fragment Légendaire", Price: 1000})
-	_ = s.DB.Create(&model.Item{Name: "ADN Pur", Price: 3000})
 	return svc, s
 }
 
@@ -70,19 +62,19 @@ func TestApplyAction(t *testing.T) {
 func TestResolveDisaster(t *testing.T) {
 	state := &GameState{Integrity: 0, Depth: 30, Actions: 2}
 	res := (&Service{}).Resolve(state)
-	assert.Equal(t, "Poussière d'os", res.ItemName)
+	assert.Equal(t, "bone_dust", res.ItemName)
 }
 
 func TestResolveDamaged(t *testing.T) {
 	state := &GameState{Integrity: 30, Depth: 0, Actions: 3}
 	res := (&Service{}).Resolve(state)
-	assert.Equal(t, "Fossile Abîmé", res.ItemName)
+	assert.Equal(t, "damaged_fossil", res.ItemName)
 }
 
 func TestResolvePerfect(t *testing.T) {
 	state := &GameState{Integrity: 100, Depth: 0, Actions: 3}
 	res := (&Service{}).Resolve(state)
-	assert.Equal(t, "ADN Pur", res.ItemName)
+	assert.Equal(t, "pure_dna", res.ItemName)
 }
 
 func TestReanimateInvalidRarity(t *testing.T) {

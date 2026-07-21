@@ -7,12 +7,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGetExistingItem(t *testing.T) {
-	item := Get("charbon")
+func TestGetExistingItemByID(t *testing.T) {
+	item := Get("coal")
 	require.NotNil(t, item)
-	assert.Equal(t, "charbon", item.Name)
+	assert.Equal(t, "coal", item.ID)
+	assert.Equal(t, "Coal", item.Name)
 	assert.Equal(t, Mining, item.Category)
-	assert.True(t, item.Price > 0, "charbon should have a price > 0")
+	assert.True(t, item.Price > 0, "coal should have a price > 0")
+}
+
+func TestGetExistingItemByName(t *testing.T) {
+	item := Get("Coal")
+	require.NotNil(t, item)
+	assert.Equal(t, "coal", item.ID)
 }
 
 func TestGetMissingItem(t *testing.T) {

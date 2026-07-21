@@ -56,62 +56,34 @@ func (s *Service) GetInventory(userID int64) (*InvResult, error) {
 	entries := make([]InvEntry, 0, len(inv))
 	current := 0
 	for _, iv := range inv {
-		it := items.Get("")
-		if iv.ItemID > 0 {
-			var dbItem model.Item
-			if err := s.store.DB.First(&dbItem, iv.ItemID).Error; err == nil {
-				it = items.Get(dbItem.Name)
-			}
-		}
+		it := items.Get(iv.ItemID)
 		name := ""
 		if it != nil {
 			name = it.Name
-		} else {
-			var dbItem model.Item
-			if err := s.store.DB.First(&dbItem, iv.ItemID).Error; err == nil {
-				name = dbItem.Name
-			}
 		}
-		it2 := items.Get(name)
-		entries = append(entries, InvEntry{ItemName: name, Quantity: iv.Quantity, Item: it2})
+		entries = append(entries, InvEntry{ItemName: name, Quantity: iv.Quantity, Item: it})
 		current += iv.Quantity
 	}
 	return &InvResult{Entries: entries, Current: current, Limit: limit, UserID: userID}, nil
 }
 
-func (s *Service) HasItem(userID int64, itemName string, quantity int) bool {
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", itemName).First(&dbItem).Error; err != nil {
-		return false
-	}
+func (s *Service) HasItem(userID int64, itemID string, quantity int) bool {
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
 		return false
 	}
 	return inv.Quantity >= quantity
 }
 
-func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemName string, quantity int) error {
-	var dbItem model.Item
-	if err := db.Where("name = ?", itemName).First(&dbItem).Error; err != nil {
-		return err
-	}
-	db.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
-		FirstOrCreate(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 0})
+func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemID string, quantity int) error {
 	return db.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
+		Where("user_id = ? AND item_id = ?", userID, itemID).
 		UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error
 }
 
-func (s *Service) AddItem(db *gorm.DB, userID int64, itemName string, quantity int) error {
-	var dbItem model.Item
-	if err := db.Where("name = ?", itemName).FirstOrCreate(&dbItem, model.Item{
-		Name: itemName, Price: 0, Description: "", EffectType: "",
-	}).Error; err != nil {
-		return err
-	}
+func (s *Service) AddItem(db *gorm.DB, userID int64, itemID string, quantity int) error {
 	return db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
-		)}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: quantity}).Error
+		)}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
 }

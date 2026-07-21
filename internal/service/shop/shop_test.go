@@ -41,7 +41,7 @@ func TestBuyItemSuccess(t *testing.T) {
 	_, err := st.UpdateBalance(1, 1000)
 	require.NoError(t, err)
 
-	err = svc.BuyItem(1, "charbon", 2)
+	err = svc.BuyItem(1, "coal", 2)
 	require.NoError(t, err)
 }
 
@@ -53,6 +53,6 @@ func TestBuyItemNotFound(t *testing.T) {
 
 func TestBuyItemInsufficientFunds(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.BuyItem(1, "charbon", 1000)
+	err := svc.BuyItem(1, "coal", 1000)
 	assert.ErrorIs(t, err, ErrNoMoney)
 }

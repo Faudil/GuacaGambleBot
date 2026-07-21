@@ -32,7 +32,6 @@ func Migrate(db *gorm.DB) error {
 		&model.GameLimit{},
 		&model.Bet{},
 		&model.Wager{},
-		&model.Item{},
 		&model.Inventory{},
 		&model.LottoState{},
 		&model.Job{},

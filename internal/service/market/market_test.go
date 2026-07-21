@@ -41,7 +41,7 @@ func TestGetMarketPricesReturnsCategories(t *testing.T) {
 
 func TestSellItemNotSellable(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "old journal", 1)
+	_, err := svc.SellItem(1, "old_journal", 1)
 	assert.ErrorIs(t, err, ErrNotSellable)
 }
 
@@ -53,32 +53,28 @@ func TestSellItemNotFound(t *testing.T) {
 
 func TestSellItemNoItem(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "charbon", 1)
-	assert.ErrorIs(t, err, ErrNotFound)
+	_, err := svc.SellItem(1, "coal", 1)
+	assert.ErrorIs(t, err, ErrNoItem)
 }
 
 func TestSellItemInsufficientQuantity(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 1}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 1}).Error)
 
-	_, err := svc.SellItem(1, "charbon", 5)
+	_, err := svc.SellItem(1, "coal", 5)
 	assert.ErrorIs(t, err, ErrNoItem)
 }
 
 func TestSellItemSuccess(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 10}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
 
-	gain, err := svc.SellItem(1, "charbon", 3)
+	gain, err := svc.SellItem(1, "coal", 3)
 	require.NoError(t, err)
 	assert.Greater(t, gain, 0)
 
 	var inv model.Inventory
-	st.DB.Where("user_id = ? AND item_id = ?", 1, dbItem.ID).First(&inv)
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv)
 	assert.Equal(t, 7, inv.Quantity)
 
 	bal, _ := st.GetBalance(1)

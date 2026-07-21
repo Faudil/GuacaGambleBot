@@ -52,7 +52,7 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.day1_strata.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 10}},
 			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_dialogue", Rewards: &QuestReward{Money: 200}},
 			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 10}},
-			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_choice", Rewards: &QuestReward{ItemIDs: []string{"blé"}}},
+			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_choice", Rewards: &QuestReward{ItemIDs: []string{"wheat"}}},
 		},
 	},
 	"daily_quest": {

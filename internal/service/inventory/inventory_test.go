@@ -35,61 +35,53 @@ func TestGetInventoryEmpty(t *testing.T) {
 
 func TestGetInventoryWithItems(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 10}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
 
 	res, err := svc.GetInventory(1)
 	require.NoError(t, err)
 	assert.Len(t, res.Entries, 1)
 	assert.Equal(t, 10, res.Current)
-	assert.Equal(t, "charbon", res.Entries[0].ItemName)
+	assert.Equal(t, "Coal", res.Entries[0].ItemName)
 }
 
 func TestHasItemTrue(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 5}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 5}).Error)
 
-	assert.True(t, svc.HasItem(1, "charbon", 3))
+	assert.True(t, svc.HasItem(1, "coal", 3))
 }
 
 func TestHasItemFalse(t *testing.T) {
 	svc, _ := testService(t)
-	assert.False(t, svc.HasItem(1, "charbon", 1))
+	assert.False(t, svc.HasItem(1, "coal", 1))
 }
 
 func TestHasItemInsufficientQuantity(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 2}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 2}).Error)
 
-	assert.False(t, svc.HasItem(1, "charbon", 5))
+	assert.False(t, svc.HasItem(1, "coal", 5))
 }
 
 func TestAddItem(t *testing.T) {
 	svc, st := testService(t)
-	err := svc.AddItem(st.DB, 1, "charbon", 3)
+	err := svc.AddItem(st.DB, 1, "coal", 3)
 	require.NoError(t, err)
 
 	var inv model.Inventory
-	err = st.DB.Where("user_id = ? AND item_id = (SELECT id FROM items WHERE name = ?)", 1, "charbon").First(&inv).Error
+	err = st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error
 	require.NoError(t, err)
 	assert.Equal(t, 3, inv.Quantity)
 }
 
 func TestRemoveItem(t *testing.T) {
 	svc, st := testService(t)
-	dbItem := model.Item{Name: "charbon", Price: 5, Description: "", EffectType: "resource"}
-	require.NoError(t, st.DB.Create(&dbItem).Error)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: dbItem.ID, Quantity: 10}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
 
-	err := svc.RemoveItem(st.DB, 1, "charbon", 4)
+	err := svc.RemoveItem(st.DB, 1, "coal", 4)
 	require.NoError(t, err)
 
 	var inv model.Inventory
-	st.DB.Where("user_id = ? AND item_id = ?", 1, dbItem.ID).First(&inv)
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv)
 	assert.Equal(t, 6, inv.Quantity)
 }

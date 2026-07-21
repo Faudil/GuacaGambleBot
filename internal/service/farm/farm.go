@@ -29,31 +29,31 @@ type Seed struct {
 }
 
 var Crops = []Crop{
-	{Name: "Blé", Value: 5, GrowTimeSec: 300, SeedName: "Graine de Blé"},
-	{Name: "Avoine", Value: 8, GrowTimeSec: 600, SeedName: "Graine d'Avoine"},
-	{Name: "Maïs", Value: 12, GrowTimeSec: 1800, SeedName: "Graine de Maïs"},
-	{Name: "Patate", Value: 20, GrowTimeSec: 3600, SeedName: "Graine de Patate"},
-	{Name: "Tomate", Value: 25, GrowTimeSec: 7200, SeedName: "Graine de Tomate"},
-	{Name: "Citrouille", Value: 40, GrowTimeSec: 14400, SeedName: "Graine de Citrouille"},
-	{Name: "Grain de Café", Value: 60, GrowTimeSec: 28800, SeedName: "Graine de Café"},
-	{Name: "Fève de Cacao", Value: 75, GrowTimeSec: 43200, SeedName: "Graine de Cacao"},
-	{Name: "Fraise", Value: 90, GrowTimeSec: 64800, SeedName: "Graine de Fraise"},
-	{Name: "Pomme Dorée", Value: 150, GrowTimeSec: 86400, SeedName: "Pépin de Pomme Dorée"},
-	{Name: "Fruit Étoile", Value: 250, GrowTimeSec: 172800, SeedName: "Pépin de Fruit Étoile"},
+	{Name: "wheat", Value: 5, GrowTimeSec: 300, SeedName: "wheat_seed"},
+	{Name: "oat", Value: 8, GrowTimeSec: 600, SeedName: "oat_seed"},
+	{Name: "corn", Value: 12, GrowTimeSec: 1800, SeedName: "corn_seed"},
+	{Name: "potato", Value: 20, GrowTimeSec: 3600, SeedName: "potato_seed"},
+	{Name: "tomato", Value: 25, GrowTimeSec: 7200, SeedName: "tomato_seed"},
+	{Name: "pumpkin", Value: 40, GrowTimeSec: 14400, SeedName: "pumpkin_seed"},
+	{Name: "coffee_bean", Value: 60, GrowTimeSec: 28800, SeedName: "coffee_seed"},
+	{Name: "cocoa_bean", Value: 75, GrowTimeSec: 43200, SeedName: "cocoa_seed"},
+	{Name: "strawberry", Value: 90, GrowTimeSec: 64800, SeedName: "strawberry_seed"},
+	{Name: "golden_apple", Value: 150, GrowTimeSec: 86400, SeedName: "golden_apple_seed"},
+	{Name: "star_fruit", Value: 250, GrowTimeSec: 172800, SeedName: "star_fruit_seed"},
 }
 
 var Seeds = []Seed{
-	{Name: "Graine de Blé", Price: 2, GrowTimeSec: 300, Crop: cropByName("Blé")},
-	{Name: "Graine d'Avoine", Price: 3, GrowTimeSec: 600, Crop: cropByName("Avoine")},
-	{Name: "Graine de Maïs", Price: 5, GrowTimeSec: 1800, Crop: cropByName("Maïs")},
-	{Name: "Graine de Patate", Price: 8, GrowTimeSec: 3600, Crop: cropByName("Patate")},
-	{Name: "Graine de Tomate", Price: 10, GrowTimeSec: 7200, Crop: cropByName("Tomate")},
-	{Name: "Graine de Citrouille", Price: 15, GrowTimeSec: 14400, Crop: cropByName("Citrouille")},
-	{Name: "Graine de Café", Price: 25, GrowTimeSec: 28800, Crop: cropByName("Grain de Café")},
-	{Name: "Graine de Cacao", Price: 30, GrowTimeSec: 43200, Crop: cropByName("Fève de Cacao")},
-	{Name: "Graine de Fraise", Price: 40, GrowTimeSec: 64800, Crop: cropByName("Fraise")},
-	{Name: "Pépin de Pomme Dorée", Price: 75, GrowTimeSec: 86400, Crop: cropByName("Pomme Dorée")},
-	{Name: "Pépin de Fruit Étoile", Price: 125, GrowTimeSec: 172800, Crop: cropByName("Fruit Étoile")},
+	{Name: "wheat_seed", Price: 2, GrowTimeSec: 300, Crop: cropByName("wheat")},
+	{Name: "oat_seed", Price: 3, GrowTimeSec: 600, Crop: cropByName("oat")},
+	{Name: "corn_seed", Price: 5, GrowTimeSec: 1800, Crop: cropByName("corn")},
+	{Name: "potato_seed", Price: 8, GrowTimeSec: 3600, Crop: cropByName("potato")},
+	{Name: "tomato_seed", Price: 10, GrowTimeSec: 7200, Crop: cropByName("tomato")},
+	{Name: "pumpkin_seed", Price: 15, GrowTimeSec: 14400, Crop: cropByName("pumpkin")},
+	{Name: "coffee_seed", Price: 25, GrowTimeSec: 28800, Crop: cropByName("coffee_bean")},
+	{Name: "cocoa_seed", Price: 30, GrowTimeSec: 43200, Crop: cropByName("cocoa_bean")},
+	{Name: "strawberry_seed", Price: 40, GrowTimeSec: 64800, Crop: cropByName("strawberry")},
+	{Name: "golden_apple_seed", Price: 75, GrowTimeSec: 86400, Crop: cropByName("golden_apple")},
+	{Name: "star_fruit_seed", Price: 125, GrowTimeSec: 172800, Crop: cropByName("star_fruit")},
 }
 
 func cropByName(name string) Crop {
@@ -138,12 +138,8 @@ func (s *Service) Plant(userID int64, zoneKey string, plotIndex int, seedName st
 		return ErrOccupied
 	}
 
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", seedName).First(&dbItem).Error; err != nil {
-		return ErrNoSeed
-	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, seedName).First(&inv).Error; err != nil {
 		return ErrNoSeed
 	}
 	if inv.Quantity < 1 {
@@ -198,12 +194,8 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		quantity++
 	}
 
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", crop.Name).First(&dbItem).Error; err != nil {
-		return nil, err
-	}
 	if err := s.store.DB.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
+		Where("user_id = ? AND item_id = ?", userID, crop.Name).
 		UpdateColumn("quantity", gorm.Expr("quantity + ?", quantity)).Error; err != nil {
 		return nil, err
 	}

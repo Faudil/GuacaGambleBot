@@ -26,10 +26,10 @@ type Service struct {
 }
 
 type MarketItem struct {
-	Item          *items.Item
-	CurrentPrice  int
-	BasePrice     int
-	Multiplier    float64
+	Item         *items.Item
+	CurrentPrice int
+	BasePrice    int
+	Multiplier   float64
 }
 
 type MarketCategory struct {
@@ -78,7 +78,7 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 	var found *MarketItem
 	for _, cat := range market {
 		for _, mi := range cat.Items {
-			if mi.Item.Name == itemName {
+			if mi.Item.ID == itemName {
 				found = &mi
 				break
 			}
@@ -92,12 +92,8 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 	}
 	totalGain := found.CurrentPrice * amount
 
-	var dbItem model.Item
-	if err := s.store.DB.Where("name = ?", itemName).First(&dbItem).Error; err != nil {
-		return 0, ErrNotFound
-	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemName).First(&inv).Error; err != nil {
 		return 0, ErrNoItem
 	}
 	if inv.Quantity < amount {
@@ -106,7 +102,7 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 
 	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.Inventory{}).
-			Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
+			Where("user_id = ? AND item_id = ?", userID, itemName).
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", amount)).Error; err != nil {
 			return err
 		}
