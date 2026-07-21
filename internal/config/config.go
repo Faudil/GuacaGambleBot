@@ -34,9 +34,9 @@ func Load() *Config {
 		Prefix:          getEnv("PREFIX", "!"),
 		StartingBalance: getInt("STARTING_BALANCE", 100),
 		DailyAmount:     getInt("DAILY_AMOUNT", 50),
-		ChannelID:       getInt64("CHANNEL_ID", 1465882503045841156),
-		TestChannelID:   getInt64("TEST_CHANNEL_ID", 1470452977587458334),
-		PetChannelID:    getInt64("PET_CHANNEL_ID", 1478386999584096327),
+		ChannelID:       getInt64("CHANNEL_ID", 0),
+		TestChannelID:   getInt64("TEST_CHANNEL_ID", 0),
+		PetChannelID:    getInt64("PET_CHANNEL_ID", 0),
 		BaseJackpot:     getInt("BASE_JACKPOT", 500),
 	}
 }

@@ -1,8 +1,10 @@
 package onboarding
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -19,8 +21,9 @@ import (
 // it posts a configuration menu (channel, language, prefix, enabled) and the
 // same menu can be reopened at any time with the `/setup` command.
 type Cog struct {
-	store *store.Store
-	cfg   *config.Config
+	store    *store.Store
+	cfg      *config.Config
+	reminded sync.Map // guild int64 → bool — tracks which guilds received a DM reminder
 }
 
 // Register wires the onboarding cog into the router and listens for the bot
@@ -38,6 +41,7 @@ func Register(r *interaction.Router, st *store.Store, cfg *config.Config) {
 	r.Component("onboarding", "reconfigure", c.onReconfigure)
 
 	r.Session().AddHandler(c.onGuildCreate)
+	r.Session().AddHandler(c.onMessage)
 }
 
 // onGuildCreate fires for every guild the bot is in (including on (re)connect).
@@ -68,23 +72,70 @@ func (c *Cog) onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
 	}
 	if !sent && g.OwnerID != "" {
 		if ch, err := s.UserChannelCreate(g.OwnerID); err == nil {
-			_, _ = s.ChannelMessageSendComplex(ch.ID, &discordgo.MessageSend{
-				Embeds:     []*discordgo.MessageEmbed{embed},
-				Components: comps,
-			})
+			msg := fmt.Sprintf(
+				"Hi! I was just added to **%s** but I couldn't find a text channel to introduce myself.\n\n"+
+					"Please go to any channel in your server and type **/setup** (or **!setup**) "+
+					"to open my configuration menu. You'll be able to choose a channel, language, "+
+					"and other settings in just a few clicks.",
+				g.Name,
+			)
+			_, _ = s.ChannelMessageSend(ch.ID, msg)
+			sent = true
 		}
 	}
 
-	// Persist the onboarded marker so we don't re-post on the next connect.
-	if ss == nil {
-		ss = &model.ServerSetting{ServerID: gid, Enabled: true}
+	// Only persist the onboarded marker when we managed to reach the guild,
+	// so the menu is retried on the next GuildCreate if delivery failed.
+	if sent {
+		if ss == nil {
+			ss = &model.ServerSetting{ServerID: gid, Enabled: true}
+		}
+		if ss.Language == "" {
+			ss.Language = "en"
+		}
+		now := time.Now()
+		ss.OnboardedAt = &now
+		_ = c.store.SaveServerSetting(ss)
 	}
-	if ss.Language == "" {
-		ss.Language = "fr"
+}
+
+// onMessage listens for any user message in an unconfigured guild and sends a
+// one-shot DM reminder telling them to run /setup.
+func (c *Cog) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	if m.Author == nil || m.Author.Bot {
+		return
 	}
-	now := time.Now()
-	ss.OnboardedAt = &now
-	_ = c.store.SaveServerSetting(ss)
+	gid := interaction.ToInt64(m.GuildID)
+	if gid == 0 {
+		return
+	}
+	ss, _ := c.store.GetServerSetting(gid)
+	if ss != nil && ss.OnboardedAt != nil {
+		return
+	}
+	if _, already := c.reminded.Load(gid); already {
+		return
+	}
+	c.reminded.Store(gid, true)
+
+	guild, err := s.State.Guild(m.GuildID)
+	if err != nil || guild == nil {
+		guild, err = s.Guild(m.GuildID)
+		if err != nil {
+			return
+		}
+	}
+	ch, err := s.UserChannelCreate(m.Author.ID)
+	if err != nil {
+		return
+	}
+	msg := fmt.Sprintf(
+		"Hey! The server **%s** hasn't finished setting me up yet.\n\n"+
+			"If you're an admin, type **/setup** (or **!setup**) in any channel to configure me. "+
+			"It only takes a minute!",
+		guild.Name,
+	)
+	_, _ = s.ChannelMessageSend(ch.ID, msg)
 }
 
 // pickChannel returns a text channel the bot can post the onboarding message
