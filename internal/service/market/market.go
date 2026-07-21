@@ -110,7 +110,13 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", amount)).Error; err != nil {
 			return err
 		}
-		if _, err := s.store.UpdateBalance(userID, totalGain); err != nil {
+		if err := tx.Where("user_id = ?", userID).
+			FirstOrCreate(&model.User{UserID: userID}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", totalGain)).Error; err != nil {
 			return err
 		}
 		if err := achievement.IncrementStat(tx, userID, "items_sold_market", amount); err != nil {

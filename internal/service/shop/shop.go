@@ -10,6 +10,7 @@ import (
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -81,9 +82,10 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 		}).Error; err != nil {
 			return err
 		}
-		return tx.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
-			FirstOrCreate(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 0}).
-			UpdateColumn("quantity", gorm.Expr("quantity + ?", quantity)).Error
+		return tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
+			)}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: quantity}).Error
 	})
 }
 

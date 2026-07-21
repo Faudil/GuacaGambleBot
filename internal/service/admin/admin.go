@@ -35,10 +35,10 @@ func (s *Service) AirdropAll(amount int) (int, error) {
 
 func (s *Service) ResetEconomy() error {
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.User{}).Update("balance", s.cfg.StartingBalance).Error; err != nil {
+		if err := tx.Model(&model.User{}).Where("1 = 1").Update("balance", s.cfg.StartingBalance).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.User{}).Update("bank", 0).Error; err != nil {
+		if err := tx.Model(&model.User{}).Where("1 = 1").Update("bank", 0).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("1 = 1").Delete(&model.Loan{}).Error; err != nil {

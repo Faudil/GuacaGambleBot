@@ -139,6 +139,7 @@ type UserStat struct {
 	RouletteMoneyWon    int   `gorm:"column:roulette_money_won;default:0"`
 	RouletteMoneyLost   int   `gorm:"column:roulette_money_lost;default:0"`
 	DailyUses           int   `gorm:"column:daily_uses;default:0"`
+	ItemsSoldMarket     int   `gorm:"column:items_sold_market;default:0"`
 }
 
 type UserAchievement struct {

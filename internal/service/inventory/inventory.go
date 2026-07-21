@@ -8,6 +8,7 @@ import (
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -95,7 +96,10 @@ func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemName string, quantit
 	if err := db.Where("name = ?", itemName).First(&dbItem).Error; err != nil {
 		return err
 	}
-	return db.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
+	db.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
+		FirstOrCreate(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 0})
+	return db.Model(&model.Inventory{}).
+		Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
 		UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error
 }
 
@@ -106,7 +110,8 @@ func (s *Service) AddItem(db *gorm.DB, userID int64, itemName string, quantity i
 	}).Error; err != nil {
 		return err
 	}
-	return db.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
-		FirstOrCreate(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 0}).
-		UpdateColumn("quantity", gorm.Expr("quantity + ?", quantity)).Error
+	return db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
+		)}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: quantity}).Error
 }

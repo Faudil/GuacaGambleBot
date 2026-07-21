@@ -107,10 +107,14 @@ func (s *Service) GetAllNPCMeta() []*NPCData {
 
 func (s *Service) GetReputation(userID int64, npcID string) (*model.UserNPCReputation, error) {
 	var r model.UserNPCReputation
-	err := s.store.DB.Where("user_id = ? AND npc_id = ?", userID, npcID).FirstOrCreate(&r, model.UserNPCReputation{
-		UserID: userID, NPCID: npcID, Reputation: 0, Level: 1,
-	}).Error
-	if err != nil {
+	if err := s.store.DB.Where("user_id = ? AND npc_id = ?", userID, npcID).First(&r).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			r = model.UserNPCReputation{UserID: userID, NPCID: npcID}
+			if err := s.store.DB.Create(&r).Error; err != nil {
+				return nil, err
+			}
+			return &r, nil
+		}
 		return nil, err
 	}
 	return &r, nil
@@ -149,7 +153,14 @@ func (s *Service) AddReputation(userID int64, npcID string, points int) (int, er
 	}
 	var rep model.UserNPCReputation
 	if err := s.store.DB.Where("user_id = ? AND npc_id = ?", userID, npcID).First(&rep).Error; err != nil {
-		return 0, err
+		if err == gorm.ErrRecordNotFound {
+			rep = model.UserNPCReputation{UserID: userID, NPCID: npcID}
+			if err := s.store.DB.Create(&rep).Error; err != nil {
+				return 0, err
+			}
+		} else {
+			return 0, err
+		}
 	}
 	newRep := rep.Reputation + points
 	nextLevel := rep.Level
@@ -203,7 +214,10 @@ type NPCBonus struct {
 func (s *Service) GetBonuses(userID int64) *NPCBonus {
 	b := &NPCBonus{}
 	for _, npc := range NPCs {
-		rep, _ := s.GetReputation(userID, npc.ID)
+		rep, err := s.GetReputation(userID, npc.ID)
+		if err != nil || rep == nil {
+			continue
+		}
 		lvl := rep.Level
 		switch npc.ID {
 		case "gamblebot":

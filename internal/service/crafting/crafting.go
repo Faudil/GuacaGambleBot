@@ -8,6 +8,7 @@ import (
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var (
@@ -111,13 +112,16 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 				return err
 			}
 		}
-		if err := tx.Where("user_id = ? AND item_id = ?", userID, dbItem.ID).
-			FirstOrCreate(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: 0}).
-			UpdateColumn("quantity", gorm.Expr("quantity + ?", amount)).Error; err != nil {
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)}),
+		}).Create(&model.Inventory{UserID: userID, ItemID: dbItem.ID, Quantity: amount}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("user_id = ? AND job_name = ?", userID, "crafter").
-			FirstOrCreate(&model.Job{UserID: userID, JobName: "crafter", Level: 1, XP: 0}).
+		tx.Where("user_id = ? AND job_name = ?", userID, "crafter").
+			FirstOrCreate(&model.Job{UserID: userID, JobName: "crafter", Level: 1, XP: 0})
+		if err := tx.Model(&model.Job{}).
+			Where("user_id = ? AND job_name = ?", userID, "crafter").
 			UpdateColumn("xp", gorm.Expr("xp + ?", recipe.XP*amount)).Error; err != nil {
 			return err
 		}
