@@ -1,0 +1,116 @@
+package duel
+
+import (
+	"errors"
+	"math/rand"
+
+	"guacagamblebot/internal/achievement"
+	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/store"
+)
+
+var (
+	ErrNoMoney     = errors.New("insufficient funds")
+	ErrSelf        = errors.New("cannot duel yourself")
+	ErrBot         = errors.New("cannot duel a bot")
+	ErrAmount      = errors.New("amount must be positive")
+)
+
+type DuelResult struct {
+	ChallengerID  int64
+	OpponentID    int64
+	Amount        int
+	Die1C         int
+	Die2C         int
+	TotalC        int
+	Die1O         int
+	Die2O         int
+	TotalO        int
+	WinnerID      int64
+	IsDraw        bool
+	UnlocksC      []*achievement.Achievement
+	UnlocksO      []*achievement.Achievement
+}
+
+type Service struct {
+	store *store.Store
+	cfg   *config.Config
+}
+
+func New(s *store.Store, cfg *config.Config) *Service {
+	return &Service{store: s, cfg: cfg}
+}
+
+func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult, error) {
+	if challengerID == opponentID {
+		return nil, ErrSelf
+	}
+	if amount <= 0 {
+		return nil, ErrAmount
+	}
+	cb, err := s.store.GetBalance(challengerID)
+	if err != nil {
+		return nil, err
+	}
+	if cb < amount {
+		return nil, ErrNoMoney
+	}
+	ob, err := s.store.GetBalance(opponentID)
+	if err != nil {
+		return nil, err
+	}
+	if ob < amount {
+		return nil, ErrNoMoney
+	}
+
+	d1c := rand.Intn(6) + 1
+	d2c := rand.Intn(6) + 1
+	tc := d1c + d2c
+	d1o := rand.Intn(6) + 1
+	d2o := rand.Intn(6) + 1
+	to := d1o + d2o
+
+	res := &DuelResult{
+		ChallengerID: challengerID,
+		OpponentID:   opponentID,
+		Amount:       amount,
+		Die1C:        d1c, Die2C: d2c, TotalC: tc,
+		Die1O:        d1o, Die2O: d2o, TotalO: to,
+	}
+
+	if tc > to {
+		res.WinnerID = challengerID
+		if _, err := s.store.UpdateBalance(challengerID, amount); err != nil {
+			return nil, err
+		}
+		if _, err := s.store.UpdateBalance(opponentID, -amount); err != nil {
+			return nil, err
+		}
+		if err := achievement.IncrementStat(s.store.DB, challengerID, "pvp_wins", 1); err != nil {
+			return nil, err
+		}
+		if err := achievement.IncrementStat(s.store.DB, opponentID, "pvp_losses", 1); err != nil {
+			return nil, err
+		}
+	} else if to > tc {
+		res.WinnerID = opponentID
+		if _, err := s.store.UpdateBalance(opponentID, amount); err != nil {
+			return nil, err
+		}
+		if _, err := s.store.UpdateBalance(challengerID, -amount); err != nil {
+			return nil, err
+		}
+		if err := achievement.IncrementStat(s.store.DB, opponentID, "pvp_wins", 1); err != nil {
+			return nil, err
+		}
+		if err := achievement.IncrementStat(s.store.DB, challengerID, "pvp_losses", 1); err != nil {
+			return nil, err
+		}
+	} else {
+		res.IsDraw = true
+	}
+
+	res.UnlocksC, _ = achievement.CheckAndUnlock(s.store.DB, challengerID)
+	res.UnlocksO, _ = achievement.CheckAndUnlock(s.store.DB, opponentID)
+	return res, nil
+}

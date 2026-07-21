@@ -16,11 +16,37 @@ import (
 	"guacagamblebot/internal/store"
 
 	achievementscog "guacagamblebot/internal/cogs/achievements"
+	admincog "guacagamblebot/internal/cogs/admin"
+	archeologycog "guacagamblebot/internal/cogs/archeology"
 	bankcog "guacagamblebot/internal/cogs/bank"
+	bettingcog "guacagamblebot/internal/cogs/betting"
+	blackjackcog "guacagamblebot/internal/cogs/blackjack"
+	bosscog "guacagamblebot/internal/cogs/boss"
+	casinocog "guacagamblebot/internal/cogs/casino"
 	charactercog "guacagamblebot/internal/cogs/character"
+	communitycog "guacagamblebot/internal/cogs/community"
+	craftingcog "guacagamblebot/internal/cogs/crafting"
+	duelcog "guacagamblebot/internal/cogs/duel"
 	economycog "guacagamblebot/internal/cogs/economy"
+	expeditioncog "guacagamblebot/internal/cogs/expedition"
+	farmcog "guacagamblebot/internal/cogs/farm"
+	fishingcog "guacagamblebot/internal/cogs/fishing"
+	housingcog "guacagamblebot/internal/cogs/housing"
+	huntcog "guacagamblebot/internal/cogs/hunt"
+	inventorycog "guacagamblebot/internal/cogs/inventory"
+	itemmanagercog "guacagamblebot/internal/cogs/item_manager"
+	jobscog "guacagamblebot/internal/cogs/jobs"
 	leadercog "guacagamblebot/internal/cogs/leaderboard"
 	loancog "guacagamblebot/internal/cogs/loan"
+	lottocog "guacagamblebot/internal/cogs/lotto"
+	marketcog "guacagamblebot/internal/cogs/market"
+	miningcog "guacagamblebot/internal/cogs/mining"
+	npcscog "guacagamblebot/internal/cogs/npcs"
+	petscog "guacagamblebot/internal/cogs/pets"
+	questscog "guacagamblebot/internal/cogs/quests"
+	roulettecog "guacagamblebot/internal/cogs/roulette"
+	shopcog "guacagamblebot/internal/cogs/shop"
+	tournamentcog "guacagamblebot/internal/cogs/tournament"
 	"guacagamblebot/internal/onboarding"
 )
 
@@ -55,12 +81,38 @@ func main() {
 	str := store.New(database, cfg)
 	router := interaction.NewRouter(bot, str)
 
-	economycog.Register(router, str, cfg)
-	bankcog.Register(router, str, cfg)
-	loancog.Register(router, str, cfg)
-	leadercog.Register(router, str, cfg)
+	admincog.Register(router, str, cfg)
 	achievementscog.Register(router, str, cfg)
+	archeologycog.Register(router, str, cfg)
+	bankcog.Register(router, str, cfg)
+	bettingcog.Register(router, str, cfg)
+	blackjackcog.Register(router, str, cfg)
+	bosscog.Register(router, str, cfg)
+	casinocog.Register(router, str, cfg)
 	charactercog.Register(router, str, cfg)
+	communitycog.Register(router, str, cfg)
+	craftingcog.Register(router, str, cfg)
+	duelcog.Register(router, str, cfg)
+	economycog.Register(router, str, cfg)
+	expeditioncog.Register(router, str, cfg)
+	farmcog.Register(router, str, cfg)
+	fishingcog.Register(router, str, cfg)
+	housingcog.Register(router, str, cfg)
+	huntcog.Register(router, str, cfg)
+	inventorycog.Register(router, str, cfg)
+	itemmanagercog.Register(router, str, cfg)
+	jobscog.Register(router, str, cfg)
+	leadercog.Register(router, str, cfg)
+	loancog.Register(router, str, cfg)
+	lottocog.Register(router, str, cfg)
+	marketcog.Register(router, str, cfg)
+	miningcog.Register(router, str, cfg)
+	npcscog.Register(router, str, cfg)
+	petscog.Register(router, str, cfg)
+	questscog.Register(router, str, cfg)
+	roulettecog.Register(router, str, cfg)
+	shopcog.Register(router, str, cfg)
+	tournamentcog.Register(router, str, cfg)
 	onboarding.Register(router, str, cfg)
 
 	router.Register()

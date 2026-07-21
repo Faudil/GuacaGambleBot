@@ -16,7 +16,19 @@
     "channel_set": "✅ Le salon d'annonces du bot a été défini sur {channel}.",
     "announcements_disabled": "❌ Les annonces automatiques du bot (Ventes flash, Loto, etc.) ont été désactivées pour ce serveur.",
     "lang_set": "🌐 La langue du bot pour ce serveur a été changée en **Français**.",
-    "lang_not_supported": "❌ Langue non supportée. Utilisez `fr` ou `en`."
+    "lang_not_supported": "❌ Langue non supportée. Utilisez `fr` ou `en`.",
+    "menu_title": "🛠️ Panneau d'Admin",
+    "menu_desc": "Outils d'administration du serveur.",
+    "btn_airdrop": "💸 Airdrop",
+    "btn_givecrowns": "👑 Donner Crowns",
+    "btn_reseteconomy": "🔄 Réinitialiser",
+    "btn_setlang": "🌐 Langue",
+    "airdrop_modal_title": "Airdrop Argent",
+    "user_id_label": "ID ou Mention",
+    "amount_label": "Montant",
+    "givecrowns_modal_title": "Donner Crowns",
+    "setlang_modal_title": "Changer la Langue",
+    "lang_label": "Langue (en/fr)"
   },
   "economy": {
     "rsa_title": "🍀 LE RSA 🍀",
@@ -77,7 +89,17 @@
   "inventory": {
     "empty": "🎒 Ton sac est vide, {user} ! Va miner ou achète des trucs.",
     "title": "🎒 Sac à dos de {user}",
-    "footer": "Utilise !use <nom de l'objet> pour t'en servir !"
+    "footer": "Utilise !use <nom de l'objet> pour t'en servir !",
+    "error": "❌ Impossible de charger l'inventaire.",
+    "category_mining": "⛏️ Minage",
+    "category_fishing": "🎣 Pêche",
+    "category_farming": "🚜 Agriculture",
+    "category_archeology": "🦴 Archéologie",
+    "category_food": "🍲 Nourriture",
+    "category_tools": "🔧 Outils",
+    "category_materials": "🌱 Matériaux",
+    "category_special": "✨ Spécial",
+    "category_other": "📦 Autre"
   },
   "rarities": {
     "common": "Commun",
@@ -98,7 +120,8 @@
     "trade_proposal_title": "🤝 Proposition d'échange",
     "trade_proposal_desc": "**{seller}** veut te vendre **{item}** pour **${price}**.\n{buyer}, acceptes-tu ?",
     "accept_label": "✅ Accepter l'offre",
-    "refuse_label": "Refuser"
+    "refuse_label": "Refuser",
+    "trade_usage": "Utilisation : `!sell @utilisateur <objet> <prix>` — Vendre un objet à un autre joueur."
   },
   "leaderboard": {
     "no_money": "Personne n'a d'argent pour l'instant !",
@@ -175,7 +198,10 @@
     "personal_title": "🛒 Boutique de {user}",
     "personal_desc": "Choisis un article à acheter ! Attention, **tu ne peux acheter qu'un seul article** parmi les 4.\n\n",
     "flash_sale_title": "⚡ VENTE FLASH !",
-    "flash_sale_desc": "Un marchand itinérant propose : **{item}**\n{desc}\nPrix normal : ~~${price}~~\n**Prix Flash : ${flash_price}** (-{discount}%)"
+    "flash_sale_desc": "Un marchand itinérant propose : **{item}**\n{desc}\nPrix normal : ~~${price}~~\n**Prix Flash : ${flash_price}** (-{discount}%)",
+    "balance_footer": "💰 Solde : ${balance}",
+    "price_label": "Prix",
+    "error": "❌ Une erreur est survenue."
   },
   "items": {
     "base_use_msg": "Cet objet ({item_name}) ne fait rien pour l'instant.",
@@ -425,7 +451,9 @@
     "item_not_sellable": "❌ Cet item ne peut pas être vendu sur le marché !",
     "sold_msg": "💰 Tu as vendu **{amount}x {item}** pour **${gain}**.",
     "no_item": "❌ Tu ne possèdes pas cet item **{item}**.",
-    "invalid_id": "❌ ID d'objet invalide."
+    "invalid_id": "❌ ID d'objet invalide.",
+    "sell_modal_title": "Vendre un objet",
+    "amount_label": "Quantité"
   },
   "achievements": {
     "pvp_rookie": {
@@ -770,11 +798,19 @@
     "footer": "Niveau Global : {total} | Continue de bosser !"
   },
   "jobs": {
+    "menu_title": "⚒️ Métiers & Compétences",
+    "menu_desc": "Voir vos niveaux de métier et progression.",
+    "btn_show": "Voir Métiers",
+    "title": "📊 Compétences",
+    "xp_line": "Niv. {level} | XP: {xp}/{next}\n{bar}",
+    "footer": "Niveau Global: {total} | Continuez !",
     "miner": "Mineur",
     "fisher": "Pêcheur",
     "farmer": "Fermier",
     "gambler": "Joueur",
-    "crafter": "Artisan"
+    "crafter": "Artisan",
+    "archeologist": "Archéologue",
+    "hunter": "Chasseur"
   },
   "pet_types": {
     "Escargot": {
@@ -1409,6 +1445,9 @@
     }
   },
   "quests": {
+    "menu_desc": "Suivez vos quêtes actives et leur progression.",
+    "btn_show": "Voir Quêtes",
+    "no_active": "❌ Vous n'avez aucune quête active.",
     "daily_challenge": {
       "title": "Défi Quotidien",
       "description": "Une tâche aléatoire donnée par le village pour gagner des récompenses.",
@@ -1519,6 +1558,14 @@
     "hunt": "Aide à la chasse"
   },
   "housing": {
+    "menu_title": "🏠 Logement",
+    "menu_desc": "Gérez votre maison et collectez les ressources.",
+    "btn_show": "Voir Maison",
+    "btn_collect": "Collecter",
+    "btn_tree": "Arbre d'amélioration",
+    "btn_upgrade": "Améliorer",
+    "stats_label": "📊 Statistiques",
+    "pending_rewards": "💰 Récompenses en attente",
     "title": "🏠 Maison de {user}",
     "no_house": "❌ Tu n'as pas encore de maison ! Achète-en une à la `!house shop`.",
     "stats": "📊 **Niveau :** {level}\n✨ **Bonus Actifs :**\n{buffs}",
@@ -1553,6 +1600,10 @@
     "pet_full_warning": "❌ **Ton zoo est plein ({current}/{limit}) !**\nLibère des familiers ou agrandis ton écurie avec `!house expand pets`."
   },
   "community": {
+    "menu_desc": "Gérer les projets de construction communautaires.",
+    "btn_list": "Liste",
+    "btn_inspect": "Inspecter",
+    "btn_stats": "Mes Stats",
     "list_title": "🏛️ Projets Communautaires",
     "building_market_name": "Le Grand Marché",
     "building_market_desc": "Réduit les prix de la boutique.",

@@ -16,7 +16,19 @@
     "channel_set": "✅ the bot's announcement channel has been set to {channel}.",
     "announcements_disabled": "❌ Automatic bot announcements (Flash sales, Lotto, etc.) have been disabled for this server.",
     "lang_set": "🌐 The bot's language for this server has been set to **English**.",
-    "lang_not_supported": "❌ Language not supported. Use `fr` or `en`."
+    "lang_not_supported": "❌ Language not supported. Use `fr` or `en`.",
+    "menu_title": "🛠️ Admin Panel",
+    "menu_desc": "Server administration tools.",
+    "btn_airdrop": "💸 Airdrop",
+    "btn_givecrowns": "👑 Give Crowns",
+    "btn_reseteconomy": "🔄 Reset Economy",
+    "btn_setlang": "🌐 Set Language",
+    "airdrop_modal_title": "Airdrop Money",
+    "user_id_label": "User ID or Mention",
+    "amount_label": "Amount",
+    "givecrowns_modal_title": "Give Crowns",
+    "setlang_modal_title": "Set Server Language",
+    "lang_label": "Language (en/fr)"
   },
   "economy": {
     "rsa_title": "🍀 WELFARE 🍀",
@@ -1047,11 +1059,19 @@
     "footer": "Global Level: {total} | Keep working!"
   },
   "jobs": {
+    "menu_title": "⚒️ Jobs & Skills",
+    "menu_desc": "View your job levels and progress.",
+    "btn_show": "Show Jobs",
+    "title": "📊 Skills",
+    "xp_line": "Lvl. {level} | XP: {xp}/{next}\n{bar}",
+    "footer": "Global Level: {total} | Keep working!",
     "miner": "Miner",
     "fisher": "Fisherman",
     "farmer": "Farmer",
     "gambler": "Gambler",
-    "crafter": "Crafter"
+    "crafter": "Crafter",
+    "archeologist": "Archeologist",
+    "hunter": "Hunter"
   },
   "tournament": {
     "title": "🏆 Pet Tournaments",
@@ -1425,6 +1445,14 @@
     "hunt": "Helps hunting"
   },
   "housing": {
+    "menu_title": "🏠 Housing",
+    "menu_desc": "Manage your home and collect resources.",
+    "btn_show": "Show House",
+    "btn_collect": "Collect Resources",
+    "btn_tree": "Upgrade Tree",
+    "btn_upgrade": "Upgrade Level",
+    "stats_label": "📊 Stats",
+    "pending_rewards": "💰 Pending Rewards",
     "title": "🏠 {user}'s Home",
     "no_house": "❌ You don't have a home yet! Buy one at the `!house shop`.",
     "stats": "📊 **Level:** {level}\n✨ **Active Buffs:**\n{buffs}",
@@ -1459,6 +1487,10 @@
     "pet_full_warning": "❌ **Your zoo is full ({current}/{limit})!**\nRelease some pets or expand your capacity at `!house expand pets`."
   },
   "community": {
+    "menu_desc": "Manage community building projects.",
+    "btn_list": "List Projects",
+    "btn_inspect": "Inspect Building",
+    "btn_stats": "My Stats",
     "list_title": "🏛️ Community Projects",
     "building_market_name": "The Grand Market",
     "building_market_desc": "Reduces shop prices.",
@@ -1483,6 +1515,9 @@
     "stats_title": "📈 {user}'s Community Stats"
   },
   "quests": {
+    "menu_desc": "Track your active quests and progress.",
+    "btn_show": "Show Quests",
+    "no_active": "❌ You have no active quests.",
     "daily_challenge": {
       "title": "Daily Challenge",
       "description": "A random task given by the village to earn rewards.",

@@ -32,3 +32,4 @@ migrate_db.py
 
 # Logs
 *.log
+/bot
