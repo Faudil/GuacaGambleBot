@@ -1,15 +1,21 @@
-FROM python:3.12-slim
+FROM golang:1.26-alpine AS builder
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -o /build/bot ./cmd/bot
+
+FROM alpine:3.21
 
 WORKDIR /app
+RUN apk add --no-cache ca-certificates tzdata
 
-ENV PYTHONUNBUFFERED=1
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY src ./src
-COPY main.py ./
+COPY --from=builder /build/bot ./bot
+COPY --from=builder /build/locales ./locales
 
 RUN mkdir ./data
 
-CMD ["python", "main.py"]
+CMD ["./bot"]
