@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	mktsvc "guacagamblebot/internal/service/market"
 	"guacagamblebot/internal/store"
 )
@@ -24,11 +25,44 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: mktsvc.New(s, cfg)}
+	r.Slash("market", "Marché : voir les prix et vendre des objets.", c.onSlashMenu)
 	r.Prefix("market", c.onPrefix)
 	r.Prefix("market_sell", c.onSellPrefix)
 	r.Prefix("ms", c.onSellPrefix)
 	r.Prefix("m_s", c.onSellPrefix)
 	r.Component("market", "sell", c.onSell)
+}
+
+func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	categories := c.svc.GetMarketPrices()
+
+	selected := []int{0, 1, 2}
+	for _, idx := range selected {
+		if idx >= len(categories) {
+			continue
+		}
+		cat := categories[idx]
+		titleKey := "market.title_" + cat.Name
+		embed := components.Embed(i18n.T(titleKey, lang), "", 0xf1c40f)
+		var btns []discordgo.MessageComponent
+		for _, mi := range cat.Items {
+			name := c.displayName(mi.Item.Name, lang)
+			embed.Fields = append(embed.Fields, components.Field(
+				name,
+				i18n.T("market.sale_price", lang, map[string]any{"price": mi.CurrentPrice, "base": mi.BasePrice}),
+				true,
+			))
+			btns = append(btns, components.Button(
+				fmt.Sprintf("%s — $%d", name, mi.CurrentPrice),
+				components.Encode("market", "sell", mi.Item.Name),
+				discordgo.PrimaryButton,
+			))
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed,
+				[]discordgo.MessageComponent{components.ActionRow(btns...)}))
+	}
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -139,10 +173,5 @@ func (c *Cog) onSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	k := "items." + name + ".name"
-	translated := i18n.T(k, lang)
-	if translated == k {
-		return name
-	}
-	return translated
+	return items.DisplayName(name)
 }

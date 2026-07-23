@@ -24,6 +24,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: communitysvc.New(s, cfg)}
 	r.Slash("community", "Gère les projets communautaires du serveur.", c.onSlashMenu)
 	r.Prefix("community", c.onPrefixMenu)
+	r.Prefix("com", c.onPrefixMenu)
 	r.Component("community", "list", c.onList)
 	r.Component("community", "inspect", c.onInspect)
 	r.Component("community", "stats", c.onStats)

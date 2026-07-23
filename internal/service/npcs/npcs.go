@@ -10,59 +10,8 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
-
-type NPCData struct {
-	ID          string
-	Name        string
-	Emoji       string
-	Color       int
-	Description string
-	Role        string
-	Advice      string
-	Chat        string
-	Hint        string
-	Greetings   []string
-}
-
-var NPCs = map[string]*NPCData{
-	"elara": {
-		ID: "elara", Name: "Elara", Emoji: "🌿", Color: 0x2ecc71,
-		Description: "Gardienne des jardins du village et des écuries.",
-		Role:        "Elle vous aide avec le farming et les pets. Une haute affinité réduit le temps de pousse des cultures.",
-		Advice:      "Associez vos cultures à vos terres ! Les serres sont parfaites pour les graines tropicales.",
-		Chat:        "Les pousses sont si vertes aujourd'hui. N'oubliez pas de nourrir vos petits compagnons !",
-		Hint:        "(Aime les œufs mystère, fruits étoiles, pommes dorées, graines et baies)",
-		Greetings:   []string{"Bonjour. Prends soin de la terre et des animaux.", "Ravie de te voir. Mes plantes poussent à merveille.", "Bonjour cher ami ! La nature elle-même chante en ta présence."},
-	},
-	"thorek": {
-		ID: "thorek", Name: "Thorek", Emoji: "⛏️", Color: 0xe67e22,
-		Description: "Forgeron et mineur du village.",
-		Role:        "Il raffine les métaux et aide les mineurs. Une haute affinité réduit le risque d'effondrement.",
-		Advice:      "Miner est une question de gestion de risque. Ne creusez pas trop profond si votre sac est plein !",
-		Chat:        "Clang ! Clang ! Je travaille sur un nouveau prototype de pioche. Le travail acharné forge le caractère.",
-		Hint:        "(Aime les pépites d'or, diamants, platine et minerais)",
-		Greetings:   []string{"Qu'est-ce que tu veux ? Si t'as pas de pioche, tu perds mon temps.", "Ah, te voilà ! Trouvé du bon minerai récemment ?", "Bonjour mon ami ! Ma forge est toujours ouverte pour un travailleur comme toi."},
-	},
-	"irian": {
-		ID: "irian", Name: "Irian", Emoji: "🎣", Color: 0x3498db,
-		Description: "Pêcheur vétéran et gardien des quais.",
-		Role:        "Il aide les pêcheurs à attraper des créatures rares. Une haute affinité étend la fenêtre de réaction.",
-		Advice:      "Soyez rapide ! La pêche en océan a une fenêtre très serrée, mais c'est là que vivent les bêtes légendaires.",
-		Chat:        "Je regarde l'horizon... On dit qu'un Kraken géant rôde dans les eaux profondes quand le ciel s'assombrit.",
-		Hint:        "(Aime les tentacules de kraken, baleines, requins et poissons)",
-		Greetings:   []string{"Chut... Tu vas effrayer les poissons.", "Hé marin. Senti la brise de mer récemment ?", "Ah, mon capitaine ! Les marées sont favorables aujourd'hui."},
-	},
-	"gamblebot": {
-		ID: "gamblebot", Name: "GambleBot", Emoji: "🤖", Color: 0xf1c40f,
-		Description: "Un croupier robot de pointe.",
-		Role:        "Il gère le Casino du village. Améliorer votre réputation débloque jusqu'à 20% de réduction.",
-		Advice:      "Toujours doubler sur un 11 au Blackjack, mais ne misez jamais plus que ce que vous pouvez perdre !",
-		Chat:        "Bip boop ! Calcul de probabilité de gain... 99% de chance que vous devriez jouer aux machines à sous.",
-		Hint:        "(Aime les objets brillants, pièces truquées et tickets VIP)",
-		Greetings:   []string{"Bonjour humain. As-tu tenté ta chance aujourd'hui ?", "Content de te voir. On dirait que tu as misé sagement.", "Hé partenaire ! Qui allons-nous plumer aujourd'hui ?"},
-	},
-}
 
 type DailyRepCap struct {
 	Flat      int
@@ -82,24 +31,26 @@ type NPCInfo struct {
 	Reputation  int
 	NextLevel   int
 	RankName    string
+	Data        *universe.NPCData
 }
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store    *store.Store
+	cfg      *config.Config
+	universe *universe.Definition
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, def *universe.Definition) *Service {
+	return &Service{store: s, cfg: cfg, universe: def}
 }
 
-func (s *Service) GetNPCData(id string) *NPCData {
-	return NPCs[id]
+func (s *Service) GetNPCData(id string) *universe.NPCData {
+	return s.universe.NPCs[id]
 }
 
-func (s *Service) GetAllNPCMeta() []*NPCData {
-	out := make([]*NPCData, 0, len(NPCs))
-	for _, n := range NPCs {
+func (s *Service) GetAllNPCMeta() []*universe.NPCData {
+	out := make([]*universe.NPCData, 0, len(s.universe.NPCs))
+	for _, n := range s.universe.NPCs {
 		out = append(out, n)
 	}
 	return out
@@ -213,7 +164,7 @@ type NPCBonus struct {
 
 func (s *Service) GetBonuses(userID int64) *NPCBonus {
 	b := &NPCBonus{}
-	for _, npc := range NPCs {
+	for _, npc := range s.universe.NPCs {
 		rep, err := s.GetReputation(userID, npc.ID)
 		if err != nil || rep == nil {
 			continue

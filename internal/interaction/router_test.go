@@ -39,19 +39,19 @@ func TestPrefixDispatch(t *testing.T) {
 	r := NewRouter(&Bot{Prefix: "!"}, nil)
 	r.Prefix("economy", func(b *Bot, s *discordgo.Session, m *discordgo.Message) { called = true })
 
-	r.onMessage(&discordgo.Session{}, &discordgo.Message{Content: "!economy", Author: &discordgo.User{ID: "1"}})
+	r.onMessage(&discordgo.Session{}, &discordgo.MessageCreate{Message: &discordgo.Message{Content: "!economy", Author: &discordgo.User{ID: "1"}}})
 	assert.True(t, called, "prefix !economy should dispatch")
 
 	called = false
-	r.onMessage(&discordgo.Session{}, &discordgo.Message{Content: "!economy", Author: &discordgo.User{Bot: true}})
+	r.onMessage(&discordgo.Session{}, &discordgo.MessageCreate{Message: &discordgo.Message{Content: "!economy", Author: &discordgo.User{Bot: true}}})
 	assert.False(t, called, "bot messages must be ignored")
 
 	called = false
-	r.onMessage(&discordgo.Session{}, &discordgo.Message{Content: "economy", Author: &discordgo.User{ID: "1"}})
+	r.onMessage(&discordgo.Session{}, &discordgo.MessageCreate{Message: &discordgo.Message{Content: "economy", Author: &discordgo.User{ID: "1"}}})
 	assert.False(t, called, "non-prefixed messages must be ignored")
 
 	called = false
-	r.onMessage(&discordgo.Session{}, &discordgo.Message{Content: "!nope", Author: &discordgo.User{ID: "1"}})
+	r.onMessage(&discordgo.Session{}, &discordgo.MessageCreate{Message: &discordgo.Message{Content: "!nope", Author: &discordgo.User{ID: "1"}}})
 	assert.False(t, called, "unknown prefix command must be ignored")
 }
 

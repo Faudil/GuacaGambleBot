@@ -172,6 +172,7 @@ type ServerSetting struct {
 	Prefix                string     `gorm:"column:prefix"`
 	Enabled               bool       `gorm:"column:enabled"`
 	OnboardedAt           *time.Time `gorm:"column:onboarded_at"`
+	Universe              string     `gorm:"column:universe;default:hoakhaven"`
 }
 
 type ServerLottoState struct {

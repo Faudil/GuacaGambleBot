@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	crtsvc "guacagamblebot/internal/service/crafting"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/store"
 )
 
@@ -23,11 +24,126 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: crtsvc.New(s, cfg)}
+	r.SlashWithOptions("craft", "Fabriquer un objet à partir de recettes.",
+		[]*discordgo.ApplicationCommandOption{
+			{Type: discordgo.ApplicationCommandOptionString, Name: "input", Description: "Le nom de l'objet et éventuellement la quantité (ex: iron_sword 3).", Required: true},
+		}, c.onSlashCraft)
+	r.Slash("recipes", "Voir les recettes de craft disponibles.", c.onSlashRecipes)
 	r.Prefix("craft", c.onCraftPrefix)
 	r.Prefix("fabriquer", c.onCraftPrefix)
 	r.Prefix("recipes", c.onRecipesPrefix)
 	r.Prefix("recettes", c.onRecipesPrefix)
 	r.Prefix("crafting", c.onRecipesPrefix)
+	r.Prefix("rec", c.onRecipesPrefix)
+}
+
+func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	input := strings.TrimSpace(i.ApplicationCommandData().Options[0].StringValue())
+	if input == "" {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("❌", i18n.T("crafting.no_args", lang), 0xe74c3c), nil))
+		return
+	}
+
+	parts := strings.Fields(input)
+	amount := 1
+	itemQuery := ""
+
+	if len(parts) > 1 && isNumeric(parts[0]) {
+		amount, _ = strconv.Atoi(parts[0])
+		itemQuery = strings.Join(parts[1:], " ")
+	} else {
+		itemQuery = input
+	}
+
+	if amount <= 0 {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("❌", i18n.T("crafting.invalid_qty", lang), 0xe74c3c), nil))
+		return
+	}
+
+	itemQuery = strings.ToLower(strings.TrimSpace(itemQuery))
+
+	recipeKey := c.resolveRecipeKey(itemQuery, lang)
+	recipe, ok := crtsvc.Recipes[recipeKey]
+	if !ok {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("❌", i18n.T("crafting.no_recipe", lang, map[string]any{"item": itemQuery}), 0xe74c3c), nil))
+		return
+	}
+
+	if err := c.svc.Craft(userID, recipeKey, amount); err != nil {
+		var msg string
+		switch err {
+		case crtsvc.ErrNoLevel:
+			msg = i18n.T("crafting.no_level", lang, map[string]any{"level": recipe.LevelRequired})
+		case crtsvc.ErrNoIngredients:
+			msg = i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})
+		case crtsvc.ErrNoRecipe:
+			msg = i18n.T("crafting.no_recipe", lang, map[string]any{"item": itemQuery})
+		default:
+			msg = err.Error()
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("❌", msg, 0xe74c3c), nil))
+		return
+	}
+
+	resDisplay := c.displayName(recipe.Result, lang)
+	msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": amount, "item": resDisplay, "xp": recipe.XP * amount})
+
+	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
+		msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
+	}
+
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+			components.Embed("✅", msg, 0x2ecc71), nil))
+}
+
+func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	level := c.svc.GetCrafterLevel(userID)
+
+	var unlocked, locked []string
+	for _, recipe := range crtsvc.Recipes {
+		ingStrs := make([]string, 0, len(recipe.Ingredients))
+		for ing, qty := range recipe.Ingredients {
+			ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, c.displayName(ing, lang)))
+		}
+		ingStr := strings.Join(ingStrs, ", ")
+		resName := c.displayName(recipe.Result, lang)
+		if recipe.LevelRequired <= level {
+			unlocked = append(unlocked, i18n.T("crafting.unlock_line", lang, map[string]any{"item": resName, "ingredients": ingStr}))
+		} else {
+			locked = append(locked, i18n.T("crafting.lock_line", lang, map[string]any{"item": resName, "level": recipe.LevelRequired, "ingredients": ingStr}))
+		}
+	}
+
+	desc := i18n.T("crafting.desc_intro", lang)
+	desc += i18n.T("crafting.unlocked_title", lang)
+	if len(unlocked) > 0 {
+		desc += strings.Join(unlocked, "\n") + "\n\n"
+	} else {
+		desc += i18n.T("crafting.no_unlocked", lang)
+	}
+	if len(locked) > 0 {
+		desc += i18n.T("crafting.locked_title", lang) + strings.Join(locked, "\n")
+	}
+
+	embed := components.Embed(
+		i18n.T("crafting.title", lang, map[string]any{"level": level}),
+		desc, 0xe67e22,
+	)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
 
 func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -146,12 +262,7 @@ func (c *Cog) resolveRecipeKey(query, lang string) string {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	k := "items." + name + ".name"
-	translated := i18n.T(k, lang)
-	if translated == k {
-		return name
-	}
-	return translated
+	return items.DisplayName(name)
 }
 
 func isNumeric(s string) bool {

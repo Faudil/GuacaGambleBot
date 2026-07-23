@@ -24,6 +24,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: lottosvc.New(s, cfg)}
 	r.Slash("lotto", "Loterie du serveur : acheter un ticket.", c.onSlashMenu)
 	r.Prefix("lotto", c.onPrefixMenu)
+	r.Prefix("lt", c.onPrefixMenu)
 	r.Component("lotto", "buy", c.onBuyOpen)
 	r.Component("lotto", "jackpot", c.onJackpot)
 	r.Component("lotto", "refresh", c.onRefresh)

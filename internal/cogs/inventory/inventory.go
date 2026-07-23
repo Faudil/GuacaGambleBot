@@ -2,7 +2,6 @@ package inventory
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -10,6 +9,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	invsvc "guacagamblebot/internal/service/inventory"
 	"guacagamblebot/internal/store"
 )
@@ -22,10 +22,40 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: invsvc.New(s, cfg)}
+	r.Slash("inventory", "Voir ton inventaire.", c.onSlashMenu)
 	r.Prefix("inventory", c.onPrefix)
 	r.Prefix("inv", c.onPrefix)
 	r.Prefix("bag", c.onPrefix)
 	r.Prefix("sac", c.onPrefix)
+}
+
+func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	result, err := c.svc.GetInventory(userID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+
+	if len(result.Entries) == 0 {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("", i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(userID)}), 0xe74c3c), nil))
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("inventory.title", lang, map[string]any{"user": i.Member.User.Username}),
+		"", 0x3498db,
+	)
+	embed.Fields = buildFields(result, lang)
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: i18n.T("inventory.footer", lang) + fmt.Sprintf(" — %d/%d", result.Current, result.Limit),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -85,12 +115,5 @@ func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedFi
 }
 
 func displayName(name, lang string) string {
-	k := "items." + name + ".name"
-	translated := i18n.T(k, lang)
-	if translated == k {
-		translated = name
-	}
-	id := strconv.Itoa(int(interaction.ToInt64(name)))
-	_ = id
-	return translated
+	return items.DisplayName(name)
 }

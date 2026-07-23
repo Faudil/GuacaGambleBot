@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,7 +15,11 @@ import (
 	"guacagamblebot/internal/elosimulation"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe/hoakhaven"
+	"guacagamblebot/internal/universe/scifi"
+	"guacagamblebot/internal/universe/scorch"
 
 	achievementscog "guacagamblebot/internal/cogs/achievements"
 	admincog "guacagamblebot/internal/cogs/admin"
@@ -32,6 +37,7 @@ import (
 	expeditioncog "guacagamblebot/internal/cogs/expedition"
 	farmcog "guacagamblebot/internal/cogs/farm"
 	fishingcog "guacagamblebot/internal/cogs/fishing"
+	helpcog "guacagamblebot/internal/cogs/help"
 	housingcog "guacagamblebot/internal/cogs/housing"
 	huntcog "guacagamblebot/internal/cogs/hunt"
 	inventorycog "guacagamblebot/internal/cogs/inventory"
@@ -49,12 +55,17 @@ import (
 	shopcog "guacagamblebot/internal/cogs/shop"
 	lorecog "guacagamblebot/internal/cogs/lore"
 	skillscog "guacagamblebot/internal/cogs/skills"
+	startcog "guacagamblebot/internal/cogs/start"
 	tournamentcog "guacagamblebot/internal/cogs/tournament"
 	"guacagamblebot/internal/onboarding"
 )
 
 func main() {
 	cfg := config.Load()
+	logger.Init(cfg)
+	hoakhaven.Register()
+	scifi.Register()
+	scorch.Register()
 
 	if cfg.TZ != "" {
 		_ = os.Setenv("TZ", cfg.TZ)
@@ -64,7 +75,7 @@ func main() {
 	}
 
 	if err := i18n.Load("locales"); err != nil {
-		log.Printf("warning: could not load locales: %v", err)
+		slog.Warn("could not load locales", "error", err)
 	}
 
 	database, err := db.Open(cfg)
@@ -103,6 +114,7 @@ func main() {
 	fishingcog.Register(router, str, cfg)
 	housingcog.Register(router, str, cfg)
 	huntcog.Register(router, str, cfg)
+	helpcog.Register(router, str, cfg)
 	inventorycog.Register(router, str, cfg)
 	itemmanagercog.Register(router, str, cfg)
 	jobscog.Register(router, str, cfg)
@@ -118,6 +130,7 @@ func main() {
 	shopcog.Register(router, str, cfg)
 	lorecog.Register(router, str, cfg)
 	skillscog.Register(router, str, cfg)
+	startcog.Register(router, str, cfg)
 	tournamentcog.Register(router, str, cfg)
 	onboarding.Register(router, str, cfg)
 
@@ -129,9 +142,9 @@ func main() {
 	}
 	dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		if err := router.RegisterCommands(guildID); err != nil {
-			log.Printf("warning: could not register slash commands: %v", err)
+			slog.Warn("could not register slash commands", "error", err)
 		}
-		log.Printf("Logged in as %s", s.State.User.Username)
+		slog.Info("logged in", "username", s.State.User.Username)
 	})
 
 	if err := dg.Open(); err != nil {
@@ -139,9 +152,9 @@ func main() {
 	}
 	defer dg.Close()
 
-	log.Println("GuacaGambleBot (Go) is online. Press CTRL-C to exit.")
+	slog.Info("GuacaGambleBot (Go) is online. Press CTRL-C to exit.")
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
-	log.Println("Shutting down...")
+	slog.Info("shutting down")
 }

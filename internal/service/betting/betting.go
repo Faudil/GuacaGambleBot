@@ -59,6 +59,14 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 func (s *Service) CreateBet(creatorID int64, description, option1, option2 string) (int64, error) {
+	ok, _, err := s.store.CheckGameLimit(creatorID, "create_bet", 5)
+	if err != nil {
+		return 0, err
+	}
+	if !ok {
+		return 0, ErrClosed
+	}
+
 	bet := model.Bet{
 		CreatorID:   creatorID,
 		Description: description,
@@ -69,6 +77,7 @@ func (s *Service) CreateBet(creatorID int64, description, option1, option2 strin
 	if err := s.store.DB.Create(&bet).Error; err != nil {
 		return 0, err
 	}
+	_ = s.store.IncrementGameLimit(creatorID, "create_bet")
 	return bet.ID, nil
 }
 
@@ -84,6 +93,14 @@ func (s *Service) getBet(betID int64) (*model.Bet, error) {
 }
 
 func (s *Service) PlaceBet(userID, betID int64, choice string, amount int) error {
+	ok, _, err := s.store.CheckGameLimit(userID, "bet", 20)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrClosed
+	}
+
 	if choice != "a" && choice != "b" {
 		return ErrInvalidOpt
 	}
@@ -107,12 +124,16 @@ func (s *Service) PlaceBet(userID, betID int64, choice string, amount int) error
 	if _, err := s.store.UpdateBalance(userID, -amount); err != nil {
 		return err
 	}
-	return s.store.DB.Create(&model.Wager{
+	if err := s.store.DB.Create(&model.Wager{
 		BetID:  betID,
 		UserID: userID,
 		Option: choice,
 		Amount: amount,
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+	_ = s.store.IncrementGameLimit(userID, "bet")
+	return nil
 }
 
 func (s *Service) CloseBet(creatorID, betID int64, winningOption string) (*CloseResult, error) {

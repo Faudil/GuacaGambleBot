@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	bosssvc "guacagamblebot/internal/service/boss"
 	petsvc "guacagamblebot/internal/service/pets"
@@ -29,6 +30,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Slash("boss", "Boss League - Combattez des boss", c.onSlash)
 	r.Prefix("boss", c.onPrefix)
 	r.Prefix("league", c.onPrefix)
+	r.Prefix("bl", c.onPrefix)
 }
 
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -89,7 +91,7 @@ func (c *Cog) show(userID int64, lang string) *discordgo.MessageEmbed {
 
 	rewardsTxt := fmt.Sprintf("💵 **$%d**\n", boss.RewardMoney)
 	for item, qty := range boss.RewardItems {
-		rewardsTxt += fmt.Sprintf("📦 %s x%d\n", item, qty)
+		rewardsTxt += fmt.Sprintf("📦 %s x%d\n", items.DisplayName(item), qty)
 	}
 
 	embed := components.Embed(
@@ -112,6 +114,14 @@ func (c *Cog) show(userID int64, lang string) *discordgo.MessageEmbed {
 }
 
 func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
+	ok, _, err := c.store.CheckGameLimit(userID, "boss_fight", 5)
+	if err != nil {
+		return components.Embed("❌", "Error checking limit.", 0xe74c3c)
+	}
+	if !ok {
+		return components.Embed("❌", i18n.T("economy.daily_footer", lang), 0xe74c3c)
+	}
+
 	stage, err := c.svc.GetStage(userID)
 	if err != nil {
 		return components.Embed("❌", "Error loading boss data.", 0xe74c3c)
@@ -136,6 +146,7 @@ func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
 	userBP := petToBattlePet(pet)
 	battle.Simulate(userBP, bossPet)
 	_ = petsvc.New(c.store, c.cfg).UpdatePet(pet)
+	_ = c.store.IncrementGameLimit(userID, "boss_fight")
 
 	if userBP.HP > 0 && bossPet.HP <= 0 {
 		newStage := stage + 1
@@ -148,7 +159,7 @@ func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
 		desc := fmt.Sprintf("🏆 **Victory!** You defeated **%s**!\n\n💵 +$%d\n",
 			bossCfg.NameEN, bossCfg.RewardMoney)
 		for item, qty := range bossCfg.RewardItems {
-			desc += fmt.Sprintf("📦 %s x%d\n", item, qty)
+			desc += fmt.Sprintf("📦 %s x%d\n", items.DisplayName(item), qty)
 		}
 		if newStage >= 5 {
 			desc += "\n" + i18n.T("boss_league.champion", lang)
@@ -158,7 +169,8 @@ func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
 		if len(unlocks) > 0 {
 			achStr := ""
 			for _, a := range unlocks {
-				achStr += fmt.Sprintf("🎖️ %s (+%d Glory)\n", a.ID, a.Glory)
+				achName := i18n.T("achievements."+a.ID+".name", lang)
+				achStr += fmt.Sprintf("🎖️ %s (+%d Glory)\n", achName, a.Glory)
 			}
 			embed.Fields = append(embed.Fields, components.Field("🎖️ Achievements", achStr, false))
 		}

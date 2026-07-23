@@ -3,6 +3,7 @@ package hunt
 import (
 	"errors"
 	"math/rand"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -12,6 +13,8 @@ import (
 	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
+
+var ErrHuntLimit = errors.New("hunt daily limit reached")
 
 type EnemyTemplate struct {
 	Name  string
@@ -135,6 +138,22 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, error) {
+	ok, _, err := s.store.CheckGameLimit(userID, "hunt", 30)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrHuntLimit
+	}
+
+	ready, err := s.store.CheckCooldown(userID, "hunt", 30*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	if !ready {
+		return nil, ErrHuntLimit
+	}
+
 	zone, ok := Zones[zoneKey]
 	if !ok {
 		return nil, errors.New("invalid zone")
@@ -274,6 +293,9 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		}
 		charsvc.ConsumeBuff(s.store, userID, "scavenger")
 	}
+
+	_ = s.store.IncrementGameLimit(userID, "hunt")
+	_ = s.store.SetCooldown(userID, "hunt")
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {

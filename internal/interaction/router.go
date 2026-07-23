@@ -1,12 +1,16 @@
 package interaction
 
 import (
+	"fmt"
+	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/components"
+	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/store"
 )
 
@@ -63,6 +67,13 @@ func (r *Router) Slash(name, description string, h SlashHandler) {
 	r.slashDefs = append(r.slashDefs, &discordgo.ApplicationCommand{Name: name, Description: description})
 }
 
+// SlashWithOptions registers a slash command with Discord option arguments
+// (e.g. user picks, number inputs) and its handler.
+func (r *Router) SlashWithOptions(name, description string, options []*discordgo.ApplicationCommandOption, h SlashHandler) {
+	r.slash[name] = h
+	r.slashDefs = append(r.slashDefs, &discordgo.ApplicationCommand{Name: name, Description: description, Options: options})
+}
+
 // Prefix registers a `!name` message handler.
 func (r *Router) Prefix(name string, h PrefixHandler) {
 	r.prefix[name] = h
@@ -92,39 +103,82 @@ func (r *Router) DispatchInteraction(i *discordgo.InteractionCreate) {
 }
 
 func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	defer r.recoverPanic(i)
+
+	log := logger.Log()
+	uid := UserID(i)
+	gid := i.GuildID
+	start := time.Now()
+
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
-		// The setup command is always allowed so a disabled guild can be
-		// re-enabled from within Discord.
-		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(gid)) {
 			return
 		}
+		log.Info("slash command",
+			"cmd", data.Name,
+			"user", uid,
+			"guild", gid,
+		)
 		if h, ok := r.slash[data.Name]; ok {
 			h(r.bot, i)
+		} else {
+			log.Warn("no handler for slash command", "cmd", data.Name)
 		}
+
 	case discordgo.InteractionMessageComponent:
 		cid := i.MessageComponentData().CustomID
 		domain, action, _ := components.Decode(cid)
-		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
 			return
 		}
-		if h, ok := r.component[domain+"::"+action]; ok {
+		log.Info("component interaction",
+			"domain", domain,
+			"action", action,
+			"user", uid,
+			"guild", gid,
+		)
+		key := domain + "::" + action
+		if h, ok := r.component[key]; ok {
 			h(r.bot, i)
+		} else {
+			log.Warn("no handler for component", "custom_id", cid, "key", key)
 		}
+
 	case discordgo.InteractionModalSubmit:
 		cid := i.ModalSubmitData().CustomID
 		domain, action, _ := components.Decode(cid)
-		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(i.GuildID)) {
+		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
 			return
 		}
-		if h, ok := r.modal[domain+"::"+action]; ok {
+		log.Info("modal submit",
+			"domain", domain,
+			"action", action,
+			"user", uid,
+			"guild", gid,
+		)
+		key := domain + "::" + action
+		if h, ok := r.modal[key]; ok {
 			h(r.bot, i)
+		} else {
+			log.Warn("no handler for modal", "custom_id", cid, "key", key)
 		}
 	}
+
+	log.Info("interaction completed",
+		"user", uid,
+		"guild", gid,
+		"duration", time.Since(start).String(),
+	)
 }
 
-func (r *Router) onMessage(s *discordgo.Session, m *discordgo.Message) {
+func (r *Router) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
+	defer r.recoverPanicMsg(m)
+
+	log := logger.Log()
+	start := time.Now()
+
 	if m.Author != nil && m.Author.Bot {
 		return
 	}
@@ -141,13 +195,51 @@ func (r *Router) onMessage(s *discordgo.Session, m *discordgo.Message) {
 	if len(parts) == 0 {
 		return
 	}
-	// The setup command is always allowed so a disabled guild can be
-	// re-enabled from within Discord.
 	if r.store != nil && parts[0] != "setup" && !r.store.IsEnabled(gid) {
 		return
 	}
+
+	log.Info("prefix command",
+		"cmd", parts[0],
+		"user", m.Author.ID,
+		"guild", fmt.Sprint(gid),
+	)
 	if h, ok := r.prefix[parts[0]]; ok {
-		h(r.bot, s, m)
+		h(r.bot, s, m.Message)
+	} else {
+		log.Warn("no handler for prefix command", "cmd", parts[0])
+	}
+
+	log.Info("message completed",
+		"user", m.Author.ID,
+		"guild", fmt.Sprint(gid),
+		"duration", time.Since(start).String(),
+	)
+}
+
+func (r *Router) recoverPanic(i *discordgo.InteractionCreate) {
+	if v := recover(); v != nil {
+		logger.Log().Error("panic recovered in interaction handler",
+			"panic", v,
+			"stack", string(debug.Stack()),
+			"user", UserID(i),
+			"guild", i.GuildID,
+		)
+	}
+}
+
+func (r *Router) recoverPanicMsg(m *discordgo.MessageCreate) {
+	if v := recover(); v != nil {
+		uid := ""
+		if m.Author != nil {
+			uid = m.Author.ID
+		}
+		logger.Log().Error("panic recovered in message handler",
+			"panic", v,
+			"stack", string(debug.Stack()),
+			"user", uid,
+			"guild", m.GuildID,
+		)
 	}
 }
 
@@ -155,10 +247,6 @@ func (r *Router) onMessage(s *discordgo.Session, m *discordgo.Message) {
 // register them only there (instant), or "" for global registration.
 func (r *Router) RegisterCommands(guildID string) error {
 	appID := r.bot.Session.State.User.ID
-	for _, cmd := range r.slashDefs {
-		if _, err := r.bot.Session.ApplicationCommandCreate(appID, guildID, cmd); err != nil {
-			return err
-		}
-	}
-	return nil
+	_, err := r.bot.Session.ApplicationCommandBulkOverwrite(appID, guildID, r.slashDefs)
+	return err
 }

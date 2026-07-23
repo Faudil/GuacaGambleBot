@@ -8,20 +8,27 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store      *store.Store
+	cfg        *config.Config
+	universe   *universe.Definition
+	cachedByID map[string]universe.Fragment
+	cachedByCat map[universe.Category][]universe.Fragment
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, def *universe.Definition) *Service {
+	return &Service{store: s, cfg: cfg, universe: def}
 }
 
-// Discover records a lore fragment discovery. Returns true if it's a new discovery.
+func (s *Service) Universe() *universe.Definition {
+	return s.universe
+}
+
 func (s *Service) Discover(userID int64, loreID string) (bool, error) {
-	frag := Get(loreID)
+	frag := s.Get(loreID)
 	if frag == nil {
 		return false, nil
 	}
@@ -45,17 +52,15 @@ func (s *Service) Discover(userID int64, loreID string) (bool, error) {
 	return true, nil
 }
 
-// GetDiscovered returns a set of all lore IDs discovered by the user.
 func (s *Service) GetDiscovered(userID int64) (map[string]bool, error) {
-	return loadDiscovered(s.store.DB, userID), nil
+	return s.loadDiscovered(s.store.DB, userID), nil
 }
 
-// CategoryProgress returns (discovered, total) for a category.
-func (s *Service) CategoryProgress(userID int64, cat Category) (int, int, error) {
-	total := Count(cat)
-	discovered := loadDiscovered(s.store.DB, userID)
+func (s *Service) CategoryProgress(userID int64, cat universe.Category) (int, int, error) {
+	total := s.Count(cat)
+	discovered := s.loadDiscovered(s.store.DB, userID)
 	count := 0
-	for _, f := range AllInCategory(cat) {
+	for _, f := range s.AllInCategory(cat) {
 		if discovered[f.ID] {
 			count++
 		}
@@ -63,11 +68,10 @@ func (s *Service) CategoryProgress(userID int64, cat Category) (int, int, error)
 	return count, total, nil
 }
 
-// AllProgress returns progress for every category plus grand totals.
-func (s *Service) AllProgress(userID int64) (map[Category]struct{ D, T int }, int, int, error) {
-	out := make(map[Category]struct{ D, T int })
+func (s *Service) AllProgress(userID int64) (map[universe.Category]struct{ D, T int }, int, int, error) {
+	out := make(map[universe.Category]struct{ D, T int })
 	totalD, totalT := 0, 0
-	for _, cat := range []Category{CatAether, CatTide, CatRoot, CatField, CatRust, CatEcho, CatBonus} {
+	for _, cat := range s.Categories() {
 		d, t, err := s.CategoryProgress(userID, cat)
 		if err != nil {
 			return nil, 0, 0, err
@@ -79,7 +83,6 @@ func (s *Service) AllProgress(userID int64) (map[Category]struct{ D, T int }, in
 	return out, totalD, totalT, nil
 }
 
-// TotalDiscovered returns total count of fragments discovered by the user.
 func (s *Service) TotalDiscovered(userID int64) (int, error) {
 	var count int64
 	if err := s.store.DB.Model(&model.UserLoreEntry{}).
@@ -88,5 +91,3 @@ func (s *Service) TotalDiscovered(userID int64) (int, error) {
 	}
 	return int(count), nil
 }
-
-

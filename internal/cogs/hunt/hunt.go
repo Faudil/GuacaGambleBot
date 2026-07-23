@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	petsvc "guacagamblebot/internal/service/pets"
 	huntsvc "guacagamblebot/internal/service/hunt"
 	"guacagamblebot/internal/store"
@@ -158,7 +159,11 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		color = 0xFFD700
 		desc = i18n.T("hunt.victory_msg", lang, map[string]any{"pet": "Your pet", "xp": res.XP})
 		if len(res.Loot) > 0 {
-			desc += "\n\n" + i18n.T("hunt.loot_found", lang) + strings.Join(res.Loot, ", ")
+			lootNames := make([]string, len(res.Loot))
+			for i, loot := range res.Loot {
+				lootNames[i] = items.DisplayName(loot)
+			}
+			desc += "\n\n" + i18n.T("hunt.loot_found", lang) + strings.Join(lootNames, ", ")
 		}
 	} else if res.EnemyWon {
 		color = 0xFF0000

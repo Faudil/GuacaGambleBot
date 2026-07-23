@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	tradesvc "guacagamblebot/internal/service/item_manager"
 	"guacagamblebot/internal/store"
 )
@@ -23,10 +24,64 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: tradesvc.New(s, cfg)}
+	r.Slash("trade", "Échanger des objets avec un autre joueur.", c.onSlashTrade)
+	r.SlashWithOptions("sell", "Vendre un objet à un autre joueur.",
+		[]*discordgo.ApplicationCommandOption{
+			{Type: discordgo.ApplicationCommandOptionUser, Name: "recipient", Description: "Le joueur à qui vendre.", Required: true},
+			{Type: discordgo.ApplicationCommandOptionString, Name: "item", Description: "Le nom de l'objet à vendre.", Required: true},
+			{Type: discordgo.ApplicationCommandOptionInteger, Name: "price", Description: "Le prix de vente.", Required: true},
+		}, c.onSlashSell)
 	r.Prefix("trade", c.onTradePrefix)
 	r.Prefix("sell", c.onSellPrefix)
 	r.Component("item_manager", "accept", c.onAccept)
 	r.Component("item_manager", "decline", c.onDecline)
+}
+
+func (c *Cog) onSlashTrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+			components.Embed("📦", i18n.T("item_manager.trade_usage", lang), 0xe67e22), nil))
+}
+
+func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	opts := i.ApplicationCommandData().Options
+	recipientID := interaction.ToInt64(opts[0].StringValue())
+	itemName := strings.ToLower(opts[1].StringValue())
+	priceVal := int(opts[2].IntValue())
+
+	if priceVal <= 0 {
+		interaction.RespondError(b, i, lang, "loan.invalid_amount")
+		return
+	}
+
+	sellerID := interaction.ToInt64(interaction.UserID(i))
+	if sellerID == recipientID {
+		interaction.RespondError(b, i, lang, "economy.give_invalid")
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("item_manager.trade_proposal_title", lang),
+		i18n.T("item_manager.trade_proposal_desc", lang, map[string]any{
+			"seller": interaction.Mention(sellerID),
+			"item":   c.displayName(itemName, lang),
+			"price":  priceVal,
+			"buyer":  interaction.Mention(recipientID),
+		}),
+		0xe67e22,
+	)
+
+	btns := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("item_manager.accept_label", lang), components.Encode("item_manager", "accept", fmt.Sprint(sellerID), fmt.Sprint(recipientID), itemName, fmt.Sprint(priceVal)), discordgo.SuccessButton),
+			components.Button(i18n.T("item_manager.refuse_label", lang), components.Encode("item_manager", "decline", fmt.Sprint(sellerID), fmt.Sprint(recipientID)), discordgo.DangerButton),
+		),
+	}
+
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, btns))
 }
 
 func (c *Cog) onTradePrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -167,10 +222,5 @@ func (c *Cog) onDecline(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	k := "items." + name + ".name"
-	translated := i18n.T(k, lang)
-	if translated == k {
-		return name
-	}
-	return translated
+	return items.DisplayName(name)
 }

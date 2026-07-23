@@ -24,7 +24,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: housingsvc.New(s, cfg)}
 	r.Slash("house", "Gère ta maison (acheter, améliorer, collecter).", c.onSlashMenu)
+	r.Slash("hs", "Gère ta maison (acheter, améliorer, collecter).", c.onSlashMenu)
 	r.Prefix("house", c.onPrefixMenu)
+	r.Prefix("hs", c.onPrefixMenu)
 	r.Component("house", "show", c.onShow)
 	r.Component("house", "collect", c.onCollect)
 	r.Component("house", "tree", c.onTree)

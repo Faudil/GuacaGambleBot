@@ -44,6 +44,7 @@
     "repaid_lender": "\n🤵 Tu as remboursé {lender} de ",
     "your_balance": "Ta balance",
     "daily_footer": "Reviens demain !",
+    "daily_cooldown": "⏳ Tu as déjà réclamé ton daily aujourd'hui. Reviens demain !",
     "give_invalid": "❌ Transaction invalide.",
     "give_no_money": "❌ T'as pas assez d'argent.",
     "give_title": "💸 Transaction complète",
@@ -1040,10 +1041,12 @@
     "win_cheat": " (Merci la triche 😉)",
     "lose_msg": "❌ **PERDU...** La pièce tombe sur **{result}**.",
     "lose_cheat": " (Même en trichant ?! La honte...)",
-    "xp_gain": " Tu as gagné {xp} xp"
-  },
-  "slots": {
-    "title": "🎰 Machine à Sous",
+		"spinning": "🪙 La pièce tourne dans les airs...",
+		"xp_gain": " Tu as gagné {xp} xp"
+	},
+	"slots": {
+		"title": "🎰 Machine à Sous",
+		"bet_info": "Mise: **${amount}**",
     "no_money": "❌ Pas assez d'argent (${balance}).",
     "rolling": "🌀",
     "state_start": "Faites vos jeux...",
@@ -1190,7 +1193,10 @@
     "empty_msg": "😐 Tu sors de la mine les mains vides. Au moins tu as acquis de l'expérience\n📈 XP gagnée : +{xp}",
     "title": "Expédition minière",
     "desc": "Tu entres dans la grotte...\nJusqu'où iras-tu ?",
-    "footer": "Risques réduit de : {risk} % (Bonus niveau et animal de compagnie)"
+    "footer": "Risques réduit de : {risk} % (Bonus niveau et animal de compagnie)",
+    "error": "❌ Quelque chose a mal tourné durant l'expédition. Réessaie.",
+    "limit_reached": "⛏️ Tu as assez creusé pour aujourd'hui ! Reviens demain.",
+    "cooldown": "⏳ Attends un instant avant de creuser à nouveau."
   },
   "farm": {
     "work_label": "🚜 Exploiter ce terrain",
@@ -1486,6 +1492,10 @@
     "progress": "Progression",
     "step_progress": "Étape {current} / {total}",
     "step_activity_progress": "{current} / {target} — {activity}",
+    "activity_view_btn": "Voir Progression",
+    "complete_objective_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, chasse, etc.), puis utilise le bouton Rafraîchir pour vérifier ta progression !",
+    "completed_msg": "✅ **{title}** — Quête terminée !",
+    "activity_intro": "📋 **{quest}**\n\n**{label}** — accomplis cette activité, puis reviens pour continuer.",
     "active_list": "**Tes quêtes actives :**\n\nSélectionnes-en une avec `!quest <id>` :\n",
     "daily_challenge": {
       "title": "Défi Quotidien",
@@ -1569,6 +1579,17 @@
       "step2_dialogue_team": "Le Gardien s'effondre, son cœur brillant doucement au lieu de violemment — il vous reconnaît comme autorisé au dernier moment. Le Générateur Zenith s'embrase. À travers HoakHaven, chaque lumière, chaque machine, chaque forge s'allume.\n\n*Thorek :* \"HAHA ! LES FORGES ! Regarde cette chaleur — je peux FONDRE N'IMPORTE QUOI maintenant !\"\n\n*Elara :* \"Les cultures brillent... l'énergie du Générateur nourrit le sol. Je n'ai jamais vu une telle croissance !\"\n\n*Irian :* \"Les poissons sautent dans les bateaux. Quoi que tu aies fait — l'écosystème célèbre.\"\n\n*GambleBot :* \"BIP... BOOP... PLEINE PUISSANCE RESTAURÉE. Casino opérationnel à 400% d'efficacité. Nouvelles machines en déverrouillage. Mon ami, tu es une légende.\"",
       "step3_dialogue_unknown": "Le panneau de poitrine du Gardien coulisse, révélant un noyau de données lumineux. Une voix — calme, antique — emplit l'air.\n\n*Zenith OS :* \"Menace neutralisée. Vous avez démontré les qualités que les Anciens recherchaient : l'ingéniosité, la coopération, et la volonté de miser sur des résultats incertains.\"\n\nUne carte holographique massive se projette sur le plafond du casino — 12 marqueurs lumineux à travers le continent. Seul HoakHaven est allumé. Les autres palpitent faiblement, en attente.\n\n*Zenith OS :* \"Le coffre contient les données de **12 installations Génératrices supplémentaires** dispersées à travers le continent. Chacune est une communauté qui attend d'être ranimée. L'Effondrement a presque mis fin à la civilisation — mais les Anciens ont laissé un moyen de reconstruire. Explorez plus profond. Cultivez plus rare. Élevez plus fort. Gagnez plus gros. Trouvez les autres coffres.\"\n\nL'hologramme s'évanouit. GambleBot tourne sur sa roue.\n\n*GambleBot :* \"Alors ! Qu'est-ce que tu attends ? Les machines à sous chauffent, les mines sont profondes, et le monde est IMMENSE. Bienvenue à HoakHaven — **pour de vrai cette fois.**\""
     }
+  },
+  "start": {
+    "begin_title": "🚀 Ton Aventure Commence !",
+    "continue_btn": "Continuer ▶️",
+    "already_completed": "🎉 Tu as déjà terminé ton aventure ! Le village est restauré et prospère. Utilise `/quest` pour revoir tes quêtes terminées.",
+    "already_started": "Tu as déjà commencé ton aventure ! Utilise `/quest` pour continuer où tu t'es arrêté.",
+    "complete_activity_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, etc.), puis reviens !",
+    "completed_title": "🎉 Aventure Terminée !",
+    "completed_desc": "Félicitations ! Tu as terminé la quête tutoriel et restauré le village ! Utilise `/help` pour voir toutes les commandes disponibles et continuer ton aventure.",
+    "activity_prompt": "📋 **{quest}**\n\nTermine l'objectif de l'activité en cours, puis clique sur Continuer quand c'est fait.",
+    "error": "❌ Quelque chose a mal tourné. Veuillez réessayer."
   },
   "stats": {
     "max_hp": "❤️ PV Max",
@@ -1791,10 +1812,12 @@
     "menu_desc": "Configurons le bot pour votre serveur. Choisissez le salon où je peux parler, une langue et ajustez quelques options.",
     "field_channel": "Salon",
     "field_language": "Langue",
+    "field_universe": "Histoire",
     "field_prefix": "Préfixe",
     "field_status": "Statut",
     "channel_placeholder": "Sélectionnez un salon…",
     "language_placeholder": "Sélectionnez une langue",
+    "universe_placeholder": "Choisissez une histoire…",
     "btn_advanced": "Avancé",
     "btn_enable": "Activer le bot",
     "btn_disable": "Désactiver le bot",

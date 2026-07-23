@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	shop "guacagamblebot/internal/service/shop"
 	"guacagamblebot/internal/store"
 )
@@ -24,9 +25,55 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: shop.New(s, cfg)}
+	r.Slash("shop", "Boutique quotidienne : achète des objets.", c.onSlashMenu)
 	r.Prefix("shop", c.onPrefix)
 	r.Prefix("boutique", c.onPrefix)
 	r.Component("shop", "buy", c.onBuy)
+}
+
+func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	offers := c.svc.DailyOffers(4)
+	if len(offers) == 0 {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("❌", "No items available today.", 0xe74c3c), nil))
+		return
+	}
+
+	bal, _ := c.store.GetBalance(userID)
+	desc := fmt.Sprintf(i18n.T("shop.personal_desc", lang)+"\n\n", interaction.Mention(userID))
+	embed := components.Embed(
+		i18n.T("shop.personal_title", lang, map[string]any{"user": i.Member.User.Username}),
+		desc, 0x3498db,
+	)
+	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
+	var btns []discordgo.MessageComponent
+	for idx, offer := range offers {
+		priceStr := fmt.Sprintf("$%d", offer.Price)
+		if offer.Discounted {
+			priceStr += " 🔥"
+		}
+		name := c.displayName(offer.Item.Name, lang)
+		embed.Fields = append(embed.Fields, components.Field(
+			name,
+			fmt.Sprintf("%s\n%s: **%s**", offer.Item.Description, i18n.T("shop.price_label", lang), priceStr),
+			true,
+		))
+		btns = append(btns, components.Button(
+			fmt.Sprintf("%s (%s)", name, priceStr),
+			components.Encode("shop", "buy", fmt.Sprintf("%d", idx), fmt.Sprintf("%d", userID)),
+			discordgo.PrimaryButton,
+		))
+	}
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: i18n.T("shop.balance_footer", lang, map[string]any{"balance": bal}),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed,
+			[]discordgo.MessageComponent{components.ActionRow(btns...)}))
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -117,12 +164,7 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	k := "items." + name + ".name"
-	translated := i18n.T(k, lang)
-	if translated == k {
-		return name
-	}
-	return translated
+	return items.DisplayName(name)
 }
 
 func init() {

@@ -22,9 +22,11 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: jobssvc.New(s, cfg)}
 	r.Slash("jobs", "Affiche tes métiers et niveaux.", c.onSlashMenu)
+	r.Slash("job", "Affiche tes métiers et niveaux.", c.onSlashMenu)
 	r.Prefix("jobs", c.onPrefixMenu)
 	r.Prefix("level", c.onPrefixMenu)
 	r.Prefix("jobstats", c.onPrefixMenu)
+	r.Prefix("jb", c.onPrefixMenu)
 	r.Component("jobs", "show", c.onShow)
 }
 

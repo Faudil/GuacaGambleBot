@@ -240,7 +240,7 @@ func (s *Store) SaveServerSetting(ss *model.ServerSetting) error {
 	return s.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "server_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"announcement_channel_id", "channel_id", "language", "prefix", "enabled", "onboarded_at",
+			"announcement_channel_id", "channel_id", "language", "prefix", "enabled", "onboarded_at", "universe",
 		}),
 	}).Create(ss).Error
 }
@@ -304,42 +304,68 @@ func (s *Store) HasDailyQuestToday(userID int64) (bool, error) {
 	return count > 0, nil
 }
 
-// RecordActivity advances the active daily quest when its target stat matches.
+// RecordActivity advances any active quest whose current step targets the given
+// stat (e.g. "items_mined"). For daily_quest the whole quest is marked completed
+// when the target is reached; for other quests (e.g. tutorial) the step index is
+// advanced so the user can continue the narrative.
 func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
-	var q model.UserQuest
-	if err := s.DB.Where("user_id = ? AND quest_id = 'daily_quest' AND status = 'ACTIVE'", userID).First(&q).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil
+	var active []model.UserQuest
+	if err := s.DB.Where("user_id = ? AND status = 'ACTIVE'", userID).Find(&active).Error; err != nil {
+		return err
+	}
+	for _, q := range active {
+		var d model.UserQuestData
+		if err := s.DB.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
+			continue
 		}
-		return err
-	}
-	var d model.UserQuestData
-	if err := s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", userID).First(&d).Error; err != nil {
-		return err
-	}
-	var cd map[string]any
-	if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
-		return err
-	}
-	if cd["target_stat"] != stat {
-		return nil
-	}
-	targetCount, _ := cd["target_count"].(float64)
-	newVal := d.ProgressValue + amount
-	completed := newVal >= int(targetCount)
-	if err := s.DB.Model(&model.UserQuestData{}).
-		Where("user_id = ? AND quest_id = 'daily_quest'", userID).
-		Update("progress_value", newVal).Error; err != nil {
-		return err
-	}
-	if completed {
-		if err := s.DB.Model(&model.UserQuest{}).
-			Where("user_id = ? AND quest_id = 'daily_quest'", userID).
-			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
+		var cd map[string]any
+		if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
+			continue
+		}
+		if cd["target_stat"] != stat {
+			continue
+		}
+		targetCount, _ := cd["target_count"].(float64)
+		newVal := d.ProgressValue + amount
+		done := newVal >= int(targetCount)
+		if err := s.DB.Model(&model.UserQuestData{}).
+			Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
+			Update("progress_value", newVal).Error; err != nil {
 			return err
+		}
+		if done {
+			if q.QuestID == "daily_quest" {
+				if err := s.DB.Model(&model.UserQuest{}).
+					Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
+					Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
+					return err
+				}
+			} else {
+				s.DB.Model(&model.UserQuestData{}).
+					Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
+					Updates(map[string]any{
+						"step_index":    d.StepIndex + 1,
+						"progress_value": 0,
+						"custom_data":    "{}",
+					})
+			}
 		}
 	}
 	return nil
+}
+
+// CreateQuest creates a new quest entry and its step data for a user.
+func (s *Store) CreateQuest(userID int64, questID string) error {
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&model.UserQuest{
+			UserID: userID, QuestID: questID, Status: "ACTIVE", StartedAt: time.Now(),
+		}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&model.UserQuestData{
+			UserID: userID, QuestID: questID, StepIndex: 0, ProgressValue: 0, CustomData: "{}",
+		}).Error
+	})
 }
 
 // GetRandomActivePetPair returns two active (is_active=1) pets with level >=

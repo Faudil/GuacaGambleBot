@@ -1,6 +1,8 @@
 package mining
 
 import (
+	"errors"
+	"log/slog"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -9,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	miningsvc "guacagamblebot/internal/service/mining"
 	"guacagamblebot/internal/store"
 )
@@ -30,7 +33,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: miningsvc.New(s, cfg)}
 	r.Slash("mine", "Mining expedition", c.onSlashMenu)
+	r.Slash("m", "Mining expedition", c.onSlashMenu)
 	r.Prefix("mine", c.onPrefixMenu)
+	r.Prefix("m", c.onPrefixMenu)
 	r.Component("mine", "descend", c.onDescend)
 	r.Component("mine", "leave", c.onLeave)
 }
@@ -81,7 +86,12 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.riskReduc)
 	if err != nil {
-		interaction.RespondError(b, i, lang, "mining.error")
+		if errors.Is(err, miningsvc.ErrMineLimit) {
+			interaction.RespondError(b, i, lang, "mining.limit_reached")
+		} else {
+			slog.Error("mining descend failed", "user", userID, "error", err)
+			interaction.RespondError(b, i, lang, "mining.error")
+		}
 		return
 	}
 
@@ -108,7 +118,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("mining.title", lang),
 		i18n.T("mining.status", lang, map[string]any{
 			"depth": sess.depth,
-			"item":  res.Item.Name,
+			"item":  items.DisplayName(res.Item.Name),
 			"bag":   bagString(res.Bag, lang),
 			"risk":  riskNext,
 		}),
@@ -134,6 +144,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	res, err := c.svc.LeaveMine(userID, sess.bag)
 	if err != nil {
+		slog.Error("mining leave failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
 		return
 	}
@@ -171,10 +182,11 @@ func bagString(bag []miningsvc.BagEntry, lang string) string {
 	}
 	parts := make([]string, len(bag))
 	for i, e := range bag {
+		displayName := items.DisplayName(e.Name)
 		if e.Count > 1 {
-			parts[i] = e.Name + " x" + itoa(e.Count)
+			parts[i] = displayName + " x" + itoa(e.Count)
 		} else {
-			parts[i] = e.Name
+			parts[i] = displayName
 		}
 	}
 	return strings.Join(parts, ", ")

@@ -25,7 +25,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: achievementsvc.New(s, cfg)}
 	r.Slash("achievements", "Voir vos succès et récompenses.", c.onSlashMenu)
+	r.Slash("ach", "Voir vos succès et récompenses.", c.onSlashMenu)
 	r.Prefix("achievements", c.onPrefixMenu)
+	r.Prefix("ach", c.onPrefixMenu)
 	r.Component("achievements", "show", c.onShow)
 }
 

@@ -25,6 +25,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, games: map[int64]*rlt.Game{}}
 	r.Slash("roulette", "Roulette russe : rejoignez ou créez une partie.", c.onSlashMenu)
 	r.Prefix("roulette", c.onPrefixMenu)
+	r.Prefix("rt", c.onPrefixMenu)
 	r.Component("roulette", "new", c.onNewOpen)
 	r.Component("roulette", "join", c.onJoin)
 	r.Component("roulette", "start", c.onStart)
@@ -104,6 +105,16 @@ func (c *Cog) onNewSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	ok, _, err := c.store.CheckGameLimit(leaderID, "roulette", 5)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "roulette.no_money")
+		return
+	}
+	if !ok {
+		interaction.RespondError(b, i, lang, "roulette.no_money")
+		return
+	}
+
 	bal, err := c.store.GetBalance(leaderID)
 	if err != nil || bal < entryFee {
 		interaction.RespondError(b, i, lang, "roulette.no_money")
@@ -117,6 +128,7 @@ func (c *Cog) onNewSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	game := rlt.NewGame(leaderID, entryFee)
 	c.games[serverID] = game
+	_ = c.store.IncrementGameLimit(leaderID, "roulette")
 
 	embed := components.Embed(
 		i18n.T("roulette.finish_title", lang),

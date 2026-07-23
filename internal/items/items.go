@@ -111,8 +111,8 @@ var all = []Item{
 	{ID: "identity_scroll", Name: "Identity Scroll",   Emoji: "📜", Price: 500,  Description: "Randomly changes your server nickname.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "thieves_glove",   Name: "Thieve's Glove",    Emoji: "🧤", Price: 20,   Description: "Use !rob @target with these gloves.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "scratch_ticket",  Name: "Scratch Ticket",    Emoji: "🎰", Price: 100,  Description: "Scratch to win up to $1000 instantly!", EffectType: "consumable", Droppable: false, Category: Tools},
-	{ID: "data_disk",       Name: "Data Disk",         Emoji: "💾", Price: 50,   Description: "A corrupted Zenith memory disk.", EffectType: "consumable", Droppable: false, Category: Tools},
-	{ID: "old_journal",     Name: "Old Journal",       Emoji: "📖", Price: 30,   Description: "A dusty notebook written by a survivor.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "data_disk",       Name: "Data Disk",         Emoji: "💾", Price: 50,   Description: "A corrupted memory disk from a lost era.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "old_journal",     Name: "Old Journal",       Emoji: "📖", Price: 30,   Description: "A dusty notebook handwritten by an unknown author.", EffectType: "consumable", Droppable: false, Category: Tools},
 
 	// --- Special ---
 	{ID: "mystery_egg",      Name: "Mystery Egg",       Emoji: "🥚", Price: 6000,  Description: "A trembling egg... Type !hatch to open it!", EffectType: "consumable", Droppable: false, Category: Special},
@@ -170,6 +170,16 @@ func Get(nameOrID string) *Item {
 
 func AllItems() []Item {
 	return all
+}
+
+// DisplayName resolves a name or ID to the canonical English display name.
+// If the item is not found, the input is returned unchanged.
+func DisplayName(nameOrID string) string {
+	it := Get(nameOrID)
+	if it == nil {
+		return nameOrID
+	}
+	return it.Name
 }
 
 func ItemsByCategory(cat Category) []Item {

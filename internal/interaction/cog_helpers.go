@@ -9,18 +9,33 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/logger"
 )
 
 // RespondError replies to an interaction with a single ephemeral error/info
 // message translated via the given locale key.
 func RespondError(b *Bot, i *discordgo.InteractionCreate, lang, key string) {
-	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err := b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: i18n.T(key, lang),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+	if err != nil {
+		logger.Log().Error("failed to send error response",
+			"key", key,
+			"user", UserID(i),
+			"guild", i.GuildID,
+			"error", err,
+		)
+	} else {
+		logger.Log().Info("responded with error",
+			"key", key,
+			"user", UserID(i),
+			"guild", i.GuildID,
+		)
+	}
 }
 
 // SendAchievements posts a follow-up embed listing the newly unlocked

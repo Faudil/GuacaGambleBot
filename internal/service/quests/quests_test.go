@@ -116,6 +116,44 @@ func TestAdvanceStep(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, uqd)
 	assert.Equal(t, 1, uqd.StepIndex)
+	// CustomData should be set to the activity step's extra data
+	assert.Contains(t, uqd.CustomData, `"target_stat":"items_mined"`)
+	assert.Contains(t, uqd.CustomData, `"target_count":10`)
+}
+
+func TestAdvanceStepThenRecordActivity(t *testing.T) {
+	svc, st := testService(t)
+	now := time.Now()
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "ACTIVE", StartedAt: now,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "tutorial", StepIndex: 0, ProgressValue: 0,
+	}).Error)
+
+	// Advance from step 0 (dialogue) to step 1 (activity: mine 10)
+	require.NoError(t, svc.AdvanceStep(1, "tutorial", ""))
+
+	// Record mining activity
+	require.NoError(t, st.RecordActivity(1, "items_mined", 3))
+
+	_, uqd, err := svc.GetQuestProgress(1, "tutorial")
+	require.NoError(t, err)
+	require.NotNil(t, uqd)
+	assert.Equal(t, 1, uqd.StepIndex, "should still be on step 1")
+	assert.Equal(t, 3, uqd.ProgressValue, "progress should be 3 after mining 3")
+
+	// Complete the activity step
+	for i := 0; i < 7; i++ {
+		require.NoError(t, st.RecordActivity(1, "items_mined", 1))
+	}
+
+	_, uqd, err = svc.GetQuestProgress(1, "tutorial")
+	require.NoError(t, err)
+	require.NotNil(t, uqd)
+	assert.Equal(t, 2, uqd.StepIndex, "should advance to step 2 (dialogue)")
+	assert.Equal(t, 0, uqd.ProgressValue, "progress should reset")
+	assert.Equal(t, "{}", uqd.CustomData, "custom_data should be cleared")
 }
 
 func TestAdvanceStepRewardsMoney(t *testing.T) {

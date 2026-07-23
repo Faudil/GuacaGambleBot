@@ -3,12 +3,15 @@ package economy
 import (
 	"errors"
 	"math/rand"
+	"time"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
+
+var ErrAlreadyClaimed = errors.New("daily already claimed today")
 
 // DailyObjective mirrors the Python DailyQuest objectives.
 type DailyObjective struct {
@@ -63,6 +66,14 @@ type DailyResult struct {
 // Daily pays the daily salary, applies debt repayment, starts a daily quest and
 // evaluates achievements.
 func (s *Service) Daily(userID int64) (*DailyResult, error) {
+	ready, err := s.store.CheckCooldown(userID, "daily", 24*time.Hour)
+	if err != nil {
+		return nil, err
+	}
+	if !ready {
+		return nil, ErrAlreadyClaimed
+	}
+
 	_, bank, err := s.store.GetBankData(userID)
 	if err != nil {
 		return nil, err
@@ -116,6 +127,10 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 	}
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := s.store.SetCooldown(userID, "daily"); err != nil {
 		return nil, err
 	}
 

@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	loresvc "guacagamblebot/internal/service/lore"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
@@ -20,9 +21,14 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: loresvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	c := &Cog{store: s, cfg: cfg, svc: loresvc.New(s, cfg, def)}
 	r.Slash("lore", "Browse discovered lore fragments", c.onSlash)
 	r.Prefix("lore", c.onPrefix)
+	r.Prefix("lr", c.onPrefix)
 	r.Component("lore", "category", c.onCategorySelect)
 	r.Component("lore", "back", c.onBack)
 }
@@ -54,19 +60,19 @@ func (c *Cog) showMenu(b *interaction.Bot, i *discordgo.InteractionCreate, edit 
 	}
 }
 
-var catMeta = map[loresvc.Category]struct {
+var catMeta = map[universe.Category]struct {
 	Name string
 	Emoji string
 	Color int
 	Hint string
 }{
-	loresvc.CatAether:   {"Aether-Logs", "🟦", 0x3498db, "Found while mining deep strata"},
-	loresvc.CatTide:     {"Tide-Scrolls", "🟩", 0x2ecc71, "Found while fishing"},
-	loresvc.CatRoot:     {"Root-Whispers", "🟫", 0x8b4513, "Found while farming"},
-	loresvc.CatField:    {"Field Observations", "🟧", 0xe67e22, "Found while hunting"},
-	loresvc.CatRust:     {"Rust-Memories", "🟥", 0xe74c3c, "Found while excavating fossils"},
-	loresvc.CatEcho:     {"Echo-Shards", "🟨", 0xf1c40f, "Found during pet expeditions"},
-	loresvc.CatBonus:    {"Secret Fragments", "💠", 0x9b59b6, "Special discoveries"},
+	"aether_log":  {"Aether-Logs", "🟦", 0x3498db, "Found while mining deep strata"},
+	"tide_scroll": {"Tide-Scrolls", "🟩", 0x2ecc71, "Found while fishing"},
+	"root_whisper":  {"Root-Whispers", "🟫", 0x8b4513, "Found while farming"},
+	"field_obs":     {"Field Observations", "🟧", 0xe67e22, "Found while hunting"},
+	"rust_memory":   {"Rust-Memories", "🟥", 0xe74c3c, "Found while excavating fossils"},
+	"echo_shard":    {"Echo-Shards", "🟨", 0xf1c40f, "Found during pet expeditions"},
+	"bonus":         {"Secret Fragments", "💠", 0x9b59b6, "Special discoveries"},
 }
 
 func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -75,8 +81,9 @@ func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed,
 		return components.Embed("Error", "Could not load lore progress.", 0xff0000), nil
 	}
 
-	desc := fmt.Sprintf("**Codex of the Strata** — %d / %d fragments discovered\n\n", totalD, totalT)
-	catOrder := []loresvc.Category{loresvc.CatAether, loresvc.CatTide, loresvc.CatRoot, loresvc.CatField, loresvc.CatRust, loresvc.CatEcho, loresvc.CatBonus}
+	def := c.svc.Universe()
+	desc := fmt.Sprintf("**%s** — %d / %d fragments discovered\n\n", def.Name+" Codex", totalD, totalT)
+	catOrder := c.svc.Categories()
 
 	var selectOpts []discordgo.SelectMenuOption
 
@@ -116,9 +123,9 @@ func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed,
 func (c *Cog) onCategorySelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	cat := loresvc.Category(i.MessageComponentData().Values[0])
+	cat := universe.Category(i.MessageComponentData().Values[0])
 
-	fragments := loresvc.AllInCategory(cat)
+	fragments := c.svc.AllInCategory(cat)
 	discovered, _ := c.svc.GetDiscovered(userID) // need to expose this
 	// Temporary: build from service
 	progress, _, _, _ := c.svc.AllProgress(userID)

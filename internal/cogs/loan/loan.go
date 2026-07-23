@@ -26,6 +26,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: loansvc.New(s)}
 	r.Slash("loan", "Emprunter, rembourser et consulter ses dettes.", c.onSlashMenu)
 	r.Prefix("loan", c.onPrefixMenu)
+	r.Prefix("ln", c.onPrefixMenu)
 	r.Component("loan", "borrow", c.onBorrowOpen)
 	r.Component("loan", "repay", c.onRepayOpen)
 	r.Component("loan", "list", c.onList)

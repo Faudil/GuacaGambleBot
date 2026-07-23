@@ -26,7 +26,10 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: charsvc.New(s, cfg)}
 	r.Slash("character", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
+	r.Slash("char", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
+	r.Slash("profile", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
 	r.Prefix("character", c.onPrefixMenu)
+	r.Prefix("char", c.onPrefixMenu)
 	r.Prefix("profile", c.onPrefixMenu)
 	r.Component("character", "profile", c.onProfile)
 	r.Component("character", "stats", c.onStats)

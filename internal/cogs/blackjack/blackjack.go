@@ -44,7 +44,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		activeGames:       map[int64]*activeGame{},
 	}
 	r.Slash("blackjack", "Blackjack PvP : défiez un joueur.", c.onSlashMenu)
+	r.Slash("bj", "Blackjack PvP : défiez un joueur.", c.onSlashMenu)
 	r.Prefix("blackjack", c.onPrefixMenu)
+	r.Prefix("bj", c.onPrefixMenu)
 	r.Component("blackjack", "challenge", c.onChallengeOpen)
 	r.Component("blackjack", "accept", c.onAccept)
 	r.Component("blackjack", "hit", c.onHit)
@@ -165,6 +167,16 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	ok, _, lerr := c.store.CheckGameLimit(pc.ChallengerID, "blackjack", 10)
+	if lerr != nil {
+		interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
+		return
+	}
+	if !ok {
+		interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
+		return
+	}
+
 	if _, err := c.store.UpdateBalance(pc.ChallengerID, -pc.Amount); err != nil {
 		interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
 		return
@@ -174,6 +186,8 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
 		return
 	}
+
+	_ = c.store.IncrementGameLimit(pc.ChallengerID, "blackjack")
 
 	gs := c.svc.NewGame(pc.ChallengerID, opponentID, pc.Amount)
 	embed, comps := c.gameEmbed(gs, lang)

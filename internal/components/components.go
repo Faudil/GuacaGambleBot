@@ -88,3 +88,17 @@ func InteractionResponse(responseType discordgo.InteractionResponseType, embed *
 	}
 	return &discordgo.InteractionResponse{Type: responseType, Data: data}
 }
+
+// WebhookEditResponse builds a WebhookEdit from an embed and optional
+// components, useful for editing interaction responses mid-animation.
+func WebhookEditResponse(embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) *discordgo.WebhookEdit {
+	data := &discordgo.WebhookEdit{}
+	if embed != nil {
+		embeds := []*discordgo.MessageEmbed{embed}
+		data.Embeds = &embeds
+	}
+	if comps != nil {
+		data.Components = &comps
+	}
+	return data
+}

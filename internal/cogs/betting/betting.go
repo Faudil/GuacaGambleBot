@@ -23,7 +23,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: bettingsvc.New(s, cfg)}
 	r.Slash("betting", "Paris personnalisés : créer, parier, clôturer.", c.onSlashMenu)
+	r.Slash("bet", "Paris personnalisés : créer, parier, clôturer.", c.onSlashMenu)
 	r.Prefix("betting", c.onPrefixMenu)
+	r.Prefix("bet", c.onPrefixMenu)
 	r.Component("betting", "create", c.onCreateOpen)
 	r.Component("betting", "place", c.onPlaceOpen)
 	r.Component("betting", "close", c.onCloseOpen)

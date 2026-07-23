@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	farmsvc "guacagamblebot/internal/service/farm"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/store"
 )
 
@@ -24,6 +25,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: farmsvc.New(s, cfg)}
 	r.Slash("farm", "Farming minigame", c.onSlashMenu)
 	r.Prefix("farm", c.onPrefixMenu)
+	r.Prefix("fm", c.onPrefixMenu)
 	r.Component("farm", "menu", c.onMenu)
 	r.Component("farm", "zone", c.onZone)
 	r.Component("farm", "plot", c.onPlot)
@@ -106,13 +108,13 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			))
 		} else if p.Ready {
 			comps = append(comps, components.Button(
-				i18n.T("farm.plot_ready", lang, map[string]any{"item": p.ItemName}),
+				i18n.T("farm.plot_ready", lang, map[string]any{"item": items.DisplayName(p.ItemName)}),
 				components.Encode("farm", "harvest", zoneKey, strconv.Itoa(p.PlotIndex)),
 				discordgo.SuccessButton,
 			))
 		} else {
 			comps = append(comps, components.Button(
-				i18n.T("farm.plot_growing", lang, map[string]any{"item": p.ItemName, "pc": p.Progress}),
+				i18n.T("farm.plot_growing", lang, map[string]any{"item": items.DisplayName(p.ItemName), "pc": p.Progress}),
 				components.Encode("farm", "none", ""),
 				discordgo.PrimaryButton,
 			))
@@ -150,7 +152,7 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	var btns []discordgo.MessageComponent
 	for _, seed := range seeds {
-		btns = append(btns, components.Button(seed,
+		btns = append(btns, components.Button(items.DisplayName(seed),
 			components.Encode("farm", "seed", zoneKey, rest[1], seed),
 			discordgo.SecondaryButton))
 	}
@@ -193,7 +195,7 @@ func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.planted_title", lang),
 		i18n.T("farm.planted_desc", lang, map[string]any{
-			"item": seedName,
+			"item": items.DisplayName(seedName),
 			"time": growTime / 60,
 		}),
 		0x00FF00,
@@ -225,7 +227,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	msg := i18n.T("farm.harvest_msg", lang, map[string]any{"qty": res.Quantity, "item": res.CropName})
+	msg := i18n.T("farm.harvest_msg", lang, map[string]any{"qty": res.Quantity, "item": items.DisplayName(res.CropName)})
 	embed := components.Embed(
 		i18n.T("farm.success_desc", lang, map[string]any{
 			"loot": msg,

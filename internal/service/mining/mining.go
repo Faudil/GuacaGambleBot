@@ -14,6 +14,8 @@ import (
 	"guacagamblebot/internal/store"
 )
 
+var ErrMineLimit = errors.New("mining daily limit reached")
+
 type MineItem struct {
 	Name  string
 	Value int
@@ -64,6 +66,14 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 func (s *Service) Descend(userID int64, depth int, bag []BagEntry, riskReduc int) (*DescendResult, error) {
+	ok, _, err := s.store.CheckGameLimit(userID, "mine_descend", 50)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrMineLimit
+	}
+
 	risk := (depth - 1) * 5
 	risk -= riskReduc
 
@@ -78,6 +88,8 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, riskReduc int
 	if risk < 0 {
 		risk = 0
 	}
+
+	_ = s.store.IncrementGameLimit(userID, "mine_descend")
 
 	roll := rand.Intn(100) + 1
 	if roll <= risk {

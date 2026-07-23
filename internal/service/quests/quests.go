@@ -1,7 +1,11 @@
 package quests
 
 import (
+	"encoding/json"
+	"errors"
 	"time"
+
+	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
@@ -149,7 +153,33 @@ func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) err
 			Where("user_id = ? AND quest_id = ?", userID, questID).
 			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error
 	}
+	updates := map[string]any{"step_index": nextIdx, "progress_value": 0}
+	if nextIdx < len(def.Steps) && def.Steps[nextIdx].Type == StepActivity {
+		if custom, err := json.Marshal(def.Steps[nextIdx].Extra); err == nil {
+			updates["custom_data"] = string(custom)
+		}
+	}
 	return s.store.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", userID, questID).
-		Updates(map[string]any{"step_index": nextIdx, "progress_value": 0}).Error
+		Updates(updates).Error
+}
+
+// StartQuest begins a quest for the user if not already active or completed.
+func (s *Service) StartQuest(userID int64, questID string) error {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return errors.New("quest not found")
+	}
+	var existing model.UserQuest
+	err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&existing).Error
+	if err == nil {
+		if existing.Status == "ACTIVE" {
+			return errors.New("quest already active")
+		}
+		return errors.New("quest already completed")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	return s.store.CreateQuest(userID, questID)
 }

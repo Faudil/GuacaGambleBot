@@ -14,6 +14,8 @@ import (
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
+	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
@@ -21,8 +23,11 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	require.NoError(t, err)
 	require.NoError(t, db.Migrate(d))
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
 	s := store.New(d, cfg)
-	return New(s, cfg), s
+	return New(s, cfg, def), s
 }
 
 func TestGetNPCData(t *testing.T) {
@@ -41,7 +46,7 @@ func TestGetNPCDataMissing(t *testing.T) {
 func TestGetAllNPCMeta(t *testing.T) {
 	svc, _ := testService(t)
 	all := svc.GetAllNPCMeta()
-	assert.Len(t, all, len(NPCs))
+	assert.Len(t, all, len(svc.universe.NPCs))
 }
 
 func TestGetReputationCreatesDefault(t *testing.T) {

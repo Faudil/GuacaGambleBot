@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	expeditionsvc "guacagamblebot/internal/service/expedition"
+	"guacagamblebot/internal/items"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )
@@ -25,7 +26,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: expeditionsvc.New(s, cfg)}
 	r.Slash("expedition", "Expéditions de familiers", c.onSlash)
+	r.Slash("exp", "Expéditions de familiers", c.onSlash)
 	r.Prefix("expedition", c.onPrefix)
+	r.Prefix("exp", c.onPrefix)
 }
 
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -202,21 +205,21 @@ func (c *Cog) claim(userID int64, lang string) (*discordgo.MessageEmbed, []disco
 		"🧭 **"+pet.Nickname+"** returned from an expedition with **"+itoa(exp.RewardXP)+" XP**!")
 	_ = petSvc.UpdatePet(pet)
 
-	var items []string
-	_ = json.Unmarshal([]byte(exp.RewardItems), &items)
+	var rawItems []string
+	_ = json.Unmarshal([]byte(exp.RewardItems), &rawItems)
 
 	lootStr := ""
-	if len(items) > 0 {
+	if len(rawItems) > 0 {
 		counts := map[string]int{}
-		for _, item := range items {
-			item = strings.TrimSpace(item)
-			if item == "" {
+		for _, it := range rawItems {
+			it = strings.TrimSpace(it)
+			if it == "" {
 				continue
 			}
-			counts[item]++
+			counts[it]++
 		}
-		for item, count := range counts {
-			lootStr += "- " + itoa(count) + "x " + item + "\n"
+		for itName, count := range counts {
+			lootStr += "- " + itoa(count) + "x " + items.DisplayName(itName) + "\n"
 		}
 	} else {
 		lootStr = i18n.T("expedition.no_items", lang)

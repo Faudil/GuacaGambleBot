@@ -3,6 +3,7 @@ package duel
 import (
 	"errors"
 	"math/rand"
+	"time"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
@@ -14,6 +15,8 @@ var (
 	ErrSelf        = errors.New("cannot duel yourself")
 	ErrBot         = errors.New("cannot duel a bot")
 	ErrAmount      = errors.New("amount must be positive")
+	ErrDuelLimit   = errors.New("duel daily limit reached")
+	ErrDuelCD      = errors.New("wait before dueling again")
 )
 
 type DuelResult struct {
@@ -42,6 +45,22 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult, error) {
+	ok, _, err := s.store.CheckGameLimit(challengerID, "duel", 20)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrDuelLimit
+	}
+
+	ready, err := s.store.CheckCooldown(challengerID, "duel", 30*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	if !ready {
+		return nil, ErrDuelCD
+	}
+
 	if challengerID == opponentID {
 		return nil, ErrSelf
 	}
@@ -109,6 +128,9 @@ func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult,
 	} else {
 		res.IsDraw = true
 	}
+
+	_ = s.store.IncrementGameLimit(challengerID, "duel")
+	_ = s.store.SetCooldown(challengerID, "duel")
 
 	res.UnlocksC, _ = achievement.CheckAndUnlock(s.store.DB, challengerID)
 	res.UnlocksO, _ = achievement.CheckAndUnlock(s.store.DB, opponentID)

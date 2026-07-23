@@ -44,6 +44,7 @@
     "repaid_lender": "\n🤵 You repaid {lender} ",
     "your_balance": "Your balance",
     "daily_footer": "Come back tomorrow!",
+    "daily_cooldown": "⏳ You already claimed your daily today. Come back tomorrow!",
     "give_invalid": "❌ Invalid transaction.",
     "give_no_money": "❌ You don't have enough money.",
     "give_title": "💸 Transaction complete",
@@ -627,10 +628,12 @@
     "win_cheat": " (Thanks to cheating 😉)",
     "lose_msg": "❌ **YOU LOST...** The coin lands on **{result}**.",
     "lose_cheat": " (Even while cheating?! Shameful...)",
-    "xp_gain": " You gained {xp} xp"
-  },
-  "slots": {
-    "title": "🎰 Slot Machine",
+		"spinning": "🪙 The coin is spinning in the air...",
+		"xp_gain": " You gained {xp} xp"
+	},
+	"slots": {
+		"title": "🎰 Slot Machine",
+		"bet_info": "Bet: **${amount}**",
     "no_money": "❌ Not enough money (${balance}).",
     "rolling": "🌀",
     "state_start": "Place your bets...",
@@ -1161,7 +1164,10 @@
     "empty_msg": "😐 You exit the mine empty-handed. At least you gained experience.\n📈 XP Gained: +{xp}",
     "title": "Mining Expedition",
     "desc": "You enter the cave...\nHow deep will you go?",
-    "footer": "Risk reduced by: {risk} % (Level and Pet bonus)"
+    "footer": "Risk reduced by: {risk} % (Level and Pet bonus)",
+    "error": "❌ Something went wrong during the expedition. Please try again.",
+    "limit_reached": "⛏️ You've mined enough today! Come back tomorrow.",
+    "cooldown": "⏳ You need to wait a moment before digging again."
   },
   "farm": {
     "work_label": "🚜 Work this land",
@@ -1556,6 +1562,10 @@
     "progress": "Progress",
     "step_progress": "Step {current} / {total}",
     "step_activity_progress": "{current} / {target} — {activity}",
+    "activity_view_btn": "View Progress",
+    "complete_objective_first": "⚡ Complete the current objective first (mine, farm, hunt, etc.), then use the Refresh button to check your progress!",
+    "completed_msg": "✅ **{title}** — Quest completed!",
+    "activity_intro": "📋 **{quest}**\n\n**{label}** — complete this activity, then come back to continue.",
     "active_list": "**Your Active Quests:**\n\nSelect one with `!quest <id>`:\n",
     "daily_challenge": {
       "title": "Daily Challenge",
@@ -1640,6 +1650,17 @@
       "step3_dialogue_unknown": "The Guardian's chest panel slides open, revealing a glowing data core. A voice — calm, ancient — fills the air.\n\n*Zenith OS:* \"Threat neutralized. You have demonstrated the qualities the Ancients sought: resourcefulness, cooperation, and the willingness to gamble on uncertain outcomes.\"\n\nA massive holographic map projects onto the casino ceiling — 12 glowing markers across the continent. Only HoakHaven is lit. The others pulse faintly, waiting.\n\n*Zenith OS:* \"The Vault contains data on **12 additional Generator installations** spread across the continent. Each one is a community waiting for revival. The Collapse nearly ended civilization — but the Ancients left a way to rebuild. Explore deeper. Grow rarer. Hatch stronger. Win bigger. Find the other Vaults.\"\n\nThe hologram fades. GambleBot spins on his wheel.\n\n*GambleBot:* \"Well! What are you waiting for? The slots are hot, the mines are deep, and the world is HUGE. Welcome to HoakHaven — **for real this time.**\""
     }
   },
+  "start": {
+    "begin_title": "🚀 Your Journey Begins!",
+    "continue_btn": "Continue ▶️",
+    "already_completed": "🎉 You've already completed your journey! The village is restored and thriving. Use `/quest` to review your completed quests.",
+    "already_started": "You've already begun your journey! Use `/quest` to continue where you left off.",
+    "complete_activity_first": "⚡ Complete the current objective first (mine, farm, etc.), then come back!",
+    "completed_title": "🎉 Journey Complete!",
+    "completed_desc": "Congratulations! You've completed the tutorial quest and restored the village! Use `/help` to see all available commands and continue your adventure.",
+    "activity_prompt": "📋 **{quest}**\n\nComplete the current activity objective, then click Continue when done.",
+    "error": "❌ Something went wrong. Please try again."
+  },
   "boss_league": {
     "title": "🏆 Boss League 🏆",
     "stage_info": "Stage {stage}/5 - **{name}**",
@@ -1657,7 +1678,7 @@
     "already_champion": "🏆 You are already the Boss League Champion! There are no more opponents to fight."
   },
   "npcs": {
-    "list_title": "👥 Characters of Hoak Haven",
+    "list_title": "👥 Village Characters",
     "affinity_label": "Affinity: {rank} (Lvl {level}) - ({points}/{next_lvl})",
     "talk_button": "Talk to {name}",
     "talk_menu_placeholder": "Choose a topic to talk about...",
@@ -1772,10 +1793,12 @@
     "menu_desc": "Let's set up the bot for your server. Pick the channel where I can talk, choose a language, and tweak a few options.",
     "field_channel": "Channel",
     "field_language": "Language",
+    "field_universe": "Storyline",
     "field_prefix": "Prefix",
     "field_status": "Status",
     "channel_placeholder": "Select a channel…",
     "language_placeholder": "Select a language",
+    "universe_placeholder": "Choose a storyline…",
     "btn_advanced": "Advanced",
     "btn_enable": "Enable bot",
     "btn_disable": "Disable bot",

@@ -27,6 +27,7 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg)}
 	r.Slash("pets", "Gérer vos familiers", c.onSlashMenu)
+	r.Slash("pet", "Gérer vos familiers", c.onSlashMenu)
 	r.Slash("hatch", "Éclore un œuf de familier", c.onHatchCommand)
 	r.Prefix("pets", c.onPrefixMenu)
 	r.Prefix("pet", c.onPrefixMenu)
@@ -306,6 +307,19 @@ func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
+
+	ready, _ := c.store.CheckCooldown(pet.UserID, "pet_feed", 5*time.Minute)
+	if !ready {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "⏳ Your pet was fed recently. Wait a few minutes before feeding again.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -316,6 +330,7 @@ func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	pet.HP = min(pet.MaxHP, pet.HP+5)
 	c.svc.AddBond(pet, 1)
 	_ = c.svc.UpdatePet(pet)
+	_ = c.store.SetCooldown(pet.UserID, "pet_feed")
 
 	// Check for interaction
 	c.tryInteraction(b, i, pet, "feed")

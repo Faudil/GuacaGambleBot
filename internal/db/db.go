@@ -1,6 +1,9 @@
 package db
 
 import (
+	"context"
+	"time"
+
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -9,11 +12,25 @@ import (
 	"guacagamblebot/internal/model"
 )
 
+// noNotFoundLogger wraps the default GORM logger so that ErrRecordNotFound is
+// silently ignored — these are expected in many normal code paths (empty tables,
+// pre-setup guilds, etc.) and are handled gracefully by callers.
+type noNotFoundLogger struct {
+	logger.Interface
+}
+
+func (l noNotFoundLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+	if err == gorm.ErrRecordNotFound {
+		return
+	}
+	l.Interface.Trace(ctx, begin, fc, err)
+}
+
 // Open connects to the SQLite database, runs migrations and returns the handle.
 func Open(cfg *config.Config) (*gorm.DB, error) {
 	dialector := sqlite.Open(cfg.DBPath)
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: noNotFoundLogger{logger.Default.LogMode(logger.Warn)},
 	})
 	if err != nil {
 		return nil, err

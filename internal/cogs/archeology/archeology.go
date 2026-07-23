@@ -7,6 +7,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	archsvc "guacagamblebot/internal/service/archeology"
 	"guacagamblebot/internal/store"
 )
@@ -27,6 +28,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg)}
 	r.Slash("dig", "Archeology fossil excavation", c.onSlashMenu)
 	r.Prefix("dig", c.onPrefixMenu)
+	r.Prefix("arch", c.onPrefixMenu)
 	r.Component("arch", "safe", c.onSafePermit)
 	r.Component("arch", "faille", c.onFaillePermit)
 	r.Component("arch", "dynamite", c.onAction)
@@ -187,17 +189,18 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func outcomeMsg(res *archsvc.DigResult, lang string) string {
+	itemName := items.DisplayName(res.ItemName)
 	switch res.ItemName {
-	case "Poussière d'os":
-		return i18n.T("archeology.disaster_msg", lang) + "\n" + i18n.T("archeology.received", lang, map[string]any{"item": res.ItemName})
-	case "Fossile Abîmé":
-		return i18n.T("archeology.damaged_msg", lang) + "\n" + i18n.T("archeology.received", lang, map[string]any{"item": res.ItemName})
-	case "ADN Pur":
-		return i18n.T("archeology.perfect_msg", lang, map[string]any{"item": res.ItemName})
-	case "Fragment Légendaire":
-		return i18n.T("archeology.legendary_msg", lang, map[string]any{"item": res.ItemName, "integrity": 100})
+	case "bone_dust":
+		return i18n.T("archeology.disaster_msg", lang) + "\n" + i18n.T("archeology.received", lang, map[string]any{"item": itemName})
+	case "damaged_fossil":
+		return i18n.T("archeology.damaged_msg", lang) + "\n" + i18n.T("archeology.received", lang, map[string]any{"item": itemName})
+	case "pure_dna":
+		return i18n.T("archeology.perfect_msg", lang, map[string]any{"item": itemName})
+	case "legendary_fragment":
+		return i18n.T("archeology.legendary_msg", lang, map[string]any{"item": itemName, "integrity": 100})
 	default:
-		return i18n.T("archeology.success_msg", lang, map[string]any{"item": res.ItemName, "integrity": 100})
+		return i18n.T("archeology.success_msg", lang, map[string]any{"item": itemName, "integrity": 100})
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	fishingsvc "guacagamblebot/internal/service/fishing"
 	"guacagamblebot/internal/store"
 )
@@ -23,7 +24,9 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: fishingsvc.New(s, cfg)}
 	r.Slash("fish", "Fishing minigame", c.onSlashMenu)
+	r.Slash("f", "Fishing minigame", c.onSlashMenu)
 	r.Prefix("fish", c.onPrefixMenu)
+	r.Prefix("f", c.onPrefixMenu)
 	r.Component("fish", "menu", c.onMenu)
 	r.Component("fish", "pond", c.onCast)
 	r.Component("fish", "river", c.onCast)
@@ -111,7 +114,7 @@ func (c *Cog) onCast(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("fishing.success_title", lang),
 		i18n.T("fishing.success_desc", lang, map[string]any{
 			"reaction": strconv.FormatFloat(res.Reaction, 'f', 3, 64),
-			"item":     res.ItemName,
+			"item":     items.DisplayName(res.ItemName),
 			"xp":       strconv.Itoa(res.XP),
 		}),
 		0xFFD700,

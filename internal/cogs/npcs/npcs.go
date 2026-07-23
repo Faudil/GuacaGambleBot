@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/model"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
@@ -22,11 +23,16 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: npcsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	c := &Cog{store: s, cfg: cfg, svc: npcsvc.New(s, cfg, def)}
 	r.Slash("npc", "Interagis avec les personnages du village.", c.onSlashMenu)
 	r.Prefix("npc", c.onPrefixMenu)
+	r.Prefix("np", c.onPrefixMenu)
 	r.Component("npc", "back", c.onBack)
-	for _, n := range npcsvc.NPCs {
+	for _, n := range def.NPCs {
 		id := n.ID
 		r.Component("npc", id, c.makeNPCSelect(id))
 		r.Component("npc", "talk_"+id, c.makeTalk(id))
@@ -122,12 +128,12 @@ func (c *Cog) makeNPCSelect(npcID string) func(b *interaction.Bot, i *discordgo.
 			filled = 10
 		}
 		bar := strings.Repeat("🟩", filled) + strings.Repeat("🟥", 10-filled)
-		greeting := npcData.Greetings[0]
-		if lvl >= 2 && len(npcData.Greetings) > 1 {
-			greeting = npcData.Greetings[1]
+		greeting := npcData.Greetings(lang)[0]
+		if lvl >= 2 && len(npcData.Greetings(lang)) > 1 {
+			greeting = npcData.Greetings(lang)[1]
 		}
-		if lvl >= 3 && len(npcData.Greetings) > 2 {
-			greeting = npcData.Greetings[2]
+		if lvl >= 3 && len(npcData.Greetings(lang)) > 2 {
+			greeting = npcData.Greetings(lang)[2]
 		}
 		embed := components.Embed(
 			fmt.Sprintf("%s %s", npcData.Emoji, npcData.Name),
@@ -156,7 +162,7 @@ func (c *Cog) makeTalk(npcID string) func(b *interaction.Bot, i *discordgo.Inter
 		}
 		embed := components.Embed(
 			fmt.Sprintf("%s %s - %s", npcData.Emoji, npcData.Name, i18n.T("npcs.topic_bio", lang)),
-			npcData.Description,
+			npcData.Description(lang),
 			npcData.Color,
 		)
 		comps := []discordgo.MessageComponent{

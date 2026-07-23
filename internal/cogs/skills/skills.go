@@ -24,6 +24,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: charsvc.New(s, cfg)}
 	r.Slash("skills", "View and activate your RPG skills.", c.onSlashMenu)
 	r.Prefix("skills", c.onPrefixMenu)
+	r.Prefix("sk", c.onPrefixMenu)
 	r.Component("skills", "refresh", c.onRefresh)
 	r.Component("skills", "activate", c.onActivate)
 }

@@ -14,6 +14,9 @@ type Config struct {
 	DBPath       string
 	GuildID      int64
 	Prefix       string
+	LogLevel     string
+	LogFile      string
+	Universe     string
 
 	StartingBalance int
 	DailyAmount     int
@@ -32,6 +35,9 @@ func Load() *Config {
 		DBPath:          getEnv("DB_PATH", "./data/guacabot_go.db"),
 		GuildID:         getInt64("GUILD_ID", 0),
 		Prefix:          getEnv("PREFIX", "!"),
+		LogLevel:        getEnv("LOG_LEVEL", "info"),
+		LogFile:         os.Getenv("LOG_FILE"),
+		Universe:        getEnv("UNIVERSE", "hoakhaven"),
 		StartingBalance: getInt("STARTING_BALANCE", 100),
 		DailyAmount:     getInt("DAILY_AMOUNT", 50),
 		ChannelID:       getInt64("CHANNEL_ID", 0),

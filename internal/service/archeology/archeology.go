@@ -11,6 +11,8 @@ import (
 	"guacagamblebot/internal/store"
 )
 
+var ErrDigLimit = errors.New("dig daily limit reached")
+
 type GameState struct {
 	PermitType string
 	Depth      int
@@ -39,6 +41,14 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 func (s *Service) NewGame(userID int64, permitType string) (*GameState, error) {
+	ok, _, err := s.store.CheckGameLimit(userID, "dig", 10)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrDigLimit
+	}
+
 	if permitType == "faille" {
 		bal, err := s.store.GetBalance(userID)
 		if err != nil {
@@ -51,6 +61,8 @@ func (s *Service) NewGame(userID int64, permitType string) (*GameState, error) {
 			return nil, err
 		}
 	}
+
+	_ = s.store.IncrementGameLimit(userID, "dig")
 
 	return &GameState{
 		PermitType: permitType,

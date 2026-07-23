@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 // Cog drives the per-server onboarding experience: when the bot joins a guild
@@ -34,6 +35,7 @@ func Register(r *interaction.Router, st *store.Store, cfg *config.Config) {
 	r.Prefix("setup", c.onSetupPrefix)
 	r.Component("onboarding", "channel", c.onChannelSelect)
 	r.Component("onboarding", "language", c.onLanguageSelect)
+	r.Component("onboarding", "universe", c.onUniverseSelect)
 	r.Component("onboarding", "advanced", c.onAdvanced)
 	r.Modal("onboarding", "advanced_submit", c.onAdvancedSubmit)
 	r.Component("onboarding", "toggle", c.onToggle)
@@ -196,6 +198,19 @@ func (c *Cog) onLanguageSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
+func (c *Cog) onUniverseSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	gid := interaction.ToInt64(i.GuildID)
+	lang := c.store.GetLanguage(gid)
+	for _, v := range i.MessageComponentData().Values {
+		if universe.Get(v) != nil {
+			c.save(gid, func(ss *model.ServerSetting) { ss.Universe = v })
+		}
+	}
+	embed, comps := c.menu(lang, c.current(gid))
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
 func (c *Cog) onAdvanced(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
@@ -272,9 +287,11 @@ func (c *Cog) menu(lang string, ss *model.ServerSetting) (*discordgo.MessageEmbe
 		i18n.T("onboarding.menu_desc", lang),
 		0x5865f2,
 	)
+	uniName := c.universeLabel(ss)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("onboarding.field_channel", lang), c.channelLabel(ss.ChannelID), true),
 		components.Field(i18n.T("onboarding.field_language", lang), ss.Language, true),
+		components.Field(i18n.T("onboarding.field_universe", lang), uniName, true),
 		components.Field(i18n.T("onboarding.field_prefix", lang), c.prefixLabel(ss), true),
 		components.Field(i18n.T("onboarding.field_status", lang), c.statusLabel(ss, lang), true),
 	}
@@ -292,6 +309,25 @@ func (c *Cog) menu(lang string, ss *model.ServerSetting) (*discordgo.MessageEmbe
 			ID:   strconv.FormatInt(ss.ChannelID, 10),
 			Type: discordgo.SelectMenuDefaultValueChannel,
 		}}
+	}
+
+	uniSelect := discordgo.SelectMenu{
+		MenuType:    discordgo.StringSelectMenu,
+		CustomID:    components.Encode("onboarding", "universe"),
+		Placeholder: i18n.T("onboarding.universe_placeholder", lang),
+		MinValues:   intPtr(1),
+		MaxValues:   1,
+	}
+	for _, u := range universe.List() {
+		def := u.ID == ss.Universe
+		if ss.Universe == "" {
+			def = u.ID == c.cfg.Universe
+		}
+		uniSelect.Options = append(uniSelect.Options, discordgo.SelectMenuOption{
+			Label:   u.Emoji + " " + u.Name,
+			Value:   u.ID,
+			Default: def,
+		})
 	}
 
 	langSelect := discordgo.SelectMenu{
@@ -315,6 +351,7 @@ func (c *Cog) menu(lang string, ss *model.ServerSetting) (*discordgo.MessageEmbe
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(channelSelect),
+		components.ActionRow(uniSelect),
 		components.ActionRow(langSelect),
 		components.ActionRow(
 			components.Button(i18n.T("onboarding.btn_advanced", lang), components.Encode("onboarding", "advanced"), discordgo.SecondaryButton),
@@ -351,6 +388,18 @@ func (c *Cog) prefixLabel(ss *model.ServerSetting) string {
 		return ss.Prefix
 	}
 	return c.cfg.Prefix
+}
+
+func (c *Cog) universeLabel(ss *model.ServerSetting) string {
+	uid := ss.Universe
+	if uid == "" {
+		uid = c.cfg.Universe
+	}
+	u := universe.Get(uid)
+	if u == nil {
+		return uid
+	}
+	return u.Emoji + " " + u.Name
 }
 
 func (c *Cog) statusLabel(ss *model.ServerSetting, lang string) string {

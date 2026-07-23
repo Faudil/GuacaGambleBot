@@ -76,18 +76,22 @@ func TestMenuContainsExpectedComponents(t *testing.T) {
 	c, _, _, _ := newTestCog(t)
 	embed, comps := c.menu("en", nil)
 	assert.Equal(t, "Welcome to GuacaGambleBot! 🎰", embed.Title)
-	require.Len(t, comps, 3)
+	require.Len(t, comps, 4)
 
-	row := comps[0].(discordgo.ActionsRow)
-	chSel := row.Components[0].(discordgo.SelectMenu)
+	row0 := comps[0].(discordgo.ActionsRow)
+	chSel := row0.Components[0].(discordgo.SelectMenu)
 	assert.Equal(t, discordgo.ChannelSelectMenu, chSel.MenuType)
 	assert.Equal(t, components.Encode("onboarding", "channel"), chSel.CustomID)
 
-	row2 := comps[1].(discordgo.ActionsRow)
+	row1 := comps[1].(discordgo.ActionsRow)
+	uniSel := row1.Components[0].(discordgo.SelectMenu)
+	assert.Equal(t, components.Encode("onboarding", "universe"), uniSel.CustomID)
+
+	row2 := comps[2].(discordgo.ActionsRow)
 	langSel := row2.Components[0].(discordgo.SelectMenu)
 	assert.Len(t, langSel.Options, 2)
 
-	row3 := comps[2].(discordgo.ActionsRow)
+	row3 := comps[3].(discordgo.ActionsRow)
 	finishBtn := row3.Components[2].(discordgo.Button)
 	assert.Equal(t, components.Encode("onboarding", "finish"), finishBtn.CustomID)
 }
