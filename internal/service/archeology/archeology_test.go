@@ -11,6 +11,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -24,39 +25,77 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	return svc, s
 }
 
-func TestNewGameSafe(t *testing.T) {
+func TestNewGameRiverbed(t *testing.T) {
 	svc, _ := testService(t)
-	state, err := svc.NewGame(1, "safe")
+	state, err := svc.NewGame(1, "riverbed")
 	require.NoError(t, err)
-	assert.Equal(t, "safe", state.PermitType)
-	assert.Equal(t, 50, state.Depth)
+	assert.Equal(t, "riverbed", state.PermitType)
+	assert.Equal(t, 30, state.Depth)
 	assert.Equal(t, 100, state.Integrity)
 	assert.Equal(t, 5, state.Actions)
+	assert.NotNil(t, state.Site)
 }
 
-func TestNewGameFailleNoMoney(t *testing.T) {
+func TestNewGameCliffside(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.NewGame(1, "faille")
+	state, err := svc.NewGame(1, "cliffside")
+	require.NoError(t, err)
+	assert.Equal(t, "cliffside", state.PermitType)
+	assert.Equal(t, 50, state.Depth)
+}
+
+func TestNewGameFaultNoMoney(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.NewGame(1, "fault")
 	assert.ErrorIs(t, err, ErrNoMoney)
 }
 
-func TestNewGameFaille(t *testing.T) {
+func TestNewGameFault(t *testing.T) {
 	svc, s := testService(t)
 	_, err := s.UpdateBalance(1, 500)
 	require.NoError(t, err)
-	state, err := svc.NewGame(1, "faille")
+	state, err := svc.NewGame(1, "fault")
 	require.NoError(t, err)
-	assert.Equal(t, "faille", state.PermitType)
+	assert.Equal(t, "fault", state.PermitType)
 }
 
-func TestApplyAction(t *testing.T) {
+func TestNewGameIceSheetLocked(t *testing.T) {
 	svc, _ := testService(t)
-	state, _ := svc.NewGame(1, "safe")
+	_, err := svc.NewGame(1, "ice_sheet")
+	assert.ErrorIs(t, err, ErrLocked)
+}
+
+func TestNewGameVolcanicLocked(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.NewGame(1, "volcanic")
+	assert.ErrorIs(t, err, ErrLocked)
+}
+
+func TestApplyActionBrush(t *testing.T) {
+	svc, _ := testService(t)
+	state, _ := svc.NewGame(1, "riverbed")
 	outcome := svc.ApplyAction(state, ActionBrush)
-	assert.Equal(t, 48, outcome.State.Depth)
+	assert.Less(t, outcome.State.Depth, 30)
 	assert.Equal(t, 100, outcome.State.Integrity)
 	assert.Equal(t, 4, outcome.State.Actions)
 	assert.False(t, outcome.Damaged)
+}
+
+func TestApplyActionDynamite(t *testing.T) {
+	svc, _ := testService(t)
+	state, _ := svc.NewGame(1, "riverbed")
+	outcome := svc.ApplyAction(state, ActionDynamite)
+	assert.Less(t, outcome.State.Depth, 30)
+	assert.Equal(t, 4, outcome.State.Actions)
+}
+
+func TestApplyActionScan(t *testing.T) {
+	svc, _ := testService(t)
+	state, _ := svc.NewGame(1, "riverbed")
+	outcome := svc.ApplyAction(state, ActionScan)
+	assert.True(t, outcome.State.RevealedLayer)
+	assert.Equal(t, 4, outcome.State.Actions)
+	assert.False(t, outcome.Finished)
 }
 
 func TestResolveDisaster(t *testing.T) {
@@ -71,20 +110,210 @@ func TestResolveDamaged(t *testing.T) {
 	assert.Equal(t, "damaged_fossil", res.ItemName)
 }
 
-func TestResolvePerfect(t *testing.T) {
-	state := &GameState{Integrity: 100, Depth: 0, Actions: 3}
+func TestResolveTimeout(t *testing.T) {
+	state := &GameState{Integrity: 100, Depth: 20, Actions: 0}
 	res := (&Service{}).Resolve(state)
-	assert.Equal(t, "pure_dna", res.ItemName)
+	assert.Equal(t, "bone_dust", res.ItemName)
+}
+
+func TestSiteInfo(t *testing.T) {
+	svc, _ := testService(t)
+	infos := svc.GetSiteInfo(1)
+	assert.Len(t, infos, 5)
+	foundRiverbed := false
+	for _, info := range infos {
+		if info.Key == "riverbed" {
+			foundRiverbed = true
+			assert.True(t, info.Unlocked)
+		}
+		if info.Key == "volcanic" {
+			assert.False(t, info.Unlocked)
+		}
+	}
+	assert.True(t, foundRiverbed)
+}
+
+func TestGetArcheologistLevel(t *testing.T) {
+	svc, _ := testService(t)
+	assert.Equal(t, 0, svc.GetArcheologistLevel(1))
+}
+
+func TestGetArcheologistXP(t *testing.T) {
+	svc, _ := testService(t)
+	xp, next := svc.GetArcheologistXP(1)
+	assert.Equal(t, 0, xp)
+	assert.Equal(t, 50, next)
+}
+
+func TestAwardResult(t *testing.T) {
+	svc, s := testService(t)
+	err := svc.AwardResult(1, &DigResult{ItemName: "common_fossil", Value: 150, XP: 50, Quality: "common"})
+	require.NoError(t, err)
+	var inv model.Inventory
+	err = s.DB.Where("user_id = ? AND item_id = ?", 1, "common_fossil").First(&inv).Error
+	assert.NoError(t, err)
+	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestSellResult(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 1})
+	bal, err := s.GetBalance(1)
+	require.NoError(t, err)
+	newBal, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common"})
+	require.NoError(t, err)
+	assert.Greater(t, newBal, bal)
+}
+
+func TestReanimate(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
+	petName, success, err := svc.Reanimate(1, "common")
+	assert.NoError(t, err)
+	_ = petName
+	_ = success
+}
+
+func TestReanimateNoFossils(t *testing.T) {
+	svc, _ := testService(t)
+	_, _, err := svc.Reanimate(1, "common")
+	assert.Error(t, err)
 }
 
 func TestReanimateInvalidRarity(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.Reanimate(1, "invalid")
+	_, _, err := svc.Reanimate(1, "invalid")
 	assert.Error(t, err)
 }
 
-func TestReanimateNoParts(t *testing.T) {
+func TestReanimateNotEnoughFossils(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 3})
+	_, _, err := svc.Reanimate(1, "common")
+	assert.ErrorIs(t, err, ErrNoFossils)
+}
+
+func TestRollEvent(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.Reanimate(1, "commun")
-	assert.Error(t, err)
+	state, _ := svc.NewGame(1, "riverbed")
+	evt := svc.RollEvent(state)
+	if evt != nil {
+		assert.NotEmpty(t, evt.TitleID)
+	}
+}
+
+func TestResolveCaveInCareful(t *testing.T) {
+	state := &GameState{Actions: 5, Integrity: 100, Depth: 30, MaxDepth: 30}
+	evt := &DigEvent{Type: EventCaveIn}
+	result := (&Service{}).ResolveEvent(state, evt, "careful")
+	assert.True(t, result.BackToDig)
+	assert.Equal(t, 2, result.ActionsLost)
+}
+
+func TestResolveCaveInRush(t *testing.T) {
+	state := &GameState{Actions: 5, Integrity: 100, Depth: 30, MaxDepth: 30}
+	evt := &DigEvent{Type: EventCaveIn}
+	result := (&Service{}).ResolveEvent(state, evt, "rush")
+	assert.True(t, result.BackToDig)
+	assert.Equal(t, 20, result.IntLoss)
+	assert.Greater(t, result.DepthGain, 0)
+}
+
+func TestResolveCaveInAbandon(t *testing.T) {
+	state := &GameState{Actions: 5, Integrity: 100, Depth: 30, MaxDepth: 30}
+	evt := &DigEvent{Type: EventCaveIn}
+	result := (&Service{}).ResolveEvent(state, evt, "abandon")
+	assert.False(t, result.BackToDig)
+	assert.True(t, state.Finished)
+}
+
+func TestResolveGuardianTribute(t *testing.T) {
+	state := &GameState{Actions: 3, Integrity: 100}
+	evt := &DigEvent{Type: EventGuardian}
+	result := (&Service{}).ResolveEvent(state, evt, "tribute")
+	assert.True(t, result.BackToDig)
+	assert.Equal(t, 4, state.Actions)
+	assert.Equal(t, -100, result.CoinChange)
+}
+
+func TestGetToolMastery(t *testing.T) {
+	svc, _ := testService(t)
+	mastery := svc.GetToolMastery(1)
+	assert.Contains(t, mastery, "dynamite")
+	assert.Contains(t, mastery, "hammer")
+	assert.Contains(t, mastery, "brush")
+}
+
+func TestIncrementToolUses(t *testing.T) {
+	svc, _ := testService(t)
+	svc.incrementToolUses(1, "hammer")
+	uses := svc.getToolUses(1, "hammer")
+	assert.Equal(t, 1, uses)
+}
+
+func TestJournalPages(t *testing.T) {
+	svc, s := testService(t)
+	pages := svc.HasJournalPages(1)
+	assert.Empty(t, pages)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "journal_page_1", Quantity: 1})
+	pages = svc.HasJournalPages(1)
+	assert.Equal(t, []int{1}, pages)
+}
+
+func TestJournalProgress(t *testing.T) {
+	svc, s := testService(t)
+	count, max := svc.GetJournalProgress(1)
+	assert.Equal(t, 0, count)
+	assert.Equal(t, 8, max)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "journal_page_1", Quantity: 1})
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "journal_page_2", Quantity: 1})
+	count, max = svc.GetJournalProgress(1)
+	assert.Equal(t, 2, count)
+}
+
+func TestHasAllJournalPages(t *testing.T) {
+	svc, s := testService(t)
+	assert.False(t, svc.HasAllJournalPages(1))
+	for i := 1; i <= 8; i++ {
+		_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "journal_page_" + itoa(i), Quantity: 1})
+	}
+	assert.True(t, svc.HasAllJournalPages(1))
+}
+
+func TestGetSiteInfoLevel3UnlocksIce(t *testing.T) {
+	svc, s := testService(t)
+	s.DB.Create(&model.Job{UserID: 1, JobName: "archeologist", Level: 3, XP: 0})
+	infos := svc.GetSiteInfo(1)
+	for _, info := range infos {
+		if info.Key == "ice_sheet" {
+			assert.True(t, info.Unlocked)
+		}
+		if info.Key == "volcanic" {
+			assert.False(t, info.Unlocked)
+		}
+	}
+}
+
+func TestRollEventReturnsNilOnFresh(t *testing.T) {
+	svc, _ := testService(t)
+	state, _ := svc.NewGame(1, "cliffside")
+	evt := svc.RollEvent(state)
+	_ = evt
+}
+
+func TestSitesDefined(t *testing.T) {
+	assert.Len(t, Sites, 5)
+	assert.Contains(t, Sites, "riverbed")
+	assert.Contains(t, Sites, "cliffside")
+	assert.Contains(t, Sites, "fault")
+	assert.Contains(t, Sites, "ice_sheet")
+	assert.Contains(t, Sites, "volcanic")
+}
+
+func TestLayerDefs(t *testing.T) {
+	assert.Len(t, LayerDefs, 5)
+	_, ok := LayerDefs[LayerSoftSoil]
+	assert.True(t, ok)
+	_, ok = LayerDefs[LayerBedrock]
+	assert.True(t, ok)
 }

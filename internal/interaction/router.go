@@ -114,6 +114,13 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 	case discordgo.InteractionApplicationCommand:
 		data := i.ApplicationCommandData()
 		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(gid)) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ This bot is disabled on this server. Use `/setup` to enable it.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
 			return
 		}
 		log.Info("slash command",
@@ -131,6 +138,13 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		cid := i.MessageComponentData().CustomID
 		domain, action, _ := components.Decode(cid)
 		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ This bot is disabled on this server. Use `/setup` to enable it.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
 			return
 		}
 		log.Info("component interaction",

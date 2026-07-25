@@ -16,10 +16,10 @@ import (
 )
 
 type Crop struct {
-	Name          string
-	Value         int
-	GrowTimeSec   int
-	SeedName      string
+	Name        string
+	Value       int
+	GrowTimeSec int
+	SeedName    string
 }
 
 type Seed struct {
@@ -33,6 +33,7 @@ var Crops = []Crop{
 	{Name: "wheat", Value: 5, GrowTimeSec: 300, SeedName: "wheat_seed"},
 	{Name: "oat", Value: 8, GrowTimeSec: 600, SeedName: "oat_seed"},
 	{Name: "corn", Value: 12, GrowTimeSec: 1800, SeedName: "corn_seed"},
+	{Name: "carrot", Value: 15, GrowTimeSec: 900, SeedName: "carrot_seed"},
 	{Name: "potato", Value: 20, GrowTimeSec: 3600, SeedName: "potato_seed"},
 	{Name: "tomato", Value: 25, GrowTimeSec: 7200, SeedName: "tomato_seed"},
 	{Name: "pumpkin", Value: 40, GrowTimeSec: 14400, SeedName: "pumpkin_seed"},
@@ -47,6 +48,7 @@ var Seeds = []Seed{
 	{Name: "wheat_seed", Price: 2, GrowTimeSec: 300, Crop: cropByName("wheat")},
 	{Name: "oat_seed", Price: 3, GrowTimeSec: 600, Crop: cropByName("oat")},
 	{Name: "corn_seed", Price: 5, GrowTimeSec: 1800, Crop: cropByName("corn")},
+	{Name: "carrot_seed", Price: 7, GrowTimeSec: 900, Crop: cropByName("carrot")},
 	{Name: "potato_seed", Price: 8, GrowTimeSec: 3600, Crop: cropByName("potato")},
 	{Name: "tomato_seed", Price: 10, GrowTimeSec: 7200, Crop: cropByName("tomato")},
 	{Name: "pumpkin_seed", Price: 15, GrowTimeSec: 14400, Crop: cropByName("pumpkin")},
@@ -56,6 +58,16 @@ var Seeds = []Seed{
 	{Name: "golden_apple_seed", Price: 75, GrowTimeSec: 86400, Crop: cropByName("golden_apple")},
 	{Name: "star_fruit_seed", Price: 125, GrowTimeSec: 172800, Crop: cropByName("star_fruit")},
 }
+
+var RegularSeedNames = func() []string {
+	var names []string
+	for _, s := range Seeds {
+		names = append(names, s.Name)
+	}
+	return names
+}()
+
+const PlotsPerZone = 3
 
 func cropByName(name string) Crop {
 	for _, c := range Crops {
@@ -67,24 +79,32 @@ func cropByName(name string) Crop {
 }
 
 type PlotInfo struct {
-	PlotIndex int
-	ItemName  string
-	PlantTime time.Time
-	GrowTime  int
-	Ready     bool
-	Progress  int
+	PlotIndex  int
+	ItemName   string
+	PlantTime  time.Time
+	GrowTime   int
+	Ready      bool
+	Progress   int
+	Watered    bool
+	Mutated    bool
+	Mysterious bool
 }
 
 type HarvestResult struct {
 	CropName string
 	Quantity int
 	XP       int
+	Value    int
+	Mutated  bool
 }
 
 var (
-	ErrNoSeed   = errors.New("you don't have that seed")
-	ErrOccupied = errors.New("plot is occupied")
-	ErrNotReady = errors.New("crop is not ready yet")
+	ErrNoSeed      = errors.New("you don't have that seed")
+	ErrOccupied    = errors.New("plot is occupied")
+	ErrNotReady    = errors.New("crop is not ready yet")
+	ErrAlreadyWatered = errors.New("this plot has already been watered")
+	ErrNoFertilizer= errors.New("you don't have fertilizer")
+	ErrCooldown    = errors.New("please wait before using the farm again")
 )
 
 type Service struct {
@@ -106,11 +126,17 @@ func (s *Service) GetPlots(userID int64, zoneKey string) ([]PlotInfo, error) {
 		plotMap[p.PlotIndex] = p
 	}
 	var out []PlotInfo
-	for i := 0; i < 3; i++ {
+	for i := 0; i < PlotsPerZone; i++ {
 		p, ok := plotMap[i]
 		if !ok {
 			out = append(out, PlotInfo{PlotIndex: i})
 			continue
+		}
+		var itemName string
+		if p.Mysterious {
+			itemName = "mysterious_seed"
+		} else {
+			itemName = p.ItemName
 		}
 		elapsed := time.Since(p.PlantTime).Seconds()
 		ready := elapsed >= float64(p.GrowTime)
@@ -122,12 +148,15 @@ func (s *Service) GetPlots(userID int64, zoneKey string) ([]PlotInfo, error) {
 			}
 		}
 		out = append(out, PlotInfo{
-			PlotIndex: p.PlotIndex,
-			ItemName:  p.ItemName,
-			PlantTime: p.PlantTime,
-			GrowTime:  p.GrowTime,
-			Ready:     ready,
-			Progress:  progress,
+			PlotIndex:  p.PlotIndex,
+			ItemName:   itemName,
+			PlantTime:  p.PlantTime,
+			GrowTime:   p.GrowTime,
+			Ready:      ready,
+			Progress:   progress,
+			Watered:    p.Watered,
+			Mutated:    p.Mutated,
+			Mysterious: p.Mysterious,
 		})
 	}
 	return out, nil
@@ -146,12 +175,13 @@ func (s *Service) Plant(userID int64, zoneKey string, plotIndex int, seedName st
 	if inv.Quantity < 1 {
 		return ErrNoSeed
 	}
-
 	if inv.Quantity <= 1 {
 		s.store.DB.Delete(&inv)
 	} else {
 		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
 	}
+
+	mysterious := seedName == "mysterious_seed"
 
 	level := s.getFarmerLevel(userID)
 	reduction := float64(level) * 0.01
@@ -161,13 +191,18 @@ func (s *Service) Plant(userID int64, zoneKey string, plotIndex int, seedName st
 	finalGrowTime := int(float64(growTime) * (1 - reduction))
 
 	if err := s.store.DB.Create(&model.UserFarming{
-		UserID:    userID,
-		ZoneKey:   zoneKey,
-		PlotIndex: plotIndex,
-		ItemName:  seedName,
-		PlantTime: time.Now(),
-		GrowTime:  finalGrowTime,
+		UserID:     userID,
+		ZoneKey:    zoneKey,
+		PlotIndex:  plotIndex,
+		ItemName:   seedName,
+		PlantTime:  time.Now(),
+		GrowTime:   finalGrowTime,
+		Mysterious: mysterious,
 	}).Error; err != nil {
+		return err
+	}
+
+	if err := s.store.IncrementGameLimit(userID, "farm"); err != nil {
 		return err
 	}
 	return nil
@@ -184,13 +219,36 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		return nil, ErrNotReady
 	}
 
-	crop := cropBySeedName(plot.ItemName)
-	if crop.Name == "" {
-		return nil, fmt.Errorf("unknown crop")
+	var cropName string
+	var mutation bool
+
+	if plot.Mysterious {
+		cropName = s.resolveMystery(plot.ItemName)
+		mutation = false
+	} else if plot.Mutated {
+		cropName = plot.ItemName
+		mutation = true
+	} else {
+		crop := cropBySeedName(plot.ItemName)
+		cropName = crop.Name
+
+		if mutated := s.CheckMutation(userID, cropName); mutated != "" {
+			cropName = mutated
+			mutation = true
+		}
 	}
+
+	crop := findCrop(cropName)
 
 	level := s.getFarmerLevel(userID)
 	quantity := 1
+
+	if plot.Watered {
+		if rand.Float64() < 0.35 {
+			quantity++
+		}
+	}
+
 	intBonus := charsvc.GetINTBonus(s.store, userID)
 	doubleChance := float64(level)*0.02 + (intBonus-1.0)*0.5
 	if rand.Float64() < doubleChance {
@@ -207,9 +265,21 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		quantity++
 	}
 
-	if err := s.store.DB.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ?", userID, crop.Name).
-		UpdateColumn("quantity", gorm.Expr("quantity + ?", quantity)).Error; err != nil {
+	if mutation {
+		quantity *= 2
+		if quantity < 2 {
+			quantity = 2
+		}
+	}
+
+	var value int
+	if mutation {
+		value = crop.Value * quantity
+	} else {
+		value = crop.Value * quantity
+	}
+
+	if err := s.store.AddItemRaw(s.store.DB, userID, cropName, quantity); err != nil {
 		return nil, err
 	}
 
@@ -221,6 +291,13 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 	}
 	if err := s.store.RecordActivity(userID, "items_farmed", quantity); err != nil {
 		return nil, err
+	}
+
+	var ch model.UserCropHarvest
+	if err := s.store.DB.Where("user_id = ? AND crop_name = ?", userID, cropName).First(&ch).Error; err != nil {
+		s.store.DB.Create(&model.UserCropHarvest{UserID: userID, CropName: cropName, Count: quantity})
+	} else {
+		s.store.DB.Model(&ch).UpdateColumn("count", gorm.Expr("count + ?", quantity))
 	}
 
 	s.store.DB.Delete(&plot)
@@ -244,7 +321,207 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 
 	charsvc.AddXP(s.store, userID, xp)
 
-	return &HarvestResult{CropName: crop.Name, Quantity: quantity, XP: xp}, nil
+	if err := s.store.IncrementGameLimit(userID, "farm"); err != nil {
+		return nil, err
+	}
+
+	return &HarvestResult{CropName: cropName, Quantity: quantity, XP: xp, Value: value, Mutated: mutation}, nil
+}
+
+func (s *Service) Water(userID int64, zoneKey string, plotIndex int) error {
+	var plot model.UserFarming
+	if err := s.store.DB.Where("user_id = ? AND zone_key = ? AND plot_index = ?", userID, zoneKey, plotIndex).First(&plot).Error; err != nil {
+		return fmt.Errorf("no crop found")
+	}
+	if plot.Watered {
+		return ErrAlreadyWatered
+	}
+
+	elapsed := time.Since(plot.PlantTime).Seconds()
+	if elapsed >= float64(plot.GrowTime) {
+		return ErrNotReady
+	}
+
+	if err := s.store.DB.Model(&plot).UpdateColumn("watered", true).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) Fertilize(userID int64, zoneKey string, plotIndex int) error {
+	var plot model.UserFarming
+	if err := s.store.DB.Where("user_id = ? AND zone_key = ? AND plot_index = ?", userID, zoneKey, plotIndex).First(&plot).Error; err != nil {
+		return fmt.Errorf("no crop found")
+	}
+
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "fertilizer").First(&inv).Error; err != nil {
+		return ErrNoFertilizer
+	}
+	if inv.Quantity < 1 {
+		return ErrNoFertilizer
+	}
+	if inv.Quantity <= 1 {
+		s.store.DB.Delete(&inv)
+	} else {
+		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
+	}
+
+	reduction := int(float64(plot.GrowTime) * 0.3)
+	newGrowTime := plot.GrowTime - reduction
+	if newGrowTime < 60 {
+		newGrowTime = 60
+	}
+	if err := s.store.DB.Model(&plot).UpdateColumn("grow_time", newGrowTime).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) GetAccessibleZones(userID int64) []string {
+	zones := []string{"public"}
+	var invs []model.Inventory
+	s.store.DB.Where("user_id = ? AND item_id IN (?)", userID, []string{"garden_plot", "tropical_greenhouse", "enchanted_orchard"}).Find(&invs)
+	owned := map[string]bool{}
+	for _, inv := range invs {
+		owned[inv.ItemID] = inv.Quantity > 0
+	}
+	if owned["garden_plot"] {
+		zones = append(zones, "veggie")
+	}
+	if owned["tropical_greenhouse"] {
+		zones = append(zones, "greenhouse")
+	}
+	if owned["enchanted_orchard"] {
+		zones = append(zones, "orchard")
+	}
+	return zones
+}
+
+func (s *Service) HasZoneAccess(userID int64, zoneKey string) bool {
+	if zoneKey == "public" {
+		return true
+	}
+	deedMap := map[string]string{
+		"veggie":     "garden_plot",
+		"greenhouse": "tropical_greenhouse",
+		"orchard":    "enchanted_orchard",
+	}
+	deed, ok := deedMap[zoneKey]
+	if !ok {
+		return false
+	}
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, deed).First(&inv).Error; err != nil {
+		return false
+	}
+	return inv.Quantity > 0
+}
+
+func (s *Service) CountActivePlots(userID int64) int {
+	var count int64
+	s.store.DB.Model(&model.UserFarming{}).Where("user_id = ?", userID).Count(&count)
+	return int(count)
+}
+
+func (s *Service) MaxTotalPlots(userID int64) int {
+	zones := s.GetAccessibleZones(userID)
+	return len(zones) * PlotsPerZone
+}
+
+func (s *Service) GetNextHarvest(userID int64) (string, int) {
+	var plots []model.UserFarming
+	if err := s.store.DB.Where("user_id = ?", userID).Find(&plots).Error; err != nil || len(plots) == 0 {
+		return "", 0
+	}
+	var closest *model.UserFarming
+	var closestRemaining int
+	for i := range plots {
+		elapsed := time.Since(plots[i].PlantTime).Seconds()
+		remaining := int(float64(plots[i].GrowTime) - elapsed)
+		if remaining <= 0 {
+			continue
+		}
+		if closest == nil || remaining < closestRemaining {
+			closest = &plots[i]
+			closestRemaining = remaining
+		}
+	}
+	if closest == nil {
+		return "", 0
+	}
+	var name string
+	if closest.Mysterious {
+		name = "mysterious_seed"
+	} else {
+		name = closest.ItemName
+	}
+	return name, closestRemaining
+}
+
+func (s *Service) GetFarmerLevel(userID int64) int {
+	return s.getFarmerLevel(userID)
+}
+
+func (s *Service) GetFarmerXP(userID int64) (int, int) {
+	var job model.Job
+	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "farmer").First(&job).Error; err != nil {
+		return 0, 50
+	}
+	next := 50 + job.Level*25
+	return job.XP, next
+}
+
+func (s *Service) HasBlessing(userID int64) bool {
+	_, ok := blessings[userID]
+	return ok
+}
+
+func (s *Service) GetBlessingZone(userID int64) string {
+	if b, ok := blessings[userID]; ok {
+		return b.ZoneKey
+	}
+	return ""
+}
+
+func (s *Service) ConsumeBlessing(userID int64) {
+	delete(blessings, userID)
+}
+
+func (s *Service) HasItem(userID int64, itemID string) bool {
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+		return false
+	}
+	return inv.Quantity > 0
+}
+
+func (s *Service) GetItemQuantity(userID int64, itemID string) int {
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+		return 0
+	}
+	return inv.Quantity
+}
+
+func (s *Service) ConsumeItem(userID int64, itemID string, quantity int) bool {
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+		return false
+	}
+	if inv.Quantity < quantity {
+		return false
+	}
+	if inv.Quantity <= quantity {
+		s.store.DB.Delete(&inv)
+	} else {
+		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity))
+	}
+	return true
+}
+
+func (s *Service) AddItem(userID int64, itemID string, quantity int) error {
+	return s.store.AddItemRaw(s.store.DB, userID, itemID, quantity)
 }
 
 func (s *Service) getFarmerLevel(userID int64) int {
@@ -262,4 +539,21 @@ func cropBySeedName(seedName string) Crop {
 		}
 	}
 	return Crop{}
+}
+
+func findCrop(name string) Crop {
+	for _, c := range Crops {
+		if c.Name == name {
+			return c
+		}
+	}
+	return Crop{Name: name, Value: 0}
+}
+
+var blessings = map[int64]struct {
+	ZoneKey string
+}{}
+
+func SetBlessing(userID int64, zoneKey string) {
+	blessings[userID] = struct{ ZoneKey string }{ZoneKey: zoneKey}
 }

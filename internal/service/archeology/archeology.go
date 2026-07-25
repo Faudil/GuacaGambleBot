@@ -11,25 +11,204 @@ import (
 	"guacagamblebot/internal/store"
 )
 
-var ErrDigLimit = errors.New("dig daily limit reached")
+const JournalPageCount = 8
+
+var (
+	ErrDigLimit   = errors.New("dig daily limit reached")
+	ErrNoMoney    = errors.New("not enough money")
+	ErrFinished   = errors.New("game already finished")
+	ErrLocked     = errors.New("site locked")
+	ErrNoActions  = errors.New("no actions remaining")
+	ErrNoFossils  = errors.New("not enough fossils")
+)
+
+type LayerType int
+
+const (
+	LayerSoftSoil LayerType = iota
+	LayerHardRock
+	LayerGravel
+	LayerClay
+	LayerBedrock
+)
+
+type LayerProfile struct {
+	Type   LayerType
+	Depth  int
+	Emoji  string
+	NameID string
+}
+
+type ToolAction struct {
+	ID            string
+	NameID        string
+	DepthRem      int
+	RiskPct       int
+	IntLoss       int
+	Emoji         string
+}
+
+type SiteDef struct {
+	Key         string
+	NameID      string
+	DescID      string
+	Depth       int
+	Cost        int
+	MinLevel    int
+	LayerSeqs   [][]LayerType
+	FossilRarities []string
+	Color       int
+}
+
+var Tools = map[string]ToolAction{
+	"dynamite": {ID: "dynamite", DepthRem: 20, RiskPct: 50, IntLoss: 30, Emoji: "🧨"},
+	"hammer":   {ID: "hammer", DepthRem: 10, RiskPct: 15, IntLoss: 10, Emoji: "🔨"},
+	"brush":    {ID: "brush", DepthRem: 2, RiskPct: 0, IntLoss: 0, Emoji: "🖌️"},
+}
+
+var LayerDefs = map[LayerType]struct {
+	BaseNameID string
+	Effects    map[string]ToolEffect
+	Emoji      string
+}{
+	LayerSoftSoil: {
+		BaseNameID: "layer_soft_soil",
+		Emoji:      "🟫",
+		Effects: map[string]ToolEffect{
+			"dynamite": {DepthMul: 1, RiskMul: 0.8, IntMul: 1},
+			"hammer":   {DepthMul: 1, RiskMul: 0.7, IntMul: 1},
+			"brush":    {DepthMul: 2, RiskMul: 0, IntMul: 0},
+		},
+	},
+	LayerHardRock: {
+		BaseNameID: "layer_hard_rock",
+		Emoji:      "🪨",
+		Effects: map[string]ToolEffect{
+			"dynamite": {DepthMul: 1, RiskMul: 1, IntMul: 1},
+			"hammer":   {DepthMul: 1, RiskMul: 1, IntMul: 1},
+			"brush":    {DepthMul: 0.5, RiskMul: 0, IntMul: 0},
+		},
+	},
+	LayerGravel: {
+		BaseNameID: "layer_gravel",
+		Emoji:      "🪨",
+		Effects: map[string]ToolEffect{
+			"dynamite": {DepthMul: 1, RiskMul: 1.2, IntMul: 1.2},
+			"hammer":   {DepthMul: 0.8, RiskMul: 0.7, IntMul: 0.5},
+			"brush":    {DepthMul: 1, RiskMul: 0, IntMul: 0},
+		},
+	},
+	LayerClay: {
+		BaseNameID: "layer_clay",
+		Emoji:      "🟤",
+		Effects: map[string]ToolEffect{
+			"dynamite": {DepthMul: 0.75, RiskMul: 0.6, IntMul: 0.7},
+			"hammer":   {DepthMul: 0.6, RiskMul: 0.3, IntMul: 0.5},
+			"brush":    {DepthMul: 2, RiskMul: 0, IntMul: 0},
+		},
+	},
+	LayerBedrock: {
+		BaseNameID: "layer_bedrock",
+		Emoji:      "⬛",
+		Effects: map[string]ToolEffect{
+			"dynamite": {DepthMul: 0.75, RiskMul: 1.4, IntMul: 1.3},
+			"hammer":   {DepthMul: 0.4, RiskMul: 2, IntMul: 1.5},
+			"brush":    {DepthMul: 0, RiskMul: 0, IntMul: 0},
+		},
+	},
+}
+
+type ToolEffect struct {
+	DepthMul float64
+	RiskMul  float64
+	IntMul   float64
+}
 
 type GameState struct {
-	PermitType string
-	Depth      int
-	Integrity  int
-	Actions    int
-	Finished   bool
+	UserID      int64
+	PermitType  string
+	Depth       int
+	MaxDepth    int
+	Integrity   int
+	Actions     int
+	Finished    bool
+	CurrentLayer LayerType
+	LayerSeq    []LayerType
+	LayerIdx    int
+	LastTool    string
+	Site        *SiteDef
+	CursedDebuff bool
+	RevealedLayer bool
 }
 
 type DigResult struct {
-	ItemName string
-	Value    int
+	ItemName    string
+	Value       int
+	Quality     string
+	Integrity   int
+	IsEgg       bool
+	IsShadow    bool
+	IsCursed    bool
+	JournalPage string
+	XP          int
+	Quantity    int
 }
 
-var (
-	ErrNoMoney  = errors.New("not enough money")
-	ErrFinished = errors.New("game already finished")
+type ActionOutcome struct {
+	State       GameState
+	DepthRem    int
+	IntLoss     int
+	Damaged     bool
+	Finished    bool
+	LayerShift  bool
+	Event       *DigEvent
+}
+
+type DigEvent struct {
+	Type        EventType
+	TitleID     string
+	DescID      string
+	Choices     []EventChoice
+	Data        map[string]any
+}
+
+type ActionType string
+
+const (
+	ActionDynamite ActionType = "dynamite"
+	ActionHammer   ActionType = "hammer"
+	ActionBrush    ActionType = "brush"
+	ActionScan     ActionType = "scan"
 )
+
+type EventType int
+
+const (
+	EventNone EventType = iota
+	EventFossilWhisper
+	EventCaveIn
+	EventGuardian
+	EventBuriedTreasure
+	EventFossilEgg
+)
+
+type EventChoice struct {
+	LabelID string
+	Value   string
+	Style   int
+}
+
+type EventResult struct {
+	TitleID      string
+	DescID       string
+	CoinChange   int
+	ActionsLost  int
+	IntLoss      int
+	ItemGiven    string
+	ItemQty      int
+	DepthGain    int
+	BackToDig    bool
+}
 
 type Service struct {
 	store *store.Store
@@ -40,7 +219,7 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
-func (s *Service) NewGame(userID int64, permitType string) (*GameState, error) {
+func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
 	ok, _, err := s.store.CheckGameLimit(userID, "dig", 10)
 	if err != nil {
 		return nil, err
@@ -49,76 +228,128 @@ func (s *Service) NewGame(userID int64, permitType string) (*GameState, error) {
 		return nil, ErrDigLimit
 	}
 
-	if permitType == "faille" {
+	site, ok := Sites[siteKey]
+	if !ok {
+		return nil, errors.New("unknown site")
+	}
+
+	if siteKey != "riverbed" && siteKey != "cliffside" {
+		level := s.GetArcheologistLevel(userID)
+		if level < site.MinLevel {
+			return nil, ErrLocked
+		}
+	}
+	if site.Cost > 0 {
 		bal, err := s.store.GetBalance(userID)
 		if err != nil {
 			return nil, err
 		}
-		if bal < 200 {
+		if bal < site.Cost {
 			return nil, ErrNoMoney
 		}
-		if _, err := s.store.UpdateBalance(userID, -200); err != nil {
+		if _, err := s.store.UpdateBalance(userID, -site.Cost); err != nil {
 			return nil, err
 		}
 	}
 
 	_ = s.store.IncrementGameLimit(userID, "dig")
 
+	seq := site.LayerSeqs[rand.Intn(len(site.LayerSeqs))]
+	currentLayer := seq[0]
+
+	var cursed bool
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "cursed_artifact").First(&model.Inventory{}).Error; err == nil {
+		cursed = true
+	}
+
 	return &GameState{
-		PermitType: permitType,
-		Depth:      50,
-		Integrity:  100,
-		Actions:    5,
+		UserID:       userID,
+		PermitType:   siteKey,
+		Depth:        site.Depth,
+		MaxDepth:     site.Depth,
+		Integrity:    100,
+		Actions:      5,
+		CurrentLayer: currentLayer,
+		LayerSeq:     seq,
+		LayerIdx:     0,
+		Site:         site,
+		CursedDebuff: cursed,
 	}, nil
 }
 
-type ActionType string
-
-const (
-	ActionDynamite ActionType = "dynamite"
-	ActionHammer   ActionType = "hammer"
-	ActionBrush    ActionType = "brush"
-)
-
-type ActionOutcome struct {
-	State      GameState
-	DepthRem   int
-	RiskChance int
-	IntLoss    int
-	Damaged    bool
-	Finished   bool
-}
-
 func (s *Service) ApplyAction(state *GameState, action ActionType) *ActionOutcome {
-	var depthRem, riskChance, intLoss int
-	switch action {
-	case ActionDynamite:
-		depthRem, riskChance, intLoss = 20, 50, 30
-	case ActionHammer:
-		depthRem, riskChance, intLoss = 10, 15, 10
-	case ActionBrush:
-		depthRem, riskChance, intLoss = 2, 0, 0
+	if state.Finished {
+		return &ActionOutcome{Finished: true}
+	}
+	if action == ActionScan {
+		state.Actions--
+		state.RevealedLayer = true
+		if state.Actions <= 0 {
+			state.Finished = true
+		}
+		return &ActionOutcome{
+			State:      *state,
+			LayerShift: false,
+			Finished:   state.Finished,
+		}
 	}
 
-	state.Actions--
+	state.LastTool = string(action)
+	tool := Tools[string(action)]
+	layer := LayerDefs[state.CurrentLayer]
+	effect := layer.Effects[string(action)]
+
+	depthRem := int(float64(tool.DepthRem) * effect.DepthMul)
+	if depthRem < 1 {
+		depthRem = 1
+	}
+
+	masteryBonus := 1.0
+	uses := s.getToolUses(state.UserID, string(action))
+	if uses >= 200 {
+		masteryBonus = 1.30
+	} else if uses >= 100 {
+		masteryBonus = 1.20
+	} else if uses >= 50 {
+		masteryBonus = 1.10
+	}
+	depthRem = int(float64(depthRem) * masteryBonus)
+
+	if depthRem > state.Depth {
+		depthRem = state.Depth
+	}
 	state.Depth -= depthRem
-	if state.Depth < 0 {
-		state.Depth = 0
+
+	riskPct := int(float64(tool.RiskPct) * effect.RiskMul)
+	if state.CursedDebuff {
+		riskPct += 10
 	}
-
-	finalRisk := riskChance
-	if state.PermitType == "safe" && riskChance > 0 {
-		finalRisk = riskChance / 2
+	if state.PermitType == "safe" || state.PermitType == "riverbed" {
+		riskPct /= 2
 	}
-
-
 	damaged := false
-	if finalRisk > 0 && rand.Intn(100) < finalRisk {
+	intLoss := 0
+	if riskPct > 0 && rand.Intn(100) < riskPct {
+		intLoss = int(float64(tool.IntLoss) * effect.IntMul)
+		if intLoss < 1 {
+			intLoss = 1
+		}
 		state.Integrity -= intLoss
 		if state.Integrity < 0 {
 			state.Integrity = 0
 		}
 		damaged = true
+	}
+
+	state.Actions--
+	s.incrementToolUses(state.UserID, string(action))
+
+	layerShift := false
+	if state.Depth <= 0 && state.LayerIdx < len(state.LayerSeq)-1 {
+		state.LayerIdx++
+		state.CurrentLayer = state.LayerSeq[state.LayerIdx]
+		state.Depth += state.Site.Depth / len(state.LayerSeq)
+		layerShift = true
 	}
 
 	finished := state.Depth <= 0 || state.Integrity <= 0 || state.Actions <= 0
@@ -127,93 +358,392 @@ func (s *Service) ApplyAction(state *GameState, action ActionType) *ActionOutcom
 	return &ActionOutcome{
 		State:      *state,
 		DepthRem:   depthRem,
-		RiskChance: riskChance,
 		IntLoss:    intLoss,
 		Damaged:    damaged,
 		Finished:   finished,
+		LayerShift: layerShift,
 	}
+}
+
+func (s *Service) GetToolEffectiveness(state *GameState, action ActionType) map[string]int {
+	tool := Tools[string(action)]
+	layer := LayerDefs[state.CurrentLayer]
+	effect := layer.Effects[string(action)]
+	depth := int(float64(tool.DepthRem) * effect.DepthMul)
+	risk := int(float64(tool.RiskPct) * effect.RiskMul)
+	return map[string]int{"depth": depth, "risk": risk}
 }
 
 func (s *Service) Resolve(state *GameState) *DigResult {
 	if state.Integrity <= 0 {
-		return &DigResult{ItemName: "bone_dust", Value: 1}
+		xp := 10
+		return &DigResult{ItemName: "bone_dust", Value: 1, Quality: "disaster", Integrity: 0, XP: xp, Quantity: 1}
 	}
 	if state.Depth > 0 && state.Actions <= 0 {
-		return &DigResult{ItemName: "bone_dust", Value: 1}
+		xp := 10
+		return &DigResult{ItemName: "bone_dust", Value: 1, Quality: "disaster", Integrity: state.Integrity, XP: xp, Quantity: 1}
 	}
 
 	if state.Integrity < 50 {
-		return &DigResult{ItemName: "damaged_fossil", Value: 50}
+		xp := 25
+		return &DigResult{ItemName: "damaged_fossil", Value: 50, Quality: "damaged", Integrity: state.Integrity, XP: xp, Quantity: 1}
 	}
 
-	if state.Integrity == 100 {
-		return &DigResult{ItemName: "pure_dna", Value: 3000}
-	}
+	xpBase := state.Integrity / 2
 
-	if state.PermitType == "safe" {
-		roll := rand.Float64()
-		if roll < 0.60 {
-			return &DigResult{ItemName: "common_fossil", Value: 150}
-		} else if roll < 0.90 {
-			return &DigResult{ItemName: "rare_fossil", Value: 300}
-		} else {
-			return &DigResult{ItemName: "epic_fossil", Value: 500}
+	rarityPool := state.Site.FossilRarities
+
+	if state.Integrity >= 95 && state.LastTool == "brush" {
+		if rand.Float64() < 0.02 {
+			xp := 200
+			return &DigResult{ItemName: "coelacanth_egg", Value: 2500, Quality: "living", Integrity: state.Integrity, XP: xp, IsEgg: true, Quantity: 1}
 		}
 	}
 
-	return &DigResult{ItemName: "legendary_fragment", Value: 1000}
+	if state.Integrity < 15 && state.Integrity > 5 && state.LastTool != "brush" {
+		if rand.Float64() < 0.15 {
+			xp := 300
+			return &DigResult{ItemName: "shadow_fossil", Value: 5000, Quality: "shadow", Integrity: state.Integrity, XP: xp, IsShadow: true, Quantity: 1}
+		}
+	}
+
+	if state.Integrity < 30 && state.LastTool == "dynamite" {
+		if rand.Float64() < 0.05 {
+			xp := 100
+			return &DigResult{ItemName: "cursed_artifact", Value: 800, Quality: "cursed", Integrity: state.Integrity, XP: xp, IsCursed: true, Quantity: 1}
+		}
+	}
+
+	journalRoll := rand.Float64()
+	if journalRoll < 0.01 {
+		for i := 1; i <= JournalPageCount; i++ {
+			pageID := itoa(i)
+			var inv model.Inventory
+			if err := s.store.DB.Where("user_id = ? AND item_id = ?", state.UserID, "journal_page_"+pageID).First(&inv).Error; err != nil {
+				xp := 50
+				return &DigResult{ItemName: "journal_page_" + pageID, Value: 1, Quality: "journal", Integrity: state.Integrity, XP: xp, JournalPage: "journal_page_" + pageID, Quantity: 1}
+			}
+		}
+	}
+
+	xp := xpBase
+	var chosen string
+	if len(rarityPool) == 1 {
+		chosen = rarityPool[0]
+	} else {
+		totalWeight := 0
+		weights := make([]int, len(rarityPool))
+		for i, r := range rarityPool {
+			w := fossilWeight(r)
+			weights[i] = w
+			totalWeight += w
+		}
+		roll := rand.Intn(totalWeight)
+		cumulative := 0
+		for i, w := range weights {
+			cumulative += w
+			if roll < cumulative {
+				chosen = rarityPool[i]
+				break
+			}
+		}
+	}
+
+	itemMap := map[string]string{
+		"common":   "common_fossil",
+		"rare":     "rare_fossil",
+		"epic":     "epic_fossil",
+		"legendary": "legendary_fragment",
+		"pure_dna": "pure_dna",
+	}
+	valueMap := map[string]int{
+		"common": 150, "rare": 300, "epic": 500, "legendary": 1000, "pure_dna": 3000,
+	}
+
+	itemID := itemMap[chosen]
+	val := valueMap[chosen]
+	xp += val / 2
+
+	quantity := 1
+	if state.Integrity >= 100 {
+		quantity = 2
+	}
+	level := s.GetArcheologistLevel(state.UserID)
+	quantity += level / 5
+	if quantity < 1 {
+		quantity = 1
+	}
+	if quantity > 10 {
+		quantity = 10
+	}
+
+	return &DigResult{ItemName: itemID, Value: val, Quality: chosen, Integrity: state.Integrity, XP: xp, Quantity: quantity}
+}
+
+func (s *Service) GetArcheologistLevel(userID int64) int {
+	var job model.Job
+	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
+		return 0
+	}
+	return job.Level
+}
+
+func (s *Service) GetArcheologistXP(userID int64) (int, int) {
+	var job model.Job
+	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
+		return 0, 50
+	}
+	next := 50 + job.Level*25
+	return job.XP, next
+}
+
+func (s *Service) addArcheologistXP(userID int64, xp int) {
+	var job model.Job
+	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			s.store.DB.Create(&model.Job{UserID: userID, JobName: "archeologist", Level: 1, XP: xp})
+		}
+		return
+	}
+	job.XP += xp
+	next := 50 + job.Level*25
+	if job.XP >= next {
+		job.XP -= next
+		job.Level++
+	}
+	s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "archeologist").
+		Updates(map[string]any{"xp": job.XP, "level": job.Level})
+}
+
+type SiteInfo struct {
+	Key      string
+	NameID   string
+	DescID   string
+	Cost     int
+	MinLevel int
+	Depth    int
+	Color    int
+	Unlocked bool
+}
+
+func (s *Service) GetSiteInfo(userID int64) []SiteInfo {
+	level := s.GetArcheologistLevel(userID)
+	var infos []SiteInfo
+	for _, site := range Sites {
+		unlocked := true
+		if site.MinLevel > level {
+			unlocked = false
+		}
+		infos = append(infos, SiteInfo{
+			Key:      site.Key,
+			NameID:   site.NameID,
+			DescID:   site.DescID,
+			Cost:     site.Cost,
+			MinLevel: site.MinLevel,
+			Depth:    site.Depth,
+			Color:    site.Color,
+			Unlocked: unlocked,
+		})
+	}
+	return infos
+}
+
+func (s *Service) AwardResult(userID int64, res *DigResult) error {
+	if res.ItemName != "" {
+		qty := res.Quantity
+		if qty < 1 {
+			qty = 1
+		}
+		if err := s.store.AddItemRaw(s.store.DB, userID, res.ItemName, qty); err != nil {
+			return err
+		}
+		s.trackFossilHarvest(userID, res.ItemName, qty)
+	}
+	if res.XP > 0 {
+		s.addArcheologistXP(userID, res.XP)
+	}
+	if err := s.store.RecordActivity(userID, "items_digged", 1); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) trackFossilHarvest(userID int64, fossilID string, quantity int) {
+	var fh model.UserFossilHarvest
+	if err := s.store.DB.Where("user_id = ? AND fossil_id = ?", userID, fossilID).First(&fh).Error; err != nil {
+		s.store.DB.Create(&model.UserFossilHarvest{UserID: userID, FossilID: fossilID, Count: quantity})
+	} else {
+		s.store.DB.Model(&fh).UpdateColumn("count", gorm.Expr("count + ?", quantity))
+	}
+}
+
+func (s *Service) SellResult(userID int64, res *DigResult) (int, error) {
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, res.ItemName).First(&inv).Error; err != nil {
+		return 0, errors.New("item not in inventory")
+	}
+	if inv.Quantity < 1 {
+		return 0, errors.New("item not in inventory")
+	}
+	if inv.Quantity <= 1 {
+		s.store.DB.Delete(&inv)
+	} else {
+		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
+	}
+
+	price := int(float64(res.Value) * 1.2)
+	newBal, err := s.store.UpdateBalance(userID, price)
+	if err != nil {
+		return 0, err
+	}
+
+	semiXP := res.XP / 2
+	if semiXP > 0 {
+		s.addArcheologistXP(userID, semiXP)
+	}
+	return newBal, nil
+}
+
+func (s *Service) Reanimate(userID int64, rarity string) (petName string, success bool, err error) {
+	pool, ok := ReanimatePools[rarity]
+	if !ok {
+		return "", false, errors.New("invalid rarity")
+	}
+
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, pool.ItemName, 5).First(&inv).Error; err != nil {
+		return "", false, ErrNoFossils
+	}
+
+	level := s.GetArcheologistLevel(userID)
+	successRate := 0.50 + float64(level)*0.02
+	if successRate > 0.90 {
+		successRate = 0.90
+	}
+
+	if rand.Float64() < successRate {
+		if inv.Quantity <= 5 {
+			s.store.DB.Delete(&inv)
+		} else {
+			s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 5"))
+		}
+
+		petName := pool.Pets[rand.Intn(len(pool.Pets))]
+		pet := model.UserPet{
+			UserID:   userID,
+			PetType:  petName,
+			Nickname: petName,
+			Level:    1,
+			XP:       0,
+			MaxHP:    50,
+			HP:       50,
+			Atk:      10,
+			Defense:  5,
+			Speed:    10,
+			DGE:      5,
+			ACC:      0,
+			CritC:    5,
+			CritD:    1.5,
+			IsActive: false,
+		}
+		if err := s.store.DB.Create(&pet).Error; err != nil {
+			return "", false, err
+		}
+		s.addArcheologistXP(userID, 100)
+		return petName, true, nil
+	}
+
+	if inv.Quantity <= 3 {
+		s.store.DB.Delete(&inv)
+	} else {
+		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 3"))
+	}
+	s.addArcheologistXP(userID, 25)
+	return "", false, nil
+}
+
+func (s *Service) GetFossilCount(userID int64, itemID string) int {
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+		return 0
+	}
+	return inv.Quantity
+}
+
+func fossilWeight(rarity string) int {
+	switch rarity {
+	case "common":
+		return 50
+	case "rare":
+		return 30
+	case "epic":
+		return 15
+	case "legendary":
+		return 4
+	case "pure_dna":
+		return 1
+	}
+	return 10
+}
+
+func (s *Service) getToolUses(userID int64, toolID string) int {
+	col := "tool_" + toolID + "_uses"
+	var val int
+	s.store.DB.Model(&model.UserStat{}).Where("user_id = ?", userID).Pluck(col, &val)
+	return val
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	s := ""
+	for n > 0 {
+		s = string(rune('0'+n%10)) + s
+		n /= 10
+	}
+	return s
+}
+
+func GetLayerNameID(lt LayerType) string {
+	switch lt {
+	case LayerSoftSoil:
+		return "layer_soft_soil"
+	case LayerHardRock:
+		return "layer_hard_rock"
+	case LayerGravel:
+		return "layer_gravel"
+	case LayerClay:
+		return "layer_clay"
+	case LayerBedrock:
+		return "layer_bedrock"
+	}
+	return ""
+}
+
+func GetLayerEmoji(lt LayerType) string {
+	switch lt {
+	case LayerSoftSoil:
+		return "🟫"
+	case LayerHardRock:
+		return "🪨"
+	case LayerGravel:
+		return "🔘"
+	case LayerClay:
+		return "🟤"
+	case LayerBedrock:
+		return "⬛"
+	}
+	return "❓"
 }
 
 var ReanimatePools = map[string]struct {
 	ItemName string
 	Pets     []string
 }{
-	"commun":    {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
-	"rare":      {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
-	"epic":      {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
+	"common":   {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
+	"rare":     {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
+	"epic":     {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
 	"legendary": {ItemName: "legendary_fragment", Pets: []string{"Dragon", "Tyrannosaure", "Diplodocus", "Mamouth"}},
-	"pure_dna":  {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
-}
-
-func (s *Service) Reanimate(userID int64, rarity string) (string, error) {
-	pool, ok := ReanimatePools[rarity]
-	if !ok {
-		return "", errors.New("invalid rarity")
-	}
-
-	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, pool.ItemName, 5).First(&inv).Error; err != nil {
-		return "", errors.New("not enough parts")
-	}
-
-	if inv.Quantity <= 5 {
-		s.store.DB.Delete(&inv)
-	} else {
-		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 5"))
-	}
-
-	petName := pool.Pets[rand.Intn(len(pool.Pets))]
-
-	pet := model.UserPet{
-		UserID:   userID,
-		PetType:  petName,
-		Nickname: petName,
-		Level:    1,
-		XP:       0,
-		MaxHP:    50,
-		HP:       50,
-		Atk:      10,
-		Defense:  5,
-		Speed:    10,
-		DGE:      5,
-		ACC:      0,
-		CritC:    5,
-		CritD:    1.5,
-		IsActive: false,
-	}
-	if err := s.store.DB.Create(&pet).Error; err != nil {
-		return "", err
-	}
-
-	return petName, nil
+	"pure_dna": {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
 }

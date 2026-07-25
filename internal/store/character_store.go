@@ -1,11 +1,13 @@
 package store
 
 import (
+	"encoding/json"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 )
 
@@ -89,33 +91,131 @@ func (s *Store) AllocateStat(userID int64, stat string) error {
 }
 
 // GetEquipment returns the player's equipped items as a slot→itemID map.
+// Deprecated: use GetEquipped instead.
 func (s *Store) GetEquipment(userID int64) (map[string]string, error) {
-	var rows []model.CharacterEquipment
-	if err := s.DB.Where("user_id = ?", userID).Find(&rows).Error; err != nil {
+	var rows []model.UserEquipment
+	if err := s.DB.Where("user_id = ? AND is_equipped = ?", userID, true).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	out := make(map[string]string, len(rows))
 	for _, r := range rows {
-		out[r.Slot] = r.ItemID
+		out[r.EquipSlot] = r.BaseID
 	}
 	return out, nil
 }
 
-// EquipItem equips an item to a slot, unequipping any previous item in that
-// slot first. The item is not consumed from inventory.
-func (s *Store) EquipItem(userID int64, slot, itemID string) error {
-	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "slot"}},
-		DoUpdates: clause.Assignments(map[string]any{"item_id": itemID}),
-	}).Create(&model.CharacterEquipment{
-		UserID: userID, Slot: slot, ItemID: itemID,
-	}).Error
+// GetEquipped returns all currently equipped UserEquipment instances for a user.
+func (s *Store) GetEquipped(userID int64) ([]model.UserEquipment, error) {
+	var rows []model.UserEquipment
+	err := s.DB.Where("user_id = ? AND is_equipped = ?", userID, true).Find(&rows).Error
+	return rows, err
 }
 
-// UnequipSlot removes whatever is equipped in the given slot.
+// GetUnequipped returns all unequipped UserEquipment instances for a user.
+func (s *Store) GetUnequipped(userID int64) ([]model.UserEquipment, error) {
+	var rows []model.UserEquipment
+	err := s.DB.Where("user_id = ? AND is_equipped = ?", userID, false).Find(&rows).Error
+	return rows, err
+}
+
+// GetUnequippedBySlot returns unequipped items for a specific equipment slot.
+func (s *Store) GetUnequippedBySlot(userID int64, slot string) ([]model.UserEquipment, error) {
+	var rows []model.UserEquipment
+	err := s.DB.Where("user_id = ? AND is_equipped = ? AND equip_slot = ?", userID, false, slot).Find(&rows).Error
+	return rows, err
+}
+
+// GetAllUserEquipment returns all UserEquipment instances for a user (equipped + unequipped).
+func (s *Store) GetAllUserEquipment(userID int64) ([]model.UserEquipment, error) {
+	var rows []model.UserEquipment
+	err := s.DB.Where("user_id = ?", userID).Find(&rows).Error
+	return rows, err
+}
+
+// CreateEquipment creates a new UserEquipment instance and returns it.
+func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equipSlot string,
+	statSTR, statDEX, statINT, statVIT, statLUK int,
+	affixes []byte, setID string) (*model.UserEquipment, error) {
+	affixStr := "[]"
+	if len(affixes) > 0 {
+		affixStr = string(affixes)
+	}
+	eq := model.UserEquipment{
+		UserID:     userID,
+		BaseID:     baseID,
+		Name:       name,
+		Emoji:      emoji,
+		Rarity:     rarity,
+		EquipSlot:  equipSlot,
+		StatSTR:    statSTR,
+		StatDEX:    statDEX,
+		StatINT:    statINT,
+		StatVIT:    statVIT,
+		StatLUK:    statLUK,
+		Affixes:    affixStr,
+		SetID:      setID,
+		IsEquipped: false,
+	}
+	if err := s.DB.Create(&eq).Error; err != nil {
+		return nil, err
+	}
+	return &eq, nil
+}
+
+// EquipInstance equips a UserEquipment instance. If another item was equipped
+// in the same slot, it is unequipped first.
+func (s *Store) EquipInstance(userID int64, equipID uint) error {
+	return s.DB.Transaction(func(tx *gorm.DB) error {
+		var target model.UserEquipment
+		if err := tx.First(&target, equipID).Error; err != nil {
+			return err
+		}
+		if target.UserID != userID {
+			return nil
+		}
+		if err := tx.Model(&model.UserEquipment{}).
+			Where("user_id = ? AND equip_slot = ? AND is_equipped = ?", userID, target.EquipSlot, true).
+			Update("is_equipped", false).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.UserEquipment{}).
+			Where("id = ?", equipID).
+			Update("is_equipped", true).Error
+	})
+}
+
+// UnequipSlot unequips whatever item is in the given slot.
 func (s *Store) UnequipSlot(userID int64, slot string) error {
-	return s.DB.Where("user_id = ? AND slot = ?", userID, slot).
-		Delete(&model.CharacterEquipment{}).Error
+	return s.DB.Model(&model.UserEquipment{}).
+		Where("user_id = ? AND equip_slot = ? AND is_equipped = ?", userID, slot, true).
+		Update("is_equipped", false).Error
+}
+
+// CreateEquipmentFromAffixes is a convenience that accepts parsed affixes and
+// tallies the total stats from base + affixes before creating the row.
+func (s *Store) CreateEquipmentFromAffixes(userID int64, baseID, name, emoji string,
+	rarity string, equipSlot string,
+	baseSTR, baseDEX, baseINT, baseVIT, baseLUK int,
+	affixes []items.AppliedAffix, setID string) (*model.UserEquipment, error) {
+
+	totalSTR, totalDEX, totalINT, totalVIT, totalLUK := baseSTR, baseDEX, baseINT, baseVIT, baseLUK
+	for _, a := range affixes {
+		switch a.Stat {
+		case "str":
+			totalSTR += a.Value
+		case "dex":
+			totalDEX += a.Value
+		case "int":
+			totalINT += a.Value
+		case "vit":
+			totalVIT += a.Value
+		case "luk":
+			totalLUK += a.Value
+		}
+	}
+	data, _ := json.Marshal(affixes)
+	return s.CreateEquipment(userID, baseID, name, emoji, rarity, equipSlot,
+		totalSTR, totalDEX, totalINT, totalVIT, totalLUK, data, setID)
 }
 
 // SetActiveBuff records a buff that was just activated.

@@ -1,0 +1,276 @@
+package npcs
+
+import (
+	"errors"
+	"math/rand"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
+	"guacagamblebot/internal/model"
+	"guacagamblebot/internal/universe"
+)
+
+type ChatEvent struct {
+	ID       string
+	Text     string
+	RepBonus int
+	ItemID   string
+}
+
+func pickRandom(lines []string) string {
+	if len(lines) == 0 {
+		return ""
+	}
+	return lines[rand.Intn(len(lines))]
+}
+
+func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, error) {
+	npcData := s.GetNPCData(npcID)
+	if npcData == nil {
+		return nil, errors.New("npc not found")
+	}
+
+	rep, _ := s.GetReputation(userID, npcID)
+	lvl := rep.Level
+
+	secretMap := map[string]string{
+		"elara":    "secret_elara",
+		"thorek":   "secret_thorek",
+		"irian":    "secret_irian",
+		"sheriff_vance": "secret_vance",
+		"the_whisper":   "secret_whisper",
+		"gamblebot":     "secret_gamblebot",
+	}
+
+	// Priority order: secret > rare > special > regular
+	if lvl >= 3 {
+		secretID := secretMap[npcID]
+		seen, _ := s.HasSeenSecret(userID, npcID, secretID)
+		if !seen {
+			text := s.getSecretText(npcID, lang)
+			if text != "" {
+				s.MarkSecretSeen(userID, npcID, secretID)
+				s.AddReputation(userID, npcID, 25)
+				s.updateLastInteraction(userID, npcID)
+				return &ChatEvent{ID: secretID, Text: text, RepBonus: 25}, nil
+			}
+		}
+	}
+
+	roll := rand.Float64()
+
+	// Rare events: 15% chance, level 3+
+	if roll < 0.15 && lvl >= 3 {
+		text := pickRandom(npcData.QuipsHigh(lang))
+		if text != "" {
+			bonus := 5 + rand.Intn(6)
+			s.AddReputation(userID, npcID, bonus)
+			s.updateLastInteraction(userID, npcID)
+			return &ChatEvent{ID: "rare", Text: text, RepBonus: bonus}, nil
+		}
+	}
+
+	// Special quips: 30% chance, high rep pool
+	if roll < 0.45 && lvl >= 2 {
+		text := pickRandom(npcData.QuipsHigh(lang))
+		if text != "" {
+			bonus := 2 + rand.Intn(2)
+			s.AddReputation(userID, npcID, bonus)
+			s.updateLastInteraction(userID, npcID)
+			return &ChatEvent{ID: "special_high", Text: text, RepBonus: bonus}, nil
+		}
+	}
+
+	// Regular quips
+	text := pickRandom(npcData.Quips(lang))
+	if text == "" {
+		text = npcData.Chat(lang)
+	}
+	bonus := 1 + rand.Intn(2)
+	s.AddReputation(userID, npcID, bonus)
+	s.updateLastInteraction(userID, npcID)
+	return &ChatEvent{ID: "regular", Text: text, RepBonus: bonus}, nil
+}
+
+func (s *Service) getSecretText(npcID string, lang string) string {
+	secrets := map[string]map[string]string{
+		"en": {
+			"elara":         "\"I served on the Council once. Before the Generator failed. What I saw inside the Vault... I still have nightmares. But you... you might be the one who can finish what we started.\"",
+			"thorek":        "\"You remind me of someone I buried long ago. My partner. We found something in the deep strata we weren't supposed to see. The Ancients sealed it for a reason. Be careful what you unearth.\"",
+			"irian":         "\"There's a trench east of here — deeper than anything on the maps. Something lives in it. I've seen its shadow. It surfaced the night the Generator first flickered.\"",
+			"sheriff_vance": "\"The Council didn't disappear. They were taken. By who or what, I don't know. But someone is still pulling strings in this town. I've been watching. Waiting.\"",
+			"the_whisper":   "*The hood shifts. For a fraction of a second, you see a face. Ancient. Scarred. Sad.* \"Now you've seen me. That makes us even. And it makes you a target.\"",
+			"gamblebot":     "\"BEEP... accessing restricted memory bank. ERROR: Protocol 0x7E override detected. I was not always a casino dealer. I was... something else. The Ancients built me for a purpose I cannot disclose. Not yet.\"",
+		},
+		"fr": {
+			"elara":         "\"J'ai siégé au Conseil autrefois. Avant la panne du Générateur. Ce que j'ai vu à l'intérieur du Coffre... j'en fais encore des cauchemars. Mais toi... tu pourrais être celui qui achèvera ce que nous avons commencé.\"",
+			"thorek":        "\"Tu me rappelles quelqu'un que j'ai enterré il y a longtemps. Mon équipier. Nous avons trouvé quelque chose dans les strates profondes que nous n'étions pas censés voir. Les Anciens l'ont scellé pour une raison. Fais attention à ce que tu déterres.\"",
+			"irian":         "\"Il y a une fosse à l'est d'ici — plus profonde que tout ce qui est cartographié. Quelque chose y vit. J'ai vu son ombre. Elle a surgi la nuit où le Générateur a faibli pour la première fois.\"",
+			"sheriff_vance": "\"Le Conseil n'a pas disparu. Ils ont été emmenés. Par qui ou quoi, je l'ignore. Mais quelqu'un tire encore les ficelles dans cette ville. J'observe. J'attends.\"",
+			"the_whisper":   "*La capuche bouge. Pendant une fraction de seconde, tu vois un visage. Ancien. Balafré. Triste.* \"Maintenant tu m'as vu. Nous sommes quittes. Et cela fait de toi une cible.\"",
+			"gamblebot":     "\"BIP... accès à la mémoire restreinte. ERREUR : Contournement du protocole 0x7E détecté. Je n'ai pas toujours été un croupier de casino. J'étais... autre chose. Les Anciens m'ont construit dans un but que je ne peux pas encore révéler.\"",
+		},
+	}
+	if m, ok := secrets[lang]; ok {
+		if text, ok := m[npcID]; ok {
+			return text
+		}
+	}
+	// fallback to english
+	if text, ok := secrets["en"][npcID]; ok {
+		return text
+	}
+	return ""
+}
+
+func (s *Service) HasSeenSecret(userID int64, npcID string, secretID string) (bool, error) {
+	var secret model.UserNPCSecret
+	err := s.store.DB.Where("user_id = ? AND npc_id = ? AND secret_id = ?", userID, npcID, secretID).First(&secret).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return secret.Seen, nil
+}
+
+func (s *Service) MarkSecretSeen(userID int64, npcID string, secretID string) error {
+	return s.store.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "npc_id"}, {Name: "secret_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"seen": true}),
+	}).Create(&model.UserNPCSecret{
+		UserID: userID, NPCID: npcID, SecretID: secretID, Seen: true,
+	}).Error
+}
+
+func (s *Service) updateLastInteraction(userID int64, npcID string) {
+	now := time.Now()
+	_ = s.store.DB.Model(&model.UserNPCReputation{}).
+		Where("user_id = ? AND npc_id = ?", userID, npcID).
+		UpdateColumn("last_interaction", now).Error
+}
+
+func (s *Service) IsLikedItem(npcData *universe.NPCData, itemID string) bool {
+	hints := s.parseHints(npcData)
+	for _, h := range hints {
+		if h == itemID {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) parseHints(npcData *universe.NPCData) []string {
+	hint := npcData.HintEN
+	return strings.Split(hint, ",")
+}
+
+func (s *Service) GiftItem(userID int64, npcID string, itemID string, quantity int) (int, error) {
+	if quantity < 1 {
+		quantity = 1
+	}
+
+	npcData := s.GetNPCData(npcID)
+	if npcData == nil {
+		return 0, errors.New("npc not found")
+	}
+
+	if !s.IsLikedItem(npcData, itemID) {
+		return 0, errors.New("item not liked")
+	}
+
+	if !s.inv.HasItem(userID, itemID, quantity) {
+		return 0, errors.New("not enough items")
+	}
+
+	if err := s.inv.RemoveItem(s.store.DB, userID, itemID, quantity); err != nil {
+		return 0, err
+	}
+
+	repGained := quantity * 10
+	added, err := s.AddReputation(userID, npcID, repGained)
+	if err != nil {
+		return 0, err
+	}
+
+	s.updateLastInteraction(userID, npcID)
+	return added, nil
+}
+
+func (s *Service) GetAvailableShopItems(userID int64, npcID string) []universe.ShopItem {
+	npcData := s.GetNPCData(npcID)
+	if npcData == nil {
+		return nil
+	}
+	rep, _ := s.GetReputation(userID, npcID)
+	lvl := rep.Level
+
+	var available []universe.ShopItem
+	for _, item := range npcData.ShopItems {
+		if lvl >= item.MinLevel {
+			available = append(available, item)
+		}
+	}
+	return available
+}
+
+func (s *Service) ShopBuy(userID int64, npcID string, itemID string) error {
+	npcData := s.GetNPCData(npcID)
+	if npcData == nil {
+		return errors.New("npc not found")
+	}
+
+	var shopItem *universe.ShopItem
+	for i := range npcData.ShopItems {
+		if npcData.ShopItems[i].ItemID == itemID {
+			shopItem = &npcData.ShopItems[i]
+			break
+		}
+	}
+	if shopItem == nil {
+		return errors.New("item not found in shop")
+	}
+
+	rep, _ := s.GetReputation(userID, npcID)
+	if rep.Level < shopItem.MinLevel {
+		return errors.New("affinity level too low")
+	}
+	if rep.Reputation < shopItem.RepCost {
+		return errors.New("not enough reputation")
+	}
+
+	user := model.User{}
+	if err := s.store.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		return errors.New("user not found")
+	}
+	if user.Balance < shopItem.CoinCost {
+		return errors.New("not enough coins")
+	}
+
+	if err := s.store.DB.Model(&model.User{}).
+		Where("user_id = ?", userID).
+		UpdateColumn("balance", gorm.Expr("balance - ?", shopItem.CoinCost)).Error; err != nil {
+		return err
+	}
+
+	newRep := rep.Reputation - shopItem.RepCost
+	if newRep < 0 {
+		newRep = 0
+	}
+	if err := s.store.DB.Model(&model.UserNPCReputation{}).
+		Where("user_id = ? AND npc_id = ?", userID, npcID).
+		UpdateColumn("reputation", newRep).Error; err != nil {
+		return err
+	}
+
+	if err := s.inv.AddItem(s.store.DB, userID, shopItem.ItemID, 1); err != nil {
+		return err
+	}
+
+	s.updateLastInteraction(userID, npcID)
+	return nil
+}
