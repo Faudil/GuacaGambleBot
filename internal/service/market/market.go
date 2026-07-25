@@ -2,11 +2,13 @@ package market
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
@@ -16,10 +18,25 @@ import (
 	"guacagamblebot/internal/store"
 )
 
+const (
+	RotationSize   = 20
+	MaxPerCategory = 5
+	ItemsPerPage   = 5
+
+	SellImpact = 0.01
+	BuyImpact  = 0.007
+
+	DailyDecayRate = 0.10
+	PriceFloorMult = 0.20
+	PriceCeilMult  = 5.0
+)
+
 var (
-	ErrNotSellable = errors.New("item not sellable on market")
-	ErrNotFound    = errors.New("item not found")
-	ErrNoItem      = errors.New("item not owned")
+	ErrNotActive  = errors.New("item not in active rotation")
+	ErrNotFound   = errors.New("item not found")
+	ErrNoItem     = errors.New("item not owned")
+	ErrNoMoney    = errors.New("insufficient funds")
+	ErrInvalidQty = errors.New("quantity must be positive")
 )
 
 type Service struct {
@@ -27,104 +44,301 @@ type Service struct {
 	cfg   *config.Config
 }
 
-type MarketItem struct {
+type MarketItemView struct {
 	Item         *items.Item
 	CurrentPrice int
 	BasePrice    int
-	Multiplier   float64
-}
-
-type MarketCategory struct {
-	Name  string
-	Items []MarketItem
+	TrendPercent int
 }
 
 func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
-func (s *Service) GetMarketPrices() []MarketCategory {
-	now := time.Now().Format("2006-01-02")
-	rng := rand.New(rand.NewSource(hashSeed(now)))
-
-	catDefs := []struct {
-		name     string
-		category items.Category
-	}{
-		{"mining", items.Mining},
-		{"fishing", items.Fishing},
-		{"farming", items.Farming},
-	}
-
-	cats := make([]MarketCategory, 0, len(catDefs))
-	for _, cd := range catDefs {
-		all := items.ItemsByCategory(cd.category)
-		mkt := make([]MarketItem, 0, len(all))
-		for _, it := range all {
-			mult := 0.5 + rng.Float64()*2.5
-			mult = math.Round(mult*100) / 100
-			mkt = append(mkt, MarketItem{
-				Item:         &it,
-				CurrentPrice: int(math.Max(1, float64(it.Price)*mult)),
-				BasePrice:    it.Price,
-				Multiplier:   mult,
-			})
-		}
-		cats = append(cats, MarketCategory{Name: cd.name, Items: mkt})
-	}
-	return cats
+func currentWeekID() string {
+	y, w := time.Now().ISOWeek()
+	return fmt.Sprintf("%d-W%02d", y, w)
 }
 
-func (s *Service) SellItem(userID int64, itemName string, amount int) (int, error) {
-	market := s.GetMarketPrices()
-	var found *MarketItem
-	for _, cat := range market {
-		for _, mi := range cat.Items {
-			if mi.Item.ID == itemName {
-				found = &mi
-				break
-			}
-		}
-		if found != nil {
+func (s *Service) ensureWeekRotation() error {
+	weekID := currentWeekID()
+	var count int64
+	s.store.DB.Model(&model.MarketState{}).Where("week_id = ? AND is_active = ?", weekID, true).Count(&count)
+	if count > 0 {
+		return nil
+	}
+	return s.rotateMarket(weekID)
+}
+
+func (s *Service) rotateMarket(weekID string) error {
+	all := items.MarketableItems()
+	if len(all) == 0 {
+		return nil
+	}
+
+	rng := rand.New(rand.NewSource(hashSeed(weekID)))
+	rng.Shuffle(len(all), func(i, j int) { all[i], all[j] = all[j], all[i] })
+
+	var selected []items.Item
+	catCount := make(map[items.Category]int)
+	for _, it := range all {
+		if len(selected) >= RotationSize {
 			break
 		}
+		if catCount[it.Category] >= MaxPerCategory {
+			continue
+		}
+		selected = append(selected, it)
+		catCount[it.Category]++
 	}
-	if found == nil {
-		return 0, ErrNotSellable
+
+	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.MarketState{}).Where("is_active = ?", true).Update("is_active", false).Error; err != nil {
+			return err
+		}
+		today := time.Now().Format("2006-01-02")
+		for _, it := range selected {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "item_id"}},
+				DoUpdates: clause.Assignments(map[string]any{
+					"current_price": it.Price,
+					"daily_sold":    0,
+					"daily_bought":  0,
+					"last_reset":    today,
+					"week_id":       weekID,
+					"is_active":     true,
+				}),
+			}).Create(&model.MarketState{
+				ItemID:       it.ID,
+				CurrentPrice: it.Price,
+				LastReset:    today,
+				WeekID:       weekID,
+				IsActive:     true,
+			})
+		}
+		return nil
+	})
+}
+
+func (s *Service) ensureDayReset() error {
+	today := time.Now().Format("2006-01-02")
+	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+		var states []model.MarketState
+		if err := tx.Where("is_active = ? AND last_reset != ?", true, today).Find(&states).Error; err != nil {
+			return err
+		}
+		for _, st := range states {
+			it := items.Get(st.ItemID)
+			if it == nil {
+				continue
+			}
+			price := st.CurrentPrice
+			gap := float64(it.Price - price)
+			if math.Abs(gap) > 1 {
+				price += int(math.Ceil(gap * DailyDecayRate))
+			}
+			price = clampInt(price, maxInt(1, int(float64(it.Price)*PriceFloorMult)),
+				maxInt(2, int(float64(it.Price)*PriceCeilMult)))
+
+			tx.Model(&model.MarketState{}).Where("item_id = ?", st.ItemID).Updates(map[string]any{
+				"current_price": price,
+				"daily_sold":    0,
+				"daily_bought":  0,
+				"last_reset":    today,
+			})
+		}
+		return nil
+	})
+}
+
+func (s *Service) GetMarket(category string, page, pageSize int) ([]MarketItemView, int, error) {
+	if err := s.ensureWeekRotation(); err != nil {
+		return nil, 0, err
 	}
-	totalGain := found.CurrentPrice * amount
+	if err := s.ensureDayReset(); err != nil {
+		return nil, 0, err
+	}
+
+	query := s.store.DB.Model(&model.MarketState{}).Where("is_active = ?", true)
+	countQuery := s.store.DB.Model(&model.MarketState{}).Where("is_active = ?", true)
+
+	if category != "" && category != "all" {
+		catItems := items.ItemsByCategory(items.Category(category))
+		ids := make([]string, 0, len(catItems))
+		for _, it := range catItems {
+			if it.IsMarketable() {
+				ids = append(ids, it.ID)
+			}
+		}
+		query = query.Where("item_id IN ?", ids)
+		countQuery = countQuery.Where("item_id IN ?", ids)
+	}
+
+	var total int64
+	countQuery.Count(&total)
+
+	var states []model.MarketState
+	if err := query.Offset((page - 1) * pageSize).Limit(pageSize).Find(&states).Error; err != nil {
+		return nil, 0, err
+	}
+
+	views := make([]MarketItemView, 0, len(states))
+	for _, st := range states {
+		it := items.Get(st.ItemID)
+		if it == nil {
+			continue
+		}
+		trend := 0
+		if it.Price > 0 {
+			trend = ((st.CurrentPrice - it.Price) * 100) / it.Price
+		}
+		views = append(views, MarketItemView{
+			Item:         it,
+			CurrentPrice: st.CurrentPrice,
+			BasePrice:    it.Price,
+			TrendPercent: trend,
+		})
+	}
+	return views, int(total), nil
+}
+
+func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, error) {
+	if amount <= 0 {
+		return 0, ErrInvalidQty
+	}
+	if err := s.ensureWeekRotation(); err != nil {
+		return 0, err
+	}
+	if err := s.ensureDayReset(); err != nil {
+		return 0, err
+	}
+
+	it := items.Get(itemID)
+	if it == nil {
+		return 0, ErrNotFound
+	}
+
+	var st model.MarketState
+	if err := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error; err != nil {
+		return 0, ErrNotActive
+	}
+
+	totalCost := st.CurrentPrice * amount
+	bal, err := s.store.GetBalance(userID)
+	if err != nil {
+		return 0, err
+	}
+	if bal < totalCost {
+		return 0, ErrNoMoney
+	}
+
+	priceDelta := maxInt(1, int(float64(it.Price)*BuyImpact)) * amount
+	newPrice := st.CurrentPrice + priceDelta
+	minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
+	maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
+	newPrice = clampInt(newPrice, minP, maxP)
+
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", totalCost)).Error; err != nil {
+			return err
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)},
+			),
+		}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: amount}).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.MarketState{}).
+			Where("item_id = ?", itemID).
+			Updates(map[string]any{
+				"current_price": newPrice,
+				"daily_bought":  gorm.Expr("daily_bought + ?", amount),
+			}).Error; err != nil {
+			return err
+		}
+		if err := achievement.IncrementStat(tx, userID, "items_bought_market", amount); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	charsvc.AddXP(s.store, userID, amount)
+	return totalCost, nil
+}
+
+func (s *Service) SellItem(userID int64, itemID string, amount int) (int, error) {
+	if amount <= 0 {
+		return 0, ErrInvalidQty
+	}
+	if err := s.ensureWeekRotation(); err != nil {
+		return 0, err
+	}
+	if err := s.ensureDayReset(); err != nil {
+		return 0, err
+	}
+
+	it := items.Get(itemID)
+	if it == nil {
+		return 0, ErrNotFound
+	}
+	if !it.IsMarketable() {
+		return 0, ErrNotActive
+	}
+
+	var st model.MarketState
+	if err := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error; err != nil {
+		return 0, ErrNotActive
+	}
 
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemName).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
 		return 0, ErrNoItem
 	}
 	if inv.Quantity < amount {
 		return 0, ErrNoItem
 	}
 
+	totalGain := st.CurrentPrice * amount
 	if charsvc.HasBuff(s.store, userID, "golden_touch") {
 		totalGain *= 2
 		charsvc.ConsumeBuff(s.store, userID, "golden_touch")
 	}
-
 	if charsvc.HasBuff(s.store, userID, "insider_trading") {
 		totalGain = totalGain * 15 / 10
 		charsvc.ConsumeBuff(s.store, userID, "insider_trading")
 	}
 
+	priceDelta := maxInt(1, int(float64(it.Price)*SellImpact)) * amount
+	newPrice := st.CurrentPrice - priceDelta
+	minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
+	maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
+	newPrice = clampInt(newPrice, minP, maxP)
+
+	// Ensure user row exists before the transaction
+	if _, err := s.store.GetBalance(userID); err != nil {
+		return 0, err
+	}
+
 	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.Inventory{}).
-			Where("user_id = ? AND item_id = ?", userID, itemName).
+			Where("user_id = ? AND item_id = ?", userID, itemID).
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", amount)).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("user_id = ?", userID).
-			FirstOrCreate(&model.User{UserID: userID}).Error; err != nil {
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", totalGain)).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.User{}).
-			Where("user_id = ?", userID).
-			UpdateColumn("balance", gorm.Expr("balance + ?", totalGain)).Error; err != nil {
+		if err := tx.Model(&model.MarketState{}).
+			Where("item_id = ?", itemID).
+			Updates(map[string]any{
+				"current_price": newPrice,
+				"daily_sold":    gorm.Expr("daily_sold + ?", amount),
+			}).Error; err != nil {
 			return err
 		}
 		if err := achievement.IncrementStat(tx, userID, "items_sold_market", amount); err != nil {
@@ -136,6 +350,7 @@ func (s *Service) SellItem(userID int64, itemName string, amount int) (int, erro
 		return 0, err
 	}
 	charsvc.AddXP(s.store, userID, amount)
+	_ = s.store.RecordActivity(userID, "items_sold_market", 1)
 	return totalGain, nil
 }
 
@@ -145,4 +360,21 @@ func hashSeed(s string) int64 {
 		h = h*31 + int64(c)
 	}
 	return h
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func clampInt(v, min, max int) int {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }

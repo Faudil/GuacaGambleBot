@@ -9,6 +9,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -38,10 +39,11 @@ type Service struct {
 	store    *store.Store
 	cfg      *config.Config
 	universe *universe.Definition
+	inv      *invsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config, def *universe.Definition) *Service {
-	return &Service{store: s, cfg: cfg, universe: def}
+func New(s *store.Store, cfg *config.Config, def *universe.Definition, inv *invsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, universe: def, inv: inv}
 }
 
 func (s *Service) GetNPCData(id string) *universe.NPCData {

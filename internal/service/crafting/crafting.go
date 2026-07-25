@@ -1,6 +1,7 @@
 package crafting
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 
@@ -8,22 +9,27 @@ import (
 	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
 var (
-	ErrNoRecipe      = errors.New("recipe not found")
-	ErrNoLevel       = errors.New("level too low")
-	ErrNoIngredients = errors.New("missing ingredients")
+	ErrNoRecipe          = errors.New("recipe not found")
+	ErrNoLevel           = errors.New("level too low")
+	ErrNoIngredients     = errors.New("missing ingredients")
+	ErrResearchRequired  = errors.New("research required")
 )
 
 type Recipe struct {
-	Result        string
-	Ingredients   map[string]int
-	LevelRequired int
-	XP            int
+	Result             string
+	Ingredients        map[string]int
+	LevelRequired      int
+	XP                 int
+	RequiredResearch   string // primary research gate (rarity or set)
+	RequiredResearch2  string // secondary research gate (e.g. set needs both rarity + set research)
+	IsEquipment        bool   // if true, creates UserEquipment instance instead of Inventory entry
 }
 
 type Service struct {
@@ -39,22 +45,60 @@ var Recipes = map[string]Recipe{
 	"beer":                {Result: "beer", Ingredients: map[string]int{"wheat": 3}, LevelRequired: 1, XP: 10},
 	"coffee":              {Result: "coffee", Ingredients: map[string]int{"coffee_bean": 3}, LevelRequired: 1, XP: 10},
 	"scratch_ticket":      {Result: "scratch_ticket", Ingredients: map[string]int{"coal": 1, "pebble": 1}, LevelRequired: 1, XP: 10},
-	"fertilizer":          {Result: "fertilizer", Ingredients: map[string]int{"rotten_plant": 3, "coal": 1}, LevelRequired: 2, XP: 15},
-	"forget_potion":       {Result: "forget_potion", Ingredients: map[string]int{"rotten_plant": 2, "pufferfish": 1}, LevelRequired: 2, XP: 20},
 	"fortune_cookie":      {Result: "fortune_cookie", Ingredients: map[string]int{"wheat": 2, "strawberry": 1}, LevelRequired: 2, XP: 20},
-	"bow":                 {Result: "bow", Ingredients: map[string]int{"oat": 2, "pebble": 2}, LevelRequired: 3, XP: 25},
-	"rusty_magnet":        {Result: "rusty_magnet", Ingredients: map[string]int{"iron_ore": 3, "pebble": 5}, LevelRequired: 3, XP: 20},
-	"hook":                {Result: "hook", Ingredients: map[string]int{"iron_ore": 1, "silver_ore": 1}, LevelRequired: 3, XP: 25},
-	"identity_scroll":     {Result: "identity_scroll", Ingredients: map[string]int{"rotten_plant": 2, "silver_ore": 1}, LevelRequired: 4, XP: 35},
-	"magnet":              {Result: "magnet", Ingredients: map[string]int{"iron_ore": 5, "copper_ore": 1}, LevelRequired: 5, XP: 40},
-	"rigged_coin":         {Result: "rigged_coin", Ingredients: map[string]int{"gold_nugget": 1, "pebble": 2, "coal": 1}, LevelRequired: 5, XP: 45},
-	"casino_token":        {Result: "casino_token", Ingredients: map[string]int{"gold_nugget": 1, "silver_ore": 1}, LevelRequired: 6, XP: 50},
-	"garden_plot":         {Result: "garden_plot", Ingredients: map[string]int{"gold_nugget": 2, "pebble": 20}, LevelRequired: 7, XP: 80},
-	"electric_magnet":     {Result: "electric_magnet", Ingredients: map[string]int{"platinum": 2, "copper_ore": 5}, LevelRequired: 7, XP: 60},
-	"tropical_greenhouse": {Result: "tropical_greenhouse", Ingredients: map[string]int{"gold_nugget": 5, "platinum": 2}, LevelRequired: 9, XP: 120},
-	"vip_ticket":          {Result: "vip_ticket", Ingredients: map[string]int{"rough_diamond": 3, "platinum": 2}, LevelRequired: 9, XP: 150},
-	"enchanted_orchard":   {Result: "enchanted_orchard", Ingredients: map[string]int{"rough_diamond": 2, "emerald": 2}, LevelRequired: 10, XP: 250},
-	"mystery_egg":         {Result: "mystery_egg", Ingredients: map[string]int{"rough_diamond": 1, "golden_apple": 1, "pure_dna": 1, "bone_dust": 10}, LevelRequired: 10, XP: 200},
+	"fertilizer":          {Result: "fertilizer", Ingredients: map[string]int{"rotten_plant": 3, "coal": 1}, LevelRequired: 2, XP: 15, RequiredResearch: "advanced_botany"},
+	"forget_potion":       {Result: "forget_potion", Ingredients: map[string]int{"rotten_plant": 2, "pufferfish": 1}, LevelRequired: 2, XP: 20, RequiredResearch: "scroll_magic"},
+	"bow":                 {Result: "bow", Ingredients: map[string]int{"oat": 2, "pebble": 2}, LevelRequired: 3, XP: 25, RequiredResearch: "tool_crafting"},
+	"rusty_magnet":        {Result: "rusty_magnet", Ingredients: map[string]int{"iron_ore": 3, "pebble": 5}, LevelRequired: 3, XP: 20, RequiredResearch: "tool_crafting"},
+	"hook":                {Result: "hook", Ingredients: map[string]int{"iron_ore": 1, "silver_ore": 1}, LevelRequired: 3, XP: 25, RequiredResearch: "tool_crafting"},
+	"identity_scroll":     {Result: "identity_scroll", Ingredients: map[string]int{"rotten_plant": 2, "silver_ore": 1}, LevelRequired: 4, XP: 35, RequiredResearch: "scroll_magic"},
+	"magnet":              {Result: "magnet", Ingredients: map[string]int{"iron_ore": 5, "copper_ore": 1}, LevelRequired: 5, XP: 40, RequiredResearch: "magnetism"},
+	"rigged_coin":         {Result: "rigged_coin", Ingredients: map[string]int{"gold_nugget": 1, "pebble": 2, "coal": 1}, LevelRequired: 5, XP: 45, RequiredResearch: "game_theory"},
+	"casino_token":        {Result: "casino_token", Ingredients: map[string]int{"gold_nugget": 1, "silver_ore": 1}, LevelRequired: 6, XP: 50, RequiredResearch: "game_theory"},
+	"garden_plot":         {Result: "garden_plot", Ingredients: map[string]int{"gold_nugget": 2, "pebble": 20}, LevelRequired: 7, XP: 80, RequiredResearch: "advanced_botany"},
+	"electric_magnet":     {Result: "electric_magnet", Ingredients: map[string]int{"platinum": 2, "copper_ore": 5}, LevelRequired: 7, XP: 60, RequiredResearch: "magnetism"},
+	"tropical_greenhouse": {Result: "tropical_greenhouse", Ingredients: map[string]int{"gold_nugget": 5, "platinum": 2}, LevelRequired: 9, XP: 120, RequiredResearch: "advanced_botany"},
+	"vip_ticket":          {Result: "vip_ticket", Ingredients: map[string]int{"rough_diamond": 3, "platinum": 2}, LevelRequired: 9, XP: 150, RequiredResearch: "game_theory"},
+	"enchanted_orchard":   {Result: "enchanted_orchard", Ingredients: map[string]int{"rough_diamond": 2, "emerald": 2}, LevelRequired: 10, XP: 250, RequiredResearch: "advanced_botany"},
+	"volcano_egg":         {Result: "volcano_egg", Ingredients: map[string]int{"rough_diamond": 1, "golden_apple": 1, "pure_dna": 1, "bone_dust": 10}, LevelRequired: 10, XP: 200, RequiredResearch: "dna_research"},
+
+	// --- Common equipment (equip_common) ---
+	"craft_stick":          {Result: "stick", Ingredients: map[string]int{"wheat": 2, "pebble": 1}, LevelRequired: 1, XP: 15, RequiredResearch: "equip_common", IsEquipment: true},
+	"craft_leather_armor":  {Result: "leather_armor", Ingredients: map[string]int{"iron_ore": 3, "coal": 2}, LevelRequired: 2, XP: 20, RequiredResearch: "equip_common", IsEquipment: true},
+
+	// --- Uncommon equipment (equip_uncommon) ---
+	"craft_iron_pickaxe":   {Result: "iron_pickaxe", Ingredients: map[string]int{"iron_ore": 5, "coal": 3}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_lucky_charm":    {Result: "lucky_charm", Ingredients: map[string]int{"gold_nugget": 1, "emerald": 1}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_fishing_rod":    {Result: "fishing_rod", Ingredients: map[string]int{"wheat": 5, "iron_ore": 3}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_miner_helmet":   {Result: "miner_helmet", Ingredients: map[string]int{"iron_ore": 5, "coal": 5}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
+
+	// --- Rare equipment (equip_rare) ---
+	"craft_hunters_bow":    {Result: "hunters_bow", Ingredients: map[string]int{"iron_ore": 8, "silver_ore": 3}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_hunter_cloak":   {Result: "hunter_cloak", Ingredients: map[string]int{"coal": 5, "silver_ore": 5}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_golden_ring":    {Result: "golden_ring", Ingredients: map[string]int{"gold_nugget": 3, "emerald": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_crystal_staff":  {Result: "crystal_staff", Ingredients: map[string]int{"gold_nugget": 3, "rough_diamond": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
+
+	// --- Epic equipment (equip_epic) ---
+	"craft_enchanted_robe": {Result: "enchanted_robe", Ingredients: map[string]int{"platinum": 3, "rough_diamond": 2}, LevelRequired: 7, XP: 80, RequiredResearch: "equip_epic", IsEquipment: true},
+	"craft_ancient_amulet": {Result: "ancient_amulet", Ingredients: map[string]int{"platinum": 5, "emerald": 3}, LevelRequired: 8, XP: 90, RequiredResearch: "equip_epic", IsEquipment: true},
+
+	// --- Dragon Slayer Set 🐉 (forge, equip_rare) — mining + boss resources ---
+	"craft_dragon_slayer_sword":    {Result: "dragon_slayer_sword",    Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_armor":    {Result: "dragon_slayer_armor",    Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_ring":     {Result: "dragon_slayer_ring",     Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_talisman": {Result: "dragon_slayer_talisman", Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+
+	// --- Shadow Stalker Set 🌑 (forge, equip_rare) — archeology resources ---
+	"craft_shadow_stalker_blade":  {Result: "shadow_stalker_blade",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_cloak":  {Result: "shadow_stalker_cloak",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_amulet": {Result: "shadow_stalker_amulet", Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_charm":  {Result: "shadow_stalker_charm",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+
+	// --- Arcane Weaver Set 🔮 (arcane_forge, equip_epic) — dimensional + exotic resources ---
+	"craft_arcane_weaver_staff":  {Result: "arcane_weaver_staff",  Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_robe":   {Result: "arcane_weaver_robe",   Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_crown":  {Result: "arcane_weaver_crown",  Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_orb":    {Result: "arcane_weaver_orb",    Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
 }
 
 func (s *Service) GetCrafterLevel(userID int64) int {
@@ -74,6 +118,12 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 	if level < recipe.LevelRequired {
 		return ErrNoLevel
 	}
+	if !s.isResearchCompleted(userID, recipe.RequiredResearch) {
+		return ErrResearchRequired
+	}
+	if !s.isResearchCompleted(userID, recipe.RequiredResearch2) {
+		return ErrResearchRequired
+	}
 
 	intMult := charsvc.GetINTBonus(s.store, userID)
 	charXP := int(float64(recipe.XP*amount) * intMult)
@@ -88,7 +138,6 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 
 	if charsvc.HasBuff(s.store, userID, "perfect_forge") {
 		charsvc.ConsumeBuff(s.store, userID, "perfect_forge")
-		// perfect forge makes the output quality higher (represented by double output)
 		effectiveAmount = amount * 2
 	}
 
@@ -108,12 +157,63 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 				return err
 			}
 		}
-		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", effectiveAmount)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: recipe.Result, Quantity: effectiveAmount}).Error; err != nil {
-			return err
+
+		if recipe.IsEquipment {
+			// Create UserEquipment instances for each crafted piece
+			base := items.Get(recipe.Result)
+			if base == nil {
+				return ErrNoRecipe
+			}
+			for i := 0; i < effectiveAmount; i++ {
+				rar := base.Rarity
+				affixes := items.RollAffixes(rar, base.EquipSlot)
+				var applied []items.AppliedAffix
+				for _, a := range affixes {
+					applied = append(applied, items.AppliedAffix{
+						ID:    a.ID,
+						Name:  a.Name,
+						Stat:  a.Stat,
+						Value: items.RollAffixValue(a),
+					})
+				}
+				totalSTR := base.StatSTR
+				totalDEX := base.StatDEX
+				totalINT := base.StatINT
+				totalVIT := base.StatVIT
+				totalLUK := base.StatLUK
+				for _, a := range applied {
+					switch a.Stat {
+					case "str":
+						totalSTR += a.Value
+					case "dex":
+						totalDEX += a.Value
+					case "int":
+						totalINT += a.Value
+					case "vit":
+						totalVIT += a.Value
+					case "luk":
+						totalLUK += a.Value
+					}
+				}
+				affixData, _ := json.Marshal(applied)
+				_, err := s.store.CreateEquipment(userID, base.ID, base.Name, base.Emoji,
+					string(rar), base.EquipSlot,
+					totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
+					affixData, base.SetID)
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			// Standard item: add to inventory
+			if err := tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+				DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", effectiveAmount)}),
+			}).Create(&model.Inventory{UserID: userID, ItemID: recipe.Result, Quantity: effectiveAmount}).Error; err != nil {
+				return err
+			}
 		}
+
 		tx.Where("user_id = ? AND job_name = ?", userID, "crafter").
 			FirstOrCreate(&model.Job{UserID: userID, JobName: "crafter", Level: 1, XP: 0})
 		if err := tx.Model(&model.Job{}).
@@ -144,6 +244,15 @@ func (s *Service) LevelUpCheck(userID int64) (bool, int) {
 		return true, newLevel
 	}
 	return false, job.Level
+}
+
+func (s *Service) isResearchCompleted(userID int64, researchID string) bool {
+	if researchID == "" {
+		return true
+	}
+	var r model.UserResearch
+	err := s.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, researchID, true).First(&r).Error
+	return err == nil
 }
 
 func max(a, b int) int {

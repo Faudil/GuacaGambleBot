@@ -43,7 +43,7 @@ func TestCraftNoRecipe(t *testing.T) {
 
 func TestCraftLevelTooLow(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "mystery_egg", 1)
+	err := svc.Craft(1, "volcano_egg", 1)
 	assert.ErrorIs(t, err, ErrNoLevel)
 }
 

@@ -12,7 +12,9 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	crtsvc "guacagamblebot/internal/service/crafting"
+	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -86,6 +88,12 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			msg = i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})
 		case crtsvc.ErrNoRecipe:
 			msg = i18n.T("crafting.no_recipe", lang, map[string]any{"item": itemQuery})
+		case crtsvc.ErrResearchRequired:
+			rn := c.researchName(recipe.RequiredResearch)
+			if !c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+				rn = c.researchName(recipe.RequiredResearch2)
+			}
+			msg = fmt.Sprintf("🔬 You need to complete the **%s** research first!", rn)
 		default:
 			msg = err.Error()
 		}
@@ -107,6 +115,28 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.Embed("✅", msg, 0x2ecc71), nil))
 }
 
+func recipeDisplayInfo(recipe crtsvc.Recipe, lang string) string {
+	ingStrs := make([]string, 0, len(recipe.Ingredients))
+	for ing, qty := range recipe.Ingredients {
+		ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, items.DisplayName(ing)))
+	}
+	ingStr := strings.Join(ingStrs, ", ")
+	resName := items.DisplayName(recipe.Result)
+
+	if recipe.IsEquipment {
+		it := items.Get(recipe.Result)
+		if it != nil {
+			extra := ""
+			if it.SetID != "" && it.SetName != "" {
+				extra = fmt.Sprintf(" [%s Set]", it.SetName)
+			}
+			return fmt.Sprintf("%s (%s%s) | %s", resName, string(it.Rarity), extra, ingStr)
+		}
+		return fmt.Sprintf("%s [Equipment] | %s", resName, ingStr)
+	}
+	return fmt.Sprintf("%s | %s", resName, ingStr)
+}
+
 func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -114,16 +144,26 @@ func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	var unlocked, locked []string
 	for _, recipe := range crtsvc.Recipes {
-		ingStrs := make([]string, 0, len(recipe.Ingredients))
-		for ing, qty := range recipe.Ingredients {
-			ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, c.displayName(ing, lang)))
-		}
-		ingStr := strings.Join(ingStrs, ", ")
-		resName := c.displayName(recipe.Result, lang)
-		if recipe.LevelRequired <= level {
-			unlocked = append(unlocked, i18n.T("crafting.unlock_line", lang, map[string]any{"item": resName, "ingredients": ingStr}))
+		resLine := recipeDisplayInfo(recipe, lang)
+		levelOK := recipe.LevelRequired <= level
+		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
+		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
+		if levelOK && researchOK && research2OK {
+			unlocked = append(unlocked, "✅ " + resLine)
 		} else {
-			locked = append(locked, i18n.T("crafting.lock_line", lang, map[string]any{"item": resName, "level": recipe.LevelRequired, "ingredients": ingStr}))
+			reqs := ""
+			if !levelOK {
+				reqs = fmt.Sprintf("Lvl %d", recipe.LevelRequired)
+			}
+			if !researchOK {
+				rName := c.researchName(recipe.RequiredResearch)
+				reqs = addReq(reqs, "🔬"+rName)
+			}
+			if !research2OK {
+				rName := c.researchName(recipe.RequiredResearch2)
+				reqs = addReq(reqs, "🔬"+rName)
+			}
+			locked = append(locked, fmt.Sprintf("🔒 %s | %s", resLine, reqs))
 		}
 	}
 
@@ -146,6 +186,13 @@ func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate)
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
 
+func addReq(reqs, add string) string {
+	if reqs == "" {
+		return add
+	}
+	return reqs + " + " + add
+}
+
 func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
@@ -153,16 +200,26 @@ func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *di
 
 	var unlocked, locked []string
 	for _, recipe := range crtsvc.Recipes {
-		ingStrs := make([]string, 0, len(recipe.Ingredients))
-		for ing, qty := range recipe.Ingredients {
-			ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, c.displayName(ing, lang)))
-		}
-		ingStr := strings.Join(ingStrs, ", ")
-		resName := c.displayName(recipe.Result, lang)
-		if recipe.LevelRequired <= level {
-			unlocked = append(unlocked, i18n.T("crafting.unlock_line", lang, map[string]any{"item": resName, "ingredients": ingStr}))
+		resLine := recipeDisplayInfo(recipe, lang)
+		levelOK := recipe.LevelRequired <= level
+		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
+		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
+		if levelOK && researchOK && research2OK {
+			unlocked = append(unlocked, "✅ " + resLine)
 		} else {
-			locked = append(locked, i18n.T("crafting.lock_line", lang, map[string]any{"item": resName, "level": recipe.LevelRequired, "ingredients": ingStr}))
+			reqs := ""
+			if !levelOK {
+				reqs = fmt.Sprintf("Lvl %d", recipe.LevelRequired)
+			}
+			if !researchOK {
+				rName := c.researchName(recipe.RequiredResearch)
+				reqs = addReq(reqs, "🔬"+rName)
+			}
+			if !research2OK {
+				rName := c.researchName(recipe.RequiredResearch2)
+				reqs = addReq(reqs, "🔬"+rName)
+			}
+			locked = append(locked, fmt.Sprintf("🔒 %s | %s", resLine, reqs))
 		}
 	}
 
@@ -229,6 +286,13 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."}))
 		case crtsvc.ErrNoRecipe:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_recipe", lang, map[string]any{"item": itemQuery}))
+		case crtsvc.ErrResearchRequired:
+			recipe := crtsvc.Recipes[recipeKey]
+			rName := c.researchName(recipe.RequiredResearch)
+			if !c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+				rName = c.researchName(recipe.RequiredResearch2)
+			}
+			_, _ = sess.ChannelMessageSend(m.ChannelID, "🔬 You need to complete the **"+rName+"** research first!")
 		default:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, "❌ "+err.Error())
 		}
@@ -250,15 +314,37 @@ func (c *Cog) resolveRecipeKey(query, lang string) string {
 	if _, ok := crtsvc.Recipes[query]; ok {
 		return query
 	}
-	for key := range crtsvc.Recipes {
-		if strings.ToLower(key) == query {
+	q := strings.ToLower(query)
+	for key, recipe := range crtsvc.Recipes {
+		if strings.ToLower(key) == q {
 			return key
 		}
-		if strings.ToLower(c.displayName(key, lang)) == query {
+		if it := items.Get(recipe.Result); it != nil {
+			if strings.ToLower(it.Name) == q || strings.ToLower(it.ID) == q {
+				return key
+			}
+		}
+		if strings.ToLower(c.displayName(key, lang)) == q {
 			return key
 		}
 	}
 	return query
+}
+
+func (c *Cog) isResearchCompleted(userID int64, researchID string) bool {
+	if researchID == "" {
+		return true
+	}
+	var r model.UserResearch
+	err := c.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, researchID, true).First(&r).Error
+	return err == nil
+}
+
+func (c *Cog) researchName(researchID string) string {
+	if rd, ok := researchsvc.ResearchDefs[researchID]; ok {
+		return rd.Name
+	}
+	return researchID
 }
 
 func (c *Cog) displayName(name, lang string) string {

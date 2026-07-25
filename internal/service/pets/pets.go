@@ -2,6 +2,7 @@ package pets
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"time"
 
@@ -138,6 +139,18 @@ func (s *Service) PetCount(userID int64) int {
 	return int(count)
 }
 
+func (s *Service) ActivePetCount(userID int64) int {
+	var count int64
+	s.store.DB.Model(&model.UserPet{}).Where("user_id = ? AND in_sanctuary = ?", userID, false).Count(&count)
+	return int(count)
+}
+
+func (s *Service) SanctuaryPetCount(userID int64) int {
+	var count int64
+	s.store.DB.Model(&model.UserPet{}).Where("user_id = ? AND in_sanctuary = ?", userID, true).Count(&count)
+	return int(count)
+}
+
 func (s *Service) MaxPetSlots(userID int64) int {
 	var u model.User
 	if err := s.store.DB.Where("user_id = ?", userID).First(&u).Error; err != nil {
@@ -147,7 +160,19 @@ func (s *Service) MaxPetSlots(userID int64) int {
 }
 
 func (s *Service) CanCreatePet(userID int64) bool {
-	return s.PetCount(userID) < s.MaxPetSlots(userID)
+	return s.ActivePetCount(userID) < s.MaxPetSlots(userID)
+}
+
+func (s *Service) GetSanctuaryPets(userID int64) ([]model.UserPet, error) {
+	var pets []model.UserPet
+	err := s.store.DB.Where("user_id = ? AND in_sanctuary = ?", userID, true).Find(&pets).Error
+	return pets, err
+}
+
+func (s *Service) GetActiveRosterPets(userID int64) ([]model.UserPet, error) {
+	var pets []model.UserPet
+	err := s.store.DB.Where("user_id = ? AND in_sanctuary = ?", userID, false).Find(&pets).Error
+	return pets, err
 }
 
 // ─── Leveling ──────────────────────────────────────────────────
@@ -194,6 +219,14 @@ func (s *Service) AddXP(pet *model.UserPet, amount int) *LevelResult {
 		s.RecordHistory(pet, "leveled", "**"+pet.Nickname+"** reached level **"+itoa(pet.Level)+"**!")
 		res.Leveled = true
 		res.NewLevel = pet.Level
+	}
+	// Auto-start boss_league quest when any pet reaches level 20
+	if pet.Level >= 20 {
+		var existing model.UserQuest
+		err := s.store.DB.Where("user_id = ? AND quest_id = ?", pet.UserID, "boss_league").First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			_ = s.store.CreateQuest(pet.UserID, "boss_league")
+		}
 	}
 	return res
 }

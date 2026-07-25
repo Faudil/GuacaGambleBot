@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -85,12 +86,18 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 }
 
 func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedField {
-	catOrder := []string{"mining", "fishing", "farming", "archeology", "food", "tools", "materials", "special"}
+	catOrder := []string{"mining", "fishing", "farming", "archeology", "food", "tools", "materials", "equipment", "special"}
 	grouped := make(map[string][]invsvc.InvEntry)
 	for _, e := range res.Entries {
 		cat := "other"
 		if e.Item != nil {
 			cat = string(e.Item.Category)
+			if cat == "delve" {
+				cat = "equipment"
+			}
+		}
+		if e.EquipInfo != nil {
+			cat = "equipment"
 		}
 		grouped[cat] = append(grouped[cat], e)
 	}
@@ -102,14 +109,61 @@ func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedFi
 		}
 		val := ""
 		for _, e := range entries {
-			emoji := "⚪"
-			if e.Item != nil {
-				emoji = e.Item.Emoji
+			if e.EquipInfo != nil {
+				info := e.EquipInfo
+				rarEmoji := "⬜"
+				switch info.Rarity {
+				case "uncommon":
+					rarEmoji = "🟩"
+				case "rare":
+					rarEmoji = "🔵"
+				case "epic":
+					rarEmoji = "🟣"
+				case "legendary":
+					rarEmoji = "🟠"
+				}
+				statParts := []string{}
+				if info.StatSTR > 0 {
+					statParts = append(statParts, fmt.Sprintf("STR+%d", info.StatSTR))
+				}
+				if info.StatDEX > 0 {
+					statParts = append(statParts, fmt.Sprintf("DEX+%d", info.StatDEX))
+				}
+				if info.StatINT > 0 {
+					statParts = append(statParts, fmt.Sprintf("INT+%d", info.StatINT))
+				}
+				if info.StatVIT > 0 {
+					statParts = append(statParts, fmt.Sprintf("VIT+%d", info.StatVIT))
+				}
+				if info.StatLUK > 0 {
+					statParts = append(statParts, fmt.Sprintf("LUK+%d", info.StatLUK))
+				}
+				statStr := ""
+				if len(statParts) > 0 {
+					statStr = " (`" + strings.Join(statParts, " ") + "`)"
+				}
+				tag := ""
+				if info.IsEquipped {
+					tag = " ✅"
+				}
+				val += fmt.Sprintf("%s %s **%s**%s%s\n", rarEmoji, info.Emoji, e.ItemName, statStr, tag)
+			} else {
+				emoji := "⚪"
+				if e.Item != nil {
+					emoji = e.Item.Emoji
+				}
+				val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, displayName(e.ItemName, lang), e.Quantity)
 			}
-			val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, displayName(e.ItemName, lang), e.Quantity)
 		}
-		catName := i18n.T("inventory.category_"+cat, lang)
-		fields = append(fields, components.Field(catName, val, false))
+		if val != "" {
+			catName := i18n.T("inventory.category_"+cat, lang)
+			fields = append(fields, components.Field(catName, val, false))
+		}
+	}
+
+	// Show equipment that didn't fit in the standard categories
+	if eqEntries, ok := grouped["equipment"]; ok {
+		_ = eqEntries // already handled above in the loop
 	}
 	return fields
 }

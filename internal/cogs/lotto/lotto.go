@@ -111,6 +111,7 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		return
 	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 
 	var embed *discordgo.MessageEmbed
 	if res.Win {

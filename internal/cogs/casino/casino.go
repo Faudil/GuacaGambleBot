@@ -239,6 +239,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		}
 		return
 	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -306,6 +307,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		}
 		return
 	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da
@@ -359,6 +361,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		_, _ = s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -444,6 +447,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		_, _ = s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da

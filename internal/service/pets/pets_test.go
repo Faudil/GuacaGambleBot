@@ -69,14 +69,14 @@ func TestUpdateElo(t *testing.T) {
 }
 
 func TestRollGacha(t *testing.T) {
-	name := RollGacha("")
+	name := RollGacha("", "forest")
 	assert.NotEmpty(t, name)
 	_, ok := PetTypes[name]
 	assert.True(t, ok)
 }
 
 func TestRollGachaLegendary(t *testing.T) {
-	name := RollGacha(RarityLegendary)
+	name := RollGacha(RarityLegendary, "forest")
 	pt, ok := PetTypes[name]
 	require.True(t, ok)
 	assert.Equal(t, RarityLegendary, pt.Rarity)

@@ -17,6 +17,8 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
+func (s *Service) Store() *store.Store { return s.store }
+
 // ProfileResult holds the full profile data shown to the player.
 type ProfileResult struct {
 	Wallet        int
@@ -38,6 +40,7 @@ type ProfileResult struct {
 	EquipVIT      int
 	EquipLUK      int
 	TotalJobLevel int
+	SetBonuses    []items.EquippedSetInfo
 }
 
 // Profile returns the full character profile.
@@ -68,8 +71,11 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 	var jobTotal int64
 	s.store.DB.Model(&model.Job{}).Select("COALESCE(SUM(level), 0)").Where("user_id = ?", userID).Scan(&jobTotal)
 
-	eqSTR, eqDEX, eqINT, eqVIT, eqLUK := equipBonuses(eq)
+	// Compute from instances for affixes + set bonuses
+	equipped, _ := s.store.GetEquipped(userID)
+	instSTR, instDEX, instINT, instVIT, instLUK, setInfos := equipBonusesFromInstances(equipped)
 
+	_ = eq // silence unused warning
 	return &ProfileResult{
 		Wallet:        wallet,
 		Bank:          bank,
@@ -84,12 +90,13 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 		INT:           c.INT,
 		VIT:           c.VIT,
 		LUK:           c.LUK,
-		EquipSTR:      eqSTR,
-		EquipDEX:      eqDEX,
-		EquipINT:      eqINT,
-		EquipVIT:      eqVIT,
-		EquipLUK:      eqLUK,
+		EquipSTR:      instSTR,
+		EquipDEX:      instDEX,
+		EquipINT:      instINT,
+		EquipVIT:      instVIT,
+		EquipLUK:      instLUK,
 		TotalJobLevel: int(jobTotal),
+		SetBonuses:    setInfos,
 	}, nil
 }
 
@@ -106,6 +113,22 @@ func equipBonuses(eq map[string]string) (str, dex, intt, vit, luk int) {
 		luk += it.StatLUK
 	}
 	return
+}
+
+func equipBonusesFromInstances(equipped []model.UserEquipment) (str, dex, intt, vit, luk int, setInfos []items.EquippedSetInfo) {
+	var setIDs []string
+	for _, eq := range equipped {
+		str += eq.StatSTR
+		dex += eq.StatDEX
+		intt += eq.StatINT
+		vit += eq.StatVIT
+		luk += eq.StatLUK
+		if eq.SetID != "" {
+			setIDs = append(setIDs, eq.SetID)
+		}
+	}
+	sStr, sDex, sInt, sVit, sLuk, infos := items.CalculateSetBonuses(setIDs)
+	return str + sStr, dex + sDex, intt + sInt, vit + sVit, luk + sLuk, infos
 }
 
 // EffectiveStats holds base plus equipment stat bonuses.
@@ -127,8 +150,8 @@ func GetEffectiveStats(s *store.Store, userID int64) (*EffectiveStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	eq, _ := s.GetEquipment(userID)
-	bonSTR, bonDEX, bonINT, bonVIT, bonLUK := equipBonuses(eq)
+	equipped, _ := s.GetEquipped(userID)
+	bonSTR, bonDEX, bonINT, bonVIT, bonLUK, _ := equipBonusesFromInstances(equipped)
 	return &EffectiveStats{
 		BaseSTR: c.STR, BaseDEX: c.DEX, BaseINT: c.INT, BaseVIT: c.VIT, BaseLUK: c.LUK,
 		BonSTR: bonSTR, BonDEX: bonDEX, BonINT: bonINT, BonVIT: bonVIT, BonLUK: bonLUK,
@@ -208,8 +231,8 @@ func AddXP(s *store.Store, userID int64, amount int) (bool, int) {
 
 // Service methods for equipment.
 
-func (s *Service) EquipItem(userID int64, slot, itemID string) error {
-	return s.store.EquipItem(userID, slot, itemID)
+func (s *Service) EquipInstance(userID int64, equipID uint) error {
+	return s.store.EquipInstance(userID, equipID)
 }
 
 func (s *Service) UnequipSlot(userID int64, slot string) error {
@@ -218,6 +241,10 @@ func (s *Service) UnequipSlot(userID int64, slot string) error {
 
 func (s *Service) GetEquipment(userID int64) (map[string]string, error) {
 	return s.store.GetEquipment(userID)
+}
+
+func (s *Service) GetEquipped(userID int64) ([]model.UserEquipment, error) {
+	return s.store.GetEquipped(userID)
 }
 
 // Service methods for skills.

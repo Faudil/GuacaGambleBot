@@ -3,6 +3,7 @@ package market
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
@@ -24,62 +26,108 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	return New(s, cfg), s
 }
 
-func TestGetMarketPricesReturnsCategories(t *testing.T) {
+func seedInventory(t *testing.T, st *store.Store, userID int64, itemID string, qty int) {
+	t.Helper()
+	err := st.DB.Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: qty}).Error
+	require.NoError(t, err)
+}
+
+func TestGetMarketInitializesRotation(t *testing.T) {
+	svc, st := testService(t)
+
+	views, total, err := svc.GetMarket("all", 1, ItemsPerPage)
+	require.NoError(t, err)
+	assert.Greater(t, total, 0)
+	assert.GreaterOrEqual(t, len(views), 1)
+
+	// Should have created MarketState rows
+	var count int64
+	st.DB.Model(&model.MarketState{}).Where("is_active = ?", true).Count(&count)
+	assert.Equal(t, int64(total), count)
+}
+
+func TestGetMarketCategoryFilter(t *testing.T) {
 	svc, _ := testService(t)
-	cats := svc.GetMarketPrices()
-	assert.NotEmpty(t, cats)
-	for _, cat := range cats {
-		assert.NotEmpty(t, cat.Name)
-		assert.NotEmpty(t, cat.Items)
-		for _, mi := range cat.Items {
-			assert.NotNil(t, mi.Item)
-			assert.Greater(t, mi.CurrentPrice, 0)
-			assert.Greater(t, mi.Multiplier, 0.0)
-		}
+
+	views, total, err := svc.GetMarket("mining", 1, ItemsPerPage)
+	require.NoError(t, err)
+	assert.Greater(t, total, 0)
+
+	for _, v := range views {
+		assert.Equal(t, items.Mining, v.Item.Category)
 	}
 }
 
-func TestSellItemNotSellable(t *testing.T) {
+func TestGetMarketCategoryFilterEmpty(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "old_journal", 1)
-	assert.ErrorIs(t, err, ErrNotSellable)
+
+	views, total, err := svc.GetMarket("food", 1, ItemsPerPage)
+	require.NoError(t, err)
+	_ = views
+	assert.LessOrEqual(t, total, RotationSize)
 }
 
-func TestSellItemNotFound(t *testing.T) {
-	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "nonexistent", 1)
-	assert.ErrorIs(t, err, ErrNotSellable)
-}
-
-func TestSellItemNoItem(t *testing.T) {
-	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "coal", 1)
-	assert.ErrorIs(t, err, ErrNoItem)
-}
-
-func TestSellItemInsufficientQuantity(t *testing.T) {
+func TestBuyItemSuccess(t *testing.T) {
 	svc, st := testService(t)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 1}).Error)
 
-	_, err := svc.SellItem(1, "coal", 5)
-	assert.ErrorIs(t, err, ErrNoItem)
-}
-
-func TestSellItemAddsCharacterXP(t *testing.T) {
-	svc, st := testService(t)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
-
-	_, err := svc.SellItem(1, "coal", 3)
+	// Force a specific item to be active and cheap
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	err := st.DB.Where("1=1").Delete(&model.MarketState{}).Error
+	require.NoError(t, err)
+	err = st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	}).Error
 	require.NoError(t, err)
 
-	c, err := st.GetCharacter(1)
+	cost, err := svc.BuyItem(1, "coal", 3)
 	require.NoError(t, err)
-	assert.Greater(t, c.XP, 0)
+	assert.Equal(t, 15, cost)
+
+	var inv model.Inventory
+	err = st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error
+	require.NoError(t, err)
+	assert.Equal(t, 3, inv.Quantity)
+
+	bal, _ := st.GetBalance(1)
+	assert.Equal(t, 85, bal)
+}
+
+func TestBuyItemInsufficientFunds(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 9999, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := svc.BuyItem(1, "coal", 1)
+	assert.ErrorIs(t, err, ErrNoMoney)
+}
+
+func TestBuyItemNotActive(t *testing.T) {
+	svc, st := testService(t)
+
+	// Establish the week's rotation first, then deactivate coal
+	_ = svc.ensureWeekRotation()
+	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "coal").Update("is_active", false)
+
+	_, err := svc.BuyItem(1, "coal", 1)
+	assert.ErrorIs(t, err, ErrNotActive)
 }
 
 func TestSellItemSuccess(t *testing.T) {
 	svc, st := testService(t)
-	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
+
+	seedInventory(t, st, 1, "coal", 10)
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
 
 	gain, err := svc.SellItem(1, "coal", 3)
 	require.NoError(t, err)
@@ -91,4 +139,171 @@ func TestSellItemSuccess(t *testing.T) {
 
 	bal, _ := st.GetBalance(1)
 	assert.Equal(t, 100+gain, bal)
+}
+
+func TestSellItemNotOwned(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := svc.SellItem(1, "coal", 1)
+	assert.ErrorIs(t, err, ErrNoItem)
+}
+
+func TestSellItemNotActive(t *testing.T) {
+	svc, st := testService(t)
+
+	seedInventory(t, st, 1, "coal", 5)
+	// Establish the week's rotation first, then deactivate coal
+	_ = svc.ensureWeekRotation()
+	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "coal").Update("is_active", false)
+
+	_, err := svc.SellItem(1, "coal", 1)
+	assert.ErrorIs(t, err, ErrNotActive)
+}
+
+func TestSellItemNotMarketable(t *testing.T) {
+	svc, _ := testService(t)
+
+	// Equipment is not marketable
+	_, err := svc.SellItem(1, "stick", 1)
+	assert.ErrorIs(t, err, ErrNotActive)
+}
+
+func TestBuyItemAdjustsPriceUp(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := svc.BuyItem(1, "coal", 10)
+	require.NoError(t, err)
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Greater(t, st2.CurrentPrice, 5)
+	assert.Equal(t, 10, st2.DailyBought)
+}
+
+func TestSellItemAdjustsPriceDown(t *testing.T) {
+	svc, st := testService(t)
+
+	seedInventory(t, st, 1, "coal", 100)
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := svc.SellItem(1, "coal", 10)
+	require.NoError(t, err)
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Less(t, st2.CurrentPrice, 5)
+	assert.Equal(t, 10, st2.DailySold)
+}
+
+func TestBuyItemInvalidQuantity(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.BuyItem(1, "coal", 0)
+	assert.ErrorIs(t, err, ErrInvalidQty)
+	_, err = svc.BuyItem(1, "coal", -1)
+	assert.ErrorIs(t, err, ErrInvalidQty)
+}
+
+func TestSellItemInvalidQuantity(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.SellItem(1, "coal", 0)
+	assert.ErrorIs(t, err, ErrInvalidQty)
+}
+
+func TestBuyItemNotFound(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.BuyItem(1, "nonexistent_item", 1)
+	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestGetMarketPagination(t *testing.T) {
+	svc, _ := testService(t)
+
+	_, total, err := svc.GetMarket("all", 1, ItemsPerPage)
+	require.NoError(t, err)
+	assert.Greater(t, total, 0)
+	assert.LessOrEqual(t, total, RotationSize)
+
+	// Get second page
+	views2, _, err := svc.GetMarket("all", 2, ItemsPerPage)
+	require.NoError(t, err)
+	_ = views2
+}
+
+func TestDayResetDecaysPrice(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+
+	// Create item with price below base — should decay upward
+	coal := items.Get("coal")
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 1, LastReset: "2000-01-01", WeekID: weekID, IsActive: true,
+	})
+
+	_ = svc.ensureDayReset()
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, today, st2.LastReset)
+	assert.Greater(t, st2.CurrentPrice, 1)
+	assert.LessOrEqual(t, st2.CurrentPrice, coal.Price)
+}
+
+func TestRotateMarketSelectsDistinctItems(t *testing.T) {
+	svc, st := testService(t)
+
+	weekID := currentWeekID()
+	err := svc.rotateMarket(weekID)
+	require.NoError(t, err)
+
+	var active []model.MarketState
+	st.DB.Where("is_active = ?", true).Find(&active)
+	assert.Equal(t, RotationSize, len(active))
+
+	// All item IDs should be unique
+	seen := make(map[string]bool)
+	for _, st := range active {
+		assert.False(t, seen[st.ItemID], "duplicate item: %s", st.ItemID)
+		seen[st.ItemID] = true
+	}
+}
+
+func TestMarketableItemFilter(t *testing.T) {
+	all := items.MarketableItems()
+	assert.Greater(t, len(all), 0)
+
+	for _, it := range all {
+		assert.True(t, it.IsMarketable())
+	}
+
+	// Equipment should NOT be marketable
+	stick := items.Get("stick")
+	require.NotNil(t, stick)
+	assert.False(t, stick.IsMarketable())
+
+	// Seeds are Materials — not marketable
+	wheatSeed := items.Get("wheat_seed")
+	require.NotNil(t, wheatSeed)
+	assert.False(t, wheatSeed.IsMarketable())
 }

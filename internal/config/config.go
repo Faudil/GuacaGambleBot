@@ -24,6 +24,22 @@ type Config struct {
 	TestChannelID   int64
 	PetChannelID    int64
 	BaseJackpot     int
+
+	Criminality CriminalityConfig
+}
+
+type CriminalityConfig struct {
+	StealMaxGoldPercent    float64
+	StealMaxPerDay         int
+	StealCooldownHours     int
+	BurgleCooldownDays     int
+	HuntCooldownHours      int
+	NotorietyDecayDaily    int
+	NotorietyHuntThreshold int
+	MinLevelToTarget       int
+	BountyHunterLicense    int
+	CleanSlateGoldPrice    int
+	PacifistGoldPrice      int
 }
 
 func Load() *Config {
@@ -44,6 +60,19 @@ func Load() *Config {
 		TestChannelID:   getInt64("TEST_CHANNEL_ID", 0),
 		PetChannelID:    getInt64("PET_CHANNEL_ID", 0),
 		BaseJackpot:     getInt("BASE_JACKPOT", 500),
+		Criminality: CriminalityConfig{
+			StealMaxGoldPercent:    0.05,
+			StealMaxPerDay:         3,
+			StealCooldownHours:     24,
+			BurgleCooldownDays:     7,
+			HuntCooldownHours:      8,
+			NotorietyDecayDaily:    5,
+			NotorietyHuntThreshold: 20,
+			MinLevelToTarget:       10,
+			BountyHunterLicense:    500,
+			CleanSlateGoldPrice:    50000,
+			PacifistGoldPrice:      10000,
+		},
 	}
 }
 

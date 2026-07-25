@@ -42,8 +42,8 @@ type Zone struct {
 }
 
 var Zones = map[string]Zone{
-	"easy": {
-		Key: "easy_zone", Emoji: "🌲", LevelMin: 1, LevelMax: 5, XPMult: 1.0,
+	"forest": {
+		Key: "forest_zone", Emoji: "🌲", LevelMin: 1, LevelMax: 8, XPMult: 1.0,
 		Enemies: []EnemyTemplate{
 			{Name: "Slime Gluant", Emoji: "💧", HP: 25, Atk: 5, Def: 2, Spd: 5},
 			{Name: "Sanglier Sauvage", Emoji: "🐗", HP: 35, Atk: 8, Def: 5, Spd: 10},
@@ -52,10 +52,11 @@ var Zones = map[string]Zone{
 			{Item: "pebble", Chance: 0.50, MaxQty: 3},
 			{Item: "tomato", Chance: 0.30, MaxQty: 2},
 			{Item: "coal", Chance: 0.15, MaxQty: 1},
+			{Item: "forest_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
-	"medium": {
-		Key: "medium_zone", Emoji: "🦇", LevelMin: 8, LevelMax: 12, XPMult: 2.5,
+	"cave": {
+		Key: "cave_zone", Emoji: "🦇", LevelMin: 6, LevelMax: 14, XPMult: 1.5,
 		Enemies: []EnemyTemplate{
 			{Name: "Gobelin Voleur", Emoji: "👺", HP: 40, Atk: 18, Def: 5, Spd: 25},
 			{Name: "Araignée Géante", Emoji: "🕷️", HP: 50, Atk: 15, Def: 8, Spd: 30},
@@ -64,18 +65,72 @@ var Zones = map[string]Zone{
 			{Item: "coal", Chance: 0.60, MaxQty: 3},
 			{Item: "iron_ore", Chance: 0.40, MaxQty: 2},
 			{Item: "sardine", Chance: 0.20, MaxQty: 1},
+			{Item: "cave_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
-	"hard": {
-		Key: "hard_zone", Emoji: "🌋", LevelMin: 15, LevelMax: 20, XPMult: 5.0,
+	"desert": {
+		Key: "desert_zone", Emoji: "🏜️", LevelMin: 10, LevelMax: 20, XPMult: 2.5,
 		Enemies: []EnemyTemplate{
-			{Name: "Golem de Magma", Emoji: "🗿", HP: 100, Atk: 25, Def: 20, Spd: 2},
-			{Name: "Drake de Feu", Emoji: "🐉", HP: 80, Atk: 35, Def: 12, Spd: 25},
+			{Name: "Scarabée de Sable", Emoji: "🪲", HP: 60, Atk: 22, Def: 12, Spd: 15},
+			{Name: "Coyote Affamé", Emoji: "🐺", HP: 70, Atk: 28, Def: 8, Spd: 30},
 		},
 		LootTable: []LootEntry{
-			{Item: "copper_ore", Chance: 0.50, MaxQty: 5},
-			{Item: "gold_nugget", Chance: 0.30, MaxQty: 3},
-			{Item: "rough_diamond", Chance: 0.20, MaxQty: 2},
+			{Item: "copper_ore", Chance: 0.50, MaxQty: 3},
+			{Item: "silver_ore", Chance: 0.30, MaxQty: 2},
+			{Item: "gold_nugget", Chance: 0.15, MaxQty: 1},
+			{Item: "desert_egg", Chance: 0.025, MaxQty: 1},
+		},
+	},
+	"mountain": {
+		Key: "mountain_zone", Emoji: "🏔️", LevelMin: 14, LevelMax: 25, XPMult: 4.0,
+		Enemies: []EnemyTemplate{
+			{Name: "Chèvre des Rochers", Emoji: "🐐", HP: 80, Atk: 25, Def: 15, Spd: 20},
+			{Name: "Géant de Pierre", Emoji: "🗿", HP: 110, Atk: 30, Def: 25, Spd: 5},
+		},
+		LootTable: []LootEntry{
+			{Item: "iron_ore", Chance: 0.50, MaxQty: 4},
+			{Item: "emerald", Chance: 0.20, MaxQty: 1},
+			{Item: "platinum", Chance: 0.15, MaxQty: 1},
+			{Item: "mountain_egg", Chance: 0.025, MaxQty: 1},
+		},
+	},
+	"ocean": {
+		Key: "ocean_zone", Emoji: "🌊", LevelMin: 18, LevelMax: 30, XPMult: 6.0,
+		Enemies: []EnemyTemplate{
+			{Name: "Requin des Abysses", Emoji: "🦈", HP: 100, Atk: 35, Def: 12, Spd: 35},
+			{Name: "Méduse Toxique", Emoji: "🪼", HP: 80, Atk: 28, Def: 8, Spd: 20},
+		},
+		LootTable: []LootEntry{
+			{Item: "sardine", Chance: 0.50, MaxQty: 3},
+			{Item: "swordfish", Chance: 0.25, MaxQty: 1},
+			{Item: "old_boot", Chance: 0.15, MaxQty: 1},
+			{Item: "ocean_egg", Chance: 0.025, MaxQty: 1},
+		},
+	},
+	"tundra": {
+		Key: "tundra_zone", Emoji: "❄️", LevelMin: 24, LevelMax: 35, XPMult: 8.0,
+		Enemies: []EnemyTemplate{
+			{Name: "Loup des Glaces", Emoji: "🐺", HP: 120, Atk: 38, Def: 15, Spd: 30},
+			{Name: "Yeti Furieux", Emoji: "🦍", HP: 150, Atk: 35, Def: 30, Spd: 10},
+		},
+		LootTable: []LootEntry{
+			{Item: "platinum", Chance: 0.40, MaxQty: 3},
+			{Item: "emerald", Chance: 0.25, MaxQty: 2},
+			{Item: "rough_diamond", Chance: 0.15, MaxQty: 1},
+			{Item: "tundra_egg", Chance: 0.03, MaxQty: 1},
+		},
+	},
+	"volcano": {
+		Key: "volcano_zone", Emoji: "🌋", LevelMin: 30, LevelMax: 40, XPMult: 10.0,
+		Enemies: []EnemyTemplate{
+			{Name: "Golem de Magma", Emoji: "🗿", HP: 140, Atk: 40, Def: 30, Spd: 5},
+			{Name: "Drake de Feu", Emoji: "🐉", HP: 120, Atk: 45, Def: 18, Spd: 30},
+		},
+		LootTable: []LootEntry{
+			{Item: "gold_nugget", Chance: 0.50, MaxQty: 4},
+			{Item: "rough_diamond", Chance: 0.30, MaxQty: 2},
+			{Item: "magma_carp", Chance: 0.20, MaxQty: 2},
+			{Item: "volcano_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
 }
@@ -92,7 +147,10 @@ type Combatant struct {
 }
 
 func NewEnemy(zoneKey string) *Combatant {
-	zone := Zones[zoneKey]
+	zone, ok := Zones[zoneKey]
+	if !ok || len(zone.Enemies) == 0 {
+		return &Combatant{Name: "Shadow Beast", Emoji: "👾", HP: 50, MaxHP: 50, Atk: 10, Def: 5, Level: 1, IsAlive: true}
+	}
 	t := zone.Enemies[rand.Intn(len(zone.Enemies))]
 	lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
 	return &Combatant{
@@ -296,6 +354,7 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 
 	_ = s.store.IncrementGameLimit(userID, "hunt")
 	_ = s.store.SetCooldown(userID, "hunt")
+	_ = s.store.RecordActivity(userID, "items_hunted", 1)
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {

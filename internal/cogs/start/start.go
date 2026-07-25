@@ -32,9 +32,16 @@ func toInt(v any) int {
 }
 
 var activityLabels = map[string]string{
-	"items_mined":  "⛏️ Mining",
-	"items_farmed": "🌾 Farming",
-	"items_fished": "🎣 Fishing",
+	"items_mined":          "⛏️ Mining",
+	"items_farmed":         "🌾 Farming",
+	"items_fished":         "🎣 Fishing",
+	"items_hunted":         "⚔️ Hunting",
+	"items_digged":         "🦴 Digging",
+	"casino_games_played":  "🎰 Casino",
+	"bank_deposits":        "🏦 Bank",
+	"items_sold_market":    "🏪 Market",
+	"delve_completions":    "🏰 Delve",
+	"pets_fed":             "🐾 Pet Care",
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
@@ -117,11 +124,17 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 		step := def.Steps[stepIdx]
 		text := i18n.T(step.TextKey, lang)
 		label := i18n.T("start.continue_btn", lang)
-		if step.Type == questssvc.StepActivity {
+		switch step.Type {
+		case questssvc.StepActivity:
 			progStr := activityProgressStr(&step, uqd.ProgressValue)
 			text = i18n.T("start.activity_prompt", lang, map[string]any{"quest": i18n.T(def.TitleKey, lang)})
 			text += "\n\n" + progStr
 			label = i18n.T("quests.activity_view_btn", lang)
+		case questssvc.StepRequirement:
+			label = i18n.T("quests.req_button", lang)
+		case questssvc.StepBossBattle:
+			label = i18n.T("quests.activity_view_btn", lang)
+			text = i18n.T("start.boss_prompt", lang)
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -166,18 +179,71 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	currStep := def.Steps[stepIdx]
-	if currStep.Type == questssvc.StepActivity || currStep.Type == questssvc.StepRequirement || currStep.Type == questssvc.StepBossBattle {
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("", i18n.T("start.complete_activity_first", lang), 0xe74c3c), nil))
-		return
-	}
+	switch currStep.Type {
+	case questssvc.StepActivity:
+		if c.svc.IsActivityComplete(userID, questID) {
+			if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
+				_ = b.Session.InteractionRespond(i.Interaction,
+					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+						components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+				return
+			}
+		} else {
+			uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
+			text := i18n.T("start.activity_prompt", lang, map[string]any{"quest": i18n.T(def.TitleKey, lang)})
+			if uq2.Status == "ACTIVE" && uqd2 != nil {
+				text += "\n\n" + activityProgressStr(&currStep, uqd2.ProgressValue)
+			}
+			comps := []discordgo.MessageComponent{
+				components.ActionRow(
+					components.Button(i18n.T("quests.activity_view_btn", lang), components.Encode("start", "continue", questID), discordgo.SuccessButton),
+				),
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+					components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps))
+			return
+		}
 
-	if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
+	case questssvc.StepRequirement:
+		err := c.svc.FulfillRequirement(userID, questID)
+		if err != nil {
+			text := i18n.T(questID, lang) + "\n\n❌ " + err.Error()
+			comps := []discordgo.MessageComponent{
+				components.ActionRow(
+					components.Button(i18n.T("quests.req_button", lang), components.Encode("start", "continue", questID), discordgo.SuccessButton),
+				),
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+					components.Embed(i18n.T("start.begin_title", lang), text, 0xe74c3c), comps))
+			return
+		}
+
+	case questssvc.StepBossBattle:
+		text := i18n.T("start.boss_prompt", lang)
+		if currStep.Extra != nil {
+			if bs, ok := currStep.Extra["boss_stage"].(int); ok {
+				_ = bs
+			}
+		}
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("⚔️ "+i18n.T("start.boss_fight_btn", lang), components.Encode("start", "continue", questID), discordgo.DangerButton),
+			),
+		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+				components.Embed(i18n.T("start.begin_title", lang), text, 0x992d22), comps))
 		return
+
+	default:
+		if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+					components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+			return
+		}
 	}
 
 	uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
@@ -197,7 +263,11 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	btnLabel := i18n.T("start.continue_btn", lang)
 	if nextStep.Type == questssvc.StepActivity {
 		text = i18n.T("start.activity_prompt", lang, map[string]any{"quest": i18n.T(def.TitleKey, lang)})
-		text += "\n\n" + activityProgressStr(&nextStep, 0)
+		progress := 0
+		if uqd2 != nil {
+			progress = uqd2.ProgressValue
+		}
+		text += "\n\n" + activityProgressStr(&nextStep, progress)
 		btnLabel = i18n.T("quests.activity_view_btn", lang)
 	}
 	comps := []discordgo.MessageComponent{

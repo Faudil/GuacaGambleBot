@@ -352,6 +352,7 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 
 	for _, uid := range []int64{gs.Player1ID, gs.Player2ID} {
+		_ = c.store.RecordActivity(uid, "casino_games_played", 1)
 		unlocks, _ := achievement.CheckAndUnlock(b.DB, uid)
 		if len(unlocks) > 0 {
 			interaction.SendAchievements(b, i, lang, unlocks)

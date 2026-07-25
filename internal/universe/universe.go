@@ -30,6 +30,16 @@ func (f *Fragment) Text(lang string) string {
 	return f.TextFR
 }
 
+type ShopItem struct {
+	ItemID   string
+	MinLevel int
+	RepCost  int
+	CoinCost int
+	Emoji    string
+	LabelEN  string
+	LabelFR  string
+}
+
 type NPCData struct {
 	ID          string
 	Name        string
@@ -48,6 +58,12 @@ type NPCData struct {
 	HintFR        string
 	GreetingsEN   []string
 	GreetingsFR   []string
+
+	QuipsEN      []string
+	QuipsFR      []string
+	QuipsHighEN  []string
+	QuipsHighFR  []string
+	ShopItems    []ShopItem
 }
 
 func (n *NPCData) Description(lang string) string {
@@ -90,6 +106,20 @@ func (n *NPCData) Greetings(lang string) []string {
 		return n.GreetingsEN
 	}
 	return n.GreetingsFR
+}
+
+func (n *NPCData) Quips(lang string) []string {
+	if lang == "en" {
+		return n.QuipsEN
+	}
+	return n.QuipsFR
+}
+
+func (n *NPCData) QuipsHigh(lang string) []string {
+	if lang == "en" {
+		return n.QuipsHighEN
+	}
+	return n.QuipsHighFR
 }
 
 type Definition struct {

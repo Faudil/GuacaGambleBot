@@ -51,11 +51,44 @@ type BattlePet struct {
 
 func (p *BattlePet) IsAlive() bool { return p.HP > 0 }
 
-func (p *BattlePet) realDefense() int  { return max(0, p.Defense-p.defenseMalus) }
-func (p *BattlePet) realACC() int      { return max(0, p.ACC-p.accMalus) }
-func (p *BattlePet) realAtk() int      { return max(0, p.Atk-p.atkMalus) }
-func (p *BattlePet) realDGE() int      { return max(0, p.DGE-p.dgeMalus) }
-func (p *BattlePet) realSpeed() int    { return max(1, p.Speed-p.speedMalus) }
+func (p *BattlePet) realDefense() int {
+	v := max(0, p.Defense-p.defenseMalus)
+	if p.PerkInt["mod_rampage"] > 0 && p.HP < p.MaxHP*40/100 {
+		v = v * 8 / 10
+	}
+	if cm := p.PerkInt["chaos_def_mult"]; cm > 0 {
+		v = int(float64(v) * float64(cm) / 100.0)
+	}
+	return v
+}
+func (p *BattlePet) realACC() int {
+	v := max(0, p.ACC-p.accMalus)
+	return v
+}
+func (p *BattlePet) realAtk() int {
+	v := max(0, p.Atk-p.atkMalus)
+	if cm := p.PerkInt["chaos_atk_mult"]; cm > 0 {
+		v = int(float64(v) * float64(cm) / 100.0)
+	}
+	return v
+}
+func (p *BattlePet) realDGE() int {
+	v := max(0, p.DGE-p.dgeMalus)
+	if p.PerkInt["mod_heavy_rain"] > 0 {
+		v = v / 2
+	}
+	return v
+}
+func (p *BattlePet) realSpeed() int {
+	v := max(0, p.Speed-p.speedMalus)
+	if p.PerkInt["mod_heavy_rain"] > 0 {
+		v = v * 9 / 10
+	}
+	if cm := p.PerkInt["chaos_spd_mult"]; cm > 0 {
+		v = int(float64(v) * float64(cm) / 100.0)
+	}
+	return max(1, v)
+}
 func (p *BattlePet) thornsDmg() float64 {
 	return float64(p.realDefense())*0.1 + float64(p.realDefense())*0.05*float64(p.thornMult)
 }
@@ -84,12 +117,16 @@ type BattleResult struct {
 	Pet2     *BattlePet
 }
 
-func Simulate(p1, p2 *BattlePet) *BattleResult {
+func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 	p1.healFull()
 	p2.healFull()
 
 	applyBattleStartSkills(p1.Skills, p1, p2)
 	applyBattleStartSkills(p2.Skills, p2, p1)
+
+	if len(modID) > 0 && modID[0] != "" {
+		ApplyModifierBeforeBattle(p1, p2, modID[0])
+	}
 
 	log := make([]string, 0, 10)
 	actions := 0
@@ -205,9 +242,38 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		return joinParts(parts)
 	}
 
+	if attacker.PerkInt["mod_chaos"] > 0 {
+		stat := []string{"atk", "def", "spd"}[rand.Intn(3)]
+		mult := 1.0
+		if rand.Intn(2) == 0 {
+			mult = 1.20
+		} else {
+			mult = 0.80
+		}
+		switch stat {
+		case "atk":
+			attacker.PerkInt["chaos_atk_mult"] = int(mult * 100)
+		case "def":
+			attacker.PerkInt["chaos_def_mult"] = int(mult * 100)
+		case "spd":
+			attacker.PerkInt["chaos_spd_mult"] = int(mult * 100)
+		}
+	}
 	hitChance := max(20, min(100, int(100+float64(attacker.realACC())-float64(defender.realDGE())*fatigueMult)))
+	if attacker.PerkInt["mod_shadow_realm"] > 0 {
+		hitChance = max(20, hitChance-25)
+	}
+	if defender.PerkInt["mod_heavy_rain"] > 0 {
+		hitChance = max(20, hitChance-50)
+	}
 	if rand.Intn(100)+1 > hitChance {
-		parts = append(parts, fmt.Sprintf("💨 %s **%s** dodges %s's attack!", dEmoji, dn, an))
+		if defender.PerkInt["mod_shadow_realm"] > 0 {
+			heal := max(1, defender.MaxHP*8/100)
+			defender.HP = min(defender.MaxHP, defender.HP+heal)
+			parts = append(parts, fmt.Sprintf("🌑 %s **%s** dodges and heals **%d** HP!", dEmoji, dn, heal))
+		} else {
+			parts = append(parts, fmt.Sprintf("💨 %s **%s** dodges %s's attack!", dEmoji, dn, an))
+		}
 		return joinParts(parts)
 	}
 
@@ -215,8 +281,22 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 	if attacker.PerkInt["piercing"] > 0 {
 		defForDmg *= 0.60
 	}
+	if ap := attacker.PerkInt["artifact_piercing"]; ap > 0 {
+		pct := 1.0 - float64(ap)*3.0/100.0
+		if pct < 0.7 {
+			pct = 0.7
+		}
+		defForDmg *= pct
+	}
+	if defender.PerkInt["artifact_warding"] > 0 {
+		defForDmg = math.Min(defForDmg*1.2, defForDmg+10)
+	}
 	baseDmg := max(float64(attacker.realAtk())*0.2, float64(attacker.realAtk())-defForDmg*fatigueMult)
-	isCrit := rand.Intn(100)+1 <= attacker.CritC
+	critChance := attacker.CritC
+	if attacker.PerkInt["mod_starlight"] > 0 {
+		critChance += 15
+	}
+	isCrit := rand.Intn(100)+1 <= critChance
 	critMult := 1.0
 	if isCrit {
 		critMult = 1 + (attacker.CritD-1)/2 + rand.Float64()*(attacker.CritD-(1+(attacker.CritD-1)/2))
@@ -246,10 +326,24 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		finalDmg = 1
 	}
 
+	if attacker.PerkInt["mod_burning_sun"] > 0 && getDamageType(attacker.Nickname) != nil && *getDamageType(attacker.Nickname) == DamageFire {
+		finalDmg = int(math.Round(float64(finalDmg) * 1.40))
+	}
+	if defender.PerkInt["mod_thunderstorm"] > 0 && defender.realSpeed() < 15 {
+		finalDmg = int(math.Round(float64(finalDmg) * 1.20))
+	}
+	if attacker.PerkInt["mod_rampage"] > 0 && attacker.HP < attacker.MaxHP*40/100 {
+		finalDmg = int(math.Round(float64(finalDmg) * 1.30))
+	}
+
 	defender.HP = max(0, defender.HP-finalDmg)
 
 	dmgType := getDamageType(attacker.Nickname)
-	effectTrigger := dmgType != nil && rand.Intn(100)+1 <= attacker.SpcC
+	spcC := attacker.SpcC
+	if attacker.PerkInt["mod_starlight"] > 0 && dmgType != nil {
+		spcC = 100
+	}
+	effectTrigger := dmgType != nil && rand.Intn(100)+1 <= spcC
 
 	effectMsg := ""
 	if effectTrigger && dmgType != nil {
@@ -269,6 +363,16 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		}
 		attacker.HP = min(attacker.MaxHP, attacker.HP+heal)
 		parts[len(parts)-1] += fmt.Sprintf(" and heals for **%d** HP 🩸", heal)
+	}
+	if av := attacker.PerkInt["artifact_vampirism"]; av > 0 {
+		lifesteal := max(1, finalDmg*av/100)
+		attacker.HP = min(attacker.MaxHP, attacker.HP+lifesteal)
+		parts[len(parts)-1] += fmt.Sprintf(" 🩸 drains **%d** HP", lifesteal)
+	}
+	if attacker.PerkInt["mod_blood_moon"] > 0 {
+		lifesteal := max(1, finalDmg*50/100)
+		attacker.HP = min(attacker.MaxHP, attacker.HP+lifesteal)
+		parts[len(parts)-1] += fmt.Sprintf(" 🌕 leeches **%d** HP", lifesteal)
 	}
 
 	// Counter: 30% chance to reflect 50% damage back to attacker
@@ -302,7 +406,23 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 }
 
 func tickEffects(p *BattlePet) string {
-	parts := make([]string, 0, 4)
+	parts := make([]string, 0, 6)
+
+	if _, ok := p.PerkInt["mod_start_burn"]; ok {
+		delete(p.PerkInt, "mod_start_burn")
+		p.burningTurns = max(p.burningTurns, 1)
+		if p.dgeMalus == 0 {
+			p.dgeMalus = int(float64(p.DGE) * 0.8)
+		}
+		parts = append(parts, fmt.Sprintf("🔥 %s is set on fire by the Burning Sun!", p.Emoji+" **"+p.Nickname+"**"))
+	}
+
+	if rl := p.PerkInt["artifact_rejuvenation"]; rl > 0 {
+		heal := max(1, p.MaxHP*rl/100)
+		p.HP = min(p.MaxHP, p.HP+heal)
+		parts = append(parts, fmt.Sprintf("💚 %s regenerates **%d** HP from Rejuvenation.", p.Emoji+" **"+p.Nickname+"**", heal))
+	}
+
 	if regen, ok := p.PerkInt["regeneration"]; ok {
 		p.PerkInt["regeneration"] = (regen + 1) % 3
 		if regen == 2 { // every 3rd tick
@@ -316,7 +436,11 @@ func tickEffects(p *BattlePet) string {
 		p.HP = max(0, p.HP-dmg)
 		parts = append(parts, fmt.Sprintf("🧪 **%s** suffers from poison and loses **%d** HP.", p.Nickname, dmg))
 		p.poisonedTurns--
-		if p.poisonedTurns == 0 {
+		if p.PerkInt["mod_frost_aura"] > 0 {
+			p.poisonedTurns--
+		}
+		if p.poisonedTurns <= 0 {
+			p.poisonedTurns = 0
 			p.atkMalus = 0
 			parts = append(parts, fmt.Sprintf("✨ **%s** is no longer poisoned!", p.Nickname))
 		}
@@ -326,7 +450,11 @@ func tickEffects(p *BattlePet) string {
 		p.HP = max(0, p.HP-dmg)
 		parts = append(parts, fmt.Sprintf("🔥 **%s** burns and loses **%d** HP.", p.Nickname, dmg))
 		p.burningTurns--
-		if p.burningTurns == 0 {
+		if p.PerkInt["mod_frost_aura"] > 0 {
+			p.burningTurns--
+		}
+		if p.burningTurns <= 0 {
+			p.burningTurns = 0
 			p.dgeMalus = 0
 			parts = append(parts, fmt.Sprintf("💦 **%s** is no longer burning!", p.Nickname))
 		}
@@ -335,8 +463,12 @@ func tickEffects(p *BattlePet) string {
 		dmg := max(2, int(float64(p.MaxHP)*0.06))
 		p.HP = max(0, p.HP-dmg)
 		parts = append(parts, fmt.Sprintf("🩸 **%s** bleeds and loses **%d** HP.", p.Nickname, dmg))
+		if p.PerkInt["mod_frost_aura"] > 0 {
+			p.bleedingTurns--
+		}
 		p.bleedingTurns--
-		if p.bleedingTurns == 0 {
+		if p.bleedingTurns <= 0 {
+			p.bleedingTurns = 0
 			p.speedMalus = 0
 			parts = append(parts, fmt.Sprintf("🩹 **%s** is no longer bleeding!", p.Nickname))
 		}
@@ -425,6 +557,47 @@ func applyBattleStartSkills(skills []string, owner, opponent *BattlePet) {
 		case "dragon_fury":
 			owner.PerkInt["dragon_fury"] = 1
 		}
+	}
+}
+
+func ApplyModifierBeforeBattle(p1, p2 *BattlePet, modID string) {
+	switch modID {
+	case "burning_sun":
+		p1.PerkInt["mod_burning_sun"] = 1
+		p2.PerkInt["mod_burning_sun"] = 1
+		p1.PerkInt["mod_start_burn"] = 1
+		p2.PerkInt["mod_start_burn"] = 1
+	case "heavy_rain":
+		p1.PerkInt["mod_heavy_rain"] = 1
+		p2.PerkInt["mod_heavy_rain"] = 1
+	case "starlight":
+		p1.PerkInt["mod_starlight"] = 1
+		p2.PerkInt["mod_starlight"] = 1
+	case "iron_will":
+		p1.PerkInt["mod_iron_will"] = 1
+		p2.PerkInt["mod_iron_will"] = 1
+		p1.Defense = int(float64(p1.Defense) * 1.30)
+		p2.Defense = int(float64(p2.Defense) * 1.30)
+	case "blood_moon":
+		p1.PerkInt["mod_blood_moon"] = 1
+		p2.PerkInt["mod_blood_moon"] = 1
+	case "thunderstorm":
+		p1.PerkInt["mod_thunderstorm"] = 1
+		p2.PerkInt["mod_thunderstorm"] = 1
+	case "shadow_realm":
+		p1.PerkInt["mod_shadow_realm"] = 1
+		p2.PerkInt["mod_shadow_realm"] = 1
+	case "rampage":
+		p1.PerkInt["mod_rampage"] = 1
+		p2.PerkInt["mod_rampage"] = 1
+	case "frost_aura":
+		p1.Defense += 15
+		p2.Defense += 15
+		p1.PerkInt["mod_frost_aura"] = 1
+		p2.PerkInt["mod_frost_aura"] = 1
+	case "chaos":
+		p1.PerkInt["mod_chaos"] = 1
+		p2.PerkInt["mod_chaos"] = 1
 	}
 }
 

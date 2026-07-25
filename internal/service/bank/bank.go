@@ -45,6 +45,7 @@ func (s *Service) Deposit(userID, amount int) (wallet, bank int, err error) {
 	if err != nil {
 		return 0, 0, err
 	}
+	_ = s.store.RecordActivity(int64(userID), "bank_deposits", 1)
 	return wallet, bank, nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
@@ -27,7 +28,8 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	def := universe.Get("hoakhaven")
 	require.NotNil(t, def)
 	s := store.New(d, cfg)
-	return New(s, cfg, def), s
+	inv := invsvc.New(s, cfg)
+	return New(s, cfg, def, inv), s
 }
 
 func TestGetNPCData(t *testing.T) {

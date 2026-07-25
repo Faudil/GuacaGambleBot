@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"log/slog"
 	"time"
 
 	"gorm.io/gorm"
@@ -17,12 +18,20 @@ type RepaidLender struct {
 	Amount   int
 }
 
+// QuestAdvanceFn is called by RecordActivity when an activity step reaches its
+// target. Implementations should advance the quest step with proper next-step
+// custom_data. questID is the quest whose step was completed.
+type QuestAdvanceFn func(userID int64, questID string) error
+
 // Store is the data-access layer over GORM.
 type Store struct {
 	DB            *gorm.DB
 	StartingBalance int
 	DefaultPrefix   string
+	questAdvanceFn  QuestAdvanceFn
 }
+
+func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
 
 func New(db *gorm.DB, cfg *config.Config) *Store {
 	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix}
@@ -316,21 +325,41 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 	for _, q := range active {
 		var d model.UserQuestData
 		if err := s.DB.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
+			slog.Info("RecordActivity: no quest_data row", "user_id", userID, "quest_id", q.QuestID, "err", err)
 			continue
 		}
 		var cd map[string]any
 		if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
+			slog.Info("RecordActivity: json unmarshal failed", "user_id", userID, "quest_id", q.QuestID, "custom_data", d.CustomData, "err", err)
 			continue
 		}
+		slog.Info("RecordActivity: checking quest",
+			"user_id", userID,
+			"quest_id", q.QuestID,
+			"stat", stat,
+			"custom_data", cd,
+			"target_stat_in_cd", cd["target_stat"],
+			"progress_value", d.ProgressValue,
+			"amount", amount,
+		)
 		if cd["target_stat"] != stat {
+			slog.Info("RecordActivity: stat mismatch, skipping", "expected", cd["target_stat"], "got", stat)
 			continue
 		}
 		targetCount, _ := cd["target_count"].(float64)
 		newVal := d.ProgressValue + amount
 		done := newVal >= int(targetCount)
+		slog.Info("RecordActivity: updating progress",
+			"user_id", userID,
+			"quest_id", q.QuestID,
+			"newVal", newVal,
+			"targetCount", targetCount,
+			"done", done,
+		)
 		if err := s.DB.Model(&model.UserQuestData{}).
 			Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
 			Update("progress_value", newVal).Error; err != nil {
+			slog.Info("RecordActivity: update error", "err", err)
 			return err
 		}
 		if done {
@@ -340,14 +369,10 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 					Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
 					return err
 				}
-			} else {
-				s.DB.Model(&model.UserQuestData{}).
-					Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
-					Updates(map[string]any{
-						"step_index":    d.StepIndex + 1,
-						"progress_value": 0,
-						"custom_data":    "{}",
-					})
+			} else if s.questAdvanceFn != nil {
+				if err := s.questAdvanceFn(userID, q.QuestID); err != nil {
+					slog.Warn("RecordActivity: questAdvanceFn failed", "quest_id", q.QuestID, "err", err)
+				}
 			}
 		}
 	}
@@ -409,6 +434,12 @@ func (s *Store) CheckCooldown(userID int64, activity string, duration time.Durat
 		return false, err
 	}
 	return time.Since(cd.LastUsed) >= duration, nil
+}
+
+// ClearCooldown removes a cooldown record for the given activity.
+func (s *Store) ClearCooldown(userID int64, activity string) error {
+	return s.DB.Where("user_id = ? AND activity_name = ?", userID, activity).
+		Delete(&model.Cooldown{}).Error
 }
 
 // SetCooldown records the current time as the last use of an activity.

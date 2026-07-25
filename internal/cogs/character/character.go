@@ -1,6 +1,7 @@
 package character
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -39,13 +40,15 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("character", "stat_up_int", c.onStatUp("int"))
 	r.Component("character", "stat_up_vit", c.onStatUp("vit"))
 	r.Component("character", "stat_up_luk", c.onStatUp("luk"))
-	r.Component("character", "equip_form_weapon", c.onEquipForm("weapon"))
-	r.Component("character", "equip_form_armor", c.onEquipForm("armor"))
-	r.Component("character", "equip_form_accessory", c.onEquipForm("accessory"))
+	r.Component("character", "equip_weapon", c.onEquipSelect("weapon"))
+	r.Component("character", "equip_armor", c.onEquipSelect("armor"))
+	r.Component("character", "equip_accessory", c.onEquipSelect("accessory"))
+	r.Component("character", "equip_trinket", c.onEquipSelect("trinket"))
 	r.Component("character", "unequip_weapon", c.onUnequip("weapon"))
 	r.Component("character", "unequip_armor", c.onUnequip("armor"))
 	r.Component("character", "unequip_accessory", c.onUnequip("accessory"))
-	r.Modal("character", "equip_submit", c.onEquipSubmit)
+	r.Component("character", "unequip_trinket", c.onUnequip("trinket"))
+	r.Component("character", "equip_pick", c.onEquipPick)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -53,7 +56,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
 	embed := profileEmbed(c.svc, lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, navButtons(lang)))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, profileButtons(lang)))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
@@ -61,7 +64,7 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 	embed := profileEmbed(c.svc, lang, interaction.ToInt64(m.Author.ID))
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: navButtons(lang),
+		Components: profileButtons(lang),
 	})
 }
 
@@ -80,7 +83,7 @@ func (c *Cog) showView(view string, b *interaction.Bot, i *discordgo.Interaction
 		comps = equipmentButtons(c.svc, lang, userID)
 	default:
 		embed = profileEmbed(c.svc, lang, userID)
-		comps = navButtons(lang)
+		comps = profileButtons(lang)
 	}
 
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -113,26 +116,47 @@ func (c *Cog) onStatUp(stat string) func(b *interaction.Bot, i *discordgo.Intera
 
 // --- Equipment ---
 
-func (c *Cog) onEquipForm(slot string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
+func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-		name := slotDisplayName(slot, lang)
+		userID := interaction.ToInt64(interaction.UserID(i))
+
+		items, err := c.store.GetUnequippedBySlot(userID, slot)
+		if err != nil || len(items) == 0 {
+			interaction.RespondError(b, i, lang, "character.equip_none_available")
+			return
+		}
+
+		slotName := slotDisplayName(slot, lang)
+		opts := make([]discordgo.SelectMenuOption, 0, len(items))
+		for _, eq := range items {
+			label := fmt.Sprintf("[%s] %s", eq.Rarity, eq.Name)
+			desc := statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
+			if len(desc) > 100 {
+				desc = desc[:100]
+			}
+			rarEmoji := rarityEmoji(eq.Rarity)
+			opts = append(opts, discordgo.SelectMenuOption{
+				Label:       label,
+				Value:       fmt.Sprintf("%d", eq.ID),
+				Description: desc,
+				Emoji:       &discordgo.ComponentEmoji{Name: rarEmoji},
+			})
+		}
+
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseModal,
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				CustomID: components.Encode("character", "equip_submit", slot),
-				Title:    i18n.T("character.equip_modal_title", lang, map[string]any{"slot": name}),
+				Content: i18n.T("character.equip_select_title", lang, map[string]any{"slot": slotName}),
+				Flags:   discordgo.MessageFlagsEphemeral,
 				Components: []discordgo.MessageComponent{
 					components.ActionRow(
-						components.TextInput(
-							"item_name",
-							i18n.T("character.equip_item_label", lang),
-							true,
-							"",
-							discordgo.TextInputShort,
-							1,
-							50,
-						),
+						discordgo.SelectMenu{
+							MenuType:    discordgo.StringSelectMenu,
+							CustomID:    components.Encode("character", "equip_pick", slot),
+							Placeholder: i18n.T("character.equip_select_placeholder", lang),
+							Options:     opts,
+						},
 					),
 				},
 			},
@@ -140,48 +164,44 @@ func (c *Cog) onEquipForm(slot string) func(b *interaction.Bot, i *discordgo.Int
 	}
 }
 
-func (c *Cog) onEquipSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	vals := interaction.ModalValues(i)
-	itemName := strings.TrimSpace(vals["item_name"])
-	if itemName == "" {
+func (c *Cog) onEquipPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	data := i.Interaction.MessageComponentData()
+	if len(data.Values) == 0 {
 		return
 	}
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	equipID, err := strconv.ParseUint(data.Values[0], 10, 64)
+	if err != nil {
+		return
+	}
+
+	if err := c.store.EquipInstance(userID, uint(equipID)); err != nil {
+		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		interaction.RespondError(b, i, lang, "character.equip_error")
+		return
+	}
+
+	// Defer then update the character view
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseDeferredMessageUpdate,
+	})
 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	cid := i.ModalSubmitData().CustomID
-	_, _, rest := components.Decode(cid)
-	slot := ""
-	if len(rest) > 0 {
-		slot = rest[0]
-	}
-
-	it := items.Get(itemName)
-	if it == nil {
-		interaction.RespondError(b, i, lang, "character.equip_not_found")
-		return
-	}
-	if it.EquipSlot != slot {
-		interaction.RespondError(b, i, lang, "character.equip_wrong_slot")
-		return
-	}
-	// Check inventory
-	var qty int64
-	c.store.DB.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ? AND quantity > 0", userID, it.ID).
-		Count(&qty)
-	if qty == 0 {
-		interaction.RespondError(b, i, lang, "character.equip_not_owned")
-		return
-	}
-	_ = c.svc.EquipItem(userID, slot, it.ID)
-	c.showView("equipment", b, i)
+	embed := equipmentEmbed(c.svc, lang, userID)
+	comps := equipmentButtons(c.svc, lang, userID)
+	_, _ = b.Session.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Channel:    i.ChannelID,
+		ID:         i.Message.ID,
+		Embeds:     &[]*discordgo.MessageEmbed{embed},
+		Components: &comps,
+	})
 }
 
 func (c *Cog) onUnequip(slot string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		userID := interaction.ToInt64(interaction.UserID(i))
-		_ = c.svc.UnequipSlot(userID, slot)
+		_ = c.store.UnequipSlot(userID, slot)
 		c.showView("equipment", b, i)
 	}
 }
@@ -262,6 +282,13 @@ func statsEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Mess
 	sb.WriteString(statLine("❤️", i18n.T("character.stat_vit", lang), res.VIT, res.EquipVIT))
 	sb.WriteString(statLine("🍀", i18n.T("character.stat_luk", lang), res.LUK, res.EquipLUK))
 
+	// Show set bonuses
+	for _, s := range res.SetBonuses {
+		if s.ActiveTier != nil {
+			fmt.Fprintf(sb, "\n%s %s (%d/%d) %s", s.SetEmoji, s.SetName, s.Pieces, s.ActiveTier.Pieces, s.ActiveTier.Desc)
+		}
+	}
+
 	embed := components.Embed(
 		i18n.T("character.stats_title", lang),
 		sb.String(),
@@ -271,20 +298,45 @@ func statsEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Mess
 }
 
 func equipmentEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.MessageEmbed {
-	eq, _ := svc.GetEquipment(userID)
+	equipped, _ := svc.Store().GetEquipped(userID)
 
-	slotLine := func(slot, itemID string) string {
-		it := items.Get(itemID)
-		if it == nil || itemID == "" {
-			return fmt.Sprintf("❌ **%s:** %s\n", slotDisplayName(slot, lang), i18n.T("character.empty_slot", lang))
-		}
-		bonus := statStr(it)
-		return fmt.Sprintf("✅ **%s:** %s %s\n", slotDisplayName(slot, lang), it.Emoji, it.Name) + bonus
+	equippedBySlot := map[string]model.UserEquipment{}
+	for _, eq := range equipped {
+		equippedBySlot[eq.EquipSlot] = eq
 	}
 
-	desc := slotLine("weapon", eq["weapon"])
-	desc += slotLine("armor", eq["armor"])
-	desc += slotLine("accessory", eq["accessory"])
+	slotLine := func(slot string, eq model.UserEquipment) string {
+		if eq.ID == 0 {
+			return fmt.Sprintf("❌ **%s:** %s\n", slotDisplayName(slot, lang), i18n.T("character.empty_slot", lang))
+		}
+		rarEmoji := rarityEmoji(eq.Rarity)
+		line := fmt.Sprintf("✅ **%s:** %s %s %s\n", slotDisplayName(slot, lang), rarEmoji, eq.Emoji, eq.Name)
+		line += statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
+
+		// Show affixes
+		var affixes []items.AppliedAffix
+		if err := json.Unmarshal([]byte(eq.Affixes), &affixes); err == nil && len(affixes) > 0 {
+			var affixParts []string
+			for _, a := range affixes {
+				affixParts = append(affixParts, fmt.Sprintf("%s %s+%d", a.Name, statEmoji(a.Stat), a.Value))
+			}
+			line += "└ " + strings.Join(affixParts, ", ") + "\n"
+		}
+
+		// Show set info
+		if eq.SetID != "" {
+			if set, ok := items.SetsByName[eq.SetID]; ok {
+				line += fmt.Sprintf("└ %s %s\n", set.Emoji, set.Name)
+			}
+		}
+
+		return line
+	}
+
+	desc := slotLine("weapon", equippedBySlot["weapon"])
+	desc += slotLine("armor", equippedBySlot["armor"])
+	desc += slotLine("accessory", equippedBySlot["accessory"])
+	desc += slotLine("trinket", equippedBySlot["trinket"])
 
 	embed := components.Embed(
 		i18n.T("character.equipment_title", lang),
@@ -296,12 +348,11 @@ func equipmentEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.
 
 // --- Button builders ---
 
-func navButtons(lang string) []discordgo.MessageComponent {
+func profileButtons(lang string) []discordgo.MessageComponent {
 	return []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("character.btn_profile", lang), components.Encode("character", "profile"), discordgo.PrimaryButton),
-			components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.PrimaryButton),
-			components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.PrimaryButton),
+			components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.SecondaryButton),
+			components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.SecondaryButton),
 		),
 	}
 }
@@ -311,7 +362,6 @@ func statsButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.M
 	rows := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("character.btn_profile", lang), components.Encode("character", "profile"), discordgo.SecondaryButton),
-			components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.PrimaryButton),
 			components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.SecondaryButton),
 		),
 	}
@@ -328,22 +378,25 @@ func statsButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.M
 }
 
 func equipmentButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.MessageComponent {
-	eq, _ := svc.GetEquipment(userID)
+	equipped, _ := svc.Store().GetEquipped(userID)
+	eqBySlot := map[string]bool{}
+	for _, e := range equipped {
+		eqBySlot[e.EquipSlot] = true
+	}
 
 	row1 := []discordgo.MessageComponent{
 		components.Button(i18n.T("character.btn_profile", lang), components.Encode("character", "profile"), discordgo.SecondaryButton),
 		components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.SecondaryButton),
-		components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.PrimaryButton),
 	}
 
 	row2 := []discordgo.MessageComponent{}
-	for _, slot := range []string{"weapon", "armor", "accessory"} {
-		if eq[slot] != "" {
+	for _, slot := range []string{"weapon", "armor", "accessory", "trinket"} {
+		if eqBySlot[slot] {
 			label := i18n.T("character.btn_unequip", lang, map[string]any{"slot": slotDisplayName(slot, lang)})
 			row2 = append(row2, components.Button(label, components.Encode("character", "unequip_"+slot), discordgo.DangerButton))
 		} else {
 			label := i18n.T("character.btn_equip", lang, map[string]any{"slot": slotDisplayName(slot, lang)})
-			row2 = append(row2, components.Button(label, components.Encode("character", "equip_form_"+slot), discordgo.SuccessButton))
+			row2 = append(row2, components.Button(label, components.Encode("character", "equip_"+slot), discordgo.SuccessButton))
 		}
 	}
 
@@ -374,6 +427,8 @@ func slotDisplayName(slot, lang string) string {
 		return i18n.T("character.slot_armor", lang)
 	case "accessory":
 		return i18n.T("character.slot_accessory", lang)
+	case "trinket":
+		return i18n.T("character.slot_trinket", lang)
 	}
 	return slot
 }
@@ -399,4 +454,59 @@ func statStr(it *items.Item) string {
 		return ""
 	}
 	return "(" + strings.Join(parts, ", ") + ")\n"
+}
+
+func statSummaryLine(str, dex, intt, vit, luk int) string {
+	parts := []string{}
+	if str > 0 {
+		parts = append(parts, fmt.Sprintf("STR+%d", str))
+	}
+	if dex > 0 {
+		parts = append(parts, fmt.Sprintf("DEX+%d", dex))
+	}
+	if intt > 0 {
+		parts = append(parts, fmt.Sprintf("INT+%d", intt))
+	}
+	if vit > 0 {
+		parts = append(parts, fmt.Sprintf("VIT+%d", vit))
+	}
+	if luk > 0 {
+		parts = append(parts, fmt.Sprintf("LUK+%d", luk))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return "`" + strings.Join(parts, " · ") + "`\n"
+}
+
+func rarityEmoji(rarity string) string {
+	switch strings.ToLower(rarity) {
+	case "common":
+		return "⬜"
+	case "uncommon":
+		return "🟩"
+	case "rare":
+		return "🔵"
+	case "epic":
+		return "🟣"
+	case "legendary":
+		return "🟠"
+	}
+	return "⬜"
+}
+
+func statEmoji(stat string) string {
+	switch stat {
+	case "str":
+		return "💪"
+	case "dex":
+		return "🤸"
+	case "int":
+		return "🧠"
+	case "vit":
+		return "❤️"
+	case "luk":
+		return "🍀"
+	}
+	return ""
 }

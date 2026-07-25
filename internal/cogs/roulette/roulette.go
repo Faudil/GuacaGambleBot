@@ -246,6 +246,7 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	if result == "dead" {
+		_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 		_ = achievement.IncrementStat(b.DB, userID, "roulette_lost", 1)
 		_ = achievement.IncrementStat(b.DB, userID, "roulette_spent", game.EntryFee)
 		_ = achievement.IncrementStat(b.DB, userID, "roulette_money_lost", game.EntryFee)
@@ -259,6 +260,7 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 
 		for _, s := range survivors {
+			_ = c.store.RecordActivity(s.UserID, "casino_games_played", 1)
 			if _, err := c.store.UpdateBalance(s.UserID, share); err != nil {
 				continue
 			}

@@ -29,9 +29,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Slash("hunt", "Pet hunting expedition", c.onSlashMenu)
 	r.Prefix("hunt", c.onPrefixMenu)
 	r.Component("hunt", "menu", c.onMenu)
-	r.Component("hunt", "easy", c.onHuntZone)
-	r.Component("hunt", "medium", c.onHuntZone)
-	r.Component("hunt", "hard", c.onHuntZone)
+	r.Component("hunt", "zone", c.onHuntZone)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -61,11 +59,23 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 		rangeStr := i18n.T("hunt.level_range", lang, map[string]any{"min": zone.LevelMin, "max": zone.LevelMax})
 		embed.Fields = append(embed.Fields, components.Field(zone.Emoji+" "+name, rangeStr, true))
 	}
+	opts := make([]discordgo.SelectMenuOption, 0, len(huntsvc.Zones))
+	for _, zone := range huntsvc.Zones {
+		name := i18n.T("hunt."+zone.Key, lang)
+		rangeStr := "Lvl " + itoa(zone.LevelMin) + "-" + itoa(zone.LevelMax)
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label:       zone.Emoji + " " + name,
+			Value:       zone.Key,
+			Description: rangeStr,
+		})
+	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("hunt.easy_label", lang), components.Encode("hunt", "easy"), discordgo.SuccessButton),
-			components.Button(i18n.T("hunt.medium_label", lang), components.Encode("hunt", "medium"), discordgo.PrimaryButton),
-			components.Button(i18n.T("hunt.hard_label", lang), components.Encode("hunt", "hard"), discordgo.DangerButton),
+			discordgo.SelectMenu{
+				CustomID:    components.Encode("hunt", "zone"),
+				Placeholder: i18n.T("hunt.select_zone", lang),
+				Options:     opts,
+			},
 		),
 	}
 	return embed, comps
@@ -82,8 +92,14 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
-	cid := i.MessageComponentData().CustomID
-	_, zoneKey, _ := components.Decode(cid)
+	data := i.MessageComponentData()
+	zoneKey := ""
+	if len(data.Values) > 0 {
+		zoneKey = data.Values[0]
+	}
+	if zoneKey == "" {
+		_, zoneKey, _ = components.Decode(data.CustomID)
+	}
 
 	res, err := c.svc.ExecuteHunt(userID, zoneKey)
 	if err != nil {
@@ -101,27 +117,36 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	psvc := petsvc.New(c.store, c.cfg)
 	pet, _ := psvc.GetActivePet(userID)
 	if pet != nil {
-		// Interaction trigger after hunt
 		ready, _ := c.store.CheckCooldown(userID, "pet_interaction", 180*time.Minute)
 		if ready {
-			interact := petsvc.MaybeTriggerInteraction(pet, "hunt")
-			if interact != nil {
-				opts := make([]discordgo.SelectMenuOption, 0, len(interact.Choices))
-				for _, ch := range interact.Choices {
+			ir := petsvc.MaybeTriggerInteraction(pet, "hunt")
+			if ir != nil {
+				intro := i18n.T(ir.IntroKey(pet.Personality), lang)
+				if intro == ir.IntroKey(pet.Personality) {
+					intro = i18n.T(ir.GenericIntroKey(), lang)
+				}
+				opts := make([]discordgo.SelectMenuOption, 0, len(ir.Choices))
+				for _, ch := range ir.Choices {
+					label := i18n.T(ch.ChoiceLabelKey(), lang)
+					if label == ch.ChoiceLabelKey() {
+						label = ch.ID
+					}
 					opts = append(opts, discordgo.SelectMenuOption{
-						Label: ch.Emoji + " " + ch.Label,
+						Label: ch.Emoji + " " + label,
 						Value: ch.ID,
 					})
 				}
 				if len(opts) > 0 {
-					embed := components.Embed("💬 "+pet.Nickname+" wants your attention!", interact.Intro, 0x9b59b6)
+					embed := components.Embed(
+						i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
+						intro, 0x9b59b6)
 					_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 						Embeds: []*discordgo.MessageEmbed{embed},
 						Components: []discordgo.MessageComponent{
 							components.ActionRow(
 								discordgo.SelectMenu{
 									CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
-									Placeholder: "What do you do?",
+									Placeholder: i18n.T("pets.interact.placeholder", lang),
 									Options:     opts,
 								},
 							),
@@ -132,6 +157,7 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 		}
 	}
+	var artifactLeveled bool
 	if pet != nil && res.XP > 0 {
 		lvlRes := psvc.AddXP(pet, res.XP)
 		if lvlRes.Leveled {
@@ -148,6 +174,7 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				"😰 **"+pet.Nickname+"** was defeated while hunting in the **"+zoneKey+"** zone...")
 		}
 		psvc.UpdatePet(pet)
+		_, artifactLeveled, _ = psvc.AddArtifactXP(userID, petsvc.ArtifactHuntXP)
 	}
 
 	zone := huntsvc.Zones[zoneKey]
@@ -175,6 +202,9 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if res.LeveledUp {
 		desc += "\n\n" + i18n.T("hunt.level_up", lang, map[string]any{"pet": "Your pet", "level": res.NewLevel})
+	}
+	if artifactLeveled {
+		desc += "\n\n" + i18n.T("pets.artifact.level_up", lang)
 	}
 
 	embed := components.Embed(

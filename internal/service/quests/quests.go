@@ -3,9 +3,11 @@ package quests
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
@@ -31,32 +33,91 @@ type QuestReward struct {
 }
 
 type QuestStep struct {
-	Type     QuestStepType
-	TextKey  string
-	Rewards  *QuestReward
-	Extra    map[string]any
+	Type    QuestStepType
+	TextKey string
+	Rewards *QuestReward
+	Extra   map[string]any
 }
 
 type QuestDef struct {
-	ID          string
-	Type        string
-	NPCID       string
-	TitleKey    string
-	DescKey     string
-	Steps       []QuestStep
-	RepReq      int
-	Unlocks     []string
+	ID       string
+	Type     string
+	NPCID    string
+	TitleKey string
+	DescKey  string
+	Steps    []QuestStep
+	RepReq   int
+	Unlocks  []string
 }
 
 var QuestRegistry = map[string]*QuestDef{
+	// --- Criminality: The Masked Shadow Falls ---
+	// The branching choice is handled by the criminality cog.
+	// These sub-quests are started after the player chooses their path.
+	"masked_shadow_falls_hunter": {
+		ID: "masked_shadow_falls_hunter", Type: "main", TitleKey: "quests.masked_shadow.title", DescKey: "quests.masked_shadow.desc_hunter",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.hunter_step0", Rewards: &QuestReward{Money: 200}},
+			{Type: StepActivity, TextKey: "quests.masked_shadow.hunter_step1", Extra: map[string]any{"target_stat": "hunt_evidence", "target_count": 3}},
+			{Type: StepBossBattle, TextKey: "quests.masked_shadow.hunter_step2", Extra: map[string]any{"boss_id": "tracker_trial"}},
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.hunter_step3", Rewards: &QuestReward{Money: 500, ItemIDs: []string{"hounds_cloak"}}},
+		},
+	},
+	"masked_shadow_falls_shadow": {
+		ID: "masked_shadow_falls_shadow", Type: "main", TitleKey: "quests.masked_shadow.title", DescKey: "quests.masked_shadow.desc_shadow",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.shadow_step0", Rewards: &QuestReward{Money: 200}},
+			{Type: StepActivity, TextKey: "quests.masked_shadow.shadow_step1", Extra: map[string]any{"target_stat": "stealth_progress", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.shadow_step2"},
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.shadow_step3", Rewards: &QuestReward{Money: 500, ItemIDs: []string{"shadow_cowl"}}},
+		},
+	},
+	"masked_shadow_falls_forgive": {
+		ID: "masked_shadow_falls_forgive", Type: "main", TitleKey: "quests.masked_shadow.title", DescKey: "quests.masked_shadow.desc_forgive",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.forgive_step0"},
+			{Type: StepDialogue, TextKey: "quests.masked_shadow.forgive_step1"},
+		},
+	},
+
 	"tutorial": {
 		ID: "tutorial", Type: "main", TitleKey: "quests.day0_welcome.title", DescKey: "quests.day0_welcome.description",
 		Steps: []QuestStep{
+			// Day 0 — Arrival
 			{Type: StepDialogue, TextKey: "quests.day0_welcome.step0_dialogue", Rewards: &QuestReward{Money: 100}},
-			{Type: StepActivity, TextKey: "quests.day1_strata.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 10}},
-			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_dialogue", Rewards: &QuestReward{Money: 200}},
-			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 10}},
-			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_choice", Rewards: &QuestReward{ItemIDs: []string{"wheat"}}},
+			// Day 1 — Mining + Fishing
+			{Type: StepActivity, TextKey: "quests.day1_strata.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_transition", Rewards: &QuestReward{Money: 100}},
+			{Type: StepActivity, TextKey: "quests.day1_strata.step3_activity", Extra: map[string]any{"target_stat": "items_fished", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100}},
+			// Day 2 — Farming + Archeology
+			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_transition"},
+			{Type: StepActivity, TextKey: "quests.day2_alchemy.step3_activity", Extra: map[string]any{"target_stat": "items_digged", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step4_dialogue", Rewards: &QuestReward{ItemIDs: []string{"wheat"}}},
+			// Day 3 — House + Bank
+			{Type: StepRequirement, TextKey: "quests.day3_base.step0_req", Extra: map[string]any{"req_owns_house": true}},
+			{Type: StepDialogue, TextKey: "quests.day3_base.step1_transition"},
+			{Type: StepActivity, TextKey: "quests.day3_base.step2_activity", Extra: map[string]any{"target_stat": "bank_deposits", "target_count": 1}},
+			// Day 4 — Hunting + Pet Care (merged with day3 wrap)
+			{Type: StepDialogue, TextKey: "quests.day3_base.step3_dialogue", Rewards: &QuestReward{Money: 300}},
+			{Type: StepActivity, TextKey: "quests.day4_will.step1_activity", Extra: map[string]any{"target_stat": "items_hunted", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day4_will.step2_dialogue", Rewards: &QuestReward{ItemIDs: []string{"mystery_egg"}}},
+			{Type: StepActivity, TextKey: "quests.day4_will.step3_activity", Extra: map[string]any{"target_stat": "pets_fed", "target_count": 1}},
+			// Day 5 — Casino + Market (merged with day4 wrap)
+			{Type: StepDialogue, TextKey: "quests.day4_will.step4_dialogue", Rewards: &QuestReward{Money: 300}},
+			{Type: StepActivity, TextKey: "quests.day5_odds.step1_activity", Extra: map[string]any{"target_stat": "casino_games_played", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day5_odds.step2_transition"},
+			{Type: StepActivity, TextKey: "quests.day5_odds.step3_activity", Extra: map[string]any{"target_stat": "items_sold_market", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.day5_odds.step4_dialogue", Rewards: &QuestReward{Money: 300}},
+
+			{Type: StepRequirement, TextKey: "quests.day6_contribution.step1_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 5, "wheat": 5}}},
+			// Day 7 — Guardian + Delve
+			{Type: StepDialogue, TextKey: "quests.day7_sprout.step0_event"},
+			{Type: StepBossBattle, TextKey: "quests.day7_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
+			{Type: StepDialogue, TextKey: "quests.day7_sprout.step2_transition"},
+			{Type: StepActivity, TextKey: "quests.day7_sprout.step3_activity", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.day7_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1000, ItemIDs: []string{"boss_trophy"}}},
 		},
 	},
 	"daily_quest": {
@@ -65,16 +126,32 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.daily_challenge.active_quest"},
 		},
 	},
+	"boss_league": {
+		ID: "boss_league", Type: "main", TitleKey: "quests.boss_league.title", DescKey: "quests.boss_league.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.boss_league.step0_intro"},
+			{Type: StepBossBattle, TextKey: "quests.boss_league.step1_battle", Extra: map[string]any{"boss_stage": 0}, Rewards: &QuestReward{Money: 500, ItemIDs: []string{"spark_shard"}}},
+			{Type: StepDialogue, TextKey: "quests.boss_league.step2_victory"},
+			{Type: StepBossBattle, TextKey: "quests.boss_league.step3_battle", Extra: map[string]any{"boss_stage": 1}, Rewards: &QuestReward{Money: 1000, ItemIDs: []string{"stone_heart"}}},
+			{Type: StepDialogue, TextKey: "quests.boss_league.step4_victory"},
+			{Type: StepBossBattle, TextKey: "quests.boss_league.step5_battle", Extra: map[string]any{"boss_stage": 2}, Rewards: &QuestReward{Money: 2000, ItemIDs: []string{"storm_core"}}},
+			{Type: StepDialogue, TextKey: "quests.boss_league.step6_victory"},
+			{Type: StepBossBattle, TextKey: "quests.boss_league.step7_battle", Extra: map[string]any{"boss_stage": 3}, Rewards: &QuestReward{Money: 3500, ItemIDs: []string{"abyss_pearl"}}},
+			{Type: StepDialogue, TextKey: "quests.boss_league.step8_victory"},
+			{Type: StepBossBattle, TextKey: "quests.boss_league.step9_battle", Extra: map[string]any{"boss_stage": 4}, Rewards: &QuestReward{Money: 5000, ItemIDs: []string{"phoenix_crest", "boss_trophy"}}},
+			{Type: StepDialogue, TextKey: "quests.boss_league.step10_victory"},
+		},
+	},
 }
 
 type QuestInfo struct {
-	QuestID     string
-	Title       string
-	Status      string
-	StepIndex   int
-	Progress    int
-	TotalSteps  int
-	CustomData  map[string]any
+	QuestID    string
+	Title      string
+	Status     string
+	StepIndex  int
+	Progress   int
+	TotalSteps int
+	CustomData map[string]any
 }
 
 type Service struct {
@@ -83,7 +160,58 @@ type Service struct {
 }
 
 func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+	svc := &Service{store: s, cfg: cfg}
+	s.SetQuestAdvanceFn(svc.RecordActivityComplete)
+	return svc
+}
+
+// RecordActivityComplete is called by the store when an activity step reaches
+// its target. It advances the step with proper custom_data for the next step.
+func (s *Service) RecordActivityComplete(userID int64, questID string) error {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return nil
+	}
+	var uqd model.UserQuestData
+	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&uqd).Error; err != nil {
+		return err
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return nil
+	}
+	step := def.Steps[uqd.StepIndex]
+	if step.Rewards != nil {
+		r := step.Rewards
+		if r.Money > 0 {
+			if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
+				return err
+			}
+		}
+		for _, itemID := range r.ItemIDs {
+			s.store.DB.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+				DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
+			}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
+		}
+	}
+	nextIdx := uqd.StepIndex + 1
+	if nextIdx >= len(def.Steps) {
+		return s.store.DB.Model(&model.UserQuest{}).
+			Where("user_id = ? AND quest_id = ?", userID, questID).
+			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error
+	}
+	updates := map[string]any{"step_index": nextIdx, "progress_value": 0}
+	sType := def.Steps[nextIdx].Type
+	if sType == StepActivity || sType == StepBossBattle {
+		if custom, err := json.Marshal(def.Steps[nextIdx].Extra); err == nil {
+			updates["custom_data"] = string(custom)
+		}
+	} else {
+		updates["custom_data"] = "{}"
+	}
+	return s.store.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", userID, questID).
+		Updates(updates).Error
 }
 
 func (s *Service) GetQuestDef(id string) *QuestDef {
@@ -109,6 +237,7 @@ func (s *Service) GetAllActiveQuests(userID int64) ([]QuestInfo, error) {
 		if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, uq.QuestID).First(&data).Error; err == nil {
 			qd.StepIndex = data.StepIndex
 			qd.Progress = data.ProgressValue
+			json.Unmarshal([]byte(data.CustomData), &qd.CustomData)
 		}
 		out = append(out, qd)
 	}
@@ -125,6 +254,30 @@ func (s *Service) GetQuestProgress(userID int64, questID string) (*model.UserQue
 		return &uq, nil, nil
 	}
 	return &uq, &uqd, nil
+}
+
+func (s *Service) IsActivityComplete(userID int64, questID string) bool {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return false
+	}
+	_, uqd, err := s.GetQuestProgress(userID, questID)
+	if err != nil || uqd == nil {
+		return false
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return false
+	}
+	step := def.Steps[uqd.StepIndex]
+	if step.Type != StepActivity {
+		return false
+	}
+	var cd map[string]any
+	if err := json.Unmarshal([]byte(uqd.CustomData), &cd); err != nil {
+		return false
+	}
+	targetCount, _ := cd["target_count"].(float64)
+	return uqd.ProgressValue >= int(targetCount)
 }
 
 func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) error {
@@ -146,6 +299,12 @@ func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) err
 					return err
 				}
 			}
+			for _, itemID := range r.ItemIDs {
+				s.store.DB.Clauses(clause.OnConflict{
+					Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+					DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
+				}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
+			}
 		}
 	}
 	if nextIdx >= len(def.Steps) {
@@ -154,14 +313,182 @@ func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) err
 			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error
 	}
 	updates := map[string]any{"step_index": nextIdx, "progress_value": 0}
-	if nextIdx < len(def.Steps) && def.Steps[nextIdx].Type == StepActivity {
-		if custom, err := json.Marshal(def.Steps[nextIdx].Extra); err == nil {
-			updates["custom_data"] = string(custom)
+	if nextIdx < len(def.Steps) {
+		sType := def.Steps[nextIdx].Type
+		if sType == StepActivity || sType == StepBossBattle {
+			if custom, err := json.Marshal(def.Steps[nextIdx].Extra); err == nil {
+				updates["custom_data"] = string(custom)
+			}
 		}
 	}
+	slog.Info("AdvanceStep",
+		"user_id", userID,
+		"quest_id", questID,
+		"nextIdx", nextIdx,
+		"nextStepType", def.Steps[nextIdx].Type,
+		"nextStepExtra", def.Steps[nextIdx].Extra,
+		"updates", updates,
+	)
 	return s.store.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", userID, questID).
 		Updates(updates).Error
+}
+
+func (s *Service) RecordBossVictory(userID int64, bossStage int) error {
+	var uqs []model.UserQuest
+	if err := s.store.DB.Where("user_id = ? AND status = 'ACTIVE'", userID).Find(&uqs).Error; err != nil {
+		return err
+	}
+	for _, uq := range uqs {
+		def := QuestRegistry[uq.QuestID]
+		if def == nil {
+			continue
+		}
+		var uqd model.UserQuestData
+		if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, uq.QuestID).First(&uqd).Error; err != nil {
+			continue
+		}
+		if uqd.StepIndex >= len(def.Steps) {
+			continue
+		}
+		step := def.Steps[uqd.StepIndex]
+		if step.Type != StepBossBattle {
+			continue
+		}
+		stage, ok := step.Extra["boss_stage"].(int)
+		if !ok || stage != bossStage {
+			continue
+		}
+		slog.Info("RecordBossVictory: advancing quest",
+			"user_id", userID, "quest_id", uq.QuestID,
+			"boss_stage", bossStage, "step", uqd.StepIndex)
+		return s.AdvanceStep(userID, uq.QuestID, "")
+	}
+	return nil
+}
+
+func toInt(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case float64:
+		return int(n)
+	default:
+		return 0
+	}
+}
+
+func (s *Service) CheckRequirement(userID int64, questID string) error {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return errors.New("quest not found")
+	}
+	var uqd model.UserQuestData
+	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&uqd).Error; err != nil {
+		return err
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return errors.New("quest already completed")
+	}
+	step := def.Steps[uqd.StepIndex]
+	if step.Type != StepRequirement {
+		return errors.New("current step is not a requirement")
+	}
+
+	extra := step.Extra
+	if extra == nil {
+		return errors.New("no requirement data")
+	}
+
+	// Check money requirement
+	if money := toInt(extra["req_money"]); money > 0 {
+		var user model.User
+		if err := s.store.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
+			return errors.New("user not found")
+		}
+		if user.Balance < money {
+			return errors.New("not enough money")
+		}
+	}
+
+	// Check item requirements
+	if items, ok := extra["req_items"].(map[string]any); ok {
+		for itemID, qtyAny := range items {
+			qty := toInt(qtyAny)
+			if qty <= 0 {
+				continue
+			}
+			var inv model.Inventory
+			err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
+			if err != nil {
+				return errors.New("missing item: " + itemID)
+			}
+			if inv.Quantity < qty {
+				return errors.New("not enough " + itemID)
+			}
+		}
+	}
+
+	// Check house ownership
+	if ownsHouse, ok := extra["req_owns_house"].(bool); ok && ownsHouse {
+		var housing model.UserHousing
+		err := s.store.DB.Where("user_id = ?", userID).First(&housing).Error
+		if err != nil {
+			return errors.New("you need to buy a house first")
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) FulfillRequirement(userID int64, questID string) error {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return errors.New("quest not found")
+	}
+	var uqd model.UserQuestData
+	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&uqd).Error; err != nil {
+		return err
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return errors.New("quest already completed")
+	}
+	step := def.Steps[uqd.StepIndex]
+	if step.Type != StepRequirement {
+		return errors.New("current step is not a requirement")
+	}
+
+	if err := s.CheckRequirement(userID, questID); err != nil {
+		return err
+	}
+
+	extra := step.Extra
+
+	// Deduct money
+	if money := toInt(extra["req_money"]); money > 0 {
+		if err := s.store.DB.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", money)).Error; err != nil {
+			return err
+		}
+	}
+
+	// Deduct items
+	if items, ok := extra["req_items"].(map[string]any); ok {
+		for itemID, qtyAny := range items {
+			qty := toInt(qtyAny)
+			if qty <= 0 {
+				continue
+			}
+			if err := s.store.DB.Model(&model.Inventory{}).
+				Where("user_id = ? AND item_id = ?", userID, itemID).
+				UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	return s.AdvanceStep(userID, questID, "")
 }
 
 // StartQuest begins a quest for the user if not already active or completed.

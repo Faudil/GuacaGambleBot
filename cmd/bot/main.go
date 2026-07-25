@@ -32,6 +32,8 @@ import (
 	charactercog "guacagamblebot/internal/cogs/character"
 	communitycog "guacagamblebot/internal/cogs/community"
 	craftingcog "guacagamblebot/internal/cogs/crafting"
+	criminalitycog "guacagamblebot/internal/cogs/criminality"
+	delvecog "guacagamblebot/internal/cogs/delve"
 	duelcog "guacagamblebot/internal/cogs/duel"
 	economycog "guacagamblebot/internal/cogs/economy"
 	expeditioncog "guacagamblebot/internal/cogs/expedition"
@@ -45,6 +47,7 @@ import (
 	jobscog "guacagamblebot/internal/cogs/jobs"
 	leadercog "guacagamblebot/internal/cogs/leaderboard"
 	loancog "guacagamblebot/internal/cogs/loan"
+	lorecog "guacagamblebot/internal/cogs/lore"
 	lottocog "guacagamblebot/internal/cogs/lotto"
 	marketcog "guacagamblebot/internal/cogs/market"
 	miningcog "guacagamblebot/internal/cogs/mining"
@@ -52,11 +55,12 @@ import (
 	petscog "guacagamblebot/internal/cogs/pets"
 	questscog "guacagamblebot/internal/cogs/quests"
 	roulettecog "guacagamblebot/internal/cogs/roulette"
+	sanctuarycog "guacagamblebot/internal/cogs/sanctuary"
 	shopcog "guacagamblebot/internal/cogs/shop"
-	lorecog "guacagamblebot/internal/cogs/lore"
 	skillscog "guacagamblebot/internal/cogs/skills"
 	startcog "guacagamblebot/internal/cogs/start"
 	tournamentcog "guacagamblebot/internal/cogs/tournament"
+	veilcog "guacagamblebot/internal/cogs/veil"
 	"guacagamblebot/internal/onboarding"
 )
 
@@ -94,6 +98,7 @@ func main() {
 	bot := &interaction.Bot{Session: dg, DB: database, Prefix: cfg.Prefix}
 	str := store.New(database, cfg)
 	go elosimulation.Run(str)
+	go elosimulation.RunWeeklyReset(str, dg)
 	router := interaction.NewRouter(bot, str)
 
 	admincog.Register(router, str, cfg)
@@ -107,6 +112,8 @@ func main() {
 	charactercog.Register(router, str, cfg)
 	communitycog.Register(router, str, cfg)
 	craftingcog.Register(router, str, cfg)
+	criminalitycog.Register(router, str, cfg)
+	delvecog.Register(router, str, cfg)
 	duelcog.Register(router, str, cfg)
 	economycog.Register(router, str, cfg)
 	expeditioncog.Register(router, str, cfg)
@@ -127,11 +134,13 @@ func main() {
 	petscog.Register(router, str, cfg)
 	questscog.Register(router, str, cfg)
 	roulettecog.Register(router, str, cfg)
+	sanctuarycog.Register(router, str, cfg)
 	shopcog.Register(router, str, cfg)
 	lorecog.Register(router, str, cfg)
 	skillscog.Register(router, str, cfg)
 	startcog.Register(router, str, cfg)
 	tournamentcog.Register(router, str, cfg)
+	veilcog.Register(router, str, cfg)
 	onboarding.Register(router, str, cfg)
 
 	router.Register()

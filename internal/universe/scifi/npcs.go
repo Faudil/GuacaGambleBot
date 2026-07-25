@@ -63,8 +63,8 @@ var NPCs = map[string]*universe.NPCData{
 		HintEN: "(Loves star fruit, golden apples, seeds, rare plants)",
 		HintFR: "(Aime les fruits étoilés, les pommes dorées, les graines, les plantes rares)",
 
-		GreetingsEN: []string{"Welcome to Hydroponics. Breathe — that's the freshest air on the ship.", "You've got good timing. Vat 7 just bloomed.", "Dr. Okonkwo. If you're here to help, the watering schedule is on the wall."},
-		GreetingsFR: []string{"Bienvenue à l'Hydroponie. Respire — c'est l'air le plus frais du vaisseau.", "Tu tombes bien. La Cuve 7 vient de fleurir.", "Dr. Okonkwo. Si tu es là pour aider, le planning d'arrosage est au mur."},
+		GreetingsEN: []string{"Welcome to Hydroponics. Breathe , that's the freshest air on the ship.", "You've got good timing. Vat 7 just bloomed.", "Dr. Okonkwo. If you're here to help, the watering schedule is on the wall."},
+		GreetingsFR: []string{"Bienvenue à l'Hydroponie. Respire , c'est l'air le plus frais du vaisseau.", "Tu tombes bien. La Cuve 7 vient de fleurir.", "Dr. Okonkwo. Si tu es là pour aider, le planning d'arrosage est au mur."},
 	},
 	"kellan": {
 		ID: "kellan", Name: "Kellan", Emoji: "\U0001f527", Color: 0xe67e22,
@@ -84,8 +84,8 @@ var NPCs = map[string]*universe.NPCData{
 		HintEN: "(Loves gold nuggets, diamonds, ores, mechanical parts)",
 		HintFR: "(Aime les pépites d'or, les diamants, les minerais, les pièces mécaniques)",
 
-		GreetingsEN: []string{"Touch nothing. Actually — touch everything. Tell me what's broken.", "Kellan. I fix things. You break things. The arrangement works.", "Grab a wrench. Coolant pipe on Deck 4 is leaking again."},
-		GreetingsFR: []string{"Ne touche à rien. En fait — touche à tout. Dis-moi ce qui est cassé.", "Kellan. Je répare. Tu casses. L'arrangement fonctionne.", "Prends une clé. Le conduit de refroidissement du Pont 4 fuit encore."},
+		GreetingsEN: []string{"Touch nothing. Actually , touch everything. Tell me what's broken.", "Kellan. I fix things. You break things. The arrangement works.", "Grab a wrench. Coolant pipe on Deck 4 is leaking again."},
+		GreetingsFR: []string{"Ne touche à rien. En fait , touche à tout. Dis-moi ce qui est cassé.", "Kellan. Je répare. Tu casses. L'arrangement fonctionne.", "Prends une clé. Le conduit de refroidissement du Pont 4 fuit encore."},
 	},
 	"arcade": {
 		ID: "arcade", Name: "ARCADE", Emoji: "\U0001f3b0", Color: 0xf1c40f,

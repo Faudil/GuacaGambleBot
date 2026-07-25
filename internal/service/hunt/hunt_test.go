@@ -44,14 +44,14 @@ func addActivePet(t *testing.T, s *store.Store, userID int64) {
 
 func TestExecuteHuntNoPet(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.ExecuteHunt(1, "easy")
+	_, err := svc.ExecuteHunt(1, "forest")
 	assert.ErrorIs(t, err, ErrNoPet)
 }
 
 func TestExecuteHuntEasy(t *testing.T) {
 	svc, s := testService(t)
 	addActivePet(t, s, 1)
-	res, err := svc.ExecuteHunt(1, "easy")
+	res, err := svc.ExecuteHunt(1, "forest")
 	require.NoError(t, err)
 	assert.True(t, res.PlayerWon || res.EnemyWon)
 	assert.NotEmpty(t, res.Log)
@@ -66,7 +66,7 @@ func TestExecuteHuntInvalidZone(t *testing.T) {
 }
 
 func TestNewEnemy(t *testing.T) {
-	e := NewEnemy("easy")
+	e := NewEnemy("forest")
 	assert.NotEmpty(t, e.Name)
 	assert.Greater(t, e.HP, 0)
 	assert.Greater(t, e.Level, 0)

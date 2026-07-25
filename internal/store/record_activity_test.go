@@ -37,9 +37,9 @@ func TestRecordActivityTutorialQuest(t *testing.T) {
 	}
 
 	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = ?", 1, "tutorial").First(&d).Error)
-	assert.Equal(t, 2, d.StepIndex, "step should advance to 2 after completing 10 mining")
-	assert.Equal(t, 0, d.ProgressValue, "progress should reset to 0")
-	assert.Equal(t, "{}", d.CustomData, "custom_data should be cleared")
+	assert.Equal(t, 1, d.StepIndex, "step should stay at activity step (advance on Continue click)")
+	assert.Equal(t, 10, d.ProgressValue, "progress should be at target count")
+	assert.Equal(t, `{"target_count":10,"target_stat":"items_mined"}`, d.CustomData, "custom_data should keep activity config")
 }
 
 func TestRecordActivityOnlyMatchesCorrectStat(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
@@ -44,6 +45,14 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("pets", "skills", c.onSkillSelect)
 	r.Component("pets", "skill_choose", c.onSkillChoose)
 	r.Component("pets", "interact", c.onInteractionChoice)
+	r.Slash("artifact", "Gérer votre artefact de familier", c.onArtifactMenu)
+	r.Slash("weekly", "Classement hebdomadaire des familiers", c.onWeeklyLeaderboard)
+	r.Prefix("weekly", c.onWeeklyPrefix)
+	r.Component("pets", "artifact_view", c.onArtifactView)
+	r.Component("pets", "artifact_reset", c.onArtifactReset)
+	r.Component("pets", "artifact_stat_choose", c.onArtifactStatChoose)
+	r.Component("pets", "weekly_refresh", c.onWeeklyRefresh)
+	r.Component("pets", "weekly_history", c.onWeeklyHistory)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -190,7 +199,7 @@ func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	pTrait := ""
 	if personality != nil {
-		pTrait = personality.Emoji + " *" + personality.Name + "*"
+		pTrait = i18n.T("pets.personality."+pet.Personality, lang)
 	}
 	title := ""
 	if pet.Title != "" {
@@ -296,6 +305,7 @@ func (c *Cog) onRenameSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	petIDStr := "0"
 	if len(rest) > 0 {
@@ -331,6 +341,7 @@ func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.AddBond(pet, 1)
 	_ = c.svc.UpdatePet(pet)
 	_ = c.store.SetCooldown(pet.UserID, "pet_feed")
+	_ = c.store.RecordActivity(userID, "pets_fed", 1)
 
 	// Check for interaction
 	c.tryInteraction(b, i, pet, "feed")
@@ -445,12 +456,40 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	bp1 := c.petToBattlePet(pet1)
 	bp2 := c.petToBattlePet(pet2)
-	result := battle.Simulate(bp1, bp2)
+
+	modID, _ := c.getActiveModID(interaction.ToInt64(i.GuildID))
+	c.applyArtifacts(bp1, bp2, userID, opponentID, modID)
+
+	result := battle.Simulate(bp1, bp2, modID)
 
 	_ = c.svc.UpdatePet(pet1)
 	_ = c.svc.UpdatePet(pet2)
 
 	diff1, diff2 := c.svc.UpdateElo(pet1, pet2, battleResultToFloat(result, pet1.ID))
+
+	serverID := interaction.ToInt64(i.GuildID)
+
+	// Weekly score tracking
+	var weeklyScoreA, weeklyScoreB int
+	artXP1, artXP2 := 0, 0
+	if result.WinnerID == pet1.ID {
+		weeklyScoreA = c.svc.CalculateScoreDelta(pet1.Elo-diff1, pet2.Elo-diff2)
+		weeklyScoreB = 5
+		artXP1, artXP2 = petsvc.ArtifactPVPWinXP, petsvc.ArtifactPVPLossXP
+	} else if result.WinnerID == pet2.ID {
+		weeklyScoreA = 5
+		weeklyScoreB = c.svc.CalculateScoreDelta(pet2.Elo-diff2, pet1.Elo-diff1)
+		artXP1, artXP2 = petsvc.ArtifactPVPLossXP, petsvc.ArtifactPVPWinXP
+	} else {
+		weeklyScoreA = 5
+		weeklyScoreB = 5
+		artXP1, artXP2 = petsvc.ArtifactPVPLossXP, petsvc.ArtifactPVPLossXP
+	}
+	c.svc.AddWeeklyScore(userID, serverID, weeklyScoreA, map[bool]int{true: 1, false: 0}[result.WinnerID == pet1.ID])
+	c.svc.AddWeeklyScore(opponentID, serverID, weeklyScoreB, map[bool]int{true: 1, false: 0}[result.WinnerID == pet2.ID])
+
+	_, art1Leveled, _ := c.svc.AddArtifactXP(userID, artXP1)
+	_, art2Leveled, _ := c.svc.AddArtifactXP(opponentID, artXP2)
 
 	// Bond + history for battle
 	if result.WinnerID == pet1.ID {
@@ -473,18 +512,31 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 	_ = c.svc.UpdatePet(pet2)
 	embedDesc := strings.Join(result.Log, "\n")
 	embed := components.Embed(i18n.T("pets.battle.arena_title", lang), embedDesc, 0x2ecc71)
+	artLine1 := fmt.Sprintf("🔮 Artifact +%d XP", artXP1)
+	if art1Leveled {
+		artLine1 += " ⬆️"
+	}
+	artLine2 := fmt.Sprintf("🔮 Artifact +%d XP", artXP2)
+	if art2Leveled {
+		artLine2 += " ⬆️"
+	}
+
 	if result.WinnerID == pet1.ID {
 		embed.Color = 0x2ecc71
-		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)",
-			MentionUser(userID), strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2)
+		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
+			MentionUser(userID), strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	} else if result.WinnerID == pet2.ID {
 		embed.Color = 0xe74c3c
-		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)",
-			MentionUser(opponentID), strconv.Itoa(pet2.Elo), diff2, strconv.Itoa(pet1.Elo), diff1)
+		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
+			MentionUser(opponentID), strconv.Itoa(pet2.Elo), diff2, strconv.Itoa(pet1.Elo), diff1, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	} else {
 		embed.Color = 0xf39c12
-		embedDesc += fmt.Sprintf("\n\n🤝 Draw! ELO: %s (%+d) | %s (%+d)",
-			strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2)
+		embedDesc += fmt.Sprintf("\n\n🤝 Draw! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
+			strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
+	}
+
+	if art1Leveled || art2Leveled {
+		embedDesc += "\n\n💠 Use `/artifact` to assign your new stat point!"
 	}
 	embed.Description = embedDesc
 
@@ -534,20 +586,20 @@ func (c *Cog) onHatchPrefix(b *interaction.Bot, s *discordgo.Session, m *discord
 }
 
 func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userID int64, lang string) {
-	eggType := c.findEgg(userID)
+	eggType, biome := c.findEgg(userID)
 	if eggType == "" {
-		interaction.RespondError(b, i, lang, "hatch.no_egg")
+		interaction.RespondError(b, i, lang, "pets.hatch.no_egg")
 		return
 	}
 	if !c.svc.CanCreatePet(userID) {
-		interaction.RespondError(b, i, lang, "hatch.no_slots")
+		interaction.RespondError(b, i, lang, "pets.hatch.no_slots")
 		return
 	}
 
-	petType := petsvc.RollGacha("")
+	petType := petsvc.RollGacha("", biome)
 	pet, err := c.svc.CreatePet(userID, petType)
 	if err != nil || pet == nil {
-		interaction.RespondError(b, i, lang, "hatch.error")
+		interaction.RespondError(b, i, lang, "pets.hatch.error")
 		return
 	}
 
@@ -562,16 +614,21 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		emoji = pt.Emoji
 	}
 	pTrait := petsvc.PersonalityTraits[pet.Personality]
-	traitName := ""
+	traitKey := "pets.personality.brave.name"
 	if pTrait != nil {
-		traitName = pTrait.Emoji + " " + pTrait.Name
+		traitKey = "pets.personality." + pet.Personality + ".name"
 	}
+	traitName := i18n.T(traitKey, lang)
 
-	desc := fmt.Sprintf("%s The egg begins to crack...\n\n**%s %s** hatched!\n%s | Lvl 1 | %s\n\nUse `/pets` to see your new companion!",
-		emoji, emoji, pet.Nickname, petType, traitName)
+	biomeName := i18n.T("biomes."+biome, lang)
+	eggName := items.DisplayName(eggType)
+
+	desc := i18n.T("pets.hatch.success_desc", lang, map[string]any{
+		"emoji": emoji, "pet": pet.Nickname, "type": petType, "personality": traitName, "biome": biomeName, "egg": eggName,
+	})
 
 	embed := components.Embed(
-		i18n.T("hatch.success_title", lang),
+		i18n.T("pets.hatch.success_title", lang),
 		desc,
 		0xf1c40f,
 	)
@@ -580,19 +637,19 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 }
 
 func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message, userID int64, lang string) {
-	eggType := c.findEgg(userID)
+	eggType, biome := c.findEgg(userID)
 	if eggType == "" {
-		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("hatch.no_egg", lang))
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_egg", lang))
 		return
 	}
 	if !c.svc.CanCreatePet(userID) {
-		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("hatch.no_slots", lang))
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_slots", lang))
 		return
 	}
-	petType := petsvc.RollGacha("")
+	petType := petsvc.RollGacha("", biome)
 	pet, err := c.svc.CreatePet(userID, petType)
 	if err != nil || pet == nil {
-		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("hatch.error", lang))
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
 		return
 	}
 	_ = c.store.DB.Exec(
@@ -604,24 +661,36 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	if pt != nil {
 		emoji = pt.Emoji
 	}
-	_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s **%s** hatched! %s", emoji, pet.Nickname, petType))
+	biomeName := i18n.T("biomes."+biome, lang)
+	_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.prefix_success", lang, map[string]any{"emoji": emoji, "pet": pet.Nickname, "type": petType, "biome": biomeName}))
 }
 
-func (c *Cog) findEgg(userID int64) string {
+var eggBiomes = map[string]string{
+	"forest_egg":   "forest",
+	"cave_egg":     "cave",
+	"desert_egg":   "desert",
+	"mountain_egg": "mountain",
+	"ocean_egg":    "ocean",
+	"tundra_egg":   "tundra",
+	"volcano_egg":  "volcano",
+}
+
+func (c *Cog) findEgg(userID int64) (string, string) {
 	var inv []model.Inventory
-	c.store.DB.Where("user_id = ? AND (item_id = ? OR item_id = ?) AND quantity > 0",
-		userID, "mystery_egg", "season_egg").Find(&inv)
-	for _, iv := range inv {
-		if iv.ItemID == "season_egg" {
-			return "season_egg"
+	eggIDs := make([]string, 0, len(eggBiomes))
+	for id := range eggBiomes {
+		eggIDs = append(eggIDs, id)
+	}
+	c.store.DB.Where("user_id = ? AND item_id IN ? AND quantity > 0", userID, eggIDs).Find(&inv)
+	priority := []string{"volcano_egg", "tundra_egg", "ocean_egg", "mountain_egg", "desert_egg", "cave_egg", "forest_egg"}
+	for _, id := range priority {
+		for _, iv := range inv {
+			if iv.ItemID == id {
+				return id, eggBiomes[id]
+			}
 		}
 	}
-	for _, iv := range inv {
-		if iv.ItemID == "mystery_egg" {
-			return "mystery_egg"
-		}
-	}
-	return ""
+	return "", ""
 }
 
 // ─── Skill Selection ──────────────────────────────────────────
@@ -635,7 +704,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
 	pet, err := c.svc.GetPetByID(petID)
 	if err != nil || pet == nil || pet.SkillPoints <= 0 {
-		interaction.RespondError(b, i, lang, "skills.no_points")
+		interaction.RespondError(b, i, lang, "pets.skills.no_points")
 		return
 	}
 
@@ -653,7 +722,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 	}
 	if slot < 0 {
-		interaction.RespondError(b, i, lang, "skills.maxed")
+		interaction.RespondError(b, i, lang, "pets.skills.maxed")
 		return
 	}
 
@@ -663,7 +732,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	options := append(battleOpts, utilOpts...)
 
 	if len(options) == 0 {
-		interaction.RespondError(b, i, lang, "skills.none_available")
+		interaction.RespondError(b, i, lang, "pets.skills.none_available")
 		return
 	}
 
@@ -677,8 +746,8 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	embed := components.Embed(
-		i18n.T("skills.choose_title", lang, map[string]any{"level": (slot+1)*10}),
-		i18n.T("skills.choose_desc", lang),
+		i18n.T("pets.skills.choose_title", lang, map[string]any{"level": (slot+1)*10}),
+		i18n.T("pets.skills.choose_desc", lang),
 		0x9b59b6,
 	)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -686,7 +755,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			components.ActionRow(
 				discordgo.SelectMenu{
 					CustomID:    components.Encode("pets", "skill_choose", rest[0]),
-					Placeholder: i18n.T("skills.select", lang),
+					Placeholder: i18n.T("pets.skills.select", lang),
 					Options:     opts,
 				},
 			),
@@ -720,7 +789,7 @@ func (c *Cog) onSkillChoose(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	if err := c.svc.SelectSkill(petID, slot, skillID); err != nil {
-		interaction.RespondError(b, i, lang, "skills.error")
+		interaction.RespondError(b, i, lang, "pets.skills.error")
 		return
 	}
 	_ = c.svc.SpendSkillPoint(pet)
@@ -735,7 +804,7 @@ func (c *Cog) onSkillChoose(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Content: i18n.T("skills.learned", lang, map[string]any{"name": skDef.Emoji + " " + skDef.Name}),
+			Content: i18n.T("pets.skills.learned", lang, map[string]any{"name": skDef.Emoji + " " + skDef.Name}),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -759,34 +828,39 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 		return
 	}
 
-	interactionData := petsvc.ResolveInteraction(pet, choiceID)
-	if interactionData == nil {
-		interaction.RespondError(b, i, lang, "interact.invalid")
+	reward := petsvc.ResolveInteraction(choiceID)
+	if reward == nil {
+		interaction.RespondError(b, i, lang, "pets.interact.invalid")
 		return
 	}
 
-	c.svc.AddBond(pet, interactionData.BondReward)
-	if interactionData.XPReward > 0 {
-		c.svc.AddXP(pet, interactionData.XPReward)
+	c.svc.AddBond(pet, reward.BondReward)
+	if reward.XPReward > 0 {
+		c.svc.AddXP(pet, reward.XPReward)
 	}
-	c.svc.RecordHistory(pet, "interaction", interactionData.Detail)
+	// Resolve choice detail via i18n
+	detailKey := fmt.Sprintf("pets.interact.%s.choices.%s.detail", findInteractionID(choiceID), choiceID)
+	detail := i18n.T(detailKey, lang, map[string]any{"name": pet.Nickname})
+	if detail == detailKey {
+		detail = i18n.T("pets.interact.default_detail", lang, map[string]any{"name": pet.Nickname})
+	}
+	c.svc.RecordHistory(pet, "interaction", detail)
 	_ = c.svc.UpdatePet(pet)
 
-	if interactionData.ItemReward != "" {
+	if reward.ItemReward != "" {
 		_ = c.store.DB.Exec(
 			`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
 			 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-			pet.UserID, interactionData.ItemReward,
+			pet.UserID, reward.ItemReward,
 		)
 	}
 
-	// Set cooldown
 	_ = c.store.SetCooldown(pet.UserID, "pet_interaction")
 
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Content: interactionData.Detail,
+			Content: detail,
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
@@ -795,19 +869,30 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 // ─── Interaction Trigger ──────────────────────────────────────
 
 func (c *Cog) tryInteraction(b *interaction.Bot, i *discordgo.InteractionCreate, pet *model.UserPet, context string) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	ready, _ := c.store.CheckCooldown(pet.UserID, "pet_interaction", 180*time.Minute)
 	if !ready {
 		return
 	}
-	interaction := petsvc.MaybeTriggerInteraction(pet, context)
-	if interaction == nil {
+	ir := petsvc.MaybeTriggerInteraction(pet, context)
+	if ir == nil {
 		return
 	}
 
-	opts := make([]discordgo.SelectMenuOption, 0, len(interaction.Choices))
-	for _, ch := range interaction.Choices {
+	// Resolve intro text via i18n
+	intro := i18n.T(ir.IntroKey(pet.Personality), lang)
+	if intro == ir.IntroKey(pet.Personality) {
+		intro = i18n.T(ir.GenericIntroKey(), lang)
+	}
+
+	opts := make([]discordgo.SelectMenuOption, 0, len(ir.Choices))
+	for _, ch := range ir.Choices {
+		label := i18n.T(ch.ChoiceLabelKey(), lang)
+		if label == ch.ChoiceLabelKey() {
+			label = ch.Emoji + " " + ch.ID
+		}
 		opts = append(opts, discordgo.SelectMenuOption{
-			Label: ch.Emoji + " " + ch.Label,
+			Label: ch.Emoji + " " + label,
 			Value: ch.ID,
 		})
 	}
@@ -815,14 +900,18 @@ func (c *Cog) tryInteraction(b *interaction.Bot, i *discordgo.InteractionCreate,
 		return
 	}
 
-	embed := components.Embed("💬 "+pet.Nickname+" wants your attention!", interaction.Intro, 0x9b59b6)
+	embed := components.Embed(
+		i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
+		intro,
+		0x9b59b6,
+	)
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Embeds: []*discordgo.MessageEmbed{embed},
 		Components: []discordgo.MessageComponent{
 			components.ActionRow(
 				discordgo.SelectMenu{
 					CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
-					Placeholder: "What do you do?",
+					Placeholder: i18n.T("pets.interact.placeholder", lang),
 					Options:     opts,
 				},
 			),
@@ -853,6 +942,19 @@ func (c *Cog) petToBattlePet(pet *model.UserPet) *battle.BattlePet {
 	}
 }
 
+func (c *Cog) getActiveModID(serverID int64) (string, error) {
+	mod, err := c.svc.GetActiveModifier(serverID)
+	if err != nil || mod == nil {
+		return "", err
+	}
+	return mod.Modifier, nil
+}
+
+func (c *Cog) applyArtifacts(bp1, bp2 *battle.BattlePet, userID1, userID2 int64, modID string) {
+	c.svc.ApplyArtifactToBattle(userID1, bp1, modID)
+	c.svc.ApplyArtifactToBattle(userID2, bp2, modID)
+}
+
 func battleResultToFloat(result *battle.BattleResult, pet1ID int64) float64 {
 	if result.WinnerID == pet1ID {
 		return 1.0
@@ -871,6 +973,23 @@ func petTypeRarity(pet *model.UserPet) string {
 		return pt.Rarity
 	}
 	return "common"
+}
+
+func findInteractionID(choiceID string) string {
+	// Simple lookup: the choice IDs are prefixed by interaction type
+	// We match known prefix patterns
+	typeMap := map[string]string{
+		"fetch": "play_time", "tug": "play_time", "ignore": "play_time",
+		"feed_treat": "snack_time", "share_meal": "snack_time", "cook": "snack_time",
+		"explore": "explore_together", "follow": "explore_together",
+		"brush": "grooming", "bath": "grooming", "massage": "grooming",
+		"spar": "training", "teach": "training", "praise": "training",
+		"stand_together": "rescue", "investigate": "rescue", "retreat": "rescue",
+	}
+	if id, ok := typeMap[choiceID]; ok {
+		return id
+	}
+	return "play_time"
 }
 
 func min(a, b int) int {
@@ -898,4 +1017,318 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return string(runes[:maxLen]) + "..."
+}
+
+// ─── Artifact UI ────────────────────────────────────────────────
+
+func (c *Cog) onArtifactMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.artifactView(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) artifactView(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	a, err := c.svc.GetArtifact(userID)
+	if err != nil {
+		a, err = c.svc.CreateArtifact(userID)
+		if err != nil {
+			return components.Embed("Artifact", "Could not create artifact.", 0xe74c3c), nil
+		}
+	}
+
+	statIDs := []string{a.Stat1, a.Stat2, a.Stat3}
+	statLvls := []int{a.Stat1Lvl, a.Stat2Lvl, a.Stat3Lvl}
+
+	statLines := ""
+	for i, sid := range statIDs {
+		def := petsvc.GetArtifactStat(sid)
+		emoji := "❓"
+		name := sid
+		if def != nil {
+			emoji = def.Emoji
+			name = def.Name
+		}
+		statLines += fmt.Sprintf("%s **%s** — Lvl %d\n", emoji, name, statLvls[i])
+	}
+
+	xpBar := buildArtifactXPBar(a.XP, petsvc.ArtifactXPForLevel(a.Level), a.Level)
+
+	unspentLine := ""
+	allocBtns := []discordgo.MessageComponent{}
+	if a.UnspentPoints > 0 {
+		unspentLine = fmt.Sprintf("\n\n⚡ **%d unspent stat point(s)!** Choose a stat to improve:", a.UnspentPoints)
+		for i, sid := range statIDs {
+			def := petsvc.GetArtifactStat(sid)
+			emoji := "❓"
+			if def != nil {
+				emoji = def.Emoji
+			}
+			allocBtns = append(allocBtns,
+				components.Button(emoji, components.Encode("pets", "artifact_stat_choose", strconv.FormatInt(int64(i), 10)), discordgo.PrimaryButton))
+		}
+	}
+
+	desc := fmt.Sprintf("**Level %d** %s\n\n**Stats:**\n%s%s",
+		a.Level, xpBar, statLines, unspentLine)
+	embed := components.Embed("💠 Pet Artifact", desc, 0x9b59b6)
+
+	comps := []discordgo.MessageComponent{}
+	if len(allocBtns) > 0 {
+		comps = append(comps, components.ActionRow(allocBtns...))
+	}
+	comps = append(comps, components.ActionRow(
+		components.Button("🔄 Reset", components.Encode("pets", "artifact_reset"), discordgo.DangerButton),
+	))
+	return embed, comps
+}
+
+func buildArtifactXPBar(xp, needed, level int) string {
+	if level >= petsvc.ArtifactMaxLevel {
+		return "`[██████████]` **MAX**"
+	}
+	if needed <= 0 {
+		needed = 1
+	}
+	filled := xp * 10 / needed
+	if filled > 10 {
+		filled = 10
+	}
+	bar := "["
+	for i := 0; i < 10; i++ {
+		if i < filled {
+			bar += "█"
+		} else {
+			bar += "░"
+		}
+	}
+	bar += fmt.Sprintf("] %d/%d", xp, needed)
+	return "`" + bar + "`"
+}
+
+func (c *Cog) onArtifactView(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.artifactView(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onArtifactReset(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	var inv model.Inventory
+	err := c.store.DB.Where("user_id = ? AND item_id = ?", userID, "artifact_shard").First(&inv).Error
+	if err != nil || inv.Quantity < 1 {
+		interaction.RespondError(b, i, lang, "artifact.no_shard")
+		return
+	}
+
+	cb, err := c.store.GetBalance(userID)
+	if err != nil || cb < items.Get("artifact_shard").Price {
+		interaction.RespondError(b, i, lang, "artifact.no_money")
+		return
+	}
+
+	_, _ = c.store.UpdateBalance(userID, -items.Get("artifact_shard").Price)
+	_ = c.store.DB.Exec(
+		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
+		userID, "artifact_shard",
+	)
+	_, _ = c.svc.ResetArtifact(userID)
+
+	embed, comps := c.artifactView(userID, lang)
+	embed.Description = "✅ Artifact reset! New random stats assigned.\n\n" + embed.Description
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+
+
+func (c *Cog) onArtifactStatChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+
+	statPos := 0
+	if len(rest) > 0 {
+		statPos, _ = strconv.Atoi(rest[0])
+	}
+	if statPos < 0 || statPos > 2 {
+		return
+	}
+
+	_, err := c.svc.LevelArtifactStat(userID, statPos)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "artifact.error")
+		return
+	}
+
+	a, _ := c.svc.GetArtifact(userID)
+	statIDs := []string{a.Stat1, a.Stat2, a.Stat3}
+	def := petsvc.GetArtifactStat(statIDs[statPos])
+	name := statIDs[statPos]
+	if def != nil {
+		name = def.Emoji + " " + def.Name
+	}
+	lvl := 0
+	switch statPos {
+	case 0:
+		lvl = a.Stat1Lvl
+	case 1:
+		lvl = a.Stat2Lvl
+	case 2:
+		lvl = a.Stat3Lvl
+	}
+
+	if a.UnspentPoints > 0 {
+		embed, comps := c.artifactView(userID, lang)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	} else {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Content: "✅ " + name + " improved to Lvl " + itoa2(lvl) + "!",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+}
+
+// ─── Weekly Leaderboard UI ─────────────────────────────────────
+
+func (c *Cog) onWeeklyPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	args := strings.Fields(m.Content)
+	if len(args) < 2 {
+		return
+	}
+	sub := strings.ToLower(args[1])
+	if sub == "history" || sub == "prev" || sub == "last" {
+		userID := interaction.ToInt64(m.Author.ID)
+		embed := c.weeklyHistoryEmbed(userID, interaction.ToInt64(m.GuildID), lang)
+		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
+	}
+}
+
+func (c *Cog) onWeeklyLeaderboard(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	embed, comps := c.weeklyLeaderboardEmbed(i, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) weeklyLeaderboardEmbed(i *discordgo.InteractionCreate, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	serverID := interaction.ToInt64(i.GuildID)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	ranks, _ := c.svc.GetWeeklyLeaderboard(i.GuildID, 10)
+
+	lines := ""
+	if len(ranks) == 0 {
+		lines = i18n.T("weekly.empty", lang)
+	} else {
+		for pos, r := range ranks {
+			emoji := ""
+			switch pos {
+			case 0:
+				emoji = "👑"
+			case 1:
+				emoji = "🥈"
+			case 2:
+				emoji = "🥉"
+			default:
+				emoji = strconv.Itoa(pos+1) + "."
+			}
+			lines += fmt.Sprintf("%s <@%d> — **%d** pts (W:%d L:%d)\n", emoji, r.UserID, r.Score, r.Wins, r.Losses)
+		}
+	}
+
+	rankPos, _ := c.svc.GetRankPosition(userID, serverID)
+	var personalLine string
+	if rankPos > 0 {
+		wr, err := c.svc.GetWeeklyRank(userID, serverID)
+		if err == nil {
+			personalLine = fmt.Sprintf("\n**Your rank:** #%d — **%d** pts (W:%d L:%d)", rankPos, wr.Score, wr.Wins, wr.Losses)
+		}
+	}
+
+	mod, _ := c.svc.EnsureWeeklyModifier(serverID)
+	modLine := ""
+	if mod != nil {
+		modDef := petsvc.GetModifierDef(mod.Modifier)
+		if modDef != nil {
+			boosted := ""
+			for _, s := range petsvc.SplitModStats(mod.Boosted) {
+				if def := petsvc.GetArtifactStat(s); def != nil {
+					boosted += def.Emoji + " "
+				}
+			}
+			nerfed := ""
+			for _, s := range petsvc.SplitModStats(mod.Nerfed) {
+				if def := petsvc.GetArtifactStat(s); def != nil {
+					nerfed += def.Emoji + " "
+				}
+			}
+			modLine = fmt.Sprintf("\n\n**Weekly Modifier:** %s %s\nBoosted: %s | Nerfed: %s",
+				modDef.Emoji, modDef.Name, boosted, nerfed)
+		}
+	}
+
+	desc := lines + modLine + personalLine
+	embed := components.Embed(i18n.T("weekly.title", lang), desc, 0xf1c40f)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("leaderboard.btn_refresh", lang), components.Encode("pets", "weekly_refresh"), discordgo.PrimaryButton),
+			components.Button("📜 History", components.Encode("pets", "weekly_history"), discordgo.SecondaryButton),
+		),
+	}
+	return embed, comps
+}
+
+func (c *Cog) onWeeklyHistory(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	serverID := interaction.ToInt64(i.GuildID)
+	embed := c.weeklyHistoryEmbed(userID, serverID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Flags:  discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+func (c *Cog) onWeeklyRefresh(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	embed, comps := c.weeklyLeaderboardEmbed(i, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) weeklyHistoryEmbed(userID, serverID int64, lang string) *discordgo.MessageEmbed {
+	history, _ := c.svc.GetWeeklyRankHistory(userID, serverID, 5)
+
+	desc := ""
+	if len(history) == 0 {
+		desc = i18n.T("weekly.history_empty", lang)
+	} else {
+		for _, r := range history {
+			rank := 0
+			var count int64
+			_ = c.store.DB.Model(&model.WeeklyRank{}).
+				Where("server_id = ? AND week_id = ? AND score > ?", serverID, r.WeekID, r.Score).
+				Count(&count)
+			rank = int(count) + 1
+
+			desc += fmt.Sprintf("**%s** — #%d — %d pts (W:%d L:%d)\n", r.WeekID, rank, r.Score, r.Wins, r.Losses)
+		}
+	}
+
+	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, 0x9b59b6)
+	return embed
 }

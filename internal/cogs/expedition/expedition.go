@@ -227,9 +227,15 @@ func (c *Cog) claim(userID int64, lang string) (*discordgo.MessageEmbed, []disco
 
 	_ = c.svc.Claim(exp)
 
+	art, artLeveled, _ := petSvc.AddArtifactXP(userID, petsvc.ArtifactExpeditionXP)
+
 	desc := i18n.T("expedition.claim_title", lang, map[string]any{"pet": pet.Nickname, "xp": exp.RewardXP, "items": "\n" + lootStr})
 	if leveled {
 		desc += "\n\n" + i18n.T("pets.play.level_up", lang, map[string]any{"name": pet.Nickname, "level": pet.Level})
+	}
+	_ = art
+	if artLeveled {
+		desc += "\n\n💠 **Artifact leveled up!** Use `/artifact` to assign your new stat point."
 	}
 
 	return components.Embed("🎁", desc, 0xf1c40f), nil

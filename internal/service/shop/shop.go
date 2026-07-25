@@ -1,6 +1,7 @@
 package shop
 
 import (
+	"encoding/json"
 	"errors"
 	"math/rand"
 	"time"
@@ -72,6 +73,49 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 	if bal < totalCost {
 		return ErrNoMoney
 	}
+
+	if it.EquipSlot != "" {
+		// Equipment item: create a UserEquipment instance with rolled affixes
+		rar := it.Rarity
+		affixes := items.RollAffixes(rar, it.EquipSlot)
+		var applied []items.AppliedAffix
+		for _, a := range affixes {
+			applied = append(applied, items.AppliedAffix{
+				ID:    a.ID,
+				Name:  a.Name,
+				Stat:  a.Stat,
+				Value: items.RollAffixValue(a),
+			})
+		}
+		totalSTR, totalDEX, totalINT, totalVIT, totalLUK := it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK
+		for _, a := range applied {
+			switch a.Stat {
+			case "str":
+				totalSTR += a.Value
+			case "dex":
+				totalDEX += a.Value
+			case "int":
+				totalINT += a.Value
+			case "vit":
+				totalVIT += a.Value
+			case "luk":
+				totalLUK += a.Value
+			}
+		}
+		affixData, _ := json.Marshal(applied)
+		return s.store.DB.Transaction(func(tx *gorm.DB) error {
+			if _, err := s.store.UpdateBalance(userID, -totalCost); err != nil {
+				return err
+			}
+			_, err := s.store.CreateEquipment(userID, it.ID, it.Name, it.Emoji,
+				string(rar), it.EquipSlot,
+				totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
+				affixData, it.SetID)
+			return err
+		})
+	}
+
+	// Non-equipment: add to regular inventory
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if _, err := s.store.UpdateBalance(userID, -totalCost); err != nil {
 			return err
