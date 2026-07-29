@@ -25,6 +25,12 @@ const (
 	RoomRest     RoomType = "rest"
 	RoomNPC      RoomType = "npc"
 	RoomEmpty    RoomType = "empty"
+	RoomTomb     RoomType = "tomb"
+	RoomGarden   RoomType = "garden"
+	RoomForge    RoomType = "anvil"
+	RoomRift     RoomType = "rift"
+	RoomShrine   RoomType = "shrine"
+	RoomLocked   RoomType = "locked"
 )
 
 type Room struct {
@@ -69,24 +75,28 @@ type roomWeight struct {
 
 var zoneRoomTables = map[string][]roomWeight{
 	"crypt": {
-		{RoomMonster, 30}, {RoomTreasure, 15}, {RoomAltar, 5},
-		{RoomMerchant, 8}, {RoomPuzzle, 10}, {RoomRest, 12},
-		{RoomNPC, 5}, {RoomEmpty, 15},
+		{RoomMonster, 28}, {RoomTreasure, 12}, {RoomAltar, 5},
+		{RoomMerchant, 8}, {RoomPuzzle, 8}, {RoomRest, 10},
+		{RoomNPC, 5}, {RoomEmpty, 12}, {RoomTomb, 8},
+		{RoomShrine, 5}, {RoomLocked, 8},
 	},
 	"fungal_wilds": {
-		{RoomMonster, 28}, {RoomTreasure, 12}, {RoomAltar, 8},
-		{RoomMerchant, 10}, {RoomPuzzle, 8}, {RoomRest, 10},
-		{RoomNPC, 8}, {RoomEmpty, 16},
+		{RoomMonster, 26}, {RoomTreasure, 10}, {RoomAltar, 6},
+		{RoomMerchant, 8}, {RoomPuzzle, 8}, {RoomRest, 8},
+		{RoomNPC, 6}, {RoomEmpty, 12}, {RoomGarden, 8},
+		{RoomShrine, 5}, {RoomLocked, 8},
 	},
 	"forge_district": {
-		{RoomMonster, 25}, {RoomTreasure, 18}, {RoomAltar, 10},
-		{RoomMerchant, 12}, {RoomPuzzle, 12}, {RoomRest, 8},
-		{RoomNPC, 5}, {RoomEmpty, 10},
+		{RoomMonster, 23}, {RoomTreasure, 15}, {RoomAltar, 8},
+		{RoomMerchant, 10}, {RoomPuzzle, 10}, {RoomRest, 6},
+		{RoomNPC, 5}, {RoomEmpty, 8}, {RoomForge, 8},
+		{RoomShrine, 5}, {RoomLocked, 8},
 	},
 	"abyss": {
-		{RoomMonster, 35}, {RoomTreasure, 10}, {RoomAltar, 15},
+		{RoomMonster, 33}, {RoomTreasure, 8}, {RoomAltar, 12},
 		{RoomMerchant, 5}, {RoomPuzzle, 5}, {RoomRest, 5},
-		{RoomNPC, 10}, {RoomEmpty, 15},
+		{RoomNPC, 8}, {RoomEmpty, 10}, {RoomRift, 8},
+		{RoomShrine, 5}, {RoomLocked, 8},
 	},
 }
 
@@ -160,6 +170,42 @@ var npcDescs = []string{
 	"A wounded adventurer leans against the wall, clutching a bloodied side. \"Please,\" they whisper, \"help me.\"",
 }
 
+var tombDescs = []string{
+	"A stone sarcophagus dominates the chamber, its lid carved with the visage of a long-forgotten king. Dust motes dance in your torchlight.",
+	"Rows of burial niches line the walls, some sealed with crumbling wax, others pried open by earlier thieves. One remains intact.",
+	"A massive marble casket sits atop a raised dais. Faint runes glow along its edges, warning of danger — or promising reward.",
+}
+
+var gardenDescs = []string{
+	"Bioluminescent mushrooms carpet the floor, their caps pulsing with soft light. Strange fruits hang from fibrous stalks.",
+	"A patch of glowing flora thrives in the center of the cavern. Some look nourishing; others drip with ominous spores.",
+	"Delicate fungal blooms sway in an unseen breeze. The air is thick with a sweet, heady aroma that makes your head spin.",
+}
+
+var anvilDescs = []string{
+	"An ancient anvil sits cold and silent. Tools lie scattered around it, still in remarkable condition. A forge pit yawns nearby.",
+	"The heat of long-extinguished fires lingers. A workbench holds half-finished weapon parts, and a heavy hammer rests on the anvil.",
+	"Gears and chains hang from the ceiling above a sturdy anvil. A metal press stands in the corner, its handle worn smooth by use.",
+}
+
+var riftDescs = []string{
+	"The air distorts and shimmers. A vertical tear in reality hangs before you, pulsing with colors that shouldn't exist.",
+	"Gravity warps around a crack in the fabric of space. You feel pulled toward it — and see glimpses of other worlds within.",
+	"A wound in the world, bleeding light and shadow. The void whispers through it, offering secrets that burn to know.",
+}
+
+var shrineDescs = []string{
+	"A small altar of white stone stands in a quiet alcove. Fresh flowers — impossibly — lie upon it, as if placed yesterday.",
+	"Carved from a single piece of marble, a shrine to an unknown deity glows with a faint inner light. Someone still tends this place.",
+	"Faded icons and burnt-down candles surround a humble shrine. The air here is warm and still, untouched by the dungeon's chill.",
+}
+
+var lockedDescs = []string{
+	"A heavy iron door blocks the passage, its lock intricate and well-maintained. Beyond it, you sense open space and treasure.",
+	"Rusted bars seal a promising corridor. The lock mechanism looks complex but functional — a key would turn it smoothly.",
+	"A reinforced door bars your way. Through a crack, you glimpse a glittering chamber beyond. The lock gleams, awaiting a key.",
+}
+
 func pickRandom[T any](items []T, rng *rand.Rand) T {
 	return items[rng.Intn(len(items))]
 }
@@ -221,6 +267,18 @@ func roomDescription(rt RoomType, zone string, rng *rand.Rand) string {
 		desc = pickRandom(puzzleDescs, rng)
 	case RoomRest:
 		desc = pickRandom(restDescs, rng)
+	case RoomTomb:
+		desc = pickRandom(tombDescs, rng)
+	case RoomGarden:
+		desc = pickRandom(gardenDescs, rng)
+	case RoomForge:
+		desc = pickRandom(anvilDescs, rng)
+	case RoomRift:
+		desc = pickRandom(riftDescs, rng)
+	case RoomShrine:
+		desc = pickRandom(shrineDescs, rng)
+	case RoomLocked:
+		desc = pickRandom(lockedDescs, rng)
 	case RoomNPC:
 		desc = pickRandom(npcDescs, rng)
 	default:
@@ -263,6 +321,7 @@ func roomButtons(rt RoomType, rng *rand.Rand) []RoomButton {
 	case RoomMerchant:
 		return []RoomButton{
 			{Emoji: "🛒", Label: "Browse", Action: "merchant_browse", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "🤝", Label: "Haggle", Action: "merchant_haggle", Style: discordgo.SuccessButton, Data: ""},
 			{Emoji: "🚪", Label: "Leave", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
 		}
 	case RoomPuzzle:
@@ -274,12 +333,51 @@ func roomButtons(rt RoomType, rng *rand.Rand) []RoomButton {
 		return []RoomButton{
 			{Emoji: "🔦", Label: "Use Torch", Action: "rest_torch", Style: discordgo.SuccessButton, Data: ""},
 			{Emoji: "😴", Label: "Sleep", Action: "rest_sleep", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "🩹", Label: "Bandage", Action: "rest_bandage", Style: discordgo.PrimaryButton, Data: ""},
 			{Emoji: "↩️", Label: "Leave", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomTomb:
+		return []RoomButton{
+			{Emoji: "🪦", Label: "Open Sarcophagus", Action: "tomb_open", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "🙏", Label: "Pay Respects", Action: "tomb_respect", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomGarden:
+		return []RoomButton{
+			{Emoji: "🌿", Label: "Harvest", Action: "garden_harvest", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "🔥", Label: "Burn Garden", Action: "garden_burn", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomForge:
+		return []RoomButton{
+			{Emoji: "⚒️", Label: "Temper Weapon", Action: "forge_temper", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "🔧", Label: "Scavenge Parts", Action: "forge_scavenge", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomRift:
+		return []RoomButton{
+			{Emoji: "👁️", Label: "Gaze into the Void", Action: "rift_gaze", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "🌀", Label: "Disturb the Rift", Action: "rift_disturb", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomShrine:
+		return []RoomButton{
+			{Emoji: "🙏", Label: "Pray", Action: "shrine_pray", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "💰", Label: "Donate Gold", Action: "shrine_donate", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "💀", Label: "Defile", Action: "shrine_defile", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomLocked:
+		return []RoomButton{
+			{Emoji: "🔑", Label: "Use Key", Action: "locked_key", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "💪", Label: "Force Door", Action: "locked_force", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "↩️", Label: "Find Another Way", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
 		}
 	case RoomNPC:
 		return []RoomButton{
 			{Emoji: "🤝", Label: "Help", Action: "npc_help", Style: discordgo.SuccessButton, Data: ""},
 			{Emoji: "💰", Label: "Betray", Action: "npc_betray", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "💪", Label: "Intimidate", Action: "npc_intimidate", Style: discordgo.PrimaryButton, Data: ""},
 			{Emoji: "🚪", Label: "Ignore", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
 		}
 	default:
@@ -324,22 +422,55 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 		zoneName = session.Zone
 	}
 
+	char, _ := svc.store.EnsureCharacter(session.UserID)
+	playerLevel := 1
+	if char != nil {
+		playerLevel = char.Level
+	}
+	danger := CalcDanger(session.Floor, playerLevel)
+
 	title := fmt.Sprintf("🧱 The Undercroft · Floor %d · %s", session.Floor, zoneName)
-	desc := room.Description
+	dangerLine := DescribeDanger(danger)
+	desc := dangerLine + "\n\n" + room.Description
+
+	color := 0x2ecc71
+	switch {
+	case danger.Skulls >= 4:
+		color = 0xe74c3c
+	case danger.Skulls >= 2:
+		color = 0xf39c12
+	}
 
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: desc,
-		Color:       0x2ecc71,
+		Color:       color,
 	}
 
+	warningLine := ""
+	if danger.IsPunished {
+		warningLine = "\n⚠️ The depths sense your weakness..."
+	}
+	if session.Torches == 0 {
+		if warningLine != "" {
+			warningLine += "\n🌑 You are shrouded in darkness!"
+		} else {
+			warningLine = "\n🌑 You are shrouded in darkness!"
+		}
+	}
+
+	potionDisplay := fmt.Sprintf("🧪 Potions: %d", session.Potions)
 	hpLine := fmt.Sprintf("⚔️ HP: %d/%d    🔥 Mana: %d/%d", session.HP, session.MaxHP, session.Mana, session.MaxMana)
 	itemsLine := fmt.Sprintf("🔦 Torches: %d    🗝️ Keys: %d    💰 Gold: %d", session.Torches, session.Keys, session.Gold)
 	var effects []string
 	json.Unmarshal([]byte(session.StatusEffects), &effects)
 	statusLine := ""
 	if len(effects) > 0 {
-		statusLine = "\n⚠️ " + strings.Join(effects, ", ")
+		var displayEffects []string
+		for _, e := range effects {
+			displayEffects = append(displayEffects, i18n.T("delve.status."+e, lang))
+		}
+		statusLine = "\n⚠️ " + strings.Join(displayEffects, ", ")
 	}
 
 	pets := svc.DeployedPets(session)
@@ -348,24 +479,25 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 		petLine = fmt.Sprintf("\n🐾 Pets deployed: %d", len(pets))
 	}
 
+	statBlock := hpLine + "\n" + potionDisplay + "  " + itemsLine + warningLine + petLine + statusLine
 	embed.Fields = []*discordgo.MessageEmbedField{
-		{Name: "\u200b", Value: hpLine + "\n" + itemsLine + petLine + statusLine, Inline: false},
+		{Name: "\u200b", Value: statBlock, Inline: false},
 	}
 
 	return embed
 }
 
-func BuildRoomComponents(room *Room) []discordgo.MessageComponent {
+func BuildRoomComponents(room *Room, lang string) []discordgo.MessageComponent {
 	var rows []discordgo.MessageComponent
 	var currentRow []discordgo.MessageComponent
 
 	for _, b := range room.Buttons {
-		label := b.Emoji + " " + i18n.T("delve.buttons."+b.Action, "en")
+		label := i18n.T("delve.buttons."+b.Action, lang)
 		if label == "delve.buttons."+b.Action {
-			label = b.Emoji + " " + b.Label
+			label = b.Label
 		}
 		customID := components.Encode("delve", b.Action, b.Data)
-		btn := components.Button(b.Emoji+" "+b.Label, customID, b.Style)
+		btn := components.Button(b.Emoji+" "+label, customID, b.Style)
 		currentRow = append(currentRow, btn)
 		if len(currentRow) >= 3 {
 			rows = append(rows, components.ActionRow(currentRow...))
@@ -378,21 +510,61 @@ func BuildRoomComponents(room *Room) []discordgo.MessageComponent {
 	return rows
 }
 
-func CombatRoomButtons() []discordgo.MessageComponent {
-	return []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button("⚔️ Slash", components.Encode("delve", "combat_slash"), discordgo.PrimaryButton),
-			components.Button("🔥 Fireball", components.Encode("delve", "combat_fireball"), discordgo.DangerButton),
-			components.Button("🛡️ Defend", components.Encode("delve", "combat_defend"), discordgo.SuccessButton),
-		),
-		components.ActionRow(
-			components.Button("🧪 Use Potion", components.Encode("delve", "combat_potion"), discordgo.PrimaryButton),
-			components.Button("🏃 Flee", components.Encode("delve", "combat_flee"), discordgo.SecondaryButton),
-		),
+func CombatRoomButtons(lang string, abilities []AbilityStatus, weaponEmoji, weaponName string) []discordgo.MessageComponent {
+	var rows []discordgo.MessageComponent
+	var currentRow []discordgo.MessageComponent
+
+	for _, as := range abilities {
+		a := as.Ability
+		emoji := a.Emoji
+		label := a.Name
+		customID := components.Encode("delve", "combat_"+a.ID)
+
+		if a.ID == "strike" {
+			emoji = weaponEmoji
+			label = weaponName
+		}
+
+		style := discordgo.PrimaryButton
+		switch a.ID {
+		case "fireball":
+			style = discordgo.DangerButton
+		case "mend":
+			style = discordgo.SuccessButton
+		case "power_blow":
+			style = discordgo.PrimaryButton
+		}
+
+		var btn discordgo.MessageComponent
+		if as.Unlocked {
+			btn = components.Button(emoji+" "+label, customID, style)
+		} else {
+			lockLabel := fmt.Sprintf("🔒 %s (Lv %d)", i18n.T("delve.abilities."+a.ID, lang), a.UnlockLevel)
+			if lockLabel == "🔒 delve.abilities."+a.ID {
+				lockLabel = fmt.Sprintf("🔒 %s (Lv %d)", label, a.UnlockLevel)
+			}
+			btn = components.Button(lockLabel, customID, discordgo.SecondaryButton)
+		}
+
+		currentRow = append(currentRow, btn)
+		if len(currentRow) >= 3 {
+			rows = append(rows, components.ActionRow(currentRow...))
+			currentRow = nil
+		}
 	}
+	if len(currentRow) > 0 {
+		rows = append(rows, components.ActionRow(currentRow...))
+	}
+
+	rows = append(rows, components.ActionRow(
+		components.Button("🧪 "+i18n.T("delve.buttons.combat_potion", lang), components.Encode("delve", "combat_potion"), discordgo.PrimaryButton),
+		components.Button("🏃 "+i18n.T("delve.buttons.combat_flee", lang), components.Encode("delve", "combat_flee"), discordgo.SecondaryButton),
+	))
+
+	return rows
 }
 
-func MaybeAddRescueOverlay(room *Room, fallen []model.DelveSession, currentUserID int64, guildID int64, dbStore *store.Store) {
+func MaybeAddRescueOverlay(room *Room, fallen []model.DelveSession, currentUserID int64, guildID int64, dbStore *store.Store, lang string) {
 	var eligible []model.DelveSession
 	for _, f := range fallen {
 		if f.UserID != currentUserID {
@@ -408,7 +580,7 @@ func MaybeAddRescueOverlay(room *Room, fallen []model.DelveSession, currentUserI
 	if len(eligible) > 2 {
 		eligible = eligible[:2]
 	}
-	room.Description += "\n\n*A faint voice calls from the shadows... someone needs help!*"
+	room.Description += "\n\n" + i18n.T("delve.rescue_overlay", lang)
 	var btns []RoomButton
 	for _, f := range eligible {
 		btns = append(btns, RoomButton{

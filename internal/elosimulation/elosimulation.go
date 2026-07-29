@@ -1,8 +1,9 @@
 package elosimulation
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"math/rand"
 	"strconv"
@@ -19,29 +20,46 @@ import (
 	"guacagamblebot/internal/store"
 )
 
-func Run(st *store.Store) {
+func Run(ctx context.Context, st *store.Store) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		simulateRound(st)
+	for {
+		select {
+		case <-ticker.C:
+			simulateRound(st)
+		case <-ctx.Done():
+			slog.Info("elosimulation: shutting down simulation loop")
+			return
+		}
 	}
 }
 
-func RunWeeklyReset(st *store.Store, s *discordgo.Session) {
+func RunWeeklyReset(ctx context.Context, st *store.Store, s *discordgo.Session) {
 	for {
-		time.Sleep(time.Until(nextSundayMidnight()))
-		performWeeklyResetForAll(st, s)
+		nextMidnight := nextSundayMidnight()
+		dur := time.Until(nextMidnight)
+		if dur <= 0 {
+			dur = time.Second
+		}
+		select {
+		case <-time.After(dur):
+			performWeeklyResetForAll(st, s)
+		case <-ctx.Done():
+			slog.Info("elosimulation: shutting down weekly reset loop")
+			return
+		}
 	}
 }
 
 func nextSundayMidnight() time.Time {
 	now := time.Now().UTC()
 	daysUntilSunday := (7 - int(now.Weekday())) % 7
-	if daysUntilSunday == 0 {
-		daysUntilSunday = 7
-	}
 	next := now.AddDate(0, 0, daysUntilSunday)
-	return time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, time.UTC)
+	nextMidnight := time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, time.UTC)
+	if !nextMidnight.After(now) {
+		nextMidnight = nextMidnight.AddDate(0, 0, 7)
+	}
+	return nextMidnight
 }
 
 func currentWeekID() string {
@@ -60,7 +78,7 @@ func performWeeklyResetForAll(st *store.Store, s *discordgo.Session) {
 func performWeeklyReset(st *store.Store, s *discordgo.Session, ss model.ServerSetting) {
 	weekID := currentWeekID()
 	var ranks []model.WeeklyRank
-	st.DB.Where("server_id = ? AND week_id = ?", ss.ServerID, weekID).
+	st.DB.Where("(server_id = ? OR server_id = 0) AND week_id = ?", ss.ServerID, weekID).
 		Order("score desc").Find(&ranks)
 
 	topFive := make([]model.WeeklyRank, 0, 5)
@@ -70,17 +88,23 @@ func performWeeklyReset(st *store.Store, s *discordgo.Session, ss model.ServerSe
 			continue
 		}
 		if tier.Coins > 0 {
-			_, _ = st.UpdateBalance(r.UserID, tier.Coins)
+			if _, err := st.UpdateBalance(r.UserID, tier.Coins); err != nil {
+				slog.Error("elosimulation: failed to award coins", "user", r.UserID, "coins", tier.Coins, "error", err)
+			}
 		}
 		if tier.Crowns > 0 {
-			_, _ = st.AdjustColumn(r.UserID, "crowns", tier.Crowns)
+			if _, err := st.AdjustColumn(r.UserID, "crowns", tier.Crowns); err != nil {
+				slog.Error("elosimulation: failed to award crowns", "user", r.UserID, "crowns", tier.Crowns, "error", err)
+			}
 		}
 		if tier.ItemID != "" {
-			_ = st.DB.Exec(
+			if err := st.DB.Exec(
 				`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
 				 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
 				r.UserID, tier.ItemID,
-			)
+			).Error; err != nil {
+				slog.Error("elosimulation: failed to award item", "user", r.UserID, "item", tier.ItemID, "error", err)
+			}
 		}
 		if i < 5 {
 			topFive = append(topFive, r)
@@ -168,7 +192,7 @@ func sendWeeklyAnnouncement(s *discordgo.Session, ss model.ServerSetting, topFiv
 
 	_, err := s.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), embed)
 	if err != nil {
-		log.Printf("elosimulation: failed to send weekly announcement: %v", err)
+		slog.Warn("elosimulation: failed to send weekly announcement", "error", err)
 	}
 }
 
@@ -290,17 +314,23 @@ func simulateRound(st *store.Store) {
 		return nil
 	})
 	if txErr != nil {
-		log.Printf("elosimulation: failed to persist Elo update: %v", txErr)
+		slog.Error("elosimulation: failed to persist Elo update", "error", txErr)
 	}
 
+	serverID := p1.ServerID
+	if serverID == 0 {
+		serverID = p2.ServerID
+	}
 	if score == 1.0 {
-		addWeeklyScore(st, p1.UserID, p1.ID, p2.UserID, p2.ID, 5)
+		addWeeklyScore(st, serverID, p1.UserID, p2.UserID, 5)
 	} else if score == 0.0 {
-		addWeeklyScore(st, p2.UserID, p2.ID, p1.UserID, p1.ID, 5)
+		addWeeklyScore(st, serverID, p2.UserID, p1.UserID, 5)
+	} else {
+		addWeeklyScore(st, serverID, p1.UserID, p2.UserID, 2)
 	}
 }
 
-func addWeeklyScore(st *store.Store, winnerUserID, winnerPetID, loserUserID, loserPetID int64, scoreDelta int) {
+func addWeeklyScore(st *store.Store, serverID, winnerUserID, loserUserID int64, scoreDelta int) {
 	weekID := currentWeekID()
 	_ = st.DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "server_id"}, {Name: "week_id"}},
@@ -310,19 +340,19 @@ func addWeeklyScore(st *store.Store, winnerUserID, winnerPetID, loserUserID, los
 			"losses": gorm.Expr("losses + 0"),
 		}),
 	}).Create(&model.WeeklyRank{
-		UserID: winnerUserID, ServerID: 0, WeekID: weekID,
+		UserID: winnerUserID, ServerID: serverID, WeekID: weekID,
 		Score: scoreDelta, Wins: 1, Losses: 0,
 	}).Error
 	_ = st.DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "server_id"}, {Name: "week_id"}},
 		DoUpdates: clause.Assignments(map[string]any{
-			"score":  gorm.Expr("score + 2"),
+			"score":  gorm.Expr("score + 0"),
 			"wins":   gorm.Expr("wins + 0"),
 			"losses": gorm.Expr("losses + 1"),
 		}),
 	}).Create(&model.WeeklyRank{
-		UserID: loserUserID, ServerID: 0, WeekID: weekID,
-		Score: 2, Wins: 0, Losses: 1,
+		UserID: loserUserID, ServerID: serverID, WeekID: weekID,
+		Score: 0, Wins: 0, Losses: 1,
 	}).Error
 }
 

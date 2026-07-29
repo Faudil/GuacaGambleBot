@@ -3,6 +3,7 @@ package fishing
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,16 +16,37 @@ import (
 	invsvc "guacagamblebot/internal/service/inventory"
 	loresvc "guacagamblebot/internal/service/lore"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
 
+type phase int
+
+const (
+	phaseSelecting phase = iota
+	phaseWaiting
+	phaseNibble
+	phaseBiting
+	phaseFighting
+)
+
 type fishSession struct {
-	baitTier fishingsvc.BaitTier
-	state    *fishingsvc.FishFightState
+	baitTier    fishingsvc.BaitTier
+	state       *fishingsvc.FishFightState
+	phase       phase
+	msgID       string
+	channelID   string
+	guildID     int64
+	biteExpires time.Time
+	biome       string
+	freeUsed    bool
 }
 
-var sessions = map[int64]*fishSession{}
+var (
+	sessions   = map[int64]*fishSession{}
+	sessionsMu sync.Mutex
+)
 
 type Cog struct {
 	store *store.Store
@@ -54,6 +76,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("fish", "spot_river", c.onSpotSelect)
 	r.Component("fish", "spot_ocean", c.onSpotSelect)
 	r.Component("fish", "spot_lava", c.onSpotSelect)
+	r.Component("fish", "strike", c.onStrike)
 	r.Component("fish", "reel", c.onFightAction)
 	r.Component("fish", "pull", c.onFightAction)
 	r.Component("fish", "rest", c.onFightAction)
@@ -77,7 +100,9 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
+	sessionsMu.Lock()
 	delete(sessions, userID)
+	sessionsMu.Unlock()
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.baitMenu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -168,7 +193,9 @@ func (c *Cog) onBaitSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
+	sessionsMu.Lock()
 	sessions[userID] = &fishSession{baitTier: tier}
+	sessionsMu.Unlock()
 	embed, comps := c.spotMenu(lang, userID, tier)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -218,13 +245,16 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	cid := i.MessageComponentData().CustomID
 	_, action, _ := components.Decode(cid)
 
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
+		sessionsMu.Unlock()
 		interaction.RespondError(b, i, lang, "fishing.error")
 		return
 	}
-
 	biome := action[5:]
+	sess.biome = biome
+	sessionsMu.Unlock()
 
 	if biome == "lava" {
 		unlocked, _ := c.svc.LavaUnlocked(userID)
@@ -267,6 +297,7 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	freeUsed := false
 	if sess.baitTier == fishingsvc.BaitCommon {
 		free, _ := c.svc.CanFreeCast(userID)
 		if free {
@@ -274,6 +305,7 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				interaction.RespondError(b, i, lang, "fishing.error")
 				return
 			}
+			freeUsed = true
 		} else {
 			if err := c.svc.ConsumeBait(userID, sess.baitTier); err != nil {
 				interaction.RespondError(b, i, lang, "fishing.error")
@@ -295,22 +327,324 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			return
 		}
 		embed := c.bottleEmbed(bottleKey, res, lang)
+		sessionsMu.Lock()
 		delete(sessions, userID)
+		sessionsMu.Unlock()
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 		return
 	}
 
 	state := c.svc.GenerateFish(biome, sess.baitTier)
-	sess.state = state
 
-	embed, comps := c.fightEmbed(state, lang)
+	sessionsMu.Lock()
+	sess.state = state
+	sess.phase = phaseWaiting
+	sess.freeUsed = freeUsed
+	sess.msgID = i.Message.ID
+	sess.channelID = i.ChannelID
+	sess.guildID = interaction.ToInt64(i.GuildID)
+	sess.biteExpires = time.Time{}
+	sessionsMu.Unlock()
+
+	c.startBiteWait(userID, b.Session, lang)
+
+	embed, comps := c.waitEmbed(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
+func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang string) {
+	sessionsMu.Lock()
+	sess, ok := sessions[userID]
+	if !ok || sess.phase != phaseWaiting {
+		sessionsMu.Unlock()
+		return
+	}
+	biome := sess.biome
+	msgID := sess.msgID
+	channelID := sess.channelID
+	waitTotal := fishingsvc.BiteWaitForBiome(biome)
+	sessionsMu.Unlock()
+
+	go func() {
+		nibbleCount := 0
+		if waitTotal >= 8 {
+			nibbleCount = 1 + rand.Intn(2)
+			if nibbleCount > 2 {
+				nibbleCount = 2
+			}
+		}
+
+		segDuration := waitTotal / (nibbleCount + 1)
+
+		for i := 0; i < nibbleCount; i++ {
+			time.Sleep(time.Duration(segDuration) * time.Second)
+
+			sessionsMu.Lock()
+			current, ok := sessions[userID]
+			if !ok || current.phase != phaseWaiting || current.msgID != msgID {
+				sessionsMu.Unlock()
+				return
+			}
+			current.phase = phaseNibble
+			sessionsMu.Unlock()
+
+			c.editWaitMessage(session, channelID, msgID, "nibble", lang)
+
+			nibbleWindow := 2 + time.Duration(rand.Intn(2))*time.Second
+			time.Sleep(nibbleWindow)
+
+			sessionsMu.Lock()
+			current, ok = sessions[userID]
+			if !ok || current.phase != phaseNibble || current.msgID != msgID {
+				sessionsMu.Unlock()
+				return
+			}
+			current.phase = phaseWaiting
+			sessionsMu.Unlock()
+
+			c.editWaitMessage(session, channelID, msgID, "waiting", lang)
+		}
+
+		time.Sleep(time.Duration(segDuration) * time.Second)
+
+		sessionsMu.Lock()
+		current, ok := sessions[userID]
+		if !ok || current.phase != phaseWaiting || current.msgID != msgID {
+			sessionsMu.Unlock()
+			return
+		}
+		current.phase = phaseBiting
+		current.biteExpires = time.Now().Add(7 * time.Second)
+		sessionsMu.Unlock()
+
+		c.editWaitMessage(session, channelID, msgID, "bite", lang, current.biteExpires)
+
+		time.Sleep(7 * time.Second)
+
+		sessionsMu.Lock()
+		current, ok = sessions[userID]
+		if !ok || current.phase != phaseBiting || current.msgID != msgID {
+			sessionsMu.Unlock()
+			return
+		}
+		sessionsMu.Unlock()
+
+		c.editWaitMessage(session, channelID, msgID, "expired", lang)
+	}()
+}
+
+func (c *Cog) editWaitMessage(s *discordgo.Session, channelID, msgID, state string, lang string, expires ...time.Time) {
+	reelBtn := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("fishing.reel_in_btn", lang), components.Encode("fish", "strike"), discordgo.PrimaryButton),
+		),
+	}
+
+	var embed *discordgo.MessageEmbed
+	switch state {
+	case "waiting":
+		embed = components.Embed(
+			i18n.T("fishing.wait_title", lang),
+			i18n.T("fishing.wait_desc", lang),
+			0x008080,
+		)
+	case "nibble":
+		embed = components.Embed(
+			i18n.T("fishing.nibble_title", lang),
+			i18n.T("fishing.nibble_desc", lang),
+			0x008080,
+		)
+	case "bite":
+		expireTime := time.Now().Add(7 * time.Second)
+		if len(expires) > 0 {
+			expireTime = expires[0]
+		}
+		desc := i18n.T("fishing.bite_desc", lang, map[string]any{"expires": "<t:" + itoa(int(expireTime.Unix())) + ":R>"})
+		embed = components.Embed(
+			i18n.T("fishing.bite_title", lang),
+			desc,
+			0xFF0000,
+		)
+	case "expired":
+		embed = components.Embed(
+			i18n.T("fishing.expired_title", lang),
+			i18n.T("fishing.expired_desc", lang),
+			0x808080,
+		)
+	}
+
+	if state == "expired" {
+		_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+			Channel:    channelID,
+			ID:         msgID,
+			Embeds:     &[]*discordgo.MessageEmbed{embed},
+			Components: &[]discordgo.MessageComponent{},
+		})
+	} else {
+		_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+			Channel:    channelID,
+			ID:         msgID,
+			Embeds:     &[]*discordgo.MessageEmbed{embed},
+			Components: &reelBtn,
+		})
+	}
+}
+
+func (c *Cog) waitEmbed(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	embed := components.Embed(
+		i18n.T("fishing.wait_title", lang),
+		i18n.T("fishing.wait_desc", lang),
+		0x008080,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("fishing.reel_in_btn", lang), components.Encode("fish", "strike"), discordgo.PrimaryButton),
+		),
+	}
+	return embed, comps
+}
+
+func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	sessionsMu.Lock()
+	sess, ok := sessions[userID]
+	if !ok {
+		sessionsMu.Unlock()
+		interaction.RespondError(b, i, lang, "fishing.error")
+		return
+	}
+
+	p := sess.phase
+	bt := sess.baitTier
+	state := sess.state
+	expires := sess.biteExpires
+	freeUsed := sess.freeUsed
+	sessionsMu.Unlock()
+
+	switch p {
+	case phaseWaiting:
+		refunded := false
+		if bt != fishingsvc.BaitCommon || (!freeUsed && rand.Float64() < 0.5) {
+			_ = c.svc.AddBait(userID, bt)
+			refunded = true
+		}
+		sessionsMu.Lock()
+		delete(sessions, userID)
+		sessionsMu.Unlock()
+
+		var descKey string
+		if refunded {
+			descKey = "fishing.empty_desc_refund"
+		} else {
+			descKey = "fishing.empty_desc_lost"
+		}
+		embed := components.Embed(
+			i18n.T("fishing.empty_title", lang),
+			i18n.T(descKey, lang),
+			0x808080,
+		)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+
+	case phaseNibble:
+		if rand.Float64() < 0.6 {
+			sessionsMu.Lock()
+			delete(sessions, userID)
+			sessionsMu.Unlock()
+			embed := components.Embed(
+				i18n.T("fishing.spooked_title", lang),
+				i18n.T("fishing.spooked_desc", lang),
+				0xFF0000,
+			)
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+		} else {
+			if state != nil {
+				state.Stamina = state.Stamina * 70 / 100
+				state.Mood = "diving"
+			}
+			sessionsMu.Lock()
+			existing, exists := sessions[userID]
+			if exists {
+				existing.phase = phaseFighting
+			}
+			sessionsMu.Unlock()
+			embed, comps := c.fightEmbed(state, lang)
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+		}
+
+	case phaseBiting:
+		if time.Now().After(expires) {
+			sessionsMu.Lock()
+			delete(sessions, userID)
+			sessionsMu.Unlock()
+			embed := components.Embed(
+				i18n.T("fishing.bite_missed_title", lang),
+				i18n.T("fishing.bite_missed_desc", lang),
+				0xFF0000,
+			)
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+			return
+		}
+
+		if state != nil && state.Quiet {
+			res, err := c.svc.ResolveCatch(userID, state)
+			sessionsMu.Lock()
+			delete(sessions, userID)
+			sessionsMu.Unlock()
+			if err != nil {
+				interaction.RespondError(b, i, lang, "fishing.error")
+				return
+			}
+			embed := c.quietCatchEmbed(res, lang)
+			if qid := c.store.PopQuestCompleted(userID); qid != "" {
+				embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+			return
+		}
+
+		if state != nil {
+			state.Mood = "diving"
+		}
+		sessionsMu.Lock()
+		if existing, exists := sessions[userID]; exists {
+			existing.phase = phaseFighting
+		}
+		sessionsMu.Unlock()
+
+		embed, comps := c.fightEmbed(state, lang)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	default:
+		sessionsMu.Lock()
+		delete(sessions, userID)
+		sessionsMu.Unlock()
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: i18n.T("fishing.error", lang),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+}
+
 func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	desc := fightFlavor(state, lang)
+
+	if state.Mood != "" {
+		moodKey := "fishing.mood_" + state.Mood
+		desc = i18n.T(moodKey, lang) + "\n" + desc
+	}
 
 	tensionPct := state.Tension
 	if tensionPct > 100 {
@@ -320,9 +654,6 @@ func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string) (*discor
 	tensionLabel := i18n.T("fishing.tension_bar", lang, map[string]any{"bar": tensionBar, "pct": itoa(tensionPct)})
 
 	staminaMax := state.Species.Stamina
-	if state.Mutated {
-		staminaMax = state.Species.Stamina
-	}
 	staminaCurrent := state.Stamina
 	if staminaCurrent > staminaMax {
 		staminaCurrent = staminaMax
@@ -385,31 +716,34 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	cid := i.MessageComponentData().CustomID
 	_, action, _ := components.Decode(cid)
 
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
-	if !ok || sess.state == nil || sess.state.Escaped || sess.state.Stamina <= 0 {
-		if !ok {
-			embed, comps := c.baitMenu(lang, userID)
-			_ = b.Session.InteractionRespond(i.Interaction,
-				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
-		} else {
-			delete(sessions, userID)
-			embed, comps := c.baitMenu(lang, userID)
-			_ = b.Session.InteractionRespond(i.Interaction,
-				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
-		}
+	if !ok || sess.state == nil || sess.state.Escaped || sess.state.Stamina <= 0 || sess.phase != phaseFighting {
+		delete(sessions, userID)
+		sessionsMu.Unlock()
+		embed, comps := c.baitMenu(lang, userID)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 		return
 	}
+	state := sess.state
+	sessionsMu.Unlock()
 
-	result := c.svc.ApplyAction(sess.state, action)
+	result := c.svc.ApplyAction(state, action)
 
 	if result.Caught {
-		res, err := c.svc.ResolveCatch(userID, sess.state)
-		delete(sessions, userID)
+		res, err := c.svc.ResolveCatch(userID, state)
 		if err != nil {
 			interaction.RespondError(b, i, lang, "fishing.error")
 			return
 		}
+		sessionsMu.Lock()
+		delete(sessions, userID)
+		sessionsMu.Unlock()
 		embed := c.catchEmbed(res, lang)
+		if qid := c.store.PopQuestCompleted(userID); qid != "" {
+			embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 		return
@@ -417,41 +751,50 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	if result.Escaped {
 		res, err := c.svc.ResolveEscape(userID)
-		delete(sessions, userID)
 		if err != nil {
 			interaction.RespondError(b, i, lang, "fishing.error")
 			return
 		}
+		sessionsMu.Lock()
+		delete(sessions, userID)
+		sessionsMu.Unlock()
 		embed := c.escapeEmbed(res, lang)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 		return
 	}
 
-	if result.LuckyBreak {
-		embed, comps := c.fightEmbed(sess.state, lang)
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
-		return
-	}
-
-	embed, comps := c.fightEmbed(sess.state, lang)
+	embed, comps := c.fightEmbed(state, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
+func (c *Cog) quietCatchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.MessageEmbed {
+	return components.Embed(
+		i18n.T("fishing.caught_title", lang),
+		i18n.T("fishing.quiet_desc", lang, map[string]any{
+			"name":   fishDisplayName(res.ItemName, lang),
+			"weight": itoa(res.Weight),
+			"size":   itoa(res.Size),
+			"xp":     itoa(res.XP),
+		}),
+		0x55CC55,
+	)
+}
+
 func (c *Cog) catchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.MessageEmbed {
+	localName := fishDisplayName(res.ItemName, lang)
 	var name string
 	if res.Golden {
-		name = "✦ " + i18n.T("fishing.golden_prefix", lang) + " " + res.ItemName
+		name = "✦ " + i18n.T("fishing.golden_prefix", lang) + " " + localName
 	} else if res.Mutated {
-		name = "🧪 " + i18n.T("fishing.mutated_prefix", lang) + " " + res.ItemName
+		name = "🧪 " + i18n.T("fishing.mutated_prefix", lang) + " " + localName
 	} else if res.Secret == "ghost_carp" {
-		name = "👻 " + res.ItemName
+		name = "👻 " + localName
 	} else if res.Secret == "cosmic_jellyfish" {
-		name = "🌌 " + res.ItemName
+		name = "🌌 " + localName
 	} else {
-		name = res.ItemName
+		name = localName
 	}
 
 	milestone := ""
@@ -583,6 +926,15 @@ func flavorTexts(strength int, lang string) []string {
 		i18n.T("fishing.flavor_trash_2", lang),
 		i18n.T("fishing.flavor_trash_3", lang),
 	}
+}
+
+func fishDisplayName(rawName, lang string) string {
+	key := "fishing.fish_" + strings.ReplaceAll(strings.ToLower(rawName), " ", "_")
+	loc := i18n.T(key, lang)
+	if loc == "" || loc == key {
+		return rawName
+	}
+	return loc
 }
 
 func barString(current, max int, fillChar, partialChar, emptyChar string) string {

@@ -81,6 +81,8 @@ type FishFightState struct {
 	Size       int
 	Golden     bool
 	Mutated    bool
+	Mood       string
+	Quiet      bool
 }
 
 type FightActionResult struct {
@@ -90,6 +92,7 @@ type FightActionResult struct {
 	Caught       bool
 	Escaped      bool
 	LuckyBreak   bool
+	Mood         string
 }
 
 type FightResolve struct {
@@ -271,6 +274,8 @@ func (s *Service) GenerateFish(biome string, baitTier BaitTier) *FishFightState 
 		stamina = stamina + stamina/2
 	}
 
+	quiet := baitTier == BaitCommon && pick.Secret == "" && rand.Float64() < 0.35
+
 	state := &FishFightState{
 		Species:  pick,
 		Tension:  100,
@@ -280,6 +285,8 @@ func (s *Service) GenerateFish(biome string, baitTier BaitTier) *FishFightState 
 		Size:     size,
 		Golden:   golden,
 		Mutated:  mutated,
+		Mood:     "diving",
+		Quiet:    quiet,
 	}
 
 	if mutated {
@@ -297,37 +304,43 @@ func (s *Service) GenerateFish(biome string, baitTier BaitTier) *FishFightState 
 
 func (s Service) ApplyAction(state *FishFightState, action string) *FightActionResult {
 	result := &FightActionResult{}
+
+	var tensionLoss, staminaLoss, tensionGain, staminaRecovered int
 	switch action {
 	case "reel":
-		tensionLoss := 5 + rand.Intn(11)
-		staminaLoss := 8 + rand.Intn(6)
+		tensionLoss = 5 + rand.Intn(11)
+		staminaLoss = 8 + rand.Intn(6)
+		applyMoodModifiers(state, &tensionLoss, &staminaLoss, &tensionGain, &staminaRecovered, action)
 		state.Tension -= tensionLoss
 		state.Stamina -= staminaLoss
-		result.TensionDelta = -tensionLoss
-		result.StaminaDelta = -staminaLoss
 
 	case "pull":
-		tensionLoss := 20 + rand.Intn(21) + state.Species.Strength*2
-		staminaLoss := 15 + rand.Intn(21)
+		tensionLoss = 20 + rand.Intn(21) + state.Species.Strength*2
+		staminaLoss = 15 + rand.Intn(21)
+		applyMoodModifiers(state, &tensionLoss, &staminaLoss, &tensionGain, &staminaRecovered, action)
 		state.Tension -= tensionLoss
 		state.Stamina -= staminaLoss
-		result.TensionDelta = -tensionLoss
-		result.StaminaDelta = -staminaLoss
 		if state.Distance < 1 {
 			state.Distance = 1
 			result.DistanceStep = true
 		}
 
 	case "rest":
-		tensionGain := 20 + rand.Intn(11)
+		tensionGain = 20 + rand.Intn(11)
+		staminaRecovered = 3 + state.Species.Evasiveness + rand.Intn(3)
+		applyMoodModifiers(state, &tensionLoss, &staminaLoss, &tensionGain, &staminaRecovered, action)
 		state.Tension += tensionGain
 		if state.Tension > 100 {
 			state.Tension = 100
 		}
-		staminaRecovered := 3 + state.Species.Evasiveness + rand.Intn(3)
 		state.Stamina += staminaRecovered
 		result.TensionDelta = tensionGain
 		result.StaminaDelta = staminaRecovered
+	}
+
+	if action != "rest" {
+		result.TensionDelta = -tensionLoss
+		result.StaminaDelta = -staminaLoss
 	}
 
 	if state.Tension < 0 {
@@ -340,6 +353,7 @@ func (s Service) ApplyAction(state *FishFightState, action string) *FightActionR
 	if state.Stamina <= 0 {
 		state.Distance = 2
 		result.Caught = true
+		result.Mood = state.Mood
 		return result
 	}
 
@@ -349,14 +363,74 @@ func (s Service) ApplyAction(state *FishFightState, action string) *FightActionR
 				state.Tension = 1
 				state.LuckyBreak = true
 				result.LuckyBreak = true
+				result.Mood = state.Mood
 				return result
 			}
 		}
 		state.Escaped = true
 		result.Escaped = true
+		result.Mood = state.Mood
+		return result
 	}
 
+	nextMood(state)
+	result.Mood = state.Mood
+
 	return result
+}
+
+func applyMoodModifiers(state *FishFightState, tensionLoss, staminaLoss, tensionGain, staminaRecovered *int, action string) {
+	switch state.Mood {
+	case "diving":
+		if action == "pull" {
+			*tensionLoss += 10
+		}
+		if action == "rest" {
+			*staminaRecovered += 2
+		}
+	case "thrashing":
+		if action == "reel" {
+			*staminaLoss = *staminaLoss + *staminaLoss/2
+		}
+	case "tiring":
+		if action == "pull" {
+			*tensionLoss = *tensionLoss / 2
+			if *tensionLoss < 1 {
+				*tensionLoss = 1
+			}
+		}
+	case "circling":
+		if action == "reel" || action == "pull" {
+			*staminaLoss += rand.Intn(*staminaLoss/2 + 1) - *staminaLoss/4
+			if *staminaLoss < 1 {
+				*staminaLoss = 1
+			}
+		}
+	}
+}
+
+func nextMood(state *FishFightState) {
+	staminaMax := state.Species.Stamina
+	if staminaMax <= 0 {
+		staminaMax = 1
+	}
+	staminaPct := state.Stamina * 100 / staminaMax
+
+	var moods []string
+	switch {
+	case staminaPct > 70:
+		moods = []string{"diving", "diving", "thrashing", "circling"}
+	case staminaPct > 40:
+		moods = []string{"diving", "thrashing", "circling", "circling"}
+	default:
+		moods = []string{"thrashing", "thrashing", "tiring", "circling"}
+	}
+
+	next := moods[rand.Intn(len(moods))]
+	for next == state.Mood && len(moods) > 1 {
+		next = moods[rand.Intn(len(moods))]
+	}
+	state.Mood = next
 }
 
 func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResolve, error) {
@@ -538,6 +612,28 @@ func (s *Service) ResolveBottle(userID int64) (*FightResolve, error) {
 	charsvc.AddXP(s.store, userID, xp)
 
 	return &FightResolve{XP: xp, Caught: true, LoreID: loreID, BottleMsg: "fishing.bottle_found"}, nil
+}
+
+func (s *Service) AddBait(userID int64, tier BaitTier) error {
+	itemID := baitItemID(tier)
+	if itemID == "" {
+		return ErrNoBait
+	}
+	return s.invSvc.AddItem(s.store.DB, userID, itemID, 1)
+}
+
+func BiteWaitForBiome(biome string) int {
+	switch biome {
+	case "pond":
+		return 3 + rand.Intn(8)
+	case "river":
+		return 6 + rand.Intn(10)
+	case "ocean":
+		return 10 + rand.Intn(12)
+	case "lava":
+		return 12 + rand.Intn(16)
+	}
+	return 8 + rand.Intn(8)
 }
 
 func baitItemID(tier BaitTier) string {

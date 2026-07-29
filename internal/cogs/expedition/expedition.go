@@ -2,6 +2,7 @@ package expedition
 
 import (
 	"encoding/json"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -203,7 +204,9 @@ func (c *Cog) claim(userID int64, lang string) (*discordgo.MessageEmbed, []disco
 	petSvc.AddBond(pet, 2)
 	petSvc.RecordHistory(pet, "expedition",
 		"🧭 **"+pet.Nickname+"** returned from an expedition with **"+itoa(exp.RewardXP)+" XP**!")
-	_ = petSvc.UpdatePet(pet)
+	if err := petSvc.UpdatePet(pet); err != nil {
+		slog.Error("expedition: failed to save pet after expedition", "user_id", userID, "pet_id", pet.ID, "error", err)
+	}
 
 	var rawItems []string
 	_ = json.Unmarshal([]byte(exp.RewardItems), &rawItems)

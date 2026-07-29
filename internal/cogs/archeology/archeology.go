@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	archsvc "guacagamblebot/internal/service/archeology"
 	"guacagamblebot/internal/items"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -360,6 +361,10 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			i18n.T("arch.keep_desc", lang, map[string]any{"item": items.DisplayName(res.ItemName), "xp": xpStr}),
 			0x00FF00,
 		)
+	}
+
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 	}
 
 	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)

@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -10,6 +11,12 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+)
+
+const (
+	busyTimeout  = 5000
+	maxOpenConns = 1
+	maxIdleConns = 1
 )
 
 // noNotFoundLogger wraps the default GORM logger so that ErrRecordNotFound is
@@ -35,6 +42,17 @@ func Open(cfg *config.Config) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	db.Exec("PRAGMA journal_mode=WAL")
+	db.Exec(fmt.Sprintf("PRAGMA busy_timeout=%d", busyTimeout))
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(maxOpenConns)
+	sqlDB.SetMaxIdleConns(maxIdleConns)
+
 	if err := Migrate(db); err != nil {
 		return nil, err
 	}

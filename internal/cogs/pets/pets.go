@@ -2,6 +2,7 @@ package pets
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	petsvc "guacagamblebot/internal/service/pets"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -343,6 +345,13 @@ func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_ = c.store.SetCooldown(pet.UserID, "pet_feed")
 	_ = c.store.RecordActivity(userID, "pets_fed", 1)
 
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			Content: questssvc.QuestCompletedMsg(qid, lang),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		})
+	}
+
 	// Check for interaction
 	c.tryInteraction(b, i, pet, "feed")
 }
@@ -597,16 +606,18 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 	}
 
 	petType := petsvc.RollGacha("", biome)
-	pet, err := c.svc.CreatePet(userID, petType)
+	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(i.GuildID))
 	if err != nil || pet == nil {
 		interaction.RespondError(b, i, lang, "pets.hatch.error")
 		return
 	}
 
-	_ = c.store.DB.Exec(
+	if err := c.store.DB.Exec(
 		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
 		userID, eggType,
-	)
+	).Error; err != nil {
+		slog.Error("pets: failed to decrement egg inventory", "user", userID, "egg", eggType, "error", err)
+	}
 
 	pt := petsvc.PetTypes[pet.PetType]
 	emoji := "🐾"
@@ -647,15 +658,17 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 		return
 	}
 	petType := petsvc.RollGacha("", biome)
-	pet, err := c.svc.CreatePet(userID, petType)
+	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(m.GuildID))
 	if err != nil || pet == nil {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
 		return
 	}
-	_ = c.store.DB.Exec(
+	if err := c.store.DB.Exec(
 		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
 		userID, eggType,
-	)
+	).Error; err != nil {
+		slog.Error("pets: failed to decrement egg inventory (msg)", "user", userID, "egg", eggType, "error", err)
+	}
 	pt := petsvc.PetTypes[pet.PetType]
 	emoji := "🐾"
 	if pt != nil {
@@ -845,17 +858,23 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 		detail = i18n.T("pets.interact.default_detail", lang, map[string]any{"name": pet.Nickname})
 	}
 	c.svc.RecordHistory(pet, "interaction", detail)
-	_ = c.svc.UpdatePet(pet)
+	if err := c.svc.UpdatePet(pet); err != nil {
+		slog.Error("pets: failed to save pet after interaction", "user", pet.UserID, "pet", pet.ID, "error", err)
+	}
 
 	if reward.ItemReward != "" {
-		_ = c.store.DB.Exec(
+		if err := c.store.DB.Exec(
 			`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
 			 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
 			pet.UserID, reward.ItemReward,
-		)
+		).Error; err != nil {
+			slog.Error("pets: failed to award interaction item", "user", pet.UserID, "item", reward.ItemReward, "error", err)
+		}
 	}
 
-	_ = c.store.SetCooldown(pet.UserID, "pet_interaction")
+	if err := c.store.SetCooldown(pet.UserID, "pet_interaction"); err != nil {
+		slog.Error("pets: failed to set interaction cooldown", "user", pet.UserID, "error", err)
+	}
 
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
@@ -1132,12 +1151,18 @@ func (c *Cog) onArtifactReset(b *interaction.Bot, i *discordgo.InteractionCreate
 		return
 	}
 
-	_, _ = c.store.UpdateBalance(userID, -items.Get("artifact_shard").Price)
-	_ = c.store.DB.Exec(
+	if _, err := c.store.UpdateBalance(userID, -items.Get("artifact_shard").Price); err != nil {
+		slog.Error("pets: failed to deduct artifact reset cost", "user", userID, "error", err)
+	}
+	if err := c.store.DB.Exec(
 		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
 		userID, "artifact_shard",
-	)
-	_, _ = c.svc.ResetArtifact(userID)
+	).Error; err != nil {
+		slog.Error("pets: failed to consume artifact shard", "user", userID, "error", err)
+	}
+	if _, err := c.svc.ResetArtifact(userID); err != nil {
+		slog.Error("pets: failed to reset artifact", "user", userID, "error", err)
+	}
 
 	embed, comps := c.artifactView(userID, lang)
 	embed.Description = "✅ Artifact reset! New random stats assigned.\n\n" + embed.Description

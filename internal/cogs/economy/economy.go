@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	economysvc "guacagamblebot/internal/service/economy"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -142,6 +143,9 @@ func (c *Cog) onSlashDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	fields = append(fields, components.Field(i18n.T("economy.your_balance", lang), "$"+strconv.Itoa(res.NewBalance), false))
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 
@@ -177,6 +181,9 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 	fields = append(fields, components.Field(i18n.T("economy.your_balance", lang), "$"+strconv.Itoa(res.NewBalance), false))
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
+	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
 
@@ -244,6 +251,9 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	fields = append(fields, components.Field(i18n.T("economy.your_balance", lang), "$"+strconv.Itoa(res.NewBalance), false))
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
+	}
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))

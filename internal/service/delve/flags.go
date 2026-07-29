@@ -107,6 +107,18 @@ var FlagManifest = map[string]FlagDef{
 		Sentence: "You claimed the Mask of Malveillance from the Gravewarden's grasp. The underworld stirs.",
 		Epithet:  "the Shadow-Bearer",
 	},
+	"tomb_raider": {
+		Sentence: "You dared to open the sealed sarcophagus and claim what lay within. The dead do not rest easy.",
+	},
+	"shrine_blessed": {
+		Sentence: "A holy shrine recognized your worth. The blessing lingers like a warm ember in your chest.",
+	},
+	"shrine_defiled": {
+		Sentence: "You defiled a sacred place and took its power. The light dims wherever you walk now.",
+	},
+	"key_master": {
+		Sentence: "You unlocked the path with a key. The clever always find a way.",
+	},
 }
 
 func GetFlagSentence(flagID string) string {

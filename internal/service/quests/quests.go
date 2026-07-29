@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
@@ -87,9 +88,9 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.day0_welcome.step0_dialogue", Rewards: &QuestReward{Money: 100}},
 			// Day 1 — Mining + Fishing
 			{Type: StepActivity, TextKey: "quests.day1_strata.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 2}},
-			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_transition", Rewards: &QuestReward{Money: 100}},
+			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_transition", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"worm", "worm"}}},
 			{Type: StepActivity, TextKey: "quests.day1_strata.step3_activity", Extra: map[string]any{"target_stat": "items_fished", "target_count": 1}},
-			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100}},
+			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"wheat_seed", "wheat_seed"}}},
 			// Day 2 — Farming + Archeology
 			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 2}},
 			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_transition"},
@@ -167,24 +168,25 @@ func New(s *store.Store, cfg *config.Config) *Service {
 
 // RecordActivityComplete is called by the store when an activity step reaches
 // its target. It advances the step with proper custom_data for the next step.
-func (s *Service) RecordActivityComplete(userID int64, questID string) error {
+// The bool return indicates whether the quest was fully completed (COMPLETED).
+func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, error) {
 	def := QuestRegistry[questID]
 	if def == nil {
-		return nil
+		return false, nil
 	}
 	var uqd model.UserQuestData
 	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&uqd).Error; err != nil {
-		return err
+		return false, err
 	}
 	if uqd.StepIndex >= len(def.Steps) {
-		return nil
+		return false, nil
 	}
 	step := def.Steps[uqd.StepIndex]
 	if step.Rewards != nil {
 		r := step.Rewards
 		if r.Money > 0 {
 			if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
-				return err
+				return false, err
 			}
 		}
 		for _, itemID := range r.ItemIDs {
@@ -196,9 +198,12 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) error {
 	}
 	nextIdx := uqd.StepIndex + 1
 	if nextIdx >= len(def.Steps) {
-		return s.store.DB.Model(&model.UserQuest{}).
+		if err := s.store.DB.Model(&model.UserQuest{}).
 			Where("user_id = ? AND quest_id = ?", userID, questID).
-			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error
+			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 	updates := map[string]any{"step_index": nextIdx, "progress_value": 0}
 	sType := def.Steps[nextIdx].Type
@@ -209,9 +214,12 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) error {
 	} else {
 		updates["custom_data"] = "{}"
 	}
-	return s.store.DB.Model(&model.UserQuestData{}).
+	if err := s.store.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", userID, questID).
-		Updates(updates).Error
+		Updates(updates).Error; err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func (s *Service) GetQuestDef(id string) *QuestDef {
@@ -509,4 +517,19 @@ func (s *Service) StartQuest(userID int64, questID string) error {
 		return err
 	}
 	return s.store.CreateQuest(userID, questID)
+}
+
+// QuestCompletedMsg returns a localized string to notify the user that a quest
+// was completed and they can use /quest to check it. Returns empty if questID
+// is empty or the quest definition is not found.
+func QuestCompletedMsg(questID string, lang string) string {
+	if questID == "" {
+		return ""
+	}
+	def := QuestRegistry[questID]
+	if def == nil {
+		return ""
+	}
+	title := i18n.T(def.TitleKey, lang)
+	return i18n.T("quests.completed_activity_msg", lang, map[string]any{"title": title})
 }

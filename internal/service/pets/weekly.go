@@ -2,6 +2,7 @@ package pets
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"time"
 
@@ -188,22 +189,30 @@ func (s *Service) PerformWeeklyReset(serverID int64) (int, error) {
 			continue
 		}
 		if tier.Coins > 0 {
-			_, _ = s.store.UpdateBalance(r.UserID, tier.Coins)
+			if _, err := s.store.UpdateBalance(r.UserID, tier.Coins); err != nil {
+				slog.Error("weekly: failed to award coins", "user", r.UserID, "coins", tier.Coins, "error", err)
+			}
 		}
 		if tier.Crowns > 0 {
-			_, _ = s.store.AdjustColumn(r.UserID, "crowns", tier.Crowns)
+			if _, err := s.store.AdjustColumn(r.UserID, "crowns", tier.Crowns); err != nil {
+				slog.Error("weekly: failed to award crowns", "user", r.UserID, "crowns", tier.Crowns, "error", err)
+			}
 		}
 		if tier.ItemID != "" {
-			_ = s.store.DB.Exec(
+			if err := s.store.DB.Exec(
 				`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
 				 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
 				r.UserID, tier.ItemID,
-			)
+			).Error; err != nil {
+				slog.Error("weekly: failed to award item", "user", r.UserID, "item", tier.ItemID, "error", err)
+			}
 		}
 		rewarded++
 	}
 
-	_, _ = s.RollWeeklyModifier(serverID)
+	if _, err := s.RollWeeklyModifier(serverID); err != nil {
+		slog.Error("weekly: failed to roll modifier", "server", serverID, "error", err)
+	}
 	return rewarded, nil
 }
 

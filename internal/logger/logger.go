@@ -23,7 +23,18 @@ func Init(cfg *config.Config) *slog.Logger {
 	}
 
 	level := parseLevel(cfg.LogLevel)
-	handler := slog.NewTextHandler(w, &slog.HandlerOptions{Level: level})
+	addSource := cfg.LogAddSource
+
+	var handler slog.Handler
+	opts := &slog.HandlerOptions{Level: level, AddSource: addSource}
+
+	switch strings.ToLower(cfg.LogFormat) {
+	case "json":
+		handler = slog.NewJSONHandler(w, opts)
+	default:
+		handler = slog.NewTextHandler(w, opts)
+	}
+
 	log = slog.New(handler)
 	slog.SetDefault(log)
 	return log
@@ -34,6 +45,10 @@ func Log() *slog.Logger {
 		return log
 	}
 	return slog.Default()
+}
+
+func With(attrs ...any) *slog.Logger {
+	return Log().With(attrs...)
 }
 
 func parseLevel(s string) slog.Level {

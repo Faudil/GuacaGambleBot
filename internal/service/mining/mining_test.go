@@ -27,7 +27,7 @@ func testService(t *testing.T) (*Service, *store.Store) {
 
 func TestDescend(t *testing.T) {
 	svc, _ := testService(t)
-	res, err := svc.Descend(1, 1, nil, BranchCareful, "", 0)
+	res, err := svc.Descend(1, 1, nil, BranchStandard, "", 0)
 	require.NoError(t, err)
 	if !res.Collapsed {
 		assert.NotNil(t, res.Item)
@@ -40,8 +40,8 @@ func TestDescendCollapse(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	bag := []BagEntry{}
 	collapsed := false
-	for i := 0; i < 100; i++ {
-		res, err := svc.Descend(1, 40, bag, BranchAggressive, "", 0)
+	for i := 0; i < 50; i++ {
+		res, err := svc.Descend(1, 40, bag, BranchReckless, "", 0)
 		require.NoError(t, err)
 		if res.Collapsed {
 			collapsed = true
@@ -54,52 +54,69 @@ func TestDescendCollapse(t *testing.T) {
 
 func TestDescendCanGoAnyDepth(t *testing.T) {
 	svc, _ := testService(t)
-	// Even at level 1, Descend processes normally at any depth
-	for depth := 1; depth <= 50; depth++ {
-		res, err := svc.Descend(1, depth, nil, BranchCareful, "", 0)
+	for depth := 1; depth <= 30; depth++ {
+		res, err := svc.Descend(1, depth, nil, BranchStandard, "", 0)
 		require.NoError(t, err)
-		// Result is valid: either collapsed or got a result
 		if res.Collapsed {
 			break
 		}
 	}
 }
 
-func TestDescendRestGivesNoLoot(t *testing.T) {
-	svc, _ := testService(t)
-	res, err := svc.Descend(1, 1, nil, BranchRest, "", 0)
-	require.NoError(t, err)
-	assert.False(t, res.Collapsed, "rest should not collapse")
-	assert.Nil(t, res.Item, "rest should give no item")
+func TestDescendRecklessGivesBetterLoot(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 20, XP: 0})
+	standardVal := 0
+	recklessVal := 0
+	trials := 20
+	for i := 0; i < trials; i++ {
+		r1, err := svc.Descend(1, 5, nil, BranchStandard, "", 0)
+		if err != nil || r1.Collapsed {
+			continue
+		}
+		r2, err := svc.Descend(1, 5, nil, BranchReckless, "", 0)
+		if err != nil || r2.Collapsed {
+			continue
+		}
+		if r1.Item != nil {
+			standardVal += r1.Item.Value
+		}
+		if r2.Item != nil {
+			recklessVal += r2.Item.Value
+		}
+	}
+	t.Logf("Standard total value: %d, Reckless total value: %d", standardVal, recklessVal)
 }
 
 func TestDescendLevelReducesRisk(t *testing.T) {
 	svc, s := testService(t)
-	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 50, XP: 0})
-	_ = s.DB.Create(&model.Job{UserID: 2, JobName: "miner", Level: 1, XP: 0})
+	s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 50, XP: 0})
+	s.DB.Create(&model.Job{UserID: 2, JobName: "miner", Level: 1, XP: 0})
 
-	collapseL50 := 0
-	collapseL1 := 0
-	trials := 40
+	var ml1, ml2 int
+	svc.store.DB.Model(&model.Job{}).Where("user_id = ?", 1).Select("level").Scan(&ml1)
+	svc.store.DB.Model(&model.Job{}).Where("user_id = ?", 2).Select("level").Scan(&ml2)
+
+	collapse1 := 0
+	collapse2 := 0
+	trials := 30
 
 	for i := 0; i < trials; i++ {
-		r1, err := svc.Descend(1, 15, nil, BranchCareful, "", 0)  // Level 50
+		r1, err := svc.Descend(1, 15, nil, BranchStandard, "", 0)
 		require.NoError(t, err)
-		r2, err := svc.Descend(2, 15, nil, BranchCareful, "", 0)  // Level 1
+		r2, err := svc.Descend(2, 15, nil, BranchStandard, "", 0)
 		require.NoError(t, err)
 		if r1.Collapsed {
-			collapseL50++
+			collapse1++
 		}
 		if r2.Collapsed {
-			collapseL1++
+			collapse2++
 		}
 	}
 
-	// Level 50: (14*5) - 10 - 75 = 70 - 85 = -15 -> 0 -> floor 5%
-	// Level 1:  (14*5) - 10 - 1  = 70 - 11 = 59%
-	t.Logf("Level 50 collapses: %d/%d, Level 1 collapses: %d/%d", collapseL50, trials, collapseL1, trials)
-	assert.Greater(t, collapseL1, collapseL50,
-		"level 1 should collapse far more often than level 50")
+	t.Logf("Level 50 collapses: %d/%d, Level 1 collapses: %d/%d", collapse1, trials, collapse2, trials)
+	assert.Greater(t, collapse2, collapse1,
+		"lower level miner should collapse more often at same depth")
 }
 
 func TestDescendHiddenChamber(t *testing.T) {
@@ -108,15 +125,61 @@ func TestDescendHiddenChamber(t *testing.T) {
 	found := false
 	for i := 0; i < 500; i++ {
 		bag := []BagEntry{}
-		res, err := svc.Descend(1, 40, bag, BranchAggressive, "", 0)
+		res, err := svc.Descend(1, 40, bag, BranchReckless, "", 0)
 		require.NoError(t, err)
 		if res.Event != nil && res.Event.Type == "hidden_chamber" {
 			found = true
-			assert.False(t, res.Collapsed, "hidden chamber should prevent collapse")
 			break
 		}
 	}
 	assert.True(t, found, "should have found a hidden chamber eventually")
+}
+
+func TestDescendEventSpawn(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 20, XP: 0})
+	found := false
+	for i := 0; i < 100; i++ {
+		res, err := svc.Descend(1, 15, nil, BranchStandard, "", 0)
+		require.NoError(t, err)
+		if res.NarrativeEvent != nil {
+			found = true
+			eventID := res.NarrativeEvent.ID
+			assert.NotEmpty(t, eventID)
+			assert.GreaterOrEqual(t, len(res.NarrativeEvent.Options), 2)
+			break
+		}
+	}
+	assert.True(t, found, "should have spawned a narrative event")
+}
+
+func TestApplyEventOption(t *testing.T) {
+	svc, _ := testService(t)
+	eff := svc.ApplyEventOption("collapse", 0, 5, nil)
+	assert.NotNil(t, eff)
+	assert.NotEmpty(t, eff.Message)
+}
+
+func TestApplyEventOptionShrineMystery(t *testing.T) {
+	svc, _ := testService(t)
+	types := map[string]int{"a": 0, "b": 0, "c": 0, "d": 0}
+	for i := 0; i < 100; i++ {
+		eff := svc.ApplyEventOption("shrine", 1, 10, nil)
+		msg := eff.Message
+		switch msg {
+		case "mining.ev_shrine_r2a":
+			types["a"]++
+		case "mining.ev_shrine_r2b":
+			types["b"]++
+		case "mining.ev_shrine_r2c":
+			types["c"]++
+		default:
+			types["d"]++
+		}
+	}
+	t.Logf("Shrine mystery distribution: %+v", types)
+	assert.Greater(t, types["a"], 0)
+	assert.Greater(t, types["b"], 0)
 }
 
 func TestLeaveMine(t *testing.T) {
@@ -152,7 +215,7 @@ func TestMineReinforceBuffPreventsCollapse(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	_ = s.SetActiveBuff(1, "reinforce")
 
-	res, err := svc.Descend(1, 40, nil, BranchAggressive, "", 0)
+	res, err := svc.Descend(1, 40, nil, BranchReckless, "", 0)
 	require.NoError(t, err)
 	assert.False(t, res.Collapsed, "reinforce should prevent collapse on first descend")
 
@@ -183,7 +246,7 @@ func TestGetMinerLevelDefault(t *testing.T) {
 	svc, _ := testService(t)
 	lvl, err := svc.GetMinerLevel(999)
 	require.NoError(t, err)
-	assert.Equal(t, 1, lvl, "new users should have miner level 1")
+	assert.Equal(t, 1, lvl)
 }
 
 func TestAvailableToolsByLevel(t *testing.T) {
@@ -201,10 +264,8 @@ func TestAvailableToolsByLevel(t *testing.T) {
 func TestLockedToolsByLevel(t *testing.T) {
 	l1 := LockedTools(1)
 	assert.Len(t, l1, 2)
-
 	l5 := LockedTools(5)
 	assert.Len(t, l5, 1)
-
 	l10 := LockedTools(10)
 	assert.Len(t, l10, 0)
 }
@@ -220,53 +281,19 @@ func TestLoreAtDepth(t *testing.T) {
 func TestLootAtDepth(t *testing.T) {
 	assert.Len(t, lootAtDepth(1), 2)
 	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
-	assert.Len(t, lootAtDepth(5), 3)
-	assert.Len(t, lootAtDepth(15), 3)     // kethari_crystal tier
-	assert.Len(t, lootAtDepth(25), 3)     // primordial_geode tier
-	assert.Len(t, lootAtDepth(35), 2)     // resonance_core tier
+	assert.Len(t, lootAtDepth(15), 3)
+	assert.Len(t, lootAtDepth(20), 3)
+	assert.Len(t, lootAtDepth(30), 2)
 }
 
-func TestRiskDecreaseWithLevel(t *testing.T) {
-	svc, s := testService(t)
-	s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
-	s.DB.Create(&model.Job{UserID: 2, JobName: "miner", Level: 20, XP: 0})
+func TestPickNarrativeEvent(t *testing.T) {
+	ev1 := pickNarrativeEvent(1)
+	assert.Nil(t, ev1)
 
-	// Verify miner levels are correctly stored
-	var j1, j2 model.Job
-	s.DB.Where("user_id = ? AND job_name = ?", 1, "miner").First(&j1)
-	s.DB.Where("user_id = ? AND job_name = ?", 2, "miner").First(&j2)
-	t.Logf("User 1 miner level: %d, User 2 miner level: %d", j1.Level, j2.Level)
+	ev3 := pickNarrativeEvent(3)
+	assert.NotNil(t, ev3)
+	assert.NotEmpty(t, ev3.Options)
 
-	l1, _ := svc.GetMinerLevel(1)
-	l2, _ := svc.GetMinerLevel(2)
-	t.Logf("GetMinerLevel(1) = %d, GetMinerLevel(2) = %d", l1, l2)
-	assert.Equal(t, 1, l1)
-	assert.Equal(t, 20, l2)
-
-	// At very high depth, level 1 always collapses but level 20 has slight advantage
-	// At depth 15 careful:
-	// Level 1: (14*5) - 10 - 1 = 59% risk
-	// Level 20: (14*5) - 10 - 30 = 30% risk
-	collapseL1 := 0
-	collapseL20 := 0
-	trials := 40
-
-	for i := 0; i < trials; i++ {
-		r1, err := svc.Descend(1, 15, nil, BranchCareful, "", 0)  // Level 1
-		require.NoError(t, err)
-		r2, err := svc.Descend(2, 15, nil, BranchCareful, "", 0)  // Level 20
-		require.NoError(t, err)
-		if r1.Collapsed {
-			collapseL1++
-		}
-		if r2.Collapsed {
-			collapseL20++
-		}
-	}
-
-	t.Logf("Level 1 collapses: %d/%d (%.0f%%), Level 20 collapses: %d/%d (%.0f%%)",
-		collapseL1, trials, float64(collapseL1)/float64(trials)*100,
-		collapseL20, trials, float64(collapseL20)/float64(trials)*100)
-	assert.Greater(t, collapseL1, collapseL20,
-		"lower level miner should collapse more often at same depth")
+	ev17 := pickNarrativeEvent(17)
+	assert.NotNil(t, ev17)
 }

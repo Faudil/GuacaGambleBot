@@ -55,9 +55,10 @@ type DelveItem struct {
 }
 
 type CombatState struct {
-	Enemy      *Enemy
-	Turn       int
-	Active     bool
+	Enemy           *Enemy
+	Turn            int
+	Active          bool
+	EnemyFirstStrike bool
 }
 
 type Service struct {
@@ -91,6 +92,7 @@ func (svc *Service) StartSession(userID, guildID, channelID int64) (*model.Delve
 		MaxMana:   50,
 		Torches:   3,
 		Keys:      0,
+		Potions:   1,
 		Gold:      0,
 		Inventory: "[]",
 		DeployedPets: "[]",

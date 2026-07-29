@@ -16,6 +16,8 @@ type Config struct {
 	Prefix       string
 	LogLevel     string
 	LogFile      string
+	LogFormat    string
+	LogAddSource bool
 	Universe     string
 
 	StartingBalance int
@@ -53,6 +55,8 @@ func Load() *Config {
 		Prefix:          getEnv("PREFIX", "!"),
 		LogLevel:        getEnv("LOG_LEVEL", "info"),
 		LogFile:         os.Getenv("LOG_FILE"),
+		LogFormat:       getEnv("LOG_FORMAT", "text"),
+		LogAddSource:    os.Getenv("LOG_ADD_SOURCE") == "true",
 		Universe:        getEnv("UNIVERSE", "hoakhaven"),
 		StartingBalance: getInt("STARTING_BALANCE", 100),
 		DailyAmount:     getInt("DAILY_AMOUNT", 50),

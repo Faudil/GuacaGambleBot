@@ -1,7 +1,9 @@
 package delve
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -10,6 +12,7 @@ import (
 
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 	crimsvc "guacagamblebot/internal/service/criminality"
@@ -25,6 +28,7 @@ type Cog struct {
 	sessions       map[int64]*model.DelveSession
 	mu             sync.RWMutex
 	merchantOffers map[int64][]delvesvc.DelveItem
+	merchantExtra  map[int64]map[string]int
 	riddles        map[int64]riddleEntry
 }
 
@@ -36,6 +40,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		crimsvc:        crimsvc.New(s, cfg),
 		sessions:       make(map[int64]*model.DelveSession),
 		merchantOffers: make(map[int64][]delvesvc.DelveItem),
+		merchantExtra:  make(map[int64]map[string]int),
 		riddles:        make(map[int64]riddleEntry),
 	}
 
@@ -63,13 +68,33 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		"rest_sleep":      c.onRestSleep,
 		"npc_help":        c.onNpcHelp,
 		"npc_betray":      c.onNpcBetray,
-		"combat_slash":    c.onCombatSlash,
-		"combat_fireball": c.onCombatFireball,
-		"combat_defend":   c.onCombatDefend,
-		"combat_potion":   c.onCombatPotion,
-		"combat_flee":     c.onCombatFlee,
+		"combat_slash":     c.onCombatSlash,
+		"combat_fireball":  c.onCombatFireball,
+		"combat_power_blow": c.onCombatPowerBlow,
+		"combat_mend":      c.onCombatMend,
+		"combat_defend":    c.onCombatDefend,
+		"combat_potion":    c.onCombatPotion,
+		"combat_flee":      c.onCombatFlee,
 		"rescue":          c.onRescue,
 		"ignore_fallen":   c.onIgnoreFallen,
+		"floor_deeper":     c.onFloorDeeper,
+		"floor_leave":      c.onFloorLeave,
+		"shrine_pray":      c.onShrinePray,
+		"shrine_donate":    c.onShrineDonate,
+		"shrine_defile":    c.onShrineDefile,
+		"tomb_open":        c.onTombOpen,
+		"tomb_respect":     c.onTombRespect,
+		"garden_harvest":   c.onGardenHarvest,
+		"garden_burn":      c.onGardenBurn,
+		"forge_temper":     c.onForgeTemper,
+		"forge_scavenge":   c.onForgeScavenge,
+		"rift_gaze":        c.onRiftGaze,
+		"rift_disturb":     c.onRiftDisturb,
+		"locked_key":       c.onLockedKey,
+		"locked_force":     c.onLockedForce,
+		"npc_intimidate":   c.onNpcIntimidate,
+		"merchant_haggle":  c.onMerchantHaggle,
+		"rest_bandage":     c.onRestBandage,
 	}
 	for action, h := range handlers {
 		r.Component("delve", action, h)
@@ -129,13 +154,45 @@ func (c *Cog) deleteSession(userID int64) {
 func (c *Cog) nextRoom(session *model.DelveSession, lang string) *delvesvc.Room {
 	session.Floor++
 	session.Zone = delvesvc.ZoneForFloor(session.Floor)
+
+	var effects []string
+	json.Unmarshal([]byte(session.StatusEffects), &effects)
+	var newEffects []string
+	poisonTicked := false
+	for _, e := range effects {
+		if strings.HasPrefix(e, "poisoned") {
+			parts := strings.SplitN(e, ":", 2)
+			turns := 3
+			if len(parts) == 2 {
+				v, _ := strconv.Atoi(parts[1])
+				turns = v
+			}
+			turns--
+			if turns > 0 {
+				newEffects = append(newEffects, fmt.Sprintf("poisoned:%d", turns))
+			}
+			poisonTicked = true
+		} else {
+			newEffects = append(newEffects, e)
+		}
+	}
+	if poisonTicked {
+		dmg := delvesvc.PoisonPerRoom(session.Floor)
+		session.HP -= dmg
+		if session.HP < 0 {
+			session.HP = 0
+		}
+	}
+	b, _ := json.Marshal(newEffects)
+	session.StatusEffects = string(b)
+
 	gen := delvesvc.GenerateRoom(session, lang)
 	return &gen
 }
 
 func (c *Cog) renderRoom(session *model.DelveSession, room *delvesvc.Room, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := delvesvc.BuildRoomEmbed(session, room, lang, c.svc)
-	comps := delvesvc.BuildRoomComponents(room)
+	comps := delvesvc.BuildRoomComponents(room, lang)
 	return embed, comps
 }
 
@@ -143,10 +200,81 @@ func (c *Cog) renderRoomWithFallen(session *model.DelveSession, room *delvesvc.R
 	embed, comps := c.renderRoom(session, room, lang)
 	fallen, err := c.store.GetFallenPlayersOnFloor(session.GuildID, int64(session.Floor), 2)
 	if err == nil && len(fallen) > 0 {
-		delvesvc.MaybeAddRescueOverlay(room, fallen, session.UserID, session.GuildID, c.store)
+		delvesvc.MaybeAddRescueOverlay(room, fallen, session.UserID, session.GuildID, c.store, lang)
 		embed.Description = room.Description
-		comps = delvesvc.BuildRoomComponents(room)
+		comps = delvesvc.BuildRoomComponents(room, lang)
 		_ = fallen
+	}
+	return embed, comps
+}
+
+func (c *Cog) buildFloorTransition(session *model.DelveSession, summary string, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	char, _ := c.store.EnsureCharacter(session.UserID)
+	playerLevel := 1
+	if char != nil {
+		playerLevel = char.Level
+	}
+	danger := delvesvc.CalcDanger(session.Floor, playerLevel)
+
+	title := i18n.T("delve.floor_title", lang, map[string]any{"floor": fmt.Sprintf("%d", session.Floor)})
+	dangerLine := delvesvc.DescribeDanger(danger)
+	hpLine := i18n.T("delve.floor_summary_hp", lang, map[string]any{
+		"hp":       fmt.Sprintf("%d", session.HP),
+		"max_hp":   fmt.Sprintf("%d", session.MaxHP),
+		"mana":     fmt.Sprintf("%d", session.Mana),
+		"max_mana": fmt.Sprintf("%d", session.MaxMana),
+	})
+	itemsLine := i18n.T("delve.floor_summary_items", lang, map[string]any{
+		"torches": fmt.Sprintf("%d", session.Torches),
+		"keys":    fmt.Sprintf("%d", session.Keys),
+		"gold":    fmt.Sprintf("%d", session.Gold),
+	})
+	desc := dangerLine + "\n\n" + summary + "\n\n" + hpLine + "\n" + itemsLine
+	potionLine := fmt.Sprintf("🧪 Potions: %d", session.Potions)
+	desc += "\n" + potionLine
+
+	var pets []int64
+	json.Unmarshal([]byte(session.DeployedPets), &pets)
+	if len(pets) > 0 {
+		desc += fmt.Sprintf("\n🐾 **Pets deployed:** %d", len(pets))
+	}
+
+	var effects []string
+	json.Unmarshal([]byte(session.StatusEffects), &effects)
+	if len(effects) > 0 {
+		var displayEffects []string
+		for _, e := range effects {
+			displayEffects = append(displayEffects, i18n.T("delve.status."+e, lang))
+		}
+		desc += "\n⚠️ " + strings.Join(displayEffects, ", ")
+	}
+
+	if session.Torches == 0 {
+		desc += "\n🌑 **" + i18n.T("delve.combat.darkness_warning", lang) + "**"
+	}
+
+	if danger.IsPunished {
+		desc += "\n⚠️ " + i18n.T("delve.handler.weakness_warning", lang)
+	}
+
+	color := 0xf39c12
+	switch {
+	case danger.Skulls >= 4:
+		color = 0xe74c3c
+	case danger.Skulls >= 2:
+		color = 0xf39c12
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       title,
+		Description: desc,
+		Color:       color,
+	}
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("⬇️ "+i18n.T("delve.floor_deeper", lang), components.Encode("delve", "floor_deeper"), discordgo.SuccessButton),
+			components.Button("🚪 "+i18n.T("delve.floor_leave", lang), components.Encode("delve", "floor_leave"), discordgo.SecondaryButton),
+		),
 	}
 	return embed, comps
 }
@@ -176,9 +304,10 @@ func (c *Cog) startDelve(b *interaction.Bot, userID, guildID, channelID int64) (
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	lang := c.store.GetLanguage(guildID)
 	c.saveSession(s)
-	room := delvesvc.GenerateRoom(s, "en")
-	embed, comps := c.renderRoom(s, &room, "en")
+	room := delvesvc.GenerateRoom(s, lang)
+	embed, comps := c.renderRoom(s, &room, lang)
 	return embed, comps, s, nil
 }
 
@@ -259,7 +388,8 @@ func (c *Cog) onPrefixDelve(b *interaction.Bot, s *discordgo.Session, m *discord
 
 func (c *Cog) onSlashJourney(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
-	pages, err := delvesvc.BuildChronicle(userID, c.svc, "en")
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	pages, err := delvesvc.BuildChronicle(userID, c.svc, lang)
 	if err != nil {
 		c.errorMsg(b, i, fmt.Sprintf("Failed to load chronicle: %v", err))
 		return
@@ -277,7 +407,8 @@ func (c *Cog) onSlashJourney(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 func (c *Cog) onPrefixJourney(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	userID := interaction.ToInt64(m.Author.ID)
-	pages, err := delvesvc.BuildChronicle(userID, c.svc, "en")
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	pages, err := delvesvc.BuildChronicle(userID, c.svc, lang)
 	if err != nil {
 		_, _ = s.ChannelMessageSend(m.ChannelID, "Failed to load chronicle.")
 		return

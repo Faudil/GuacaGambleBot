@@ -55,7 +55,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Slash("steal", "Pickpocket a player", c.onSlashSteal)
 	r.Slash("burgle", "Burgle an item from a player", c.onSlashBurgle)
 	r.Slash("bounty", "Place a bounty on a criminal", c.onSlashBounty)
-	r.Slash("hunt", "Hunt a wanted criminal", c.onSlashHunt)
+	r.Slash("crimhunt", "Hunt a wanted criminal", c.onSlashHunt)
 	r.Slash("track", "Track clues for a hunt", c.onSlashTrack)
 	r.Slash("report", "Report a thief to increase their notoriety", c.onSlashReport)
 	r.Slash("forgive", "Forgive a thief who stole from you", c.onSlashForgive)

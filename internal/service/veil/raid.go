@@ -2,6 +2,7 @@ package veil
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -77,16 +78,16 @@ func (svc *Service) ConsumeVeilKey(userID int64) error {
 func (svc *Service) CreateRaid(leaderID, guildID int64, lang string) (*model.VeilRaid, error) {
 	ok, msg := svc.ValidateGate(leaderID, lang)
 	if !ok {
-		return nil, fmt.Errorf(msg)
+		return nil, errors.New(msg)
 	}
 
 	ok, err := svc.HasItem(leaderID, "veil_key", 1)
 	if err != nil || !ok {
-		return nil, fmt.Errorf(i18n.T("veil.gate.err_key", lang))
+		return nil, errors.New(i18n.T("veil.gate.err_key", lang))
 	}
 
 	if err := svc.ConsumeVeilKey(leaderID); err != nil {
-		return nil, fmt.Errorf(i18n.T("veil.gate.err_consume", lang))
+		return nil, errors.New(i18n.T("veil.gate.err_consume", lang))
 	}
 
 	ids := []int64{leaderID}
@@ -115,26 +116,26 @@ func (svc *Service) CreateRaid(leaderID, guildID int64, lang string) (*model.Vei
 func (svc *Service) JoinRaid(raid *model.VeilRaid, userID int64, lang string) error {
 	ok, msg := svc.ValidateGate(userID, lang)
 	if !ok {
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 
 	var ids []int64
 	store.UnmarshalJSON(raid.ParticipantIDs, &ids)
 	if len(ids) >= 6 {
-		return fmt.Errorf(i18n.T("veil.gate.err_full", lang))
+		return errors.New(i18n.T("veil.gate.err_full", lang))
 	}
 	for _, id := range ids {
 		if id == userID {
-			return fmt.Errorf(i18n.T("veil.gate.err_already_joined", lang))
+			return errors.New(i18n.T("veil.gate.err_already_joined", lang))
 		}
 	}
 
 	ok, err := svc.HasItem(userID, "veil_key", 1)
 	if err != nil || !ok {
-		return fmt.Errorf(i18n.T("veil.gate.err_key", lang))
+		return errors.New(i18n.T("veil.gate.err_key", lang))
 	}
 	if err := svc.ConsumeVeilKey(userID); err != nil {
-		return fmt.Errorf(i18n.T("veil.gate.err_consume", lang))
+		return errors.New(i18n.T("veil.gate.err_consume", lang))
 	}
 
 	ids = append(ids, userID)
@@ -157,12 +158,12 @@ func (svc *Service) JoinRaid(raid *model.VeilRaid, userID int64, lang string) er
 
 func (svc *Service) StartRaid(raid *model.VeilRaid, leaderID int64, lang string) error {
 	if raid.LeaderID != leaderID {
-		return fmt.Errorf(i18n.T("veil.gate.err_not_leader", lang))
+		return errors.New(i18n.T("veil.gate.err_not_leader", lang))
 	}
 	var ids []int64
 	store.UnmarshalJSON(raid.ParticipantIDs, &ids)
 	if len(ids) < 3 {
-		return fmt.Errorf(i18n.T("veil.gate.err_min_players", lang, map[string]any{"count": len(ids)}))
+		return fmt.Errorf("%s", i18n.T("veil.gate.err_min_players", lang, map[string]any{"count": len(ids)}))
 	}
 
 	scaled := ScaleForPlayers(len(ids))

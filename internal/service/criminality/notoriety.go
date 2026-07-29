@@ -1,6 +1,7 @@
 package criminality
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
@@ -70,7 +71,7 @@ func (svc *Service) CheckGuardAttack(userID int64, lang string) (bool, string, e
 func (svc *Service) ApplyPacifistBlessing(userID int64, lang string) (string, error) {
 	bal, _ := svc.store.GetBalance(userID)
 	if bal < svc.cfg.PacifistGoldPrice {
-		return "", fmt.Errorf(svc.T(lang, "blessing.need_gold", map[string]any{"gold": svc.cfg.PacifistGoldPrice}))
+		return "", errors.New(svc.T(lang, "blessing.need_gold", map[string]any{"gold": svc.cfg.PacifistGoldPrice}))
 	}
 
 	svc.store.UpdateBalance(userID, -svc.cfg.PacifistGoldPrice)
@@ -86,7 +87,7 @@ func (svc *Service) ApplyPacifistBlessing(userID int64, lang string) (string, er
 func (svc *Service) ApplyCleanSlate(userID int64, lang string) (string, error) {
 	bal, _ := svc.store.GetBalance(userID)
 	if bal < svc.cfg.CleanSlateGoldPrice {
-		return "", fmt.Errorf(svc.T(lang, "cleanse.need_gold", map[string]any{"gold": svc.cfg.CleanSlateGoldPrice}))
+		return "", errors.New(svc.T(lang, "cleanse.need_gold", map[string]any{"gold": svc.cfg.CleanSlateGoldPrice}))
 	}
 
 	svc.store.UpdateBalance(userID, -svc.cfg.CleanSlateGoldPrice)

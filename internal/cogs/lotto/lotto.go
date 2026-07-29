@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	lottosvc "guacagamblebot/internal/service/lotto"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -112,27 +113,36 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	questMsg := c.store.PopQuestCompleted(userID)
 
 	var embed *discordgo.MessageEmbed
 	if res.Win {
+		desc := i18n.T("lotto.jackpot_win_desc", lang, map[string]any{
+			"user":     interaction.Mention(userID),
+			"number":   res.Number,
+			"jackpot":  res.Jackpot,
+			"new_pot":  res.NewJackpot,
+		})
+		if qid := questMsg; qid != "" {
+			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
 		embed = components.Embed(
 			i18n.T("lotto.jackpot_title", lang),
-			i18n.T("lotto.jackpot_win_desc", lang, map[string]any{
-				"user":     interaction.Mention(userID),
-				"number":   res.Number,
-				"jackpot":  res.Jackpot,
-				"new_pot":  res.NewJackpot,
-			}),
+			desc,
 			0xf1c40f,
 		)
 	} else {
+		desc := i18n.T("lotto.ticket_valid_desc", lang, map[string]any{
+			"number": res.Number,
+			"added":  res.AddedValue,
+			"total":  res.NewJackpot,
+		})
+		if qid := questMsg; qid != "" {
+			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
 		embed = components.Embed(
 			i18n.T("lotto.ticket_valid_title", lang),
-			i18n.T("lotto.ticket_valid_desc", lang, map[string]any{
-				"number": res.Number,
-				"added":  res.AddedValue,
-				"total":  res.NewJackpot,
-			}),
+			desc,
 			0x3498db,
 		)
 		embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("lotto.ticket_valid_footer", lang)}

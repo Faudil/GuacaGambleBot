@@ -16,6 +16,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	mktsvc "guacagamblebot/internal/service/market"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -371,13 +372,17 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			c.handleOrderError(b, i, lang, err)
 			return
 		}
+		content := i18n.T("market.sold_msg", lang, map[string]any{
+			"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
+		})
+		if qid := c.store.PopQuestCompleted(userID); qid != "" {
+			content += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: i18n.T("market.sold_msg", lang, map[string]any{
-					"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
-				}),
-				Flags: discordgo.MessageFlagsEphemeral,
+				Content: content,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 
@@ -447,9 +452,13 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		}
 		return
 	}
-	_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.sold_msg", lang, map[string]any{
+	sellMsg := i18n.T("market.sold_msg", lang, map[string]any{
 		"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
-	}))
+	})
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		sellMsg += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	}
+	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
 
 	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, nil, lang, unlocks)

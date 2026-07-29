@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	casinosvc "guacagamblebot/internal/service/casino"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -240,6 +241,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	questMsg := c.store.PopQuestCompleted(userID)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -277,6 +279,9 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		} else {
 			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
 		}
+		if qid := questMsg; qid != "" {
+			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
 		resultComps := c.slotsResultComps(amount, lang)
@@ -308,6 +313,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	questMsg := c.store.PopQuestCompleted(userID)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da
@@ -332,6 +338,9 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		} else {
 			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
 			color = 0xe74c3c
+		}
+		if qid := questMsg; qid != "" {
+			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
@@ -362,6 +371,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	questMsg := c.store.PopQuestCompleted(userID)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -414,6 +424,9 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 			status = flavor + "\n" + i18n.T("slots.gain", lang, map[string]any{"amount": res.Payout})
 		} else {
 			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
+		}
+		if qid := questMsg; qid != "" {
+			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
@@ -448,6 +461,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	questMsg := c.store.PopQuestCompleted(userID)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da
@@ -482,6 +496,9 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		} else {
 			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
 			color = 0xe74c3c
+		}
+		if qid := questMsg; qid != "" {
+			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)

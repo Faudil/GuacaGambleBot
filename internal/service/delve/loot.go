@@ -262,3 +262,38 @@ func MaybeDropVeilKey(zone string, floor int) *DelveItem {
 	}
 	return nil
 }
+
+func MaybeDropKey(zone string, floor int) *DelveItem {
+	if rand.Intn(100) >= KeyDropChance(floor) {
+		return nil
+	}
+	return &DelveItem{
+		ID: "dungeon_key", Name: "Dungeon Key", Emoji: "🔑", Rarity: Common, Quantity: 1,
+		Description: "A rusted iron key. It might open something in the depths.",
+	}
+}
+
+var zoneSetNames = map[string]struct {
+	SetID   string
+	SetName string
+	Zone    string
+}{
+	"crypt":          {"crypt_lord_regalia", "Crypt Lord's Regalia", "crypt"},
+	"fungal_wilds":   {"fungal_raiment", "Fungal Raiment", "fungal_wilds"},
+	"forge_district": {"forge_master_arsenal", "Forge Master's Arsenal", "forge_district"},
+}
+
+func AssignSetName(item *DelveItem, zone string) {
+	if item.Rarity < Rare {
+		return
+	}
+	set, ok := zoneSetNames[zone]
+	if !ok {
+		return
+	}
+	if rand.Intn(100) >= 15 {
+		return
+	}
+	item.SetName = set.SetName
+	item.ID = fmt.Sprintf("%s_%s", set.SetID, item.ID)
+}

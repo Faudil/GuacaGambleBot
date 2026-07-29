@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/items"
 	petsvc "guacagamblebot/internal/service/pets"
 	huntsvc "guacagamblebot/internal/service/hunt"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -205,6 +206,10 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	if artifactLeveled {
 		desc += "\n\n" + i18n.T("pets.artifact.level_up", lang)
+	}
+
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 	}
 
 	embed := components.Embed(

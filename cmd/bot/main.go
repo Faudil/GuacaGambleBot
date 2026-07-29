@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"context"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -75,7 +75,8 @@ func main() {
 		_ = os.Setenv("TZ", cfg.TZ)
 	}
 	if cfg.DiscordToken == "" {
-		log.Fatal("DISCORD_TOKEN is not set. Add it to your .env file.")
+		slog.Error("DISCORD_TOKEN is not set. Add it to your .env file.")
+		os.Exit(1)
 	}
 
 	if err := i18n.Load("locales"); err != nil {
@@ -84,21 +85,26 @@ func main() {
 
 	database, err := db.Open(cfg)
 	if err != nil {
-		log.Fatalf("failed to open database: %v", err)
+		slog.Error("failed to open database", "error", err)
+		os.Exit(1)
 	}
 
 	dg, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
-		log.Fatalf("failed to create discord session: %v", err)
+		slog.Error("failed to create discord session", "error", err)
+		os.Exit(1)
 	}
 	dg.Identify.Intents = discordgo.IntentGuilds |
 		discordgo.IntentGuildMessages |
-		discordgo.IntentMessageContent
+		discordgo.IntentMessageContent |
+		discordgo.IntentGuildMembers
+
+	ctx, stopELO := context.WithCancel(context.Background())
 
 	bot := &interaction.Bot{Session: dg, DB: database, Prefix: cfg.Prefix}
 	str := store.New(database, cfg)
-	go elosimulation.Run(str)
-	go elosimulation.RunWeeklyReset(str, dg)
+	go elosimulation.Run(ctx, str)
+	go elosimulation.RunWeeklyReset(ctx, str, dg)
 	router := interaction.NewRouter(bot, str)
 
 	admincog.Register(router, str, cfg)
@@ -145,19 +151,40 @@ func main() {
 
 	router.Register()
 
+	dg.AddHandler(func(s *discordgo.Session, r *discordgo.Connect) {
+		slog.Info("gateway connected")
+	})
+	dg.AddHandler(func(s *discordgo.Session, r *discordgo.Disconnect) {
+		slog.Warn("gateway disconnected")
+	})
+	dg.AddHandler(func(s *discordgo.Session, r *discordgo.RateLimit) {
+		slog.Warn("rate limited by discord",
+			"bucket", r.Bucket,
+			"retry_after", r.RetryAfter.String(),
+			"url", r.URL,
+		)
+	})
+
 	guildID := ""
 	if cfg.GuildID != 0 {
 		guildID = strconv.FormatInt(cfg.GuildID, 10)
 	}
 	dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		scope := "global"
+		if guildID != "" {
+			scope = "guild:" + guildID
+		}
 		if err := router.RegisterCommands(guildID); err != nil {
-			slog.Warn("could not register slash commands", "error", err)
+			slog.Warn("could not register slash commands", "error", err, "scope", scope)
+		} else {
+			slog.Info("slash commands registered", "scope", scope, "count", len(router.Commands()))
 		}
 		slog.Info("logged in", "username", s.State.User.Username)
 	})
 
 	if err := dg.Open(); err != nil {
-		log.Fatalf("failed to open discord connection: %v", err)
+		slog.Error("failed to open discord connection", "error", err)
+		os.Exit(1)
 	}
 	defer dg.Close()
 
@@ -166,4 +193,5 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-stop
 	slog.Info("shutting down")
+	stopELO()
 }

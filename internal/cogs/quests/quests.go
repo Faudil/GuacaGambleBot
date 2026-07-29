@@ -132,8 +132,8 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 				desc += i18n.T(textKey, lang) + "\n"
 			} else if targetCount == 0 {
 				text := i18n.T(step.TextKey, lang)
-				if len(text) > 200 {
-					text = text[:200] + "..."
+				if len(text) > 1024 {
+					text = text[:1024] + "..."
 				}
 				desc += text + "\n"
 			}
@@ -144,22 +144,22 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 		case questssvc.StepDialogue, questssvc.StepChoice:
 			btnLabel = i18n.T("quests.continue_label", lang)
 			text := i18n.T(step.TextKey, lang)
-			if len(text) > 200 {
-				text = text[:200] + "..."
+			if len(text) > 1024 {
+				text = text[:1024] + "..."
 			}
 			desc += text + "\n"
 		case questssvc.StepRequirement:
 			btnLabel = i18n.T("quests.req_button", lang)
 			text := i18n.T(step.TextKey, lang)
-			if len(text) > 200 {
-				text = text[:200] + "..."
+			if len(text) > 1024 {
+				text = text[:1024] + "..."
 			}
 			desc += text + "\n"
 		case questssvc.StepBossBattle:
 			btnLabel = i18n.T("quests.activity_view_btn", lang)
 			text := i18n.T(step.TextKey, lang)
-			if len(text) > 200 {
-				text = text[:200] + "..."
+			if len(text) > 1024 {
+				text = text[:1024] + "..."
 			}
 			desc += text + "\n"
 		default:
@@ -324,6 +324,31 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	if currStep.Type == questssvc.StepDialogue || currStep.Type == questssvc.StepChoice {
+		text := i18n.T(currStep.TextKey, lang)
+		if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
+			interaction.RespondError(b, i, lang, "quests.title")
+			return
+		}
+		title := i18n.T(def.TitleKey, lang) + " " + i18n.T("quests.step_progress", lang, map[string]any{
+			"current": stepIdx + 1,
+			"total":   len(def.Steps),
+		})
+		btnLabel := i18n.T(def.TitleKey, lang) + " " + i18n.T("quests.continue_label", lang)
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button(btnLabel, components.Encode("quest", "advance", questID), discordgo.SuccessButton),
+			),
+			components.ActionRow(
+				components.Button("🔄", components.Encode("quest", "show"), discordgo.SecondaryButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+				components.Embed(title, text, 0x2ecc71), comps))
+		return
+	}
+
 	if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
 		interaction.RespondError(b, i, lang, "quests.title")
 		return
@@ -355,7 +380,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		text = i18n.T("quests.activity_intro", lang, map[string]any{"label": label, "quest": i18n.T(def.TitleKey, lang)})
 	}
 
-	btnLabel := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.continue_label", lang)
+	btnLabel := i18n.T(def.TitleKey, lang) + " " + i18n.T("quests.continue_label", lang)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(btnLabel, components.Encode("quest", "advance", questID), discordgo.SuccessButton),
@@ -365,7 +390,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		),
 	}
 
-	title := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.step_progress", lang, map[string]any{
+	title := i18n.T(def.TitleKey, lang) + " " + i18n.T("quests.step_progress", lang, map[string]any{
 		"current": nextIdx + 1,
 		"total":   len(def.Steps),
 	})
@@ -373,3 +398,5 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
 			components.Embed(title, text, 0x2ecc71), comps))
 }
+
+

@@ -3,6 +3,7 @@ package pets
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"math"
 	"time"
 
@@ -60,12 +61,19 @@ func (s *Service) GetActivePet(userID int64) (*model.UserPet, error) {
 	return &pet, nil
 }
 
-func (s *Service) SetActivePet(userID int64, petID int64) error {
+func (s *Service) SetActivePet(userID int64, petID int64, serverID int64) error {
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.UserPet{}).
 			Where("user_id = ? AND is_active = ?", userID, true).
 			Update("is_active", false).Error; err != nil {
 			return err
+		}
+		if serverID != 0 {
+			if err := tx.Model(&model.UserPet{}).
+				Where("id = ? AND user_id = ?", petID, userID).
+				Update("server_id", serverID).Error; err != nil {
+				return err
+			}
 		}
 		return tx.Model(&model.UserPet{}).
 			Where("id = ? AND user_id = ?", petID, userID).
@@ -73,7 +81,7 @@ func (s *Service) SetActivePet(userID int64, petID int64) error {
 	})
 }
 
-func (s *Service) CreatePet(userID int64, petType string) (*model.UserPet, error) {
+func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*model.UserPet, error) {
 	pt, ok := PetTypes[petType]
 	if !ok {
 		return nil, nil
@@ -84,8 +92,13 @@ func (s *Service) CreatePet(userID int64, petType string) (*model.UserPet, error
 	}
 	hJSON, _ := json.Marshal(history)
 
+	sid := int64(0)
+	if len(serverID) > 0 {
+		sid = serverID[0]
+	}
 	pet := model.UserPet{
 		UserID:      userID,
+		ServerID:    sid,
 		PetType:     petType,
 		Nickname:    petType,
 		MaxHP:       pt.MaxHP,
@@ -225,7 +238,9 @@ func (s *Service) AddXP(pet *model.UserPet, amount int) *LevelResult {
 		var existing model.UserQuest
 		err := s.store.DB.Where("user_id = ? AND quest_id = ?", pet.UserID, "boss_league").First(&existing).Error
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			_ = s.store.CreateQuest(pet.UserID, "boss_league")
+			if err := s.store.CreateQuest(pet.UserID, "boss_league"); err != nil {
+				slog.Error("pets: failed to auto-start boss_league quest", "user", pet.UserID, "error", err)
+			}
 		}
 	}
 	return res

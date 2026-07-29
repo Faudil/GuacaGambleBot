@@ -238,12 +238,23 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 
 	default:
+		// Show current dialogue text, then silently advance.
+		text := i18n.T(currStep.TextKey, lang)
 		if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
 					components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
 			return
 		}
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button(i18n.T("start.continue_btn", lang), components.Encode("start", "continue", questID), discordgo.SuccessButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+				components.Embed("", text, 0x2ecc71), comps))
+		return
 	}
 
 	uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)

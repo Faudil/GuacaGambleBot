@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -13,6 +14,8 @@ import (
 	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/store"
 )
+
+const rateLimitCooldown = 500 * time.Millisecond
 
 // Bot bundles the discordgo session, database and shared config for handlers.
 type Bot struct {
@@ -44,6 +47,9 @@ type Router struct {
 	prefix     map[string]PrefixHandler
 	component  map[string]ComponentHandler
 	modal      map[string]ModalHandler
+
+	rateLimitMu    sync.Mutex
+	rateLimitTimes map[string]time.Time
 }
 
 // Session returns the underlying discordgo session.
@@ -51,13 +57,14 @@ func (r *Router) Session() *discordgo.Session { return r.bot.Session }
 
 func NewRouter(bot *Bot, st *store.Store) *Router {
 	return &Router{
-		bot:       bot,
-		store:     st,
-		slash:     map[string]SlashHandler{},
-		slashDefs: []*discordgo.ApplicationCommand{},
-		prefix:    map[string]PrefixHandler{},
-		component: map[string]ComponentHandler{},
-		modal:     map[string]ModalHandler{},
+		bot:            bot,
+		store:          st,
+		slash:          map[string]SlashHandler{},
+		slashDefs:      []*discordgo.ApplicationCommand{},
+		prefix:         map[string]PrefixHandler{},
+		component:      map[string]ComponentHandler{},
+		modal:          map[string]ModalHandler{},
+		rateLimitTimes: map[string]time.Time{},
 	}
 }
 
@@ -109,6 +116,20 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 	uid := UserID(i)
 	gid := i.GuildID
 	start := time.Now()
+
+	if i.Type != discordgo.InteractionMessageComponent && i.Type != discordgo.InteractionModalSubmit {
+		if !r.checkRateLimit(uid) {
+			log.Warn("rate limited user", "user", uid, "guild", gid)
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "⏳ Please slow down! You're sending commands too fast.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
+	}
 
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
@@ -196,6 +217,11 @@ func (r *Router) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author != nil && m.Author.Bot {
 		return
 	}
+
+	if !r.checkRateLimit(m.Author.ID) {
+		log.Warn("rate limited user", "user", m.Author.ID, "guild", m.GuildID)
+		return
+	}
 	gid := ToInt64(m.GuildID)
 	prefix := r.bot.Prefix
 	if r.store != nil {
@@ -259,6 +285,33 @@ func (r *Router) recoverPanicMsg(m *discordgo.MessageCreate) {
 
 // RegisterCommands publishes all slash commands to Discord. Pass a guild ID to
 // register them only there (instant), or "" for global registration.
+func (r *Router) Commands() []*discordgo.ApplicationCommand {
+	return r.slashDefs
+}
+
+func (r *Router) checkRateLimit(userID string) bool {
+	r.rateLimitMu.Lock()
+	defer r.rateLimitMu.Unlock()
+
+	last, ok := r.rateLimitTimes[userID]
+	now := time.Now()
+	if ok && now.Sub(last) < rateLimitCooldown {
+		return false
+	}
+	r.rateLimitTimes[userID] = now
+
+	if len(r.rateLimitTimes) > 10000 {
+		cleanup := make(map[string]time.Time, len(r.rateLimitTimes)/2)
+		for k, v := range r.rateLimitTimes {
+			if now.Sub(v) < rateLimitCooldown*10 {
+				cleanup[k] = v
+			}
+		}
+		r.rateLimitTimes = cleanup
+	}
+	return true
+}
+
 func (r *Router) RegisterCommands(guildID string) error {
 	appID := r.bot.Session.State.User.ID
 	_, err := r.bot.Session.ApplicationCommandBulkOverwrite(appID, guildID, r.slashDefs)

@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"log/slog"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -20,8 +21,9 @@ type RepaidLender struct {
 
 // QuestAdvanceFn is called by RecordActivity when an activity step reaches its
 // target. Implementations should advance the quest step with proper next-step
-// custom_data. questID is the quest whose step was completed.
-type QuestAdvanceFn func(userID int64, questID string) error
+// custom_data. questID is the quest whose step was completed. The bool return
+// indicates whether the quest was fully completed (COMPLETED status).
+type QuestAdvanceFn func(userID int64, questID string) (bool, error)
 
 // Store is the data-access layer over GORM.
 type Store struct {
@@ -29,12 +31,15 @@ type Store struct {
 	StartingBalance int
 	DefaultPrefix   string
 	questAdvanceFn  QuestAdvanceFn
+
+	questCompleted   map[int64]string // userID -> questID of just-completed quest
+	questCompletedMu sync.Mutex
 }
 
 func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
 
 func New(db *gorm.DB, cfg *config.Config) *Store {
-	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix}
+	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix, questCompleted: map[int64]string{}}
 }
 
 // ensureUser creates the user row with the starting balance if missing.
@@ -369,14 +374,35 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 					Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
 					return err
 				}
+				s.pushQuestCompleted(userID, q.QuestID)
 			} else if s.questAdvanceFn != nil {
-				if err := s.questAdvanceFn(userID, q.QuestID); err != nil {
+				completed, err := s.questAdvanceFn(userID, q.QuestID)
+				if err != nil {
 					slog.Warn("RecordActivity: questAdvanceFn failed", "quest_id", q.QuestID, "err", err)
+				} else if completed {
+					s.pushQuestCompleted(userID, q.QuestID)
 				}
 			}
 		}
 	}
 	return nil
+}
+
+func (s *Store) pushQuestCompleted(userID int64, questID string) {
+	s.questCompletedMu.Lock()
+	defer s.questCompletedMu.Unlock()
+	s.questCompleted[userID] = questID
+}
+
+// PopQuestCompleted returns the questID of a quest that was just completed by
+// the given user during the last RecordActivity call, or an empty string if no
+// quest was completed. The entry is consumed so subsequent calls return empty.
+func (s *Store) PopQuestCompleted(userID int64) string {
+	s.questCompletedMu.Lock()
+	defer s.questCompletedMu.Unlock()
+	qid := s.questCompleted[userID]
+	delete(s.questCompleted, userID)
+	return qid
 }
 
 // CreateQuest creates a new quest entry and its step data for a user.
@@ -433,7 +459,7 @@ func (s *Store) CheckCooldown(userID int64, activity string, duration time.Durat
 	if err != nil {
 		return false, err
 	}
-	return time.Since(cd.LastUsed) >= duration, nil
+	return time.Now().UTC().Sub(cd.LastUsed.UTC()) >= duration, nil
 }
 
 // ClearCooldown removes a cooldown record for the given activity.
@@ -444,11 +470,12 @@ func (s *Store) ClearCooldown(userID int64, activity string) error {
 
 // SetCooldown records the current time as the last use of an activity.
 func (s *Store) SetCooldown(userID int64, activity string) error {
+	now := time.Now().UTC()
 	return s.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "activity_name"}},
-		DoUpdates: clause.Assignments(map[string]any{"last_used": time.Now()}),
+		DoUpdates: clause.Assignments(map[string]any{"last_used": now}),
 	}).Create(&model.Cooldown{
-		UserID: userID, ActivityName: activity, LastUsed: time.Now(),
+		UserID: userID, ActivityName: activity, LastUsed: now,
 	}).Error
 }
 

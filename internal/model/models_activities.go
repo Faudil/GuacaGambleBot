@@ -1,0 +1,56 @@
+package model
+
+import "time"
+
+type UserCropHarvest struct {
+	UserID   int64  `gorm:"primaryKey;column:user_id"`
+	CropName string `gorm:"primaryKey;column:crop_name"`
+	Count    int    `gorm:"column:count;default:0"`
+}
+
+type UserFossilHarvest struct {
+	UserID   int64  `gorm:"primaryKey;column:user_id"`
+	FossilID string `gorm:"primaryKey;column:fossil_id"`
+	Count    int    `gorm:"column:count;default:0"`
+}
+
+type UserFarming struct {
+	ID         int64     `gorm:"primaryKey;column:id;autoIncrement"`
+	UserID     int64     `gorm:"column:user_id"`
+	ZoneKey    string    `gorm:"column:zone_key"`
+	PlotIndex  int       `gorm:"column:plot_index"`
+	ItemName   string    `gorm:"column:item_name"`
+	PlantTime  time.Time `gorm:"column:plant_time"`
+	GrowTime   int       `gorm:"column:grow_time"`
+	Watered    bool      `gorm:"column:watered;default:false"`
+	Mutated    bool      `gorm:"column:mutated;default:false"`
+	Mysterious bool      `gorm:"column:mysterious;default:false"`
+}
+
+type UserAchievement struct {
+	UserID        int64 `gorm:"primaryKey;column:user_id"`
+	AchievementID string `gorm:"primaryKey;column:achievement_id"`
+}
+
+type UserQuest struct {
+	UserID      int64      `gorm:"primaryKey;column:user_id"`
+	QuestID     string     `gorm:"primaryKey;column:quest_id"`
+	Status      string     `gorm:"column:status;default:ACTIVE"`
+	StartedAt   time.Time  `gorm:"column:started_at"`
+	CompletedAt *time.Time `gorm:"column:completed_at"`
+}
+
+type UserQuestData struct {
+	UserID        int64  `gorm:"primaryKey;column:user_id"`
+	QuestID       string `gorm:"primaryKey;column:quest_id"`
+	StepIndex     int    `gorm:"column:step_index;default:0"`
+	ProgressValue int    `gorm:"column:progress_value;default:0"`
+	CustomData    string `gorm:"column:custom_data;default:'{}'"`
+}
+
+func (UserCropHarvest) TableName() string  { return "user_crop_harvests" }
+func (UserFossilHarvest) TableName() string { return "user_fossil_harvests" }
+func (UserFarming) TableName() string      { return "user_farming" }
+func (UserAchievement) TableName() string  { return "user_achievements" }
+func (UserQuest) TableName() string        { return "user_quests" }
+func (UserQuestData) TableName() string    { return "user_quest_data" }

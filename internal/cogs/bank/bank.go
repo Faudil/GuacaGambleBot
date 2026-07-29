@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	banksvc "guacagamblebot/internal/service/bank"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -122,6 +123,9 @@ func (c *Cog) onSlashDeposit(b *interaction.Bot, i *discordgo.InteractionCreate)
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -154,6 +158,9 @@ func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *disco
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+	}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
@@ -284,6 +291,9 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+	}
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
 	}
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,

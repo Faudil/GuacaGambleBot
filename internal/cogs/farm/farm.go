@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	farmsvc "guacagamblebot/internal/service/farm"
 	"guacagamblebot/internal/items"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -199,16 +200,6 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
 	plots, err := c.svc.GetPlots(userID, zoneKey)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
@@ -390,6 +381,9 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	var options []discordgo.SelectMenuOption
 	for _, seed := range farmsvc.RegularSeedNames {
+		if !c.svc.HasItem(userID, seed) {
+			continue
+		}
 		var growTime int
 		for _, s := range farmsvc.Seeds {
 			if s.Name == seed {
@@ -406,13 +400,19 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 	}
 
-	if c.svc.HasItem(userID, "mysterious_seed") {
+	hasMysterious := c.svc.HasItem(userID, "mysterious_seed")
+	if hasMysterious {
 		options = append(options, discordgo.SelectMenuOption{
 			Label:       i18n.T("farm.plant_mysterious_btn", lang),
 			Value:       "mysterious_seed",
 			Description: i18n.T("farm.mysterious_seed_desc_option", lang),
 			Emoji:       &discordgo.ComponentEmoji{Name: "🔮"},
 		})
+	}
+
+	if len(options) == 0 {
+		interaction.RespondError(b, i, lang, "farm.no_seeds")
+		return
 	}
 
 	menu := discordgo.SelectMenu{
@@ -456,6 +456,21 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	seedName := data.Values[0]
 
+	if seedName != "mysterious_seed" && !c.svc.HasItem(userID, seedName) {
+		interaction.RespondError(b, i, lang, "farm.no_seeds")
+		return
+	}
+
+	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	if !ready {
+		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
+		return
+	}
+
 	var growTime int
 	if seedName == "mysterious_seed" {
 		growTime = 1800
@@ -468,7 +483,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	err := c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
+	err = c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
 		return
@@ -486,7 +501,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -505,7 +520,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -525,6 +540,16 @@ func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	plotIdx, _ := strconv.Atoi(rest[1])
 	seedName := rest[2]
 
+	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	if !ready {
+		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
+		return
+	}
+
 	var growTime int
 	if seedName == "mysterious_seed" {
 		growTime = 1800
@@ -537,7 +562,7 @@ func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	err := c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
+	err = c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
 		return
@@ -555,7 +580,7 @@ func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -574,7 +599,7 @@ func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -592,6 +617,16 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
+
+	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	if !ready {
+		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
+		return
+	}
 
 	var msg string
 	blessed := c.svc.HasBlessing(userID)
@@ -641,6 +676,10 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		desc += "\n\n" + i18n.T("farm.secret_golden_carrot", lang)
 	}
 
+	if qid := c.store.PopQuestCompleted(userID); qid != "" {
+		desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	}
+
 	embed := components.Embed(
 		i18n.T("farm.harvest_title", lang),
 		desc,
@@ -648,7 +687,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -698,7 +737,17 @@ func (c *Cog) onWater(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
 
-	err := c.svc.Water(userID, zoneKey, plotIdx)
+	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	if !ready {
+		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
+		return
+	}
+
+	err = c.svc.Water(userID, zoneKey, plotIdx)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
 		return
@@ -715,7 +764,7 @@ func (c *Cog) onWater(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -734,7 +783,17 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
 
-	err := c.svc.Fertilize(userID, zoneKey, plotIdx)
+	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	if !ready {
+		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
+		return
+	}
+
+	err = c.svc.Fertilize(userID, zoneKey, plotIdx)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
 		return
@@ -751,7 +810,7 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
