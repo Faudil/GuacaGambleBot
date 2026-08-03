@@ -80,7 +80,7 @@ func TestBuyItemSuccess(t *testing.T) {
 	}).Error
 	require.NoError(t, err)
 
-	cost, err := svc.BuyItem(1, "coal", 3)
+	cost, _, _, err := svc.BuyItem(1, "coal", 3)
 	require.NoError(t, err)
 	assert.Equal(t, 15, cost)
 
@@ -103,7 +103,7 @@ func TestBuyItemInsufficientFunds(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 9999, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, err := svc.BuyItem(1, "coal", 1)
+	_, _, _, err := svc.BuyItem(1, "coal", 1)
 	assert.ErrorIs(t, err, ErrNoMoney)
 }
 
@@ -114,7 +114,7 @@ func TestBuyItemNotActive(t *testing.T) {
 	_ = svc.ensureWeekRotation()
 	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "coal").Update("is_active", false)
 
-	_, err := svc.BuyItem(1, "coal", 1)
+	_, _, _, err := svc.BuyItem(1, "coal", 1)
 	assert.ErrorIs(t, err, ErrNotActive)
 }
 
@@ -129,7 +129,7 @@ func TestSellItemSuccess(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	gain, err := svc.SellItem(1, "coal", 3)
+	gain, _, _, err := svc.SellItem(1, "coal", 3)
 	require.NoError(t, err)
 	assert.Greater(t, gain, 0)
 
@@ -151,7 +151,7 @@ func TestSellItemNotOwned(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, err := svc.SellItem(1, "coal", 1)
+	_, _, _, err := svc.SellItem(1, "coal", 1)
 	assert.ErrorIs(t, err, ErrNoItem)
 }
 
@@ -163,7 +163,7 @@ func TestSellItemNotActive(t *testing.T) {
 	_ = svc.ensureWeekRotation()
 	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "coal").Update("is_active", false)
 
-	_, err := svc.SellItem(1, "coal", 1)
+	_, _, _, err := svc.SellItem(1, "coal", 1)
 	assert.ErrorIs(t, err, ErrNotActive)
 }
 
@@ -171,7 +171,7 @@ func TestSellItemNotMarketable(t *testing.T) {
 	svc, _ := testService(t)
 
 	// Equipment is not marketable
-	_, err := svc.SellItem(1, "stick", 1)
+	_, _, _, err := svc.SellItem(1, "stick", 1)
 	assert.ErrorIs(t, err, ErrNotActive)
 }
 
@@ -185,7 +185,7 @@ func TestBuyItemAdjustsPriceUp(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, err := svc.BuyItem(1, "coal", 10)
+	_, _, _, err := svc.BuyItem(1, "coal", 10)
 	require.NoError(t, err)
 
 	var st2 model.MarketState
@@ -205,7 +205,7 @@ func TestSellItemAdjustsPriceDown(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, err := svc.SellItem(1, "coal", 10)
+	_, _, _, err := svc.SellItem(1, "coal", 10)
 	require.NoError(t, err)
 
 	var st2 model.MarketState
@@ -216,21 +216,21 @@ func TestSellItemAdjustsPriceDown(t *testing.T) {
 
 func TestBuyItemInvalidQuantity(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.BuyItem(1, "coal", 0)
+	_, _, _, err := svc.BuyItem(1, "coal", 0)
 	assert.ErrorIs(t, err, ErrInvalidQty)
-	_, err = svc.BuyItem(1, "coal", -1)
+	_, _, _, err = svc.BuyItem(1, "coal", -1)
 	assert.ErrorIs(t, err, ErrInvalidQty)
 }
 
 func TestSellItemInvalidQuantity(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.SellItem(1, "coal", 0)
+	_, _, _, err := svc.SellItem(1, "coal", 0)
 	assert.ErrorIs(t, err, ErrInvalidQty)
 }
 
 func TestBuyItemNotFound(t *testing.T) {
 	svc, _ := testService(t)
-	_, err := svc.BuyItem(1, "nonexistent_item", 1)
+	_, _, _, err := svc.BuyItem(1, "nonexistent_item", 1)
 	assert.ErrorIs(t, err, ErrNotFound)
 }
 

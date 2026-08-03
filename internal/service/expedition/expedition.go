@@ -163,9 +163,9 @@ func (s *Service) GetActive(userID int64) (*model.PetExpedition, error) {
 	return &exp, nil
 }
 
-func (s *Service) Claim(exp *model.PetExpedition) error {
-	charsvc.AddXP(s.store, exp.UserID, exp.RewardXP/2)
-	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+func (s *Service) Claim(exp *model.PetExpedition) (leveled bool, lvl int, err error) {
+	leveled, lvl = charsvc.AddXP(s.store, exp.UserID, exp.RewardXP/2)
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.PetExpedition{}).
 			Where("id = ?", exp.ID).
 			Update("is_claimed", true).Error; err != nil {
@@ -175,6 +175,7 @@ func (s *Service) Claim(exp *model.PetExpedition) error {
 			Where("id = ?", exp.PetID).
 			Update("on_expedition", false).Error
 	})
+	return
 }
 
 var petSpecies = []string{

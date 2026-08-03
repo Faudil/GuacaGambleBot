@@ -2748,7 +2748,9 @@
     "equip_item_label": "Nom de l'objet",
     "equip_not_found": "❌ Cet objet n'existe pas.",
     "equip_wrong_slot": "❌ Cet objet ne peut pas aller dans cet emplacement.",
-    "equip_not_owned": "❌ Vous ne possédez pas cet objet."
+    "equip_not_owned": "❌ Vous ne possédez pas cet objet.",
+    "xp_gained": "📈 +{xp} XP de Personnage",
+    "level_up": "🎉 **NIVEAU SUPÉRIEUR !** Tu es maintenant niveau {level} ! (+2 points de compétence)"
   },
   "skills": {
     "title": "⚡ Compétences Actives",

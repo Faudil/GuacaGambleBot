@@ -351,23 +351,27 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	switch action {
 	case "buy":
-		cost, err := c.svc.BuyItem(userID, itemID, amount)
+		cost, leveled, newLevel, err := c.svc.BuyItem(userID, itemID, amount)
 		if err != nil {
 			c.handleOrderError(b, i, lang, err)
 			return
 		}
+		content := i18n.T("market.bought_msg", lang, map[string]any{
+			"amount": amount, "item": c.displayName(it.Name, lang), "cost": cost,
+		})
+		if leveled {
+			content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: i18n.T("market.bought_msg", lang, map[string]any{
-					"amount": amount, "item": c.displayName(it.Name, lang), "cost": cost,
-				}),
-				Flags: discordgo.MessageFlagsEphemeral,
+				Content: content,
+				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 
 	case "sell":
-		gain, err := c.svc.SellItem(userID, itemID, amount)
+		gain, leveled, newLevel, err := c.svc.SellItem(userID, itemID, amount)
 		if err != nil {
 			c.handleOrderError(b, i, lang, err)
 			return
@@ -375,6 +379,9 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		content := i18n.T("market.sold_msg", lang, map[string]any{
 			"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
 		})
+		if leveled {
+			content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+		}
 		if qid := c.store.PopQuestCompleted(userID); qid != "" {
 			content += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
@@ -436,7 +443,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		}
 	}
 
-	gain, err := c.svc.SellItem(userID, it.ID, amount)
+	gain, leveled, newLevel, err := c.svc.SellItem(userID, it.ID, amount)
 	if err != nil {
 		switch err {
 		case mktsvc.ErrNotFound:
@@ -455,6 +462,9 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 	sellMsg := i18n.T("market.sold_msg", lang, map[string]any{
 		"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
 	})
+	if leveled {
+		sellMsg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
 	if qid := c.store.PopQuestCompleted(userID); qid != "" {
 		sellMsg += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 	}

@@ -49,12 +49,16 @@ type SlotsResult struct {
 	WinType string
 	WinSym  string
 	XpGain  int
+	LeveledUp bool
+	NewLevel  int
 }
 
 type CoinflipResult struct {
 	Result string
 	Win    bool
 	XpGain int
+	LeveledUp bool
+	NewLevel  int
 }
 
 type Service struct {
@@ -166,7 +170,9 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
 	}
 
-	charsvc.AddXP(s.store, userID, res.XpGain)
+	leveled, lvl := charsvc.AddXP(s.store, userID, res.XpGain)
+	res.LeveledUp = leveled
+	res.NewLevel = lvl
 	return res, nil
 }
 
@@ -264,7 +270,9 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		res.XpGain = 30
 	}
 
-	charsvc.AddXP(s.store, userID, res.XpGain)
+	leveled, lvl := charsvc.AddXP(s.store, userID, res.XpGain)
+	res.LeveledUp = leveled
+	res.NewLevel = lvl
 	return res, nil
 }
 

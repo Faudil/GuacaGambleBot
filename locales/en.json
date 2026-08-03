@@ -2748,7 +2748,9 @@
     "equip_select_title": "Select an item to equip in {slot}:",
     "equip_select_placeholder": "Choose an item…",
     "equip_none_available": "❌ You don't have any unequipped items for this slot.",
-    "equip_error": "❌ Failed to equip item."
+    "equip_error": "❌ Failed to equip item.",
+    "xp_gained": "📈 +{xp} Character XP",
+    "level_up": "🎉 **LEVEL UP!** You are now level {level}! (+2 skill points)"
   },
   "skills": {
     "title": "⚡ Active Skills",

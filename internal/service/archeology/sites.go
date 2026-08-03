@@ -3,8 +3,8 @@ package archeology
 var Sites = map[string]*SiteDef{
 	"riverbed": {
 		Key:      "riverbed",
-		NameID:   "site_riverbed_name",
-		DescID:   "site_riverbed_desc",
+		NameID:   "arch.site_riverbed_name",
+		DescID:   "arch.site_riverbed_desc",
 		Depth:    30,
 		Cost:     0,
 		MinLevel: 0,
@@ -18,8 +18,8 @@ var Sites = map[string]*SiteDef{
 	},
 	"cliffside": {
 		Key:      "cliffside",
-		NameID:   "site_cliffside_name",
-		DescID:   "site_cliffside_desc",
+		NameID:   "arch.site_cliffside_name",
+		DescID:   "arch.site_cliffside_desc",
 		Depth:    50,
 		Cost:     0,
 		MinLevel: 0,
@@ -33,8 +33,8 @@ var Sites = map[string]*SiteDef{
 	},
 	"fault": {
 		Key:      "fault",
-		NameID:   "site_fault_name",
-		DescID:   "site_fault_desc",
+		NameID:   "arch.site_fault_name",
+		DescID:   "arch.site_fault_desc",
 		Depth:    50,
 		Cost:     200,
 		MinLevel: 0,
@@ -48,8 +48,8 @@ var Sites = map[string]*SiteDef{
 	},
 	"ice_sheet": {
 		Key:      "ice_sheet",
-		NameID:   "site_ice_sheet_name",
-		DescID:   "site_ice_sheet_desc",
+		NameID:   "arch.site_ice_sheet_name",
+		DescID:   "arch.site_ice_sheet_desc",
 		Depth:    40,
 		Cost:     50,
 		MinLevel: 3,
@@ -63,8 +63,8 @@ var Sites = map[string]*SiteDef{
 	},
 	"volcanic": {
 		Key:      "volcanic",
-		NameID:   "site_volcanic_name",
-		DescID:   "site_volcanic_desc",
+		NameID:   "arch.site_volcanic_name",
+		DescID:   "arch.site_volcanic_desc",
 		Depth:    70,
 		Cost:     100,
 		MinLevel: 5,

@@ -451,6 +451,9 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		resultMsg := i18n.T("mining.success_msg", lang, map[string]any{
 			"bag": c.bagString(res.Bag, lang), "xp": res.XP,
 		})
+		if res.LeveledUp {
+			resultMsg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+		}
 		if msg != "" {
 			resultMsg = msg + "\n\n" + resultMsg
 		}
@@ -494,6 +497,9 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"bag": c.bagString(res.Bag, lang), "xp": res.XP,
 		})
 		color = 0x00FF00
+	}
+	if res.LeveledUp {
+		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
 	if qid := c.store.PopQuestCompleted(userID); qid != "" {
 		title += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)

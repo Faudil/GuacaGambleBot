@@ -667,6 +667,9 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		"value": valueStr,
 		"xp":    res.XP,
 	})
+	if res.LeveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
 	if msg != "" {
 		desc = msg + "\n" + desc
 	}

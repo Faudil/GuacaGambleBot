@@ -47,11 +47,11 @@ func (s *Service) rollFossilWhisper(state *GameState) *DigEvent {
 	}
 	return &DigEvent{
 		Type:    EventFossilWhisper,
-		TitleID: "event_whisper_title",
-		DescID:  "event_whisper_desc",
+		TitleID: "arch.event_whisper_title",
+		DescID:  "arch.event_whisper_desc",
 		Data:    map[string]any{"layer": layerName, "tool": bestTool},
 		Choices: []EventChoice{
-			{LabelID: "event_whisper_accept", Value: "accept", Style: 3},
+			{LabelID: "arch.event_whisper_accept", Value: "accept", Style: 3},
 		},
 	}
 }
@@ -59,12 +59,12 @@ func (s *Service) rollFossilWhisper(state *GameState) *DigEvent {
 func (s *Service) rollCaveIn() *DigEvent {
 	return &DigEvent{
 		Type:    EventCaveIn,
-		TitleID: "event_cavein_title",
-		DescID:  "event_cavein_desc",
+		TitleID: "arch.event_cavein_title",
+		DescID:  "arch.event_cavein_desc",
 		Choices: []EventChoice{
-			{LabelID: "event_cavein_careful", Value: "careful", Style: 3},
-			{LabelID: "event_cavein_rush", Value: "rush", Style: 1},
-			{LabelID: "event_cavein_abandon", Value: "abandon", Style: 2},
+			{LabelID: "arch.event_cavein_careful", Value: "careful", Style: 3},
+			{LabelID: "arch.event_cavein_rush", Value: "rush", Style: 1},
+			{LabelID: "arch.event_cavein_abandon", Value: "abandon", Style: 2},
 		},
 	}
 }
@@ -72,12 +72,12 @@ func (s *Service) rollCaveIn() *DigEvent {
 func (s *Service) rollGuardian() *DigEvent {
 	return &DigEvent{
 		Type:    EventGuardian,
-		TitleID: "event_guardian_title",
-		DescID:  "event_guardian_desc",
+		TitleID: "arch.event_guardian_title",
+		DescID:  "arch.event_guardian_desc",
 		Choices: []EventChoice{
-			{LabelID: "event_guardian_tribute", Value: "tribute", Style: 3},
-			{LabelID: "event_guardian_press", Value: "press", Style: 1},
-			{LabelID: "event_guardian_retreat", Value: "retreat", Style: 2},
+			{LabelID: "arch.event_guardian_tribute", Value: "tribute", Style: 3},
+			{LabelID: "arch.event_guardian_press", Value: "press", Style: 1},
+			{LabelID: "arch.event_guardian_retreat", Value: "retreat", Style: 2},
 		},
 	}
 }
@@ -86,12 +86,12 @@ func (s *Service) rollBuriedTreasure() *DigEvent {
 	coins := 50 + rand.Intn(151)
 	return &DigEvent{
 		Type:    EventBuriedTreasure,
-		TitleID: "event_treasure_title",
-		DescID:  "event_treasure_desc",
+		TitleID: "arch.event_treasure_title",
+		DescID:  "arch.event_treasure_desc",
 		Data:    map[string]any{"coins": coins},
 		Choices: []EventChoice{
-			{LabelID: "event_treasure_dig", Value: "dig", Style: 3},
-			{LabelID: "event_treasure_ignore", Value: "ignore", Style: 2},
+			{LabelID: "arch.event_treasure_dig", Value: "dig", Style: 3},
+			{LabelID: "arch.event_treasure_ignore", Value: "ignore", Style: 2},
 		},
 	}
 }
@@ -99,10 +99,10 @@ func (s *Service) rollBuriedTreasure() *DigEvent {
 func (s *Service) rollFossilEgg() *DigEvent {
 	return &DigEvent{
 		Type:    EventFossilEgg,
-		TitleID: "event_egg_title",
-		DescID:  "event_egg_desc",
+		TitleID: "arch.event_egg_title",
+		DescID:  "arch.event_egg_desc",
 		Choices: []EventChoice{
-			{LabelID: "event_egg_take", Value: "take", Style: 3},
+			{LabelID: "arch.event_egg_take", Value: "take", Style: 3},
 		},
 	}
 }
@@ -111,8 +111,8 @@ func (s *Service) ResolveEvent(state *GameState, evt *DigEvent, choice string) *
 	switch evt.Type {
 	case EventFossilWhisper:
 		return &EventResult{
-			TitleID:   "event_whisper_result_title",
-			DescID:    "event_whisper_result_desc",
+			TitleID:   "arch.event_whisper_result_title",
+			DescID:    "arch.event_whisper_result_desc",
 			BackToDig: true,
 		}
 	case EventCaveIn:
@@ -123,14 +123,14 @@ func (s *Service) ResolveEvent(state *GameState, evt *DigEvent, choice string) *
 		return s.resolveTreasure(state, choice)
 	case EventFossilEgg:
 		return &EventResult{
-			TitleID:   "event_egg_result_title",
-			DescID:    "event_egg_result_desc",
+			TitleID:   "arch.event_egg_result_title",
+			DescID:    "arch.event_egg_result_desc",
 			ItemGiven: "fossilized_egg",
 			ItemQty:   1,
 			BackToDig: true,
 		}
 	}
-	return &EventResult{TitleID: "event_default_title", DescID: "event_default_desc", BackToDig: true}
+	return &EventResult{TitleID: "arch.event_default_title", DescID: "arch.event_default_desc", BackToDig: true}
 }
 
 func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
@@ -141,8 +141,8 @@ func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
 			state.Finished = true
 		}
 		return &EventResult{
-			TitleID:    "event_cavein_careful_title",
-			DescID:     "event_cavein_careful_desc",
+			TitleID:    "arch.event_cavein_careful_title",
+			DescID:     "arch.event_cavein_careful_desc",
 			ActionsLost: 2,
 			BackToDig:  true,
 		}
@@ -157,8 +157,8 @@ func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
 			state.Finished = true
 		}
 		return &EventResult{
-			TitleID:   "event_cavein_rush_title",
-			DescID:    "event_cavein_rush_desc",
+			TitleID:   "arch.event_cavein_rush_title",
+			DescID:    "arch.event_cavein_rush_desc",
 			IntLoss:   20,
 			DepthGain: freeDepth,
 			BackToDig: true,
@@ -166,8 +166,8 @@ func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
 	case "abandon":
 		state.Finished = true
 		return &EventResult{
-			TitleID:   "event_cavein_abandon_title",
-			DescID:    "event_cavein_abandon_desc",
+			TitleID:   "arch.event_cavein_abandon_title",
+			DescID:    "arch.event_cavein_abandon_desc",
 			BackToDig: false,
 		}
 	}
@@ -179,8 +179,8 @@ func (s *Service) resolveGuardian(state *GameState, choice string) *EventResult 
 	case "tribute":
 		state.Actions++
 		return &EventResult{
-			TitleID:    "event_guardian_tribute_title",
-			DescID:     "event_guardian_tribute_desc",
+			TitleID:    "arch.event_guardian_tribute_title",
+			DescID:     "arch.event_guardian_tribute_desc",
 			CoinChange: -100,
 			BackToDig:  true,
 		}
@@ -190,15 +190,15 @@ func (s *Service) resolveGuardian(state *GameState, choice string) *EventResult 
 			state.Finished = true
 		}
 		return &EventResult{
-			TitleID:   "event_guardian_press_title",
-			DescID:    "event_guardian_press_desc",
+			TitleID:   "arch.event_guardian_press_title",
+			DescID:    "arch.event_guardian_press_desc",
 			IntLoss:   25,
 			BackToDig: true,
 		}
 	case "retreat":
 		return &EventResult{
-			TitleID:   "event_guardian_retreat_title",
-			DescID:    "event_guardian_retreat_desc",
+			TitleID:   "arch.event_guardian_retreat_title",
+			DescID:    "arch.event_guardian_retreat_desc",
 			BackToDig: true,
 		}
 	}
@@ -214,16 +214,16 @@ func (s *Service) resolveTreasure(state *GameState, choice string) *EventResult 
 		}
 		coins, _ := evtDataCoins(state)
 		return &EventResult{
-			TitleID:    "event_treasure_dig_title",
-			DescID:     "event_treasure_dig_desc",
+			TitleID:    "arch.event_treasure_dig_title",
+			DescID:     "arch.event_treasure_dig_desc",
 			CoinChange: coins,
 			ActionsLost: 1,
 			BackToDig:  true,
 		}
 	case "ignore":
 		return &EventResult{
-			TitleID:   "event_treasure_ignore_title",
-			DescID:    "event_treasure_ignore_desc",
+			TitleID:   "arch.event_treasure_ignore_title",
+			DescID:    "arch.event_treasure_ignore_desc",
 			BackToDig: true,
 		}
 	}

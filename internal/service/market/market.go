@@ -202,34 +202,34 @@ func (s *Service) GetMarket(category string, page, pageSize int) ([]MarketItemVi
 	return views, int(total), nil
 }
 
-func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, error) {
+func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, int, error) {
 	if amount <= 0 {
-		return 0, ErrInvalidQty
+		return 0, false, 0, ErrInvalidQty
 	}
 	if err := s.ensureWeekRotation(); err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 	if err := s.ensureDayReset(); err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 
 	it := items.Get(itemID)
 	if it == nil {
-		return 0, ErrNotFound
+		return 0, false, 0, ErrNotFound
 	}
 
 	var st model.MarketState
 	if err := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error; err != nil {
-		return 0, ErrNotActive
+		return 0, false, 0, ErrNotActive
 	}
 
 	totalCost := st.CurrentPrice * amount
 	bal, err := s.store.GetBalance(userID)
 	if err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 	if bal < totalCost {
-		return 0, ErrNoMoney
+		return 0, false, 0, ErrNoMoney
 	}
 
 	priceDelta := maxInt(1, int(float64(it.Price)*BuyImpact)) * amount
@@ -264,42 +264,42 @@ func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, error) 
 		return nil
 	})
 	if err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
-	charsvc.AddXP(s.store, userID, amount)
-	return totalCost, nil
+	leveled, lvl := charsvc.AddXP(s.store, userID, amount)
+	return totalCost, leveled, lvl, nil
 }
 
-func (s *Service) SellItem(userID int64, itemID string, amount int) (int, error) {
+func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, int, error) {
 	if amount <= 0 {
-		return 0, ErrInvalidQty
+		return 0, false, 0, ErrInvalidQty
 	}
 	if err := s.ensureWeekRotation(); err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 	if err := s.ensureDayReset(); err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 
 	it := items.Get(itemID)
 	if it == nil {
-		return 0, ErrNotFound
+		return 0, false, 0, ErrNotFound
 	}
 	if !it.IsMarketable() {
-		return 0, ErrNotActive
+		return 0, false, 0, ErrNotActive
 	}
 
 	var st model.MarketState
 	if err := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error; err != nil {
-		return 0, ErrNotActive
+		return 0, false, 0, ErrNotActive
 	}
 
 	var inv model.Inventory
 	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
-		return 0, ErrNoItem
+		return 0, false, 0, ErrNoItem
 	}
 	if inv.Quantity < amount {
-		return 0, ErrNoItem
+		return 0, false, 0, ErrNoItem
 	}
 
 	totalGain := st.CurrentPrice * amount
@@ -320,7 +320,7 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, error)
 
 	// Ensure user row exists before the transaction
 	if _, err := s.store.GetBalance(userID); err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
 
 	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
@@ -347,11 +347,11 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, error)
 		return nil
 	})
 	if err != nil {
-		return 0, err
+		return 0, false, 0, err
 	}
-	charsvc.AddXP(s.store, userID, amount)
 	_ = s.store.RecordActivity(userID, "items_sold_market", 1)
-	return totalGain, nil
+	leveled, lvl := charsvc.AddXP(s.store, userID, amount)
+	return totalGain, leveled, lvl, nil
 }
 
 func hashSeed(s string) int64 {

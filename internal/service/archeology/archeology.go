@@ -708,15 +708,15 @@ func itoa(n int) string {
 func GetLayerNameID(lt LayerType) string {
 	switch lt {
 	case LayerSoftSoil:
-		return "layer_soft_soil"
+		return "arch.layer_soft_soil"
 	case LayerHardRock:
-		return "layer_hard_rock"
+		return "arch.layer_hard_rock"
 	case LayerGravel:
-		return "layer_gravel"
+		return "arch.layer_gravel"
 	case LayerClay:
-		return "layer_clay"
+		return "arch.layer_clay"
 	case LayerBedrock:
-		return "layer_bedrock"
+		return "arch.layer_bedrock"
 	}
 	return ""
 }

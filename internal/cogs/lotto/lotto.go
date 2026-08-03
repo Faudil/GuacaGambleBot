@@ -126,6 +126,9 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if qid := questMsg; qid != "" {
 			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
+		if res.LeveledUp {
+			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+		}
 		embed = components.Embed(
 			i18n.T("lotto.jackpot_title", lang),
 			desc,
@@ -139,6 +142,9 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		if qid := questMsg; qid != "" {
 			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		}
+		if res.LeveledUp {
+			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
 		embed = components.Embed(
 			i18n.T("lotto.ticket_valid_title", lang),

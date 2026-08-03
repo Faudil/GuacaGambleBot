@@ -181,6 +181,8 @@ type BattleResult struct {
 	Loot       []string
 	LeveledUp  bool
 	NewLevel   int
+	CharLeveledUp bool
+	CharNewLevel  int
 }
 
 var ErrNoPet = errors.New("no active pet")
@@ -333,7 +335,7 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	// Persist HP changes; XP and leveling are handled by the caller via petsvc.AddXP
 	s.store.DB.Model(&pet).Update("hp", petHP)
 
-	charsvc.AddXP(s.store, userID, xp)
+	charLeveled, charLvl := charsvc.AddXP(s.store, userID, xp)
 
 	if playerWon && charsvc.HasBuff(s.store, userID, "scavenger") {
 		for _, loot := range zone.LootTable {
@@ -374,6 +376,8 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		Loot:       lootItems,
 		LeveledUp:  leveledUp,
 		NewLevel:   newLevel,
+		CharLeveledUp: charLeveled,
+		CharNewLevel:  charLvl,
 	}, nil
 }
 

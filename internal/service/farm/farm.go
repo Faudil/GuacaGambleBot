@@ -91,11 +91,13 @@ type PlotInfo struct {
 }
 
 type HarvestResult struct {
-	CropName string
-	Quantity int
-	XP       int
-	Value    int
-	Mutated  bool
+	CropName  string
+	Quantity  int
+	XP        int
+	Value     int
+	Mutated   bool
+	LeveledUp bool
+	NewLevel  int
 }
 
 var (
@@ -319,13 +321,13 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 			Updates(map[string]any{"xp": job.XP, "level": job.Level})
 	}
 
-	charsvc.AddXP(s.store, userID, xp)
+	leveled, lvl := charsvc.AddXP(s.store, userID, xp)
 
 	if err := s.store.IncrementGameLimit(userID, "farm"); err != nil {
 		return nil, err
 	}
 
-	return &HarvestResult{CropName: cropName, Quantity: quantity, XP: xp, Value: value, Mutated: mutation}, nil
+	return &HarvestResult{CropName: cropName, Quantity: quantity, XP: xp, Value: value, Mutated: mutation, LeveledUp: leveled, NewLevel: lvl}, nil
 }
 
 func (s *Service) Water(userID int64, zoneKey string, plotIndex int) error {

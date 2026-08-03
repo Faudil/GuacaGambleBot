@@ -61,6 +61,8 @@ type DailyResult struct {
 	NewBalance int
 	Lenders    []store.RepaidLender
 	Unlocks    []*achievement.Achievement
+	LeveledUp  bool
+	NewLevel   int
 }
 
 // Daily pays the daily salary, applies debt repayment, starts a daily quest and
@@ -130,6 +132,8 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 		return nil, err
 	}
 
+	leveled, lvl := charsvc.AddXP(s.store, userID, 5)
+
 	if err := s.store.SetCooldown(userID, "daily"); err != nil {
 		return nil, err
 	}
@@ -140,6 +144,8 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 		NewBalance: newBalance,
 		Lenders:    lenders,
 		Unlocks:    unlocks,
+		LeveledUp:  leveled,
+		NewLevel:   lvl,
 	}, nil
 }
 

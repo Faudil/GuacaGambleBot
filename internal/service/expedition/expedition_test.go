@@ -60,7 +60,7 @@ func TestClaim(t *testing.T) {
 	exp, err := svc.Start(1, 1, 1, res)
 	require.NoError(t, err)
 
-	err = svc.Claim(exp)
+	_, _, err = svc.Claim(exp)
 	require.NoError(t, err)
 
 	_, err = svc.GetActive(1)

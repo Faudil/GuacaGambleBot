@@ -13,9 +13,9 @@ type ToolMasteryTier struct {
 }
 
 var ToolMasteryTiers = []ToolMasteryTier{
-	{Uses: 50, TitleID: "mastery_specialist", Bonus: 1.10},
-	{Uses: 100, TitleID: "mastery_master", Bonus: 1.20},
-	{Uses: 200, TitleID: "mastery_legend", Bonus: 1.30},
+	{Uses: 50, TitleID: "arch.mastery_specialist", Bonus: 1.10},
+	{Uses: 100, TitleID: "arch.mastery_master", Bonus: 1.20},
+	{Uses: 200, TitleID: "arch.mastery_legend", Bonus: 1.30},
 }
 
 func (s *Service) GetToolMastery(userID int64) map[string]struct {

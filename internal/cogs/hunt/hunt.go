@@ -204,6 +204,9 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.LeveledUp {
 		desc += "\n\n" + i18n.T("hunt.level_up", lang, map[string]any{"pet": "Your pet", "level": res.NewLevel})
 	}
+	if res.CharLeveledUp {
+		desc += "\n\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.CharNewLevel})
+	}
 	if artifactLeveled {
 		desc += "\n\n" + i18n.T("pets.artifact.level_up", lang)
 	}

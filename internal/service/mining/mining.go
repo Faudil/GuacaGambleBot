@@ -309,10 +309,12 @@ type DescendResult struct {
 }
 
 type LeaveResult struct {
-	XP      int
-	Bag     []BagEntry
-	Unlocks []*achievement.Achievement
-	ToolID  string
+	XP        int
+	Bag       []BagEntry
+	Unlocks   []*achievement.Achievement
+	ToolID    string
+	LeveledUp bool
+	NewLevel  int
 }
 
 // eventPool holds all narrative events by rarity × stage.
@@ -932,14 +934,14 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*Leave
 		_ = s.ConsumeItem(userID, toolID)
 	}
 
-	charsvc.AddXP(s.store, userID, totalXP)
+	leveled, lvl := charsvc.AddXP(s.store, userID, totalXP)
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &LeaveResult{XP: totalXP, Bag: bag, Unlocks: unlocks, ToolID: toolID}, nil
+	return &LeaveResult{XP: totalXP, Bag: bag, Unlocks: unlocks, ToolID: toolID, LeveledUp: leveled, NewLevel: lvl}, nil
 }
 
 func jobXPForLevel(level int) int {

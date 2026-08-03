@@ -109,6 +109,8 @@ type FightResolve struct {
 	LoreID      string
 	LoreName    string
 	BottleMsg   string
+	LeveledUp   bool
+	NewLevel    int
 }
 
 var (
@@ -535,7 +537,9 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 		return nil, err
 	}
 
-	charsvc.AddXP(s.store, userID, xp)
+	leveled, lvl := charsvc.AddXP(s.store, userID, xp)
+	res.LeveledUp = leveled
+	res.NewLevel = lvl
 
 	return res, nil
 }
@@ -562,9 +566,9 @@ func (s *Service) ResolveEscape(userID int64) (*FightResolve, error) {
 		return nil, err
 	}
 
-	charsvc.AddXP(s.store, userID, xp)
+	leveled, lvl := charsvc.AddXP(s.store, userID, xp)
 
-	return &FightResolve{XP: xp, Caught: false}, nil
+	return &FightResolve{XP: xp, Caught: false, LeveledUp: leveled, NewLevel: lvl}, nil
 }
 
 func (s *Service) RollMessageBottle() string {
@@ -609,9 +613,9 @@ func (s *Service) ResolveBottle(userID int64) (*FightResolve, error) {
 		return nil, err
 	}
 
-	charsvc.AddXP(s.store, userID, xp)
+	leveled, lvl := charsvc.AddXP(s.store, userID, xp)
 
-	return &FightResolve{XP: xp, Caught: true, LoreID: loreID, BottleMsg: "fishing.bottle_found"}, nil
+	return &FightResolve{XP: xp, Caught: true, LoreID: loreID, BottleMsg: "fishing.bottle_found", LeveledUp: leveled, NewLevel: lvl}, nil
 }
 
 func (s *Service) AddBait(userID int64, tier BaitTier) error {

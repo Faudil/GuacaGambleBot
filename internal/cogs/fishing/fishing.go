@@ -770,14 +770,18 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 }
 
 func (c *Cog) quietCatchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.MessageEmbed {
+	desc := i18n.T("fishing.quiet_desc", lang, map[string]any{
+		"name":   fishDisplayName(res.ItemName, lang),
+		"weight": itoa(res.Weight),
+		"size":   itoa(res.Size),
+		"xp":     itoa(res.XP),
+	})
+	if res.LeveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
 	return components.Embed(
 		i18n.T("fishing.caught_title", lang),
-		i18n.T("fishing.quiet_desc", lang, map[string]any{
-			"name":   fishDisplayName(res.ItemName, lang),
-			"weight": itoa(res.Weight),
-			"size":   itoa(res.Size),
-			"xp":     itoa(res.XP),
-		}),
+		desc,
 		0x55CC55,
 	)
 }
@@ -816,6 +820,11 @@ func (c *Cog) catchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.M
 		loreText = "\n\n📜 " + i18n.T("fishing.lore_found", lang)
 	}
 
+	lvlText := ""
+	if res.LeveledUp {
+		lvlText = "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
+
 	color := 0xFFD700
 	if res.Mutated {
 		color = 0x00FF00
@@ -830,16 +839,20 @@ func (c *Cog) catchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.M
 			"weight": itoa(res.Weight),
 			"size":   itoa(res.Size),
 			"xp":     itoa(res.XP),
-		})+milestone+loreText,
+		})+milestone+loreText+lvlText,
 		color,
 	)
 	return embed
 }
 
 func (c *Cog) escapeEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.MessageEmbed {
+	desc := i18n.T("fishing.escaped_desc", lang, map[string]any{"xp": itoa(res.XP)})
+	if res.LeveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
 	return components.Embed(
 		i18n.T("fishing.escaped_title", lang),
-		i18n.T("fishing.escaped_desc", lang, map[string]any{"xp": itoa(res.XP)}),
+		desc,
 		0xFF0000,
 	)
 }
@@ -850,6 +863,9 @@ func (c *Cog) bottleEmbed(bottleKey string, res *fishingsvc.FightResolve, lang s
 		desc += "\n\n📜 " + i18n.T("fishing.lore_found", lang)
 	}
 	desc += "\n\n" + i18n.T("fishing.bottle_xp", lang, map[string]any{"xp": itoa(res.XP)})
+	if res.LeveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
 	return components.Embed(
 		i18n.T("fishing.bottle_title", lang),
 		desc,

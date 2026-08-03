@@ -37,19 +37,19 @@ func TestGetCrafterLevelExisting(t *testing.T) {
 
 func TestCraftNoRecipe(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "nonexistent_recipe", 1)
+	_, _, err := svc.Craft(1, "nonexistent_recipe", 1)
 	assert.ErrorIs(t, err, ErrNoRecipe)
 }
 
 func TestCraftLevelTooLow(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "volcano_egg", 1)
+	_, _, err := svc.Craft(1, "volcano_egg", 1)
 	assert.ErrorIs(t, err, ErrNoLevel)
 }
 
 func TestCraftMissingIngredients(t *testing.T) {
 	svc, _ := testService(t)
-	err := svc.Craft(1, "beer", 1)
+	_, _, err := svc.Craft(1, "beer", 1)
 	assert.ErrorIs(t, err, ErrNoIngredients)
 }
 
@@ -63,7 +63,7 @@ func TestCraftSuccess(t *testing.T) {
 	svc, st := testService(t)
 	wheatID := craftSetup(t, st, 1)
 
-	err := svc.Craft(1, "beer", 1)
+	_, _, err := svc.Craft(1, "beer", 1)
 	require.NoError(t, err)
 
 	var inv model.Inventory
@@ -79,7 +79,7 @@ func TestCraftAddsXP(t *testing.T) {
 	svc, st := testService(t)
 	craftSetup(t, st, 2)
 
-	require.NoError(t, svc.Craft(2, "beer", 1))
+	_, _, _ = svc.Craft(2, "beer", 1)
 
 	var job model.Job
 	st.DB.Where("user_id = ? AND job_name = ?", 2, "crafter").First(&job)
@@ -90,7 +90,7 @@ func TestCraftMultiple(t *testing.T) {
 	svc, st := testService(t)
 	wheatID := craftSetup(t, st, 3)
 
-	require.NoError(t, svc.Craft(3, "beer", 3))
+	_, _, _ = svc.Craft(3, "beer", 3)
 
 	var inv model.Inventory
 	st.DB.Where("user_id = ? AND item_id = ?", 3, "beer").First(&inv)
@@ -120,7 +120,7 @@ func TestLevelUpCheckNotEnoughXP(t *testing.T) {
 func TestCraftAddsCharacterXP(t *testing.T) {
 	svc, st := testService(t)
 	craftSetup(t, st, 7)
-	require.NoError(t, svc.Craft(7, "beer", 1))
+	_, _, _ = svc.Craft(7, "beer", 1)
 
 	c, err := st.GetCharacter(7)
 	require.NoError(t, err)

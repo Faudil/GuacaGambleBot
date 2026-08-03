@@ -29,6 +29,8 @@ type TicketResult struct {
 	AddedValue int
 	NewJackpot int
 	Unlocks    []*achievement.Achievement
+	LeveledUp  bool
+	NewLevel   int
 }
 
 type JackpotInfo struct {
@@ -141,7 +143,9 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 		res.NewJackpot = state.Jackpot + s.TicketPrice
 	}
 
-	charsvc.AddXP(s.store, userID, 10)
+	leveled, lvl := charsvc.AddXP(s.store, userID, 10)
+	res.LeveledUp = leveled
+	res.NewLevel = lvl
 	res.Unlocks, _ = achievement.CheckAndUnlock(s.store.DB, userID)
 	return res, nil
 }

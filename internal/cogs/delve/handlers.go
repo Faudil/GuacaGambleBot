@@ -72,11 +72,14 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	// Floor clear XP
 	fxp := delvesvc.FloorClearXP(s.Floor)
-	_, _, _ = c.store.AddCharacterXP(userID, fxp)
+	leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, fxp)
 
 	c.saveSession(s)
 	room := c.nextRoom(s, lang)
 	embed, comps := c.renderRoomWithFallen(s, room, lang)
+	if leveledUp {
+		embed.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
 	c.respond(b, i, embed, comps)
 }
 
@@ -237,10 +240,13 @@ func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if s.Torches > 0 {
 			s.Torches--
 			xp := delvesvc.FloorClearXP(s.Floor)
-			_, _, _ = c.store.AddCharacterXP(userID, xp)
+			leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
 			c.saveSession(s)
 			room := c.nextRoom(s, lang)
 			room.Description = i18n.T("delve.handler.steam_vent_seal", lang, map[string]any{"xp": xp}) + "\n\n" + room.Description
+			if leveledUp {
+				room.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+			}
 			embed, comps := c.renderRoomWithFallen(s, room, lang)
 			c.respond(b, i, embed, comps)
 		} else {

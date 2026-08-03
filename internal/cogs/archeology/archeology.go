@@ -213,6 +213,9 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	var act archsvc.ActionType
 	switch action {
+	case "continue":
+		c.showDigEmbed(b, i, lang, sess.state)
+		return
 	case "dynamite":
 		act = archsvc.ActionDynamite
 	case "hammer":
@@ -248,7 +251,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	cid := i.MessageComponentData().CustomID
-	parts := strings.Split(cid, "::")
+	_, _, rest := components.Decode(cid)
 
 	sess, ok := digSessions[userID]
 	if !ok || sess.state == nil {
@@ -256,17 +259,14 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	if len(parts) < 4 {
+	if len(rest) < 2 {
 		c.showDigEmbed(b, i, lang, sess.state)
 		return
 	}
 
-	actionVal := parts[3]
+	actionVal := rest[0]
 
-	var evtType int
-	if len(parts) >= 5 {
-		evtType, _ = strconv.Atoi(parts[4])
-	}
+	evtType, _ := strconv.Atoi(rest[1])
 
 	evt := &archsvc.DigEvent{Type: archsvc.EventType(evtType)}
 	result := c.svc.ResolveEvent(sess.state, evt, actionVal)
@@ -557,7 +557,7 @@ func outcomeDesc(res *archsvc.DigResult, lang string) string {
 	case "journal":
 		return i18n.T("arch.journal_msg", lang) + "\n" + received
 	default:
-		return i18n.T("arch.success_msg", lang, map[string]any{"item": itemName + qtyStr, "quality": i18n.T("quality_"+res.Quality, lang), "integrity": res.Integrity}) + "\n" + received
+		return i18n.T("arch.success_msg", lang, map[string]any{"item": itemName + qtyStr, "quality": i18n.T("arch.quality_"+res.Quality, lang), "integrity": res.Integrity}) + "\n" + received
 	}
 }
 
@@ -629,7 +629,7 @@ func (c *Cog) onPrefixReanimateList(b *interaction.Bot, s *discordgo.Session, m 
 	desc := ""
 	for rarity, pool := range archsvc.ReanimatePools {
 		count := c.svc.GetFossilCount(userID, pool.ItemName)
-		rarityName := i18n.T("quality_"+rarity, lang)
+		rarityName := i18n.T("arch.quality_"+rarity, lang)
 		desc += i18n.T("arch.reanimate_list_line", lang, map[string]any{
 			"rarity": rarityName,
 			"count":  count,

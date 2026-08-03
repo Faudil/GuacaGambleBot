@@ -279,6 +279,9 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		} else {
 			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
 		}
+		if res.LeveledUp {
+			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+		}
 		if qid := questMsg; qid != "" {
 			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
@@ -338,6 +341,9 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		} else {
 			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
 			color = 0xe74c3c
+		}
+		if res.LeveledUp {
+			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
 		if qid := questMsg; qid != "" {
 			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
@@ -425,6 +431,9 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		} else {
 			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
 		}
+		if res.LeveledUp {
+			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+		}
 		if qid := questMsg; qid != "" {
 			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
 		}
@@ -496,6 +505,9 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		} else {
 			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
 			color = 0xe74c3c
+		}
+		if res.LeveledUp {
+			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
 		if qid := questMsg; qid != "" {
 			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)

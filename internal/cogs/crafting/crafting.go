@@ -79,7 +79,8 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	if err := c.svc.Craft(userID, recipeKey, amount); err != nil {
+	charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, amount)
+	if err != nil {
 		var msg string
 		switch err {
 		case crtsvc.ErrNoLevel:
@@ -108,6 +109,9 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
 		msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
+	}
+	if charLeveled {
+		msg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charNewLevel})
 	}
 
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -278,7 +282,8 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 		return
 	}
 
-	if err := c.svc.Craft(userID, recipeKey, amount); err != nil {
+	charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, amount)
+	if err != nil {
 		switch err {
 		case crtsvc.ErrNoLevel:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_level", lang, map[string]any{"level": crtsvc.Recipes[recipeKey].LevelRequired}))
@@ -305,6 +310,9 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 
 	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
 		msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
+	}
+	if charLeveled {
+		msg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charNewLevel})
 	}
 
 	_, _ = sess.ChannelMessageSend(m.ChannelID, msg)

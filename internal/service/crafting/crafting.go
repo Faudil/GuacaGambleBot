@@ -109,20 +109,20 @@ func (s *Service) GetCrafterLevel(userID int64) int {
 	return job.Level
 }
 
-func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
+func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, error) {
 	recipe, ok := Recipes[recipeKey]
 	if !ok {
-		return ErrNoRecipe
+		return false, 0, ErrNoRecipe
 	}
 	level := s.GetCrafterLevel(userID)
 	if level < recipe.LevelRequired {
-		return ErrNoLevel
+		return false, 0, ErrNoLevel
 	}
 	if !s.isResearchCompleted(userID, recipe.RequiredResearch) {
-		return ErrResearchRequired
+		return false, 0, ErrResearchRequired
 	}
 	if !s.isResearchCompleted(userID, recipe.RequiredResearch2) {
-		return ErrResearchRequired
+		return false, 0, ErrResearchRequired
 	}
 
 	intMult := charsvc.GetINTBonus(s.store, userID)
@@ -223,11 +223,11 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) error {
 		}
 		return nil
 	}); err != nil {
-		return err
+		return false, 0, err
 	}
 
-	charsvc.AddXP(s.store, userID, charXP)
-	return nil
+	leveled, lvl := charsvc.AddXP(s.store, userID, charXP)
+	return leveled, lvl, nil
 }
 
 func (s *Service) LevelUpCheck(userID int64) (bool, int) {
