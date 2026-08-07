@@ -12,7 +12,6 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	rlt "guacagamblebot/internal/service/roulette"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -273,12 +272,13 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 		}
 
-		if qid := c.store.PopQuestCompleted(userID); qid != "" {
-			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, 0xe74c3c)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
 
 		for _, s := range survivors {
 			unlocks, _ := achievement.CheckAndUnlock(b.DB, s.UserID)

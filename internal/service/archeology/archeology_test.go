@@ -12,7 +12,11 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
+	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
@@ -21,7 +25,12 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	require.NoError(t, db.Migrate(d))
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
-	svc := New(s, cfg)
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	svc := New(s, cfg, npcSvc)
 	return svc, s
 }
 

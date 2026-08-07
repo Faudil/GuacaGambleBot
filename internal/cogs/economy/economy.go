@@ -146,11 +146,12 @@ func (c *Cog) onSlashDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.LeveledUp {
 		embed.Description = i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)
@@ -187,8 +188,8 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 	if res.LeveledUp {
 		embed.Description = i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		embed.Description += "\n\n" + questssvc.QuestNotificationMsg(n, lang)
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
@@ -257,12 +258,13 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	fields = append(fields, components.Field(i18n.T("economy.your_balance", lang), "$"+strconv.Itoa(res.NewBalance), false))
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
-	}
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)

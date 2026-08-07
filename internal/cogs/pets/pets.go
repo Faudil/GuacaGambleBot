@@ -1,6 +1,7 @@
 package pets
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -16,9 +17,11 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
@@ -28,7 +31,13 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg, npcSvc)}
 	r.Slash("pets", "Gérer vos familiers", c.onSlashMenu)
 	r.Slash("pet", "Gérer vos familiers", c.onSlashMenu)
 	r.Slash("hatch", "Éclore un œuf de familier", c.onHatchCommand)
@@ -36,17 +45,24 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("pet", c.onPrefixMenu)
 	r.Prefix("hatch", c.onHatchPrefix)
 	r.Component("pets", "menu", c.onMenu)
+	r.Component("pets", "hatch", c.onHatchButton)
 	r.Component("pets", "pet", c.onPetDetail)
-	r.Component("pets", "feed", c.onFeed)
+	r.Component("pets", "feed", c.onFeedMenu)
+	r.Component("pets", "feed_select", c.onFeedSelect)
 	r.Component("pets", "rename_btn", c.onRenameOpen)
 	r.Modal("pets", "rename_submit", c.onRenameSubmit)
 	r.Component("pets", "delete", c.onDelete)
+	r.Component("pets", "delete_confirm", c.onDeleteConfirm)
 	r.Component("pets", "battle", c.onBattleSelect)
 	r.Component("pets", "battle_accept", c.onBattleAccept)
 	r.Component("pets", "battle_decline", c.onBattleDecline)
 	r.Component("pets", "skills", c.onSkillSelect)
 	r.Component("pets", "skill_choose", c.onSkillChoose)
+	r.Component("pets", "activate", c.onPetActivate)
 	r.Component("pets", "interact", c.onInteractionChoice)
+	r.Slash("heal", "Soigner ton familier actif", c.onHealCommand)
+	r.Prefix("heal", c.onHealPrefix)
+	r.Component("pets", "heal", c.onHealButton)
 	r.Slash("artifact", "Gérer votre artefact de familier", c.onArtifactMenu)
 	r.Slash("weekly", "Classement hebdomadaire des familiers", c.onWeeklyLeaderboard)
 	r.Prefix("weekly", c.onWeeklyPrefix)
@@ -80,28 +96,19 @@ func (c *Cog) menu(i *discordgo.InteractionCreate, lang string) (*discordgo.Mess
 
 func (c *Cog) menuFromUser(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	pets, err := c.svc.GetPets(userID)
-	desc := ""
-	if err != nil || len(pets) == 0 {
-		desc = i18n.T("pets.list.no_pets", lang)
-	} else {
-		for _, p := range pets {
-			status := i18n.T("pets.list.inactive", lang)
-			if p.IsActive {
-				status = i18n.T("pets.list.active", lang)
-			}
-			pt := petsvc.PetTypes[p.PetType]
-			emoji := "🐾"
-			if pt != nil {
-				emoji = pt.Emoji
-			}
-			desc += fmt.Sprintf("%s **%s** - %s ID: `%d`\n", emoji, p.Nickname, status, p.ID)
-		}
-	}
-	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": MentionUser(userID)}), desc, 0x2ecc71)
-	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.list.footer", lang)}
+	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": MentionUser(userID)}), "", 0x2ecc71)
 
 	comps := []discordgo.MessageComponent{}
-	if len(pets) > 0 {
+
+	if err != nil || len(pets) == 0 {
+		embed.Description = i18n.T("pets.list.no_pets", lang)
+	} else {
+		lines := make([]string, 0, len(pets))
+		for _, p := range pets {
+			lines = append(lines, c.petCardLine(p, lang))
+		}
+		embed.Description = strings.Join(lines, "\n")
+
 		opts := make([]discordgo.SelectMenuOption, 0, len(pets))
 		for _, p := range pets {
 			pt := petsvc.PetTypes[p.PetType]
@@ -122,12 +129,40 @@ func (c *Cog) menuFromUser(userID int64, lang string) (*discordgo.MessageEmbed, 
 		comps = append(comps, components.ActionRow(
 			discordgo.SelectMenu{
 				CustomID:    components.Encode("pets", "pet"),
-				Placeholder: i18n.T("pets.list.footer", lang),
+				Placeholder: i18n.T("pets.list.select_placeholder", lang),
 				Options:     opts,
 			},
 		))
 	}
+
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("pets.list.hatch_btn", lang), components.Encode("pets", "hatch"), discordgo.SuccessButton),
+	))
+
+	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.list.footer", lang)}
 	return embed, comps
+}
+
+// petCardLine renders a compact one-line card for a pet in the collection.
+func (c *Cog) petCardLine(p model.UserPet, lang string) string {
+	pt := petsvc.PetTypes[p.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+	status := i18n.T("pets.list.inactive", lang)
+	if p.IsActive {
+		status = i18n.T("pets.list.active", lang)
+	}
+	rarityName := i18n.T("rarities."+petsvc.RarityBonus(petTypeRarityValue(p)), lang)
+	hpBar := buildHPBar(p.HP, p.MaxHP)
+
+	line := fmt.Sprintf("%s **%s** %s %s\n", emoji, p.Nickname, status, rarityName)
+	line += fmt.Sprintf("  Lvl %d · %s %d/%d HP", p.Level, hpBar, p.HP, p.MaxHP)
+	if p.SkillPoints > 0 {
+		line += fmt.Sprintf(" · ⚡ %d SP", p.SkillPoints)
+	}
+	return line
 }
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -155,34 +190,83 @@ func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
+	embed, comps := c.petDetail(pet, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// petDetail renders the full pet detail view: stats, skills, history and the
+// management buttons (including activating the pet when it is not active).
+func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	petIDStr := strconv.FormatInt(pet.ID, 10)
 	pt := petsvc.PetTypes[pet.PetType]
 	emoji := "🐾"
 	if pt != nil {
 		emoji = pt.Emoji
 	}
-	rarity := i18n.T("rarities."+petsvc.RarityBonus(petTypeRarity(pet)), lang)
-	personality := petsvc.PersonalityTraits[pet.Personality]
+	rarity := petTypeRarity(pet)
+	rarityName := i18n.T("rarities."+petsvc.RarityBonus(rarity), lang)
+	color := rarityHatchColor(rarity)
 
-	// Build bond bar
-	bondBar := buildBondBar(pet.BondLevel)
-	// Build skills list
+	personality := petsvc.PersonalityTraits[pet.Personality]
+	pTrait := ""
+	if personality != nil {
+		pTrait = i18n.T("pets.personality."+pet.Personality, lang)
+	}
+	title := ""
+	if pet.Title != "" {
+		title = " 🏆 *" + pet.Title + "*"
+	}
+
+	embed := components.Embed(
+		fmt.Sprintf("%s %s%s", emoji, pet.Nickname, title),
+		fmt.Sprintf("%s · %s · Lvl %d", rarityName, pTrait, pet.Level),
+		color,
+	)
+
+	// Combat
+	hpBar := buildHPBar(pet.HP, pet.MaxHP)
+	embed.Fields = append(embed.Fields, components.Field(
+		i18n.T("pets.detail.combat", lang),
+		fmt.Sprintf("HP %s %d/%d\n⚔️ ATK %d · 🛡️ DEF %d · 💨 SPD %d", hpBar, pet.HP, pet.MaxHP, pet.Atk, pet.Defense, pet.Speed),
+		false,
+	))
+
+	// Precision
+	embed.Fields = append(embed.Fields, components.Field(
+		i18n.T("pets.detail.precision", lang),
+		fmt.Sprintf("DGE %d%% · ACC %d%%\nCRIT %d%% / %.1fx", pet.DGE, pet.ACC, pet.CritC, pet.CritD),
+		false,
+	))
+
+	// Progression
+	prog := fmt.Sprintf("XP %d · 🏆 ELO %d\n💕 Bond %s %d/%d\n🍖 Fed %d/%d", pet.XP, pet.Elo, buildBondBar(pet.BondLevel), pet.BondLevel, petsvc.MaxBond, pet.FoodEaten, petsvc.MaxFoodCapacity(pet))
+	if pet.SkillPoints > 0 {
+		prog += fmt.Sprintf("\n⚡ **%d** skill point(s) available!", pet.SkillPoints)
+	}
+	embed.Fields = append(embed.Fields, components.Field(i18n.T("pets.detail.progression", lang), prog, false))
+
+	// Skills
 	skills, _ := c.svc.GetPetSkills(pet.ID)
-	skillStr := ""
 	if len(skills) > 0 {
 		skillLines := make([]string, 0, len(skills))
 		for _, s := range skills {
 			if def, ok := petsvc.AllPetSkills[s.SkillID]; ok {
 				slot := (s.Slot + 1) * 10
-				skillLines = append(skillLines, fmt.Sprintf("  %s **%s** (lvl %d)", def.Emoji, def.Name, slot))
+				skillLines = append(skillLines, fmt.Sprintf("%s **%s** (lvl %d)", def.Emoji, def.Name, slot))
 			}
 		}
 		if len(skillLines) > 0 {
-			skillStr = "\n**Skills:**\n" + strings.Join(skillLines, "\n")
+			embed.Fields = append(embed.Fields, components.Field(
+				i18n.T("pets.detail.skills", lang),
+				strings.Join(skillLines, "\n"),
+				false,
+			))
 		}
 	}
-	// Build history (last 3)
+
+	// History (last 3)
 	hist := c.svc.GetHistory(pet)
-	histStr := ""
 	if len(hist) > 0 {
 		lines := make([]string, 0, 3)
 		start := len(hist) - 3
@@ -196,52 +280,208 @@ func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			lines = append(lines, "📜 "+d)
 		}
-		histStr = "\n**Recent History:**\n" + strings.Join(lines, "\n")
+		embed.Fields = append(embed.Fields, components.Field(
+			i18n.T("pets.detail.history", lang),
+			strings.Join(lines, "\n"),
+			false,
+		))
 	}
 
-	pTrait := ""
-	if personality != nil {
-		pTrait = i18n.T("pets.personality."+pet.Personality, lang)
-	}
-	title := ""
-	if pet.Title != "" {
-		title = " 🏆 *" + pet.Title + "*"
+	// Name button: "Name" when the pet still has its species name, "Rename" otherwise.
+	nameKey := "pets.detail.btn_rename"
+	if pet.Nickname == pet.PetType {
+		nameKey = "pets.detail.btn_name"
 	}
 
-	desc := fmt.Sprintf("**%s** | %s | Lvl %d%s | %s\n\n",
-		rarity, emoji, pet.Level, title, pTrait)
-	desc += fmt.Sprintf("HP: %d/%d | ATK: %d | DEF: %d | SPD: %d\n", pet.HP, pet.MaxHP, pet.Atk, pet.Defense, pet.Speed)
-	desc += fmt.Sprintf("DGE: %d | ACC: %d | CRIT: %d/%0.1f\n", pet.DGE, pet.ACC, pet.CritC, pet.CritD)
-	desc += fmt.Sprintf("ELO: %d | XP: %d\n", pet.Elo, pet.XP)
-	desc += fmt.Sprintf("\n**Bond:** %s %d/%d", bondBar, pet.BondLevel, petsvc.MaxBond)
+	row1 := []discordgo.MessageComponent{
+		components.Button(i18n.T("pets.detail.back", lang), components.Encode("pets", "menu"), discordgo.SecondaryButton),
+		components.Button(i18n.T(nameKey, lang), components.Encode("pets", "rename_btn", petIDStr), discordgo.PrimaryButton),
+		components.Button(i18n.T("pets.detail.btn_feed", lang), components.Encode("pets", "feed", petIDStr), discordgo.SuccessButton),
+		components.Button(i18n.T("pets.detail.btn_battle", lang), components.Encode("pets", "battle", petIDStr), discordgo.DangerButton),
+	}
+	activateBtn := components.Button(i18n.T("pets.detail.btn_activate", lang), components.Encode("pets", "activate", petIDStr), discordgo.PrimaryButton)
+	if pet.IsActive {
+		disabled := components.Button(i18n.T("pets.detail.btn_active", lang), components.Encode("pets", "pet", petIDStr), discordgo.SecondaryButton).(discordgo.Button)
+		disabled.Disabled = true
+		activateBtn = disabled
+	}
+	row1 = append(row1, activateBtn)
+	row2 := []discordgo.MessageComponent{}
 	if pet.SkillPoints > 0 {
-		desc += fmt.Sprintf("\n\n⚡ **%d** skill point(s) available! Use `/pets skills` to choose.", pet.SkillPoints)
+		row2 = append(row2, components.Button(i18n.T("pets.detail.btn_skills", lang), components.Encode("pets", "skills", petIDStr), discordgo.PrimaryButton))
 	}
-	desc += skillStr
-	desc += histStr
+	row2 = append(row2, components.Button(i18n.T("pets.detail.btn_heal", lang), components.Encode("pets", "heal", petIDStr), discordgo.SuccessButton))
+	row2 = append(row2, components.Button("🗑️", components.Encode("pets", "delete", petIDStr), discordgo.SecondaryButton))
 
-	embed := components.Embed(
-		fmt.Sprintf("%s %s", emoji, pet.Nickname),
-		desc,
-		0x3498db,
-	)
+	comps := []discordgo.MessageComponent{components.ActionRow(row1...)}
+	if len(row2) > 0 {
+		comps = append(comps, components.ActionRow(row2...))
+	}
+	return embed, comps
+}
 
-	buttons := []discordgo.MessageComponent{
-		components.Button(i18n.T("pets.rename.success", lang), components.Encode("pets", "rename_btn", petIDStr), discordgo.PrimaryButton),
-		components.Button(i18n.T("pets.feed.miam_title", lang), components.Encode("pets", "feed", petIDStr), discordgo.SuccessButton),
-		components.Button(i18n.T("pets.battle.arena_title", lang), components.Encode("pets", "battle", petIDStr), discordgo.DangerButton),
+// onPetActivate sets the selected pet as the player's active companion.
+func (c *Cog) onPetActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
 	}
-	if pet.SkillPoints > 0 {
-		buttons = append(buttons,
-			components.Button("⚡ Skills", components.Encode("pets", "skills", petIDStr), discordgo.PrimaryButton))
+	petID, err := strconv.ParseInt(rest[0], 10, 64)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
 	}
-	buttons = append(buttons, components.Button("🗑️", components.Encode("pets", "delete", petIDStr), discordgo.SecondaryButton))
-
-	comps := []discordgo.MessageComponent{
-		components.ActionRow(buttons...),
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
 	}
+	if err := c.svc.SetActivePet(userID, petID, interaction.ToInt64(i.GuildID)); err != nil {
+		slog.Error("pets: failed to activate pet", "user", userID, "pet", petID, "error", err)
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+	embed, comps := c.petDetail(pet, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// ─── Healing ───────────────────────────────────────────────────
+
+var errPetOnExpedition = errors.New("pet is on expedition")
+
+// healPet applies the heal flow: expedition/full-HP guards, hospital discount,
+// balance deduction and HP restore. It returns the recovered HP and the price
+// paid (0 when the community hospital makes the heal free).
+func (c *Cog) healPet(pet *model.UserPet, serverID int64) (healed, cost int, err error) {
+	if pet.OnExpedition {
+		return 0, 0, errPetOnExpedition
+	}
+	if pet.HP >= pet.MaxHP {
+		return 0, 0, petsvc.ErrPetAlreadyFullHP
+	}
+	missing := pet.MaxHP - pet.HP
+	cost = petsvc.HealCost(missing, c.getHospitalDiscount(serverID))
+	if err := c.svc.HealPet(pet, cost); err != nil {
+		return 0, cost, err
+	}
+	return missing, cost, nil
+}
+
+// getHospitalDiscount returns the heal cost discount granted by the server's
+// community hospital building (10% per level, capped at 100%).
+func (c *Cog) getHospitalDiscount(serverID int64) int {
+	if serverID == 0 {
+		return 0
+	}
+	var sp model.ServerProject
+	if err := c.store.DB.Where("server_id = ? AND project_id = ?", serverID, "hospital").First(&sp).Error; err != nil {
+		return 0
+	}
+	discount := sp.Level * 10
+	if discount > 100 {
+		discount = 100
+	}
+	return discount
+}
+
+// healErrorMessage translates a heal flow failure into a localized message.
+func (c *Cog) healErrorMessage(lang string, pet *model.UserPet, cost int, err error) string {
+	switch err {
+	case errPetOnExpedition:
+		return i18n.T("pets.heal.on_expedition", lang, map[string]any{"name": pet.Nickname})
+	case petsvc.ErrPetAlreadyFullHP:
+		return i18n.T("pets.heal.full_hp", lang, map[string]any{"name": pet.Nickname})
+	case petsvc.ErrInsufficientFunds:
+		return i18n.T("pets.heal.no_money", lang, map[string]any{"price": cost})
+	}
+	return i18n.T("pets.heal.error", lang)
+}
+
+func (c *Cog) healSuccess(lang string, pet *model.UserPet, healed, cost int) *discordgo.MessageEmbed {
+	return components.Embed("🏥",
+		i18n.T("pets.heal.success", lang, map[string]any{"name": pet.Nickname, "hp": healed, "price": cost}),
+		0x2ecc71)
+}
+
+// onHealCommand heals the caller's active pet via /heal.
+func (c *Cog) onHealCommand(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	pet, err := c.svc.GetActivePet(userID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "hunt.no_pet")
+		return
+	}
+	healed, cost, err := c.healPet(pet, interaction.ToInt64(i.GuildID))
+	if err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: c.healErrorMessage(lang, pet, cost, err),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, c.healSuccess(lang, pet, healed, cost), nil))
+}
+
+// onHealPrefix heals the caller's active pet via !heal.
+func (c *Cog) onHealPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+	pet, err := c.svc.GetActivePet(userID)
+	if err != nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("hunt.no_pet", lang))
+		return
+	}
+	healed, cost, err := c.healPet(pet, interaction.ToInt64(m.GuildID))
+	if err != nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, c.healErrorMessage(lang, pet, cost, err))
+		return
+	}
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, c.healSuccess(lang, pet, healed, cost))
+}
+
+// onHealButton heals the pet shown on the detail view and refreshes the embed.
+func (c *Cog) onHealButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, err := strconv.ParseInt(rest[0], 10, 64)
+	if err != nil {
+		return
+	}
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+	healed, cost, err := c.healPet(pet, interaction.ToInt64(i.GuildID))
+	if err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: c.healErrorMessage(lang, pet, cost, err),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+	embed, comps := c.petDetail(pet, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Content: i18n.T("pets.heal.success", lang, map[string]any{"name": pet.Nickname, "hp": healed, "price": cost}),
+	})
 }
 
 func buildBondBar(level int) string {
@@ -257,6 +497,20 @@ func buildBondBar(level int) string {
 	return bar
 }
 
+func buildHPBar(hp, maxHP int) string {
+	if maxHP <= 0 {
+		return ""
+	}
+	percent := hp * 10 / maxHP
+	if percent < 0 {
+		percent = 0
+	}
+	if percent > 10 {
+		percent = 10
+	}
+	return strings.Repeat("█", percent) + strings.Repeat("░", 10-percent)
+}
+
 func (c *Cog) onRenameOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
@@ -266,8 +520,8 @@ func (c *Cog) onRenameOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	modal := components.ModalResponse(
 		components.Encode("pets", "rename_submit", petID),
-		i18n.T("pets.rename.success", lang),
-		components.TextInput("name", i18n.T("pets.rename.success", lang), true, i18n.T("pets.rename.success", lang), discordgo.TextInputShort, 1, 20),
+		i18n.T("pets.rename.modal_title", lang),
+		components.TextInput("name", i18n.T("pets.rename.input_label", lang), true, i18n.T("pets.rename.input_placeholder", lang), discordgo.TextInputShort, 1, 20),
 	)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
@@ -305,7 +559,7 @@ func (c *Cog) onRenameSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 	})
 }
 
-func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
+func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
@@ -315,62 +569,288 @@ func (c *Cog) onFeed(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	petID, _ := strconv.ParseInt(petIDStr, 10, 64)
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil {
+	if err != nil || pet == nil || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
 
-	ready, _ := c.store.CheckCooldown(pet.UserID, "pet_feed", 5*time.Minute)
-	if !ready {
+	maxFood := petsvc.MaxFoodCapacity(pet)
+	full := petsvc.IsFull(pet)
+
+	var inv []model.Inventory
+	c.store.DB.Where("user_id = ? AND quantity > 0", userID).Find(&inv)
+	opts := make([]discordgo.SelectMenuOption, 0, 25)
+	for _, iv := range inv {
+		def := petsvc.GetFeedItemDef(iv.ItemID)
+		if def == nil {
+			continue
+		}
+		if full && def.CountsToCap {
+			continue
+		}
+		it := items.Get(iv.ItemID)
+		if it == nil {
+			continue
+		}
+		desc := c.feedEffectDesc(def, lang)
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label:       fmt.Sprintf("%s x%d", it.Name, iv.Quantity),
+			Value:       iv.ItemID,
+			Emoji:       &discordgo.ComponentEmoji{Name: it.Emoji},
+			Description: desc,
+		})
+		if len(opts) >= 25 {
+			break
+		}
+	}
+	if len(opts) == 0 {
+		if full {
+			_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: i18n.T("pets.feed.full", lang, map[string]any{
+						"name": pet.Nickname, "current": pet.FoodEaten, "max": maxFood,
+					}),
+					Flags: discordgo.MessageFlagsEphemeral,
+				},
+			})
+			return
+		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "⏳ Your pet was fed recently. Wait a few minutes before feeding again.",
+				Content: i18n.T("pets.feed.no_food", lang, map[string]any{"name": pet.Nickname}),
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
 		return
 	}
 
+	embed := components.Embed(
+		i18n.T("pets.feed.menu_title", lang, map[string]any{"name": pet.Nickname}),
+		i18n.T("pets.feed.menu_desc", lang, map[string]any{"current": pet.FoodEaten, "max": maxFood}),
+		0x2ecc71,
+	)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("🍖 **%s** has been fed! (+5 HP)", pet.Nickname),
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{
+				components.ActionRow(
+					discordgo.SelectMenu{
+						CustomID:    components.Encode("pets", "feed_select", petIDStr),
+						Placeholder: i18n.T("pets.feed.menu_placeholder", lang),
+						Options:     opts,
+					},
+				),
+			},
+			Flags: discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+func (c *Cog) feedEffectDesc(def *petsvc.FeedItemDef, lang string) string {
+	parts := []string{}
+	if def.Stat != "" {
+		parts = append(parts, "+"+strconv.Itoa(def.Amount)+" "+i18n.T("pets.feed.stats."+def.Stat, lang))
+	}
+	if def.Bond > 0 {
+		parts = append(parts, "💕 +"+strconv.Itoa(def.Bond))
+	}
+	return strings.Join(parts, " · ")
+}
+
+func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	data := i.MessageComponentData()
+	if len(data.Values) == 0 {
+		return
+	}
+	itemID := data.Values[0]
+	_, _, rest := components.Decode(data.CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, _ := strconv.ParseInt(rest[0], 10, 64)
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+
+	def := petsvc.GetFeedItemDef(itemID)
+	if def == nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: i18n.T("pets.feed.refuse", lang, map[string]any{
+					"name": pet.Nickname, "item": items.DisplayName(itemID),
+				}),
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	var inv model.Inventory
+	if err := c.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil || inv.Quantity < 1 {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: i18n.T("pets.feed.no_inventory", lang, map[string]any{
+					"name": items.DisplayName(itemID),
+				}),
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	if def.CountsToCap && petsvc.IsFull(pet) {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: i18n.T("pets.feed.full", lang, map[string]any{
+					"name": pet.Nickname, "current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
+				}),
+				Flags: discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+
+	if err := c.store.DB.Exec(
+		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
+		userID, itemID,
+	).Error; err != nil {
+		slog.Error("pets: failed to consume food item", "user", userID, "item", itemID, "error", err)
+		interaction.RespondError(b, i, lang, "pets.feed.error")
+		return
+	}
+
+	fed, err := c.svc.FeedPet(pet, def)
+	if err != nil || !fed {
+		slog.Error("pets: failed to apply feed", "user", userID, "item", itemID, "error", err)
+		interaction.RespondError(b, i, lang, "pets.feed.error")
+		return
+	}
+
+	itemName := items.DisplayName(itemID)
+	content := ""
+	switch {
+	case def.Stat != "" && def.Bond > 0:
+		content = i18n.T("pets.feed.success", lang, map[string]any{
+			"name": pet.Nickname, "item": itemName,
+			"amount": def.Amount, "stat": i18n.T("pets.feed.stats."+def.Stat, lang),
+			"bond": def.Bond, "current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
+		})
+	case def.Stat != "":
+		content = i18n.T("pets.feed.success_raw", lang, map[string]any{
+			"name": pet.Nickname, "item": itemName,
+			"amount": def.Amount, "stat": i18n.T("pets.feed.stats."+def.Stat, lang),
+			"current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
+		})
+	default:
+		content = i18n.T("pets.feed.success_bond", lang, map[string]any{
+			"name": pet.Nickname, "item": itemName, "bond": def.Bond,
+		})
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
-	pet.HP = min(pet.MaxHP, pet.HP+5)
-	c.svc.AddBond(pet, 1)
-	_ = c.svc.UpdatePet(pet)
-	_ = c.store.SetCooldown(pet.UserID, "pet_feed")
+
 	_ = c.store.RecordActivity(userID, "pets_fed", 1)
 
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-			Content: questssvc.QuestCompletedMsg(qid, lang),
-			Flags:   discordgo.MessageFlagsEphemeral,
-		})
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
-	// Check for interaction
 	c.tryInteraction(b, i, pet, "feed")
 }
 
 func (c *Cog) onDelete(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	petIDStr := "0"
 	if len(rest) > 0 {
 		petIDStr = rest[0]
 	}
 	petID, _ := strconv.ParseInt(petIDStr, 10, 64)
-	_ = c.svc.DeletePet(petID)
-	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: "🗑️ Pet deleted.",
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+
+	pt := petsvc.PetTypes[pet.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+	rarityName := i18n.T("rarities."+petsvc.RarityBonus(petTypeRarity(pet)), lang)
+
+	embed := components.Embed(
+		i18n.T("pets.delete.confirm_title", lang),
+		i18n.T("pets.delete.confirm_desc", lang, map[string]any{
+			"emoji": emoji, "name": pet.Nickname, "rarity": rarityName, "level": pet.Level,
+		}),
+		0xe74c3c,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("pets.delete.confirm_btn", lang), components.Encode("pets", "delete_confirm", petIDStr), discordgo.DangerButton),
+			components.Button(i18n.T("pets.delete.cancel_btn", lang), components.Encode("pets", "pet", petIDStr), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onDeleteConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	petIDStr := "0"
+	if len(rest) > 0 {
+		petIDStr = rest[0]
+	}
+	petID, _ := strconv.ParseInt(petIDStr, 10, 64)
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+
+	pt := petsvc.PetTypes[pet.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+
+	if err := c.svc.DeletePet(petID); err != nil {
+		interaction.RespondError(b, i, lang, "pets.delete.error")
+		return
+	}
+	_ = c.store.DB.Where("pet_id = ?", petID).Delete(&model.UserPetSkill{}).Error
+
+	embed := components.Embed(
+		i18n.T("pets.delete.success_title", lang, map[string]any{"name": pet.Nickname}),
+		i18n.T("pets.delete.success_desc", lang, map[string]any{"emoji": emoji, "name": pet.Nickname}),
+		0x2ecc71,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("pets.detail.back", lang), components.Encode("pets", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -582,6 +1062,12 @@ func (c *Cog) onBattleDecline(b *interaction.Bot, i *discordgo.InteractionCreate
 
 // ─── Hatch Command ───────────────────────────────────────────
 
+func (c *Cog) onHatchButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	c.hatchEgg(b, i, userID, lang)
+}
+
 func (c *Cog) onHatchCommand(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -619,32 +1105,60 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		slog.Error("pets: failed to decrement egg inventory", "user", userID, "egg", eggType, "error", err)
 	}
 
-	pt := petsvc.PetTypes[pet.PetType]
-	emoji := "🐾"
-	if pt != nil {
-		emoji = pt.Emoji
-	}
+	rarity := petTypeRarity(pet)
+	rarityKey := petsvc.RarityBonus(rarity)
+	rarityName := i18n.T("rarities."+rarityKey, lang)
+	color := rarityHatchColor(rarity)
+	eggName := localizedEggName(eggType, lang)
+
 	pTrait := petsvc.PersonalityTraits[pet.Personality]
-	traitKey := "pets.personality.brave.name"
+	personality := i18n.T("pets.personality.brave", lang)
 	if pTrait != nil {
-		traitKey = "pets.personality." + pet.Personality + ".name"
+		personality = i18n.T("pets.personality."+pet.Personality, lang)
 	}
-	traitName := i18n.T(traitKey, lang)
 
-	biomeName := i18n.T("biomes."+biome, lang)
-	eggName := items.DisplayName(eggType)
-
-	desc := i18n.T("pets.hatch.success_desc", lang, map[string]any{
-		"emoji": emoji, "pet": pet.Nickname, "type": petType, "personality": traitName, "biome": biomeName, "egg": eggName,
-	})
-
-	embed := components.Embed(
-		i18n.T("pets.hatch.success_title", lang),
-		desc,
-		0xf1c40f,
+	// Step 1 — suspense: the egg trembles (rarity-colored glow).
+	step1 := components.Embed(
+		i18n.T("pets.hatch.hatching_title", lang),
+		i18n.T("pets.hatch.step1", lang, map[string]any{"egg": eggName}),
+		color,
 	)
+	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, step1, nil))
+
+	go func() {
+		time.Sleep(1500 * time.Millisecond)
+
+		// Step 2 — the shell cracks; a personality stirs inside.
+		step2 := components.Embed(
+			i18n.T("pets.hatch.hatching_title", lang),
+			i18n.T("pets.hatch.step2", lang)+"\n\n"+i18n.T("pets.hatch.step2_personality", lang, map[string]any{"personality": personality}),
+			color,
+		)
+		step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(step2, nil))
+
+		time.Sleep(1500 * time.Millisecond)
+
+		// Step 3 — full reveal.
+		emoji := "🐾"
+		if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+			emoji = pt.Emoji
+		}
+		biomeName := i18n.T("biomes."+biome, lang)
+		desc := i18n.T("pets.hatch.success_desc", lang, map[string]any{
+			"emoji": emoji, "pet": pet.Nickname, "type": petType,
+			"personality": personality, "biome": biomeName, "egg": eggName, "rarity": rarityName,
+		})
+		final := components.Embed(
+			i18n.T("pets.hatch.success_title", lang, map[string]any{"emoji": emoji}),
+			desc,
+			color,
+		)
+		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(final, nil))
+	}()
 }
 
 func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message, userID int64, lang string) {
@@ -669,13 +1183,66 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	).Error; err != nil {
 		slog.Error("pets: failed to decrement egg inventory (msg)", "user", userID, "egg", eggType, "error", err)
 	}
-	pt := petsvc.PetTypes[pet.PetType]
+
+	rarity := petTypeRarity(pet)
+	rarityKey := petsvc.RarityBonus(rarity)
+	rarityName := i18n.T("rarities."+rarityKey, lang)
+	color := rarityHatchColor(rarity)
+	eggName := localizedEggName(eggType, lang)
+
+	pTrait := petsvc.PersonalityTraits[pet.Personality]
+	personality := i18n.T("pets.personality.brave", lang)
+	if pTrait != nil {
+		personality = i18n.T("pets.personality."+pet.Personality, lang)
+	}
+
+	// Step 1 — suspense.
+	step1 := components.Embed(
+		i18n.T("pets.hatch.hatching_title", lang),
+		i18n.T("pets.hatch.step1", lang, map[string]any{"egg": eggName}),
+		color,
+	)
+	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, step1)
+
+	time.Sleep(1500 * time.Millisecond)
+
+	// Step 2 — the shell cracks; a personality stirs inside.
+	step2 := components.Embed(
+		i18n.T("pets.hatch.hatching_title", lang),
+		i18n.T("pets.hatch.step2", lang)+"\n\n"+i18n.T("pets.hatch.step2_personality", lang, map[string]any{"personality": personality}),
+		color,
+	)
+	step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, step2)
+
+	time.Sleep(1500 * time.Millisecond)
+
+	// Step 3 — full reveal.
 	emoji := "🐾"
-	if pt != nil {
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
 		emoji = pt.Emoji
 	}
 	biomeName := i18n.T("biomes."+biome, lang)
-	_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.prefix_success", lang, map[string]any{"emoji": emoji, "pet": pet.Nickname, "type": petType, "biome": biomeName}))
+	desc := i18n.T("pets.hatch.success_desc", lang, map[string]any{
+		"emoji": emoji, "pet": pet.Nickname, "type": petType,
+		"personality": personality, "biome": biomeName, "egg": eggName, "rarity": rarityName,
+	})
+	final := components.Embed(
+		i18n.T("pets.hatch.success_title", lang, map[string]any{"emoji": emoji}),
+		desc,
+		color,
+	)
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, final)
+}
+
+func localizedEggName(eggType, lang string) string {
+	key := "items." + eggType + ".name"
+	loc := i18n.T(key, lang)
+	if loc != key {
+		return loc
+	}
+	return items.DisplayName(eggType)
 }
 
 var eggBiomes = map[string]string{
@@ -994,6 +1561,26 @@ func petTypeRarity(pet *model.UserPet) string {
 	return "common"
 }
 
+func petTypeRarityValue(p model.UserPet) string {
+	if pt, ok := petsvc.PetTypes[p.PetType]; ok {
+		return pt.Rarity
+	}
+	return "common"
+}
+
+func rarityHatchColor(rarity string) int {
+	switch rarity {
+	case petsvc.RarityLegendary:
+		return 0xFFD700
+	case petsvc.RarityEpic:
+		return 0x9B59B6
+	case petsvc.RarityRare:
+		return 0x2ECC71
+	default:
+		return 0x95A5A6
+	}
+}
+
 func findInteractionID(choiceID string) string {
 	// Simple lookup: the choice IDs are prefixed by interaction type
 	// We match known prefix patterns
@@ -1009,13 +1596,6 @@ func findInteractionID(choiceID string) string {
 		return id
 	}
 	return "play_time"
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func itoa2(n int) string {

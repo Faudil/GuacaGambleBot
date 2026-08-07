@@ -72,6 +72,7 @@ type UserNPCDailyRep struct {
 	NPCID   string `gorm:"primaryKey;column:npc_id"`
 	DateStr string `gorm:"primaryKey;column:date_str"`
 	Amount  int    `gorm:"default:0"`
+	Chats   int    `gorm:"default:0"`
 }
 
 type UserNPCSecret struct {

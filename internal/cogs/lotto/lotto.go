@@ -11,7 +11,6 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	lottosvc "guacagamblebot/internal/service/lotto"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -113,7 +112,7 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
-	questMsg := c.store.PopQuestCompleted(userID)
+	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	var embed *discordgo.MessageEmbed
 	if res.Win {
@@ -123,9 +122,6 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"jackpot":  res.Jackpot,
 			"new_pot":  res.NewJackpot,
 		})
-		if qid := questMsg; qid != "" {
-			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		if res.LeveledUp {
 			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
@@ -140,9 +136,6 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"added":  res.AddedValue,
 			"total":  res.NewJackpot,
 		})
-		if qid := questMsg; qid != "" {
-			desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		if res.LeveledUp {
 			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
@@ -157,6 +150,10 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_, comps := c.menu(lang, serverID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	if questMsg.QuestID != "" {
+		interaction.SendQuestNotification(b, i, questMsg, lang)
+	}
 
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)

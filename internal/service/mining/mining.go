@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
@@ -24,17 +25,17 @@ type MineItem struct {
 func lootAtDepth(depth int) []MineItem {
 	switch {
 	case depth <= 1:
-		return []MineItem{{"pebble", 1}, {"coal", 5}}
+		return []MineItem{{"pebble", 1}, {"coal", 5}, {"wheat_seed", 2}}
 	case depth <= 3:
-		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}}
+		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}, {"carrot_seed", 7}, {"corn_seed", 5}}
 	case depth == 4:
-		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}}
+		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}, {"potato_seed", 8}, {"tomato_seed", 10}}
 	case depth == 5:
-		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}}
+		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}, {"pumpkin_seed", 15}}
 	case depth <= 7:
-		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}}
+		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}, {"coffee_seed", 25}}
 	case depth <= 9:
-		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}}
+		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}, {"cocoa_seed", 30}}
 	case depth <= 14:
 		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}}
 	case depth <= 19:
@@ -630,12 +631,13 @@ func (s *Service) ApplyEventOption(eventID string, optionIdx int, depth int, bag
 }
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
 }
 
 func (s *Service) GetMinerLevel(userID int64) (int, error) {
@@ -751,6 +753,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 	if depth >= 10 && eRoll <= 1 {
 		_ = s.GrantItem(userID, ancientAlloyItem, 1)
 		easterEgg = &MiningEvent{Type: "ancient_forge", Items: []BagEntry{{Name: ancientAlloyItem, Count: 1}}}
+		s.npcSvc.AddActivityReputation(userID, "mining", 5)
 	} else if depth >= 6 && eRoll <= 3 {
 		easterEgg = &MiningEvent{Type: "ghost_miner", Buff: ghostVeilBuff}
 	} else if depth >= 7 && eRoll <= 6 && !hiddenChamber {
@@ -814,6 +817,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 			}
 		}
 		easterEgg = &MiningEvent{Type: "hidden_chamber", Items: chamberItems}
+		s.npcSvc.AddActivityReputation(userID, "mining", 3)
 		return &DescendResult{Item: nil, Bag: bag, Event: easterEgg, LoreID: loreID}, nil
 	}
 
@@ -863,6 +867,12 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 	var nEvent *NarrativeEvent
 	if rand.Intn(100) < rollEventChance(depth) {
 		nEvent = pickNarrativeEvent(depth)
+	}
+
+	if item.Value >= 50 {
+		s.npcSvc.AddActivityReputation(userID, "mining", 3)
+	} else {
+		s.npcSvc.AddActivityReputation(userID, "mining", 1)
 	}
 
 	return &DescendResult{Item: &item, Bag: bag, Event: easterEgg, NarrativeEvent: nEvent, LoreID: loreID}, nil

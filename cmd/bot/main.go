@@ -44,6 +44,7 @@ import (
 	huntcog "guacagamblebot/internal/cogs/hunt"
 	inventorycog "guacagamblebot/internal/cogs/inventory"
 	itemmanagercog "guacagamblebot/internal/cogs/item_manager"
+	journalcog "guacagamblebot/internal/cogs/journal"
 	jobscog "guacagamblebot/internal/cogs/jobs"
 	leadercog "guacagamblebot/internal/cogs/leaderboard"
 	loancog "guacagamblebot/internal/cogs/loan"
@@ -130,6 +131,7 @@ func main() {
 	helpcog.Register(router, str, cfg)
 	inventorycog.Register(router, str, cfg)
 	itemmanagercog.Register(router, str, cfg)
+	journalcog.Register(router, str, cfg)
 	jobscog.Register(router, str, cfg)
 	leadercog.Register(router, str, cfg)
 	loancog.Register(router, str, cfg)

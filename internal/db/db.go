@@ -97,6 +97,8 @@ func Migrate(db *gorm.DB) error {
 		&model.ActiveBuff{},
 		&model.MarketState{},
 		&model.UserLoreEntry{},
+		&model.UserHuntUnlock{},
+		&model.UserHuntZoneStat{},
 		&model.UserFurniture{},
 		&model.UserResearch{},
 		&model.WeeklyRank{},
@@ -116,5 +118,7 @@ func Migrate(db *gorm.DB) error {
 		&model.VeilRaid{},
 		&model.VeilRaidLockout{},
 		&model.VeilRaidHallOfFame{},
+		&model.UserJournalEntry{},
+		&model.UserJournalMastery{},
 	)
 }

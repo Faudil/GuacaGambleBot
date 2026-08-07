@@ -64,6 +64,10 @@ type NPCData struct {
 	QuipsHighEN  []string
 	QuipsHighFR  []string
 	ShopItems    []ShopItem
+
+	// LinkedActivities are the player activities (e.g. "mining", "fishing",
+	// "gambling") that award small reputation points with this NPC.
+	LinkedActivities []string
 }
 
 func (n *NPCData) Description(lang string) string {

@@ -13,10 +13,10 @@ import (
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	delvesvc "guacagamblebot/internal/service/delve"
 	petsvc "guacagamblebot/internal/service/pets"
-	questssvc "guacagamblebot/internal/service/quests"
 )
 
 func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -95,8 +95,8 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.EndSession(s, "left")
 	c.deleteSession(userID)
 	desc := i18n.T("delve.left_voluntarily", lang)
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
 	}
 	embed := &discordgo.MessageEmbed{
 		Title:       "🌅 " + i18n.T("delve.floor_leave", lang),
@@ -1509,6 +1509,18 @@ func (c *Cog) onGardenHarvest(b *interaction.Bot, i *discordgo.InteractionCreate
 		s.StatusEffects = string(jb)
 		desc = i18n.T("delve.handler.garden_harvest_poison", lang)
 	}
+	if rand.Float64() < 0.25 {
+		seed := randomGardenSeed()
+		c.store.AddItemRaw(c.store.DB, userID, seed, 1)
+		it := items.Get(seed)
+		seedName := seed
+		seedEmoji := "🌱"
+		if it != nil {
+			seedName = it.Name
+			seedEmoji = it.Emoji
+		}
+		desc += "\n\n" + fmt.Sprintf("%s You found a **%s**!", seedEmoji, seedName)
+	}
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
@@ -1540,9 +1552,30 @@ func (c *Cog) onGardenBurn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		c.svc.AddItem(s, loot.Item)
 		desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
 	}
+	if rand.Float64() < 0.30 {
+		seed := randomGardenSeed()
+		c.store.AddItemRaw(c.store.DB, userID, seed, 1)
+		it := items.Get(seed)
+		seedName := seed
+		seedEmoji := "🌱"
+		if it != nil {
+			seedName = it.Name
+			seedEmoji = it.Emoji
+		}
+		desc += "\n\n" + fmt.Sprintf("%s You also found a **%s**!", seedEmoji, seedName)
+	}
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
+}
+
+func randomGardenSeed() string {
+	seeds := []string{
+		"wheat_seed", "corn_seed", "carrot_seed", "potato_seed",
+		"tomato_seed", "pumpkin_seed", "coffee_seed", "cocoa_seed",
+		"strawberry_seed",
+	}
+	return seeds[rand.Intn(len(seeds))]
 }
 
 func (c *Cog) onForgeTemper(b *interaction.Bot, i *discordgo.InteractionCreate) {

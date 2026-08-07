@@ -16,7 +16,6 @@ import (
 	invsvc "guacagamblebot/internal/service/inventory"
 	loresvc "guacagamblebot/internal/service/lore"
 	npcsvc "guacagamblebot/internal/service/npcs"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -603,11 +602,11 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				return
 			}
 			embed := c.quietCatchEmbed(res, lang)
-			if qid := c.store.PopQuestCompleted(userID); qid != "" {
-				embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+			if n, ok := c.store.PopQuestNotification(userID); ok {
+				interaction.SendQuestNotification(b, i, n, lang)
+			}
 			return
 		}
 
@@ -741,11 +740,11 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		delete(sessions, userID)
 		sessionsMu.Unlock()
 		embed := c.catchEmbed(res, lang)
-		if qid := c.store.PopQuestCompleted(userID); qid != "" {
-			embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
 		return
 	}
 

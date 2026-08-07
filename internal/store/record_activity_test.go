@@ -76,3 +76,94 @@ func TestRecordActivityIgnoresCompletedQuest(t *testing.T) {
 	// Recording activity should not error
 	require.NoError(t, s.RecordActivity(1, "items_mined", 5))
 }
+
+func TestRecordActivityPushesStepAdvanceNotification(t *testing.T) {
+	s := newStore(t)
+	s.SetQuestAdvanceFn(func(userID int64, questID string) (bool, string, error) {
+		return false, "quests.day1_strata.step2_transition", nil
+	})
+
+	require.NoError(t, s.CreateQuest(1, "tutorial"))
+	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
+		Updates(map[string]any{
+			"step_index":    1,
+			"progress_value": 0,
+			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+		}).Error)
+
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	n, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.Equal(t, "tutorial", n.QuestID)
+	assert.False(t, n.Completed)
+	assert.Equal(t, "quests.day1_strata.step2_transition", n.NextStepKey)
+
+	_, ok = s.PopQuestNotification(1)
+	assert.False(t, ok, "notification should be consumed")
+}
+
+func TestRecordActivityPushesCompletionNotification(t *testing.T) {
+	s := newStore(t)
+	s.SetQuestAdvanceFn(func(userID int64, questID string) (bool, string, error) {
+		return true, "", nil
+	})
+
+	require.NoError(t, s.CreateQuest(1, "tutorial"))
+	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
+		Updates(map[string]any{
+			"step_index":    1,
+			"progress_value": 0,
+			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+		}).Error)
+
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	n, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.True(t, n.Completed)
+	assert.Equal(t, "tutorial", n.QuestID)
+}
+
+func TestPopQuestNotificationQueuesMultiple(t *testing.T) {
+	s := newStore(t)
+	s.pushQuestNotification(1, QuestNotification{QuestID: "a", Completed: true})
+	s.pushQuestNotification(1, QuestNotification{QuestID: "b", Completed: false, NextStepKey: "k"})
+
+	n1, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.Equal(t, "a", n1.QuestID)
+
+	n2, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.Equal(t, "b", n2.QuestID)
+	assert.Equal(t, "k", n2.NextStepKey)
+
+	_, ok = s.PopQuestNotification(1)
+	assert.False(t, ok)
+}
+
+func TestDailyQuestCompletionGrantsEgg(t *testing.T) {
+	s := newStore(t)
+
+	require.NoError(t, s.CreateQuest(1, "daily_quest"))
+	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "daily_quest").
+		Updates(map[string]any{
+			"step_index":    0,
+			"progress_value": 0,
+			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+		}).Error)
+
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	n, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.True(t, n.Completed)
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "forest_egg").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+}

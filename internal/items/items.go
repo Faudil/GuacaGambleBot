@@ -161,6 +161,18 @@ var all = []Item{
 	{ID: "forget_potion",   Name: "Forget Potion",     Emoji: "🧪", Price: 2500, Description: "Resets your pet to level 10.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "skill_scroll",    Name: "Skill Scroll",      Emoji: "📜", Price: 5000, Description: "Resets all your active pet's learned skills.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "bond_treat",      Name: "Bond Treat",        Emoji: "🍬", Price: 150,  Description: "Increases your active pet's bond level by 5.", EffectType: "consumable", Droppable: false, Category: Food},
+
+	// --- Pet Food (crafted, +1 stat, +1 bond) ---
+	{ID: "warrior_stew",    Name: "Warrior's Stew",    Emoji: "🍲", Price: 100,  Description: "A hearty meat stew that fortifies your pet. +1 ATK.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "stonebread",      Name: "Stonebread",        Emoji: "🍞", Price: 100,  Description: "A dense, mineral-rich loaf. +1 DEF.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "zephyr_berries",  Name: "Zephyr Berries",    Emoji: "🫐", Price: 120,  Description: "Wild berries crackling with wind energy. +1 SPD.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "hunters_soup",    Name: "Hunter's Eye Soup", Emoji: "🥘", Price: 120,  Description: "A sharp-eyed hunter's secret recipe. +1 ACC.", EffectType: "consumable", Droppable: false, Category: Food},
+
+	// --- Pet Potions (crafted, +2 stat, +1 bond) ---
+	{ID: "berserker_elixir", Name: "Berserker Elixir", Emoji: "⚗️", Price: 400, Description: "A volatile brew that awakens raw fury. +2 ATK.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "adamant_tonic",    Name: "Adamant Tonic",    Emoji: "🧪", Price: 400, Description: "Turns the drinker's hide to living stone. +2 DEF.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "gale_draught",     Name: "Gale Draught",     Emoji: "💨", Price: 450, Description: "Tastes like a storm on the tongue. +2 SPD.", EffectType: "consumable", Droppable: false, Category: Food},
+	{ID: "oracles_insight",  Name: "Oracle's Insight", Emoji: "👁️", Price: 450, Description: "A single sip of foresight. +2 ACC.", EffectType: "consumable", Droppable: false, Category: Food},
 	{ID: "personality_mirror", Name: "Personality Mirror", Emoji: "🪞", Price: 7500, Description: "Mysteriously changes your pet's personality.", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "artifact_shard",    Name: "Artifact Shard",    Emoji: "💠", Price: 7500, Description: "Resets your pet artifact, re-rolling all 3 stats.", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "fortune_cookie",  Name: "Fortune Cookie",    Emoji: "🥠", Price: 20,   Description: "A delicious cookie with a premonitory message.", EffectType: "consumable", Droppable: false, Category: Tools},
@@ -198,6 +210,7 @@ var all = []Item{
 	{ID: "tundra_egg",   Name: "Tundra Egg",   Emoji: "🥚", Price: 14000, Description: "An ice-wrapped egg. Type !hatch to open it!", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "volcano_egg",  Name: "Volcano Egg",  Emoji: "🥚", Price: 16000, Description: "A magma-infused egg. Type !hatch to open it!", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "boss_trophy",      Name: "Boss Trophy",       Emoji: "🏆", Price: 10000, Description: "A legendary trophy for defeating the boss.", EffectType: "collectible", Droppable: false, Category: Special},
+	{ID: "mastery_medallion", Name: "Mastery Medallion", Emoji: "🏅", Price: 50000, Description: "Awarded only to those who master every journal path.", EffectType: "collectible", Droppable: false, Category: Special},
 	{ID: "garden_plot",      Name: "Garden Plot",       Emoji: "🌿", Price: 500,   Description: "A patch of fertile soil for growing vegetables.", EffectType: "permanent", Droppable: false, Category: Special},
 	{ID: "tropical_greenhouse", Name: "Tropical Greenhouse", Emoji: "🌿", Price: 1000, Description: "A heated glass structure for coffee and cocoa.", EffectType: "permanent", Droppable: false, Category: Special},
 	{ID: "enchanted_orchard",   Name: "Enchanted Orchard",   Emoji: "🌿", Price: 10000, Description: "A magical floating island. Only legendary fruits grow here.", EffectType: "permanent", Droppable: false, Category: Special},

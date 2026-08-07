@@ -13,26 +13,38 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+// New creates the pets service. npcSvc is optional and only needed for
+// awarding NPC reputation on pet interactions (FeedPet).
+func New(s *store.Store, cfg *config.Config, npcSvc ...*npcsvc.Service) *Service {
+	svc := &Service{store: s, cfg: cfg}
+	if len(npcSvc) > 0 {
+		svc.npcSvc = npcSvc[0]
+	}
+	return svc
 }
 
 func (s *Service) DB() *gorm.DB { return s.store.DB }
 
 const (
-	MaxPetLevel    = 50
-	BasePetSlots   = 3
-	MaxBond        = 100
-	SkillInterval  = 10
-	BondFeedAmount = 1
+	MaxPetLevel   = 50
+	BasePetSlots  = 3
+	MaxBond       = 100
+	SkillInterval = 10
+)
+
+var (
+	ErrPetAlreadyFullHP = errors.New("pet is already at full HP")
+	ErrInsufficientFunds = errors.New("insufficient funds to heal pet")
 )
 
 // ─── Pet CRUD ──────────────────────────────────────────────────
@@ -96,11 +108,15 @@ func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*m
 	if len(serverID) > 0 {
 		sid = serverID[0]
 	}
+	var activeCount int64
+	s.store.DB.Model(&model.UserPet{}).Where("user_id = ? AND is_active = ?", userID, true).Count(&activeCount)
+
 	pet := model.UserPet{
 		UserID:      userID,
 		ServerID:    sid,
 		PetType:     petType,
 		Nickname:    petType,
+		IsActive:    activeCount == 0,
 		MaxHP:       pt.MaxHP,
 		HP:          pt.MaxHP,
 		Atk:         pt.Atk,
@@ -137,11 +153,41 @@ func (s *Service) TransferPet(petID int64, newOwnerID int64) error {
 }
 
 func (s *Service) HealPet(pet *model.UserPet, cost int) error {
-	if _, err := s.store.UpdateBalance(pet.UserID, -cost); err != nil {
-		return err
+	if pet.HP >= pet.MaxHP {
+		return ErrPetAlreadyFullHP
+	}
+	if cost > 0 {
+		bal, err := s.store.GetBalance(pet.UserID)
+		if err != nil {
+			return err
+		}
+		if bal < cost {
+			return ErrInsufficientFunds
+		}
+		if _, err := s.store.UpdateBalance(pet.UserID, -cost); err != nil {
+			return err
+		}
 	}
 	pet.HP = pet.MaxHP
 	return s.UpdatePet(pet)
+}
+
+// HealCost computes the price of healing missingHP HP. The hospital community
+// building reduces the base cost (missingHP/2, minimum 1) by discountPercent,
+// up to a fully free heal at 100%.
+func HealCost(missingHP, discountPercent int) int {
+	if discountPercent >= 100 {
+		return 0
+	}
+	base := missingHP / 2
+	if base < 1 {
+		base = 1
+	}
+	cost := base * (100 - discountPercent) / 100
+	if cost < 1 {
+		cost = 1
+	}
+	return cost
 }
 
 // ─── Pet Capacity ──────────────────────────────────────────────
@@ -361,11 +407,7 @@ func (s *Service) RerollPersonality(pet *model.UserPet) error {
 
 // ─── Feeding ───────────────────────────────────────────────────
 
-func (s *Service) FeedPet(pet *model.UserPet, stat string, amount int) error {
-	rCap := RarityFoodCapacity[petTypeRarity(pet.PetType)]
-	if pet.FoodEaten >= rCap*pet.Level {
-		return nil
-	}
+func applyStat(pet *model.UserPet, stat string, amount int) {
 	switch stat {
 	case "max_hp":
 		pet.MaxHP += amount
@@ -385,9 +427,35 @@ func (s *Service) FeedPet(pet *model.UserPet, stat string, amount int) error {
 	case "crit_d":
 		pet.CritD += float64(amount)
 	}
-	pet.FoodEaten++
-	s.AddBond(pet, BondFeedAmount)
-	return s.UpdatePet(pet)
+}
+
+// FeedPet applies a food item's effect to a pet, gated by the lifetime
+// food capacity (RarityFoodCapacity × level). Returns false if the pet
+// is full and the item counts toward the capacity.
+func (s *Service) FeedPet(pet *model.UserPet, def *FeedItemDef) (bool, error) {
+	if def == nil {
+		return false, nil
+	}
+	if def.CountsToCap {
+		if IsFull(pet) {
+			return false, nil
+		}
+		if def.Stat != "" {
+			applyStat(pet, def.Stat, def.Amount)
+		}
+		pet.FoodEaten++
+	}
+	if def.Bond > 0 {
+		s.AddBond(pet, def.Bond)
+	}
+	if def.Bond >= 5 {
+		if s.npcSvc != nil {
+			s.npcSvc.AddActivityReputation(pet.UserID, "pets", 3)
+		}
+	} else if s.npcSvc != nil {
+		s.npcSvc.AddActivityReputation(pet.UserID, "pets", 1)
+	}
+	return true, s.UpdatePet(pet)
 }
 
 // ─── Forget / Prestige ─────────────────────────────────────────

@@ -23,7 +23,24 @@ type RepaidLender struct {
 // target. Implementations should advance the quest step with proper next-step
 // custom_data. questID is the quest whose step was completed. The bool return
 // indicates whether the quest was fully completed (COMPLETED status).
-type QuestAdvanceFn func(userID int64, questID string) (bool, error)
+// QuestAdvanceFn is called by RecordActivity when an activity step reaches its
+// target. Implementations should advance the quest step with proper next-step
+// custom_data. Returns whether the quest fully completed, plus the i18n text
+// key of the next step (empty when the quest is complete or has no next step).
+type QuestAdvanceFn func(userID int64, questID string) (completed bool, nextStepKey string, err error)
+
+// QuestNotification reports a quest event produced by RecordActivity so cogs
+// can surface it to the user. Completed is true when the whole quest finished,
+// false when only a step advanced (NextStepKey then points at the new objective).
+type QuestNotification struct {
+	QuestID     string
+	Completed   bool
+	NextStepKey string
+}
+
+// JournalAdvanceFn is called by RecordActivity after quest logic so the journal
+// can re-check its milestone checks on any recorded activity.
+type JournalAdvanceFn func(userID int64, stat string, amount int)
 
 // Store is the data-access layer over GORM.
 type Store struct {
@@ -31,15 +48,19 @@ type Store struct {
 	StartingBalance int
 	DefaultPrefix   string
 	questAdvanceFn  QuestAdvanceFn
+	journalFn       JournalAdvanceFn
 
-	questCompleted   map[int64]string // userID -> questID of just-completed quest
-	questCompletedMu sync.Mutex
+	questNotifications   map[int64][]QuestNotification
+	questNotificationsMu sync.Mutex
 }
 
 func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
 
+// SetJournalFn registers the journal advance hook (journal.New wires this).
+func (s *Store) SetJournalFn(fn JournalAdvanceFn) { s.journalFn = fn }
+
 func New(db *gorm.DB, cfg *config.Config) *Store {
-	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix, questCompleted: map[int64]string{}}
+	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix, questNotifications: map[int64][]QuestNotification{}}
 }
 
 // ensureUser creates the user row with the starting balance if missing.
@@ -374,35 +395,57 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 					Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
 					return err
 				}
-				s.pushQuestCompleted(userID, q.QuestID)
+				s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: true})
+				s.grantDailyQuestReward(userID)
 			} else if s.questAdvanceFn != nil {
-				completed, err := s.questAdvanceFn(userID, q.QuestID)
+				completed, nextKey, err := s.questAdvanceFn(userID, q.QuestID)
 				if err != nil {
 					slog.Warn("RecordActivity: questAdvanceFn failed", "quest_id", q.QuestID, "err", err)
-				} else if completed {
-					s.pushQuestCompleted(userID, q.QuestID)
+				} else {
+					s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: completed, NextStepKey: nextKey})
 				}
 			}
 		}
 	}
+	if s.journalFn != nil {
+		s.journalFn(userID, stat, amount)
+	}
 	return nil
 }
 
-func (s *Store) pushQuestCompleted(userID int64, questID string) {
-	s.questCompletedMu.Lock()
-	defer s.questCompletedMu.Unlock()
-	s.questCompleted[userID] = questID
+func (s *Store) pushQuestNotification(userID int64, n QuestNotification) {
+	s.questNotificationsMu.Lock()
+	defer s.questNotificationsMu.Unlock()
+	s.questNotifications[userID] = append(s.questNotifications[userID], n)
 }
 
-// PopQuestCompleted returns the questID of a quest that was just completed by
-// the given user during the last RecordActivity call, or an empty string if no
-// quest was completed. The entry is consumed so subsequent calls return empty.
-func (s *Store) PopQuestCompleted(userID int64) string {
-	s.questCompletedMu.Lock()
-	defer s.questCompletedMu.Unlock()
-	qid := s.questCompleted[userID]
-	delete(s.questCompleted, userID)
-	return qid
+// PopQuestNotification returns the oldest pending quest notification for the
+// user, consuming it. Returns ok=false when nothing is pending.
+func (s *Store) PopQuestNotification(userID int64) (QuestNotification, bool) {
+	s.questNotificationsMu.Lock()
+	defer s.questNotificationsMu.Unlock()
+	q := s.questNotifications[userID]
+	if len(q) == 0 {
+		return QuestNotification{}, false
+	}
+	n := q[0]
+	s.questNotifications[userID] = q[1:]
+	if len(s.questNotifications[userID]) == 0 {
+		delete(s.questNotifications, userID)
+	}
+	return n, true
+}
+
+// grantDailyQuestReward hands out the reward promised by the daily quest
+// completion message (a hatchable egg).
+func (s *Store) grantDailyQuestReward(userID int64) {
+	err := s.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
+	}).Create(&model.Inventory{UserID: userID, ItemID: "forest_egg", Quantity: 1}).Error
+	if err != nil {
+		slog.Error("store: failed to grant daily quest egg", "user", userID, "error", err)
+	}
 }
 
 // CreateQuest creates a new quest entry and its step data for a user.

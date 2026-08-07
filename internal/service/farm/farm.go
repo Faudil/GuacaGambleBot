@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
@@ -101,21 +102,24 @@ type HarvestResult struct {
 }
 
 var (
-	ErrNoSeed      = errors.New("you don't have that seed")
-	ErrOccupied    = errors.New("plot is occupied")
-	ErrNotReady    = errors.New("crop is not ready yet")
+	ErrNoSeed         = errors.New("you don't have that seed")
+	ErrOccupied       = errors.New("plot is occupied")
+	ErrNotReady       = errors.New("crop is not ready yet")
 	ErrAlreadyWatered = errors.New("this plot has already been watered")
-	ErrNoFertilizer= errors.New("you don't have fertilizer")
-	ErrCooldown    = errors.New("please wait before using the farm again")
+	ErrNoFertilizer   = errors.New("you don't have fertilizer")
+	ErrCooldown       = errors.New("please wait before using the farm again")
+	ErrNoCrop         = errors.New("you don't have that crop")
+	ErrNotProcessable = errors.New("that item can't be processed into seeds")
 )
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
 }
 
 func (s *Service) GetPlots(userID int64, zoneKey string) ([]PlotInfo, error) {
@@ -327,6 +331,12 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		return nil, err
 	}
 
+	if mutation {
+		s.npcSvc.AddActivityReputation(userID, "farming", 3)
+	} else {
+		s.npcSvc.AddActivityReputation(userID, "farming", 1)
+	}
+
 	return &HarvestResult{CropName: cropName, Quantity: quantity, XP: xp, Value: value, Mutated: mutation, LeveledUp: leveled, NewLevel: lvl}, nil
 }
 
@@ -524,6 +534,45 @@ func (s *Service) ConsumeItem(userID int64, itemID string, quantity int) bool {
 
 func (s *Service) AddItem(userID int64, itemID string, quantity int) error {
 	return s.store.AddItemRaw(s.store.DB, userID, itemID, quantity)
+}
+
+// SeedForCrop returns the seed item ID that produces the given crop.
+func SeedForCrop(cropName string) (string, bool) {
+	for _, sd := range Seeds {
+		if sd.Crop.Name == cropName {
+			return sd.Name, true
+		}
+	}
+	return "", false
+}
+
+// ConvertToSeeds processes one fruit into 2-4 seeds of the same plant.
+func (s *Service) ConvertToSeeds(userID int64, cropName string) (seedID string, qty int, err error) {
+	ok := false
+	for _, c := range Crops {
+		if c.Name == cropName {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return "", 0, ErrNotProcessable
+	}
+
+	seedID, hasSeed := SeedForCrop(cropName)
+	if !hasSeed {
+		return "", 0, ErrNotProcessable
+	}
+
+	if !s.ConsumeItem(userID, cropName, 1) {
+		return "", 0, ErrNoCrop
+	}
+
+	qty = 2 + rand.Intn(3)
+	if err := s.AddItem(userID, seedID, qty); err != nil {
+		return "", 0, err
+	}
+	return seedID, qty, nil
 }
 
 func (s *Service) getFarmerLevel(userID int64) int {

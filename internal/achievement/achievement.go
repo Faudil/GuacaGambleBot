@@ -11,6 +11,7 @@ type Achievement struct {
 	ID     string
 	Emoji  string
 	Glory  int
+	Hidden bool
 	Check  func(stats map[string]any) bool
 }
 
@@ -33,6 +34,26 @@ func init() {
 	register("pvp_gladiator", "🏟️", 50, func(s map[string]any) bool { return num(s, "pvp_wins") >= 50 })
 	register("pvp_punching_bag", "🩹", 5, func(s map[string]any) bool { return num(s, "pvp_losses") >= 10 })
 	register("pve_hunter", "🌲", 20, func(s map[string]any) bool { return num(s, "pve_wins") >= 25 })
+
+	// Hunt zone discoveries: one per progressive zone.
+	register("hunt_unlock_mountain", "🏔️", 50, func(s map[string]any) bool { return num(s, "hunt_unlocked_mountain") >= 1 })
+	register("hunt_unlock_ocean", "🌊", 100, func(s map[string]any) bool { return num(s, "hunt_unlocked_ocean") >= 1 })
+	register("hunt_unlock_tundra", "❄️", 200, func(s map[string]any) bool { return num(s, "hunt_unlocked_tundra") >= 1 })
+	register("hunt_unlock_volcano", "🌋", 400, func(s map[string]any) bool { return num(s, "hunt_unlocked_volcano") >= 1 })
+
+	// Zone boss kills: first boss of each zone.
+	register("hunt_boss_forest", "🌳", 20, func(s map[string]any) bool { return num(s, "hunt_boss_forest") >= 1 })
+	register("hunt_boss_cave", "👑", 30, func(s map[string]any) bool { return num(s, "hunt_boss_cave") >= 1 })
+	register("hunt_boss_desert", "🦂", 40, func(s map[string]any) bool { return num(s, "hunt_boss_desert") >= 1 })
+	register("hunt_boss_mountain", "🗿", 60, func(s map[string]any) bool { return num(s, "hunt_boss_mountain") >= 1 })
+	register("hunt_boss_ocean", "🐙", 80, func(s map[string]any) bool { return num(s, "hunt_boss_ocean") >= 1 })
+	register("hunt_boss_tundra", "🐺", 120, func(s map[string]any) bool { return num(s, "hunt_boss_tundra") >= 1 })
+	register("hunt_boss_volcano", "🐉", 200, func(s map[string]any) bool { return num(s, "hunt_boss_volcano") >= 1 })
+
+	// Global boss kill milestones.
+	register("hunt_boss_10", "🎯", 50, func(s map[string]any) bool { return num(s, "hunt_boss_total") >= 10 })
+	register("hunt_boss_50", "⚔️", 200, func(s map[string]any) bool { return num(s, "hunt_boss_total") >= 50 })
+	register("hunt_boss_100", "🏆", 500, func(s map[string]any) bool { return num(s, "hunt_boss_total") >= 100 })
 
 	register("eco_1k", "💵", 20, func(s map[string]any) bool { return num(s, "balance") >= 1000 })
 	register("eco_10k", "💸", 50, func(s map[string]any) bool { return num(s, "balance") >= 10000 })
@@ -130,6 +151,20 @@ func init() {
 		func(s map[string]any) bool { return num(s, "lore_count") >= 48 })
 
 	_ = has
+}
+
+// registerHidden registers an achievement that is never auto-unlocked by
+// CheckAndUnlock (its check always fails). Other systems grant it explicitly —
+// the journal service inserts it when a player masters every path.
+func init() {
+	registerHidden("journal_mastery", "🏅", 10000)
+}
+
+func registerHidden(id, emoji string, glory int) {
+	registry[id] = &Achievement{
+		ID: id, Emoji: emoji, Glory: glory, Hidden: true,
+		Check: func(map[string]any) bool { return false },
+	}
 }
 func anyRank(s map[string]any, label string) bool {
 	ranks, ok := s["pet_ranks"].([]string)
@@ -285,6 +320,23 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 	var loreCount int64
 	db.Model(&model.UserLoreEntry{}).Where("user_id = ?", userID).Count(&loreCount)
 	stats["lore_count"] = int(loreCount)
+
+	// Hunt zone unlocks (progressive zones).
+	var unlocks []model.UserHuntUnlock
+	db.Where("user_id = ?", userID).Find(&unlocks)
+	for _, u := range unlocks {
+		stats["hunt_unlocked_"+u.ZoneKey] = 1
+	}
+
+	// Hunt zone boss kills.
+	var zoneStats []model.UserHuntZoneStat
+	db.Where("user_id = ?", userID).Find(&zoneStats)
+	bossTotal := 0
+	for _, zs := range zoneStats {
+		stats["hunt_boss_"+zs.ZoneKey] = zs.BossKills
+		bossTotal += zs.BossKills
+	}
+	stats["hunt_boss_total"] = bossTotal
 
 	return stats, nil
 }

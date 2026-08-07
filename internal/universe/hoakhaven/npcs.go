@@ -5,6 +5,7 @@ import "guacagamblebot/internal/universe"
 var NPCs = map[string]*universe.NPCData{
 	"elara": {
 		ID: "elara", Name: "Elara", Emoji: "\U0001f33f", Color: 0x2ecc71,
+		LinkedActivities: []string{"farming", "pets"},
 
 		DescriptionEN: "Guardian of the village gardens and stables.",
 		DescriptionFR: "Gardienne des jardins du village et des écuries.",
@@ -18,8 +19,8 @@ var NPCs = map[string]*universe.NPCData{
 		ChatEN: "The sprouts are so green today. Don't forget to feed your little companions!",
 		ChatFR: "Les pousses sont si vertes aujourd'hui. N'oubliez pas de nourrir vos petits compagnons !",
 
-		HintEN: "mystery_egg,star_fruit,golden_apple,seeds,berries",
-		HintFR: "mystery_egg,star_fruit,golden_apple,seeds,berries",
+		HintEN: "forest_egg,star_fruit,golden_apple,seeds,berries",
+		HintFR: "forest_egg,star_fruit,golden_apple,seeds,berries",
 
 		GreetingsEN: []string{"Hello. Take care of the land and animals.", "Happy to see you. My plants are thriving.", "Hello dear friend! Nature itself sings in your presence."},
 		GreetingsFR: []string{"Bonjour. Prends soin de la terre et des animaux.", "Ravie de te voir. Mes plantes poussent à merveille.", "Bonjour cher ami ! La nature elle-même chante en ta présence."},
@@ -58,7 +59,7 @@ var NPCs = map[string]*universe.NPCData{
 
 		ShopItems: []universe.ShopItem{
 			{ItemID: "basic_seeds", MinLevel: 1, RepCost: 10, CoinCost: 50, Emoji: "🌱", LabelEN: "Basic Seeds", LabelFR: "Graines de Base"},
-			{ItemID: "mystery_egg", MinLevel: 2, RepCost: 50, CoinCost: 500, Emoji: "🥚", LabelEN: "Mystery Egg", LabelFR: "Œuf Mystère"},
+			{ItemID: "forest_egg", MinLevel: 2, RepCost: 50, CoinCost: 500, Emoji: "🥚", LabelEN: "Forest Egg", LabelFR: "Œuf de Forêt"},
 			{ItemID: "star_fruit", MinLevel: 3, RepCost: 100, CoinCost: 2000, Emoji: "⭐", LabelEN: "Star Fruit", LabelFR: "Fruit Étoile"},
 			{ItemID: "golden_apple", MinLevel: 4, RepCost: 200, CoinCost: 5000, Emoji: "🍎", LabelEN: "Golden Apple", LabelFR: "Pomme Dorée"},
 			{ItemID: "phoenix_berry", MinLevel: 5, RepCost: 500, CoinCost: 20000, Emoji: "🔴", LabelEN: "Phoenix Berry", LabelFR: "Baie de Phénix"},
@@ -66,6 +67,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"thorek": {
 		ID: "thorek", Name: "Thorek", Emoji: "\u26cf\ufe0f", Color: 0xe67e22,
+		LinkedActivities: []string{"mining"},
 
 		DescriptionEN: "Village blacksmith and miner.",
 		DescriptionFR: "Forgeron et mineur du village.",
@@ -127,6 +129,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"irian": {
 		ID: "irian", Name: "Irian", Emoji: "\U0001f3a3", Color: 0x3498db,
+		LinkedActivities: []string{"fishing", "hunting"},
 
 		DescriptionEN: "Veteran fisherman and guardian of the docks.",
 		DescriptionFR: "Pêcheur vétéran et gardien des quais.",
@@ -313,6 +316,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"gamblebot": {
 		ID: "gamblebot", Name: "GambleBot", Emoji: "\U0001f916", Color: 0xf1c40f,
+		LinkedActivities: []string{"gambling"},
 
 		DescriptionEN: "A state-of-the-art robot dealer.",
 		DescriptionFR: "Un croupier robot de pointe.",

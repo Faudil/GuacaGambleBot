@@ -12,7 +12,6 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	bjsvc "guacagamblebot/internal/service/blackjack"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -354,11 +353,8 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 
 	for _, uid := range []int64{gs.Player1ID, gs.Player2ID} {
 		_ = c.store.RecordActivity(uid, "casino_games_played", 1)
-		if qid := c.store.PopQuestCompleted(uid); qid != "" {
-			_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-				Content: questssvc.QuestCompletedMsg(qid, lang),
-				Flags:   discordgo.MessageFlagsEphemeral,
-			})
+		if n, ok := c.store.PopQuestNotification(uid); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
 		}
 		unlocks, _ := achievement.CheckAndUnlock(b.DB, uid)
 		if len(unlocks) > 0 {

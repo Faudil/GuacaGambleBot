@@ -13,9 +13,11 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	archsvc "guacagamblebot/internal/service/archeology"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/items"
-	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 var digSessions = map[int64]*digSession{}
@@ -32,7 +34,13 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg, npcSvc)}
 	r.Slash("dig", "Archaeology fossil excavation", c.onSlashMenu)
 	r.Prefix("dig", c.onPrefixMenu)
 	r.Prefix("arch", c.onPrefixMenu)
@@ -191,7 +199,7 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	cid := i.MessageComponentData().CustomID
-	_, action, rest := components.Decode(cid)
+	_, _, rest := components.Decode(cid)
 
 	sess, ok := digSessions[userID]
 	if !ok || sess.state == nil || sess.state.Finished {
@@ -199,7 +207,14 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	if action == "scan" {
+	if len(rest) < 1 {
+		interaction.RespondError(b, i, lang, "arch.error")
+		return
+	}
+
+	actionName := rest[0]
+
+	if actionName == "scan" {
 		outcome := c.svc.ApplyAction(sess.state, archsvc.ActionScan)
 		if outcome.Finished {
 			result := c.svc.Resolve(sess.state)
@@ -212,7 +227,7 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	var act archsvc.ActionType
-	switch action {
+	switch actionName {
 	case "continue":
 		c.showDigEmbed(b, i, lang, sess.state)
 		return
@@ -227,7 +242,6 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	_ = rest
 	outcome := c.svc.ApplyAction(sess.state, act)
 
 	evt := c.svc.RollEvent(sess.state)
@@ -363,8 +377,8 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		)
 	}
 
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
 	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)

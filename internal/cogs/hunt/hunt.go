@@ -1,6 +1,9 @@
 package hunt
 
 import (
+	"fmt"
+	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -13,20 +16,31 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
 	huntsvc "guacagamblebot/internal/service/hunt"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
 	store *store.Store
 	cfg   *config.Config
 	svc   *huntsvc.Service
+	qsvc  *questssvc.Service
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: huntsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: huntsvc.New(s, cfg, npcSvc), qsvc: questssvc.New(s, cfg)}
 	r.Slash("hunt", "Pet hunting expedition", c.onSlashMenu)
 	r.Prefix("hunt", c.onPrefixMenu)
 	r.Component("hunt", "menu", c.onMenu)
@@ -35,38 +49,63 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
 
-func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	desc := i18n.T("hunt.dashboard_desc", lang, nil)
+	if maxPerDay := c.cfg.HuntMaxPerDay; maxPerDay > 0 {
+		_, remaining, _ := c.store.CheckGameLimit(userID, "hunt", maxPerDay)
+		desc += "\n\n" + i18n.T("hunt.remaining", lang, map[string]any{"remaining": remaining, "max": maxPerDay})
+	}
 	embed := components.Embed(
 		i18n.T("hunt.dashboard_title", lang),
-		i18n.T("hunt.dashboard_desc", lang, nil),
+		desc,
 		0x0000FF,
 	)
-	for _, zone := range huntsvc.Zones {
+	progress, _ := c.store.GetZoneProgress(userID)
+	zones := sortedZoneKeys()
+	for _, key := range zones {
+		zone := huntsvc.Zones[key]
 		name := i18n.T("hunt."+zone.Key, lang)
 		rangeStr := i18n.T("hunt.level_range", lang, map[string]any{"min": zone.LevelMin, "max": zone.LevelMax})
 		embed.Fields = append(embed.Fields, components.Field(zone.Emoji+" "+name, rangeStr, true))
 	}
-	opts := make([]discordgo.SelectMenuOption, 0, len(huntsvc.Zones))
-	for _, zone := range huntsvc.Zones {
+	opts := make([]discordgo.SelectMenuOption, 0, len(zones))
+	for _, key := range zones {
+		zone := huntsvc.Zones[key]
 		name := i18n.T("hunt."+zone.Key, lang)
-		rangeStr := "Lvl " + itoa(zone.LevelMin) + "-" + itoa(zone.LevelMax)
+		rangeStr := i18n.T("hunt.level_range", lang, map[string]any{"min": zone.LevelMin, "max": zone.LevelMax})
+		if !huntsvc.FirstZones[key] {
+			access, _ := c.svc.HasZoneAccess(userID, key)
+			if !access {
+				req := huntsvc.ZoneUnlockRequirements[key]
+				prev := huntsvc.Zones[req.Previous]
+				prevName := i18n.T("hunt."+prev.Key, lang)
+				rangeStr = i18n.T("hunt.zone_locked_progress", lang, map[string]any{
+					"current": progress[req.Previous],
+					"required": req.RequiredWins,
+					"prev_emoji": prev.Emoji,
+					"prev_name": prevName,
+				})
+			}
+		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label:       zone.Emoji + " " + name,
-			Value:       zone.Key,
+			Value:       key,
 			Description: rangeStr,
 		})
 	}
@@ -84,7 +123,8 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -106,10 +146,31 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if err != nil {
 		switch err {
 		case huntsvc.ErrNoPet:
-			interaction.RespondError(b, i, lang, "hunt.no_pet")
+			if granted, _ := c.qsvc.EnsureTutorialEgg(userID); granted {
+				interaction.RespondError(b, i, lang, "quests.tutorial_egg_granted")
+			} else {
+				interaction.RespondError(b, i, lang, "hunt.no_pet")
+			}
 		case huntsvc.ErrPetKO:
 			interaction.RespondError(b, i, lang, "hunt.pet_ko")
+		case huntsvc.ErrHuntLimit:
+			c.respondErrorParams(b, i, lang, "hunt.limit_reached", map[string]any{"max": c.huntMaxPerDay()})
+		case huntsvc.ErrHuntCooldown:
+			c.respondErrorParams(b, i, lang, "hunt.cooldown", map[string]any{"seconds": c.huntCooldownSeconds()})
+		case huntsvc.ErrZoneLocked:
+			req, ok := huntsvc.ZoneUnlockRequirements[zoneKey]
+			if !ok {
+				interaction.RespondError(b, i, lang, "hunt.error")
+				break
+			}
+			prev := huntsvc.Zones[req.Previous]
+			c.respondErrorParams(b, i, lang, "hunt.zone_locked_error", map[string]any{
+				"required": req.RequiredWins,
+				"prev_emoji": prev.Emoji,
+				"prev_name": i18n.T("hunt."+prev.Key, lang),
+			})
 		default:
+			slog.Error("hunt failed", "user", userID, "zone", zoneKey, "error", err)
 			interaction.RespondError(b, i, lang, "hunt.error")
 		}
 		return
@@ -117,48 +178,17 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	psvc := petsvc.New(c.store, c.cfg)
 	pet, _ := psvc.GetActivePet(userID)
-	if pet != nil {
-		ready, _ := c.store.CheckCooldown(userID, "pet_interaction", 180*time.Minute)
-		if ready {
-			ir := petsvc.MaybeTriggerInteraction(pet, "hunt")
-			if ir != nil {
-				intro := i18n.T(ir.IntroKey(pet.Personality), lang)
-				if intro == ir.IntroKey(pet.Personality) {
-					intro = i18n.T(ir.GenericIntroKey(), lang)
-				}
-				opts := make([]discordgo.SelectMenuOption, 0, len(ir.Choices))
-				for _, ch := range ir.Choices {
-					label := i18n.T(ch.ChoiceLabelKey(), lang)
-					if label == ch.ChoiceLabelKey() {
-						label = ch.ID
-					}
-					opts = append(opts, discordgo.SelectMenuOption{
-						Label: ch.Emoji + " " + label,
-						Value: ch.ID,
-					})
-				}
-				if len(opts) > 0 {
-					embed := components.Embed(
-						i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
-						intro, 0x9b59b6)
-					_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-						Embeds: []*discordgo.MessageEmbed{embed},
-						Components: []discordgo.MessageComponent{
-							components.ActionRow(
-								discordgo.SelectMenu{
-									CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
-									Placeholder: i18n.T("pets.interact.placeholder", lang),
-									Options:     opts,
-								},
-							),
-						},
-						Flags: discordgo.MessageFlagsEphemeral,
-					})
-				}
-			}
+
+	var artifactLeveled bool
+	var unlockedZone string
+	if res.PlayerWon {
+		if next, err := c.svc.RecordHuntWin(userID, zoneKey); err == nil && next != "" {
+			unlockedZone = next
+		}
+		if res.IsBoss {
+			_, _ = c.svc.RecordZoneBossKill(userID, zoneKey)
 		}
 	}
-	var artifactLeveled bool
 	if pet != nil && res.XP > 0 {
 		lvlRes := psvc.AddXP(pet, res.XP)
 		if lvlRes.Leveled {
@@ -168,11 +198,18 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if res.PlayerWon {
 			psvc.AddBond(pet, 1)
 			psvc.RecordHistory(pet, "hunt_win",
-				"⚔️ **"+pet.Nickname+"** won a fight in the **"+zoneKey+"** zone and earned **"+itoa(res.XP)+" XP**.")
+				i18n.T("hunt.history_win", lang, map[string]any{
+					"pet":  pet.Nickname,
+					"zone": i18n.T("hunt."+huntsvc.Zones[zoneKey].Key, lang),
+					"xp":   res.XP,
+				}))
 		} else {
 			psvc.AddBond(pet, 1)
 			psvc.RecordHistory(pet, "hunt_loss",
-				"😰 **"+pet.Nickname+"** was defeated while hunting in the **"+zoneKey+"** zone...")
+				i18n.T("hunt.history_loss", lang, map[string]any{
+					"pet":  pet.Nickname,
+					"zone": i18n.T("hunt."+huntsvc.Zones[zoneKey].Key, lang),
+				}))
 		}
 		psvc.UpdatePet(pet)
 		_, artifactLeveled, _ = psvc.AddArtifactXP(userID, petsvc.ArtifactHuntXP)
@@ -180,59 +217,266 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	zone := huntsvc.Zones[zoneKey]
 	zoneName := i18n.T("hunt."+zone.Key, lang)
-	color := 0x00FF00
-	desc := ""
 
-	if res.PlayerWon {
-		color = 0xFFD700
-		desc = i18n.T("hunt.victory_msg", lang, map[string]any{"pet": "Your pet", "xp": res.XP})
-		if len(res.Loot) > 0 {
-			lootNames := make([]string, len(res.Loot))
-			for i, loot := range res.Loot {
-				lootNames[i] = items.DisplayName(loot)
-			}
-			desc += "\n\n" + i18n.T("hunt.loot_found", lang) + strings.Join(lootNames, ", ")
+	petEmoji := "🐾"
+	if pet != nil {
+		if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+			petEmoji = pt.Emoji
 		}
-	} else if res.EnemyWon {
-		color = 0xFF0000
-		desc = i18n.T("hunt.defeat_msg", lang, map[string]any{"pet": "Your pet", "xp": res.XP})
+	}
+	enemyName := i18n.T("hunt.enemies."+res.EnemyName, lang)
+	if enemyName == "hunt.enemies."+res.EnemyName {
+		enemyName = res.EnemyName
+	}
+	if res.IsBoss {
+		enemyName += " " + i18n.T("hunt.boss_tag", lang)
 	} else {
-		color = 0xFFA500
-		desc = i18n.T("hunt.flee_msg", lang, map[string]any{"xp": res.XP})
+		enemyName += i18n.T("hunt.wild_suffix", lang)
 	}
-
-	if res.LeveledUp {
-		desc += "\n\n" + i18n.T("hunt.level_up", lang, map[string]any{"pet": "Your pet", "level": res.NewLevel})
+	petName := i18n.T("hunt.your_pet", lang)
+	if pet != nil {
+		petName = pet.Nickname
 	}
-	if res.CharLeveledUp {
-		desc += "\n\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.CharNewLevel})
-	}
-	if artifactLeveled {
-		desc += "\n\n" + i18n.T("pets.artifact.level_up", lang)
-	}
-
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-	}
-
-	embed := components.Embed(
-		i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zone.Emoji, "name": zoneName}),
-		desc,
-		color,
-	)
 
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("hunt.back", lang), components.Encode("hunt", "menu"), discordgo.SecondaryButton),
 		),
 	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, back))
 
-	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
-	if uerr == nil && len(unlocks) > 0 {
-		interaction.SendAchievements(b, i, lang, unlocks)
+	if len(res.Log) == 0 {
+		desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
+		emb := components.Embed(
+			i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zone.Emoji, "name": zoneName}),
+			desc, 0xFFA500,
+		)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, emb, back))
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
+		return
 	}
+
+	// Spawn frame: replace the zone menu with the encounter.
+	spawn := c.battleFrame(res.PetStartHP, res.EnemyMaxHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
+		petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
+		i18n.T("hunt.enemy_spawn", lang, map[string]any{"name": enemyName}), lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, spawn, nil))
+
+	// Animate the fight, then show the result.
+	go func() {
+		time.Sleep(1200 * time.Millisecond)
+		journal := make([]string, 0, 5)
+		for _, e := range res.Log {
+			journal = append(journal, c.journalLine(e, lang))
+			if len(journal) > 5 {
+				journal = journal[len(journal)-5:]
+			}
+			frame := c.battleFrame(e.PetHP, e.EnemyHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
+				petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
+				i18n.T("hunt.battle_journal", lang)+strings.Join(journal, "\n"), lang)
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, nil))
+			time.Sleep(1200 * time.Millisecond)
+		}
+
+		footerKey := "hunt.end_footer"
+		color := 0xFFA500
+		if res.PlayerWon {
+			color = 0xFFD700
+			footerKey = "hunt.victory_footer"
+		} else if res.EnemyWon {
+			color = 0xFF0000
+			footerKey = "hunt.defeat_footer"
+		}
+		desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
+		final := c.battleFrame(res.PetHP, res.EnemyHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
+			petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
+			i18n.T("hunt.battle_journal", lang)+strings.Join(journal, "\n")+desc, lang)
+		final.Color = color
+		final.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T(footerKey, lang)}
+		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(final, back))
+
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
+
+		c.maybePetInteraction(b, i, pet, lang)
+		unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
+		if uerr == nil && len(unlocks) > 0 {
+			interaction.SendAchievements(b, i, lang, unlocks)
+		}
+	}()
+}
+
+// battleFrame renders one fight frame: pet vs enemy with live HP bars.
+func (c *Cog) battleFrame(petHP, enemyHP int, enemyEmoji, enemyName string, enemyLevel int,
+	petEmoji, petName string, petLevel, petMaxHP, enemyMaxHP int, zoneEmoji, zoneName, desc, lang string) *discordgo.MessageEmbed {
+	emb := components.Embed(
+		i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zoneEmoji, "name": zoneName}),
+		desc,
+		0x0000FF,
+	)
+	emb.Fields = append(emb.Fields,
+		components.Field(
+			fmt.Sprintf("%s %s (Niv %d)", petEmoji, petName, petLevel),
+			fmt.Sprintf("PV : %s\n`%d / %d`", huntHPBar(petHP, petMaxHP), petHP, petMaxHP),
+			true,
+		),
+		components.Field(i18n.T("hunt.vs", lang), "⚡", true),
+		components.Field(
+			fmt.Sprintf("%s %s (Niv %d)", enemyEmoji, enemyName, enemyLevel),
+			fmt.Sprintf("PV : %s\n`%d / %d`", huntHPBar(enemyHP, enemyMaxHP), enemyHP, enemyMaxHP),
+			true,
+		),
+	)
+	return emb
+}
+
+func (c *Cog) journalLine(e huntsvc.BattleLogEntry, lang string) string {
+	key := "pet_combat.hit_msg"
+	if e.Crit {
+		key = "pet_combat.crit_msg"
+	}
+	return i18n.T(key, lang, map[string]any{
+		"attacker_emoji": e.AttackerEmoji,
+		"attacker":       e.AttackerName,
+		"dmg":            e.Damage,
+	})
+}
+
+// resultDesc builds the post-fight summary (loot, XP, level-ups, quest note).
+func (c *Cog) resultDesc(res *huntsvc.BattleResult, petName, lang string, artifactLeveled bool, userID int64, unlockedZone string) string {
+	desc := ""
+	if res.PlayerWon {
+		desc = i18n.T("hunt.victory_msg", lang, map[string]any{"pet": petName, "xp": res.XP})
+		if res.IsBoss {
+			desc += i18n.T("hunt.boss_defeated", lang)
+		}
+		if len(res.Loot) > 0 {
+			lootNames := make([]string, len(res.Loot))
+			for i, loot := range res.Loot {
+				lootNames[i] = items.DisplayName(loot)
+			}
+			desc += "\n\n" + i18n.T("hunt.loot_found", lang) + strings.Join(lootNames, ", ")
+		} else {
+			desc += i18n.T("hunt.no_loot", lang)
+		}
+	} else if res.EnemyWon {
+		desc = i18n.T("hunt.defeat_msg", lang, map[string]any{"pet": petName, "xp": res.XP})
+	} else {
+		desc = i18n.T("hunt.flee_msg", lang, map[string]any{"xp": res.XP})
+	}
+
+	if res.LeveledUp {
+		desc += "\n\n" + i18n.T("hunt.level_up", lang, map[string]any{"pet": petName, "level": res.NewLevel})
+	}
+	if res.CharLeveledUp {
+		desc += "\n\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.CharNewLevel})
+	}
+	if artifactLeveled {
+		desc += "\n\n" + i18n.T("artifact.level_up", lang)
+	}
+	if unlockedZone != "" {
+		uz := huntsvc.Zones[unlockedZone]
+		desc += "\n\n" + i18n.T("hunt.zone_unlocked", lang, map[string]any{
+			"emoji": uz.Emoji,
+			"name":  i18n.T("hunt."+uz.Key, lang),
+		})
+	}
+	return desc
+}
+
+// maybePetInteraction triggers a pet personality interaction when one is ready.
+func (c *Cog) maybePetInteraction(b *interaction.Bot, i *discordgo.InteractionCreate, pet *model.UserPet, lang string) {
+	if pet == nil {
+		return
+	}
+	ready, _ := c.store.CheckCooldown(interaction.ToInt64(interaction.UserID(i)), "pet_interaction", 180*time.Minute)
+	if !ready {
+		return
+	}
+	ir := petsvc.MaybeTriggerInteraction(pet, "hunt")
+	if ir == nil {
+		return
+	}
+	intro := i18n.T(ir.IntroKey(pet.Personality), lang)
+	if intro == ir.IntroKey(pet.Personality) {
+		intro = i18n.T(ir.GenericIntroKey(), lang)
+	}
+	opts := make([]discordgo.SelectMenuOption, 0, len(ir.Choices))
+	for _, ch := range ir.Choices {
+		label := i18n.T(ch.ChoiceLabelKey(), lang)
+		if label == ch.ChoiceLabelKey() {
+			label = ch.ID
+		}
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label: ch.Emoji + " " + label,
+			Value: ch.ID,
+		})
+	}
+	if len(opts) == 0 {
+		return
+	}
+	embed := components.Embed(
+		i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
+		intro, 0x9b59b6)
+	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Embeds: []*discordgo.MessageEmbed{embed},
+		Components: []discordgo.MessageComponent{
+			components.ActionRow(
+				discordgo.SelectMenu{
+					CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
+					Placeholder: i18n.T("pets.interact.placeholder", lang),
+					Options:     opts,
+				},
+			),
+		},
+		Flags: discordgo.MessageFlagsEphemeral,
+	})
+}
+
+// huntMaxPerDay returns the configured daily hunt limit (0 means no limit).
+func (c *Cog) huntMaxPerDay() int {
+	if c.cfg != nil {
+		return c.cfg.HuntMaxPerDay
+	}
+	return 0
+}
+
+// huntCooldownSeconds returns the configured cooldown between hunts.
+func (c *Cog) huntCooldownSeconds() int {
+	if c.cfg != nil {
+		return c.cfg.HuntCooldownSeconds
+	}
+	return 0
+}
+
+// respondErrorParams replies with an ephemeral error message using i18n params.
+func (c *Cog) respondErrorParams(b *interaction.Bot, i *discordgo.InteractionCreate, lang, key string, params map[string]any) {
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: i18n.T(key, lang, params),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+// huntHPBar renders a 10-block HP bar like the pets cog (█ filled / ░ empty).
+func huntHPBar(hp, maxHP int) string {
+	if maxHP <= 0 {
+		return strings.Repeat("░", 10)
+	}
+	pct := hp * 10 / maxHP
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 10 {
+		pct = 10
+	}
+	return strings.Repeat("█", pct) + strings.Repeat("░", 10-pct)
 }
 
 func itoa(n int) string {
@@ -245,4 +489,16 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return out
+}
+
+// sortedZoneKeys returns the hunt zone map keys ordered by ascending level range.
+func sortedZoneKeys() []string {
+	keys := make([]string, 0, len(huntsvc.Zones))
+	for k := range huntsvc.Zones {
+		keys = append(keys, k)
+	}
+	slices.SortFunc(keys, func(a, b string) int {
+		return huntsvc.Zones[a].LevelMin - huntsvc.Zones[b].LevelMin
+	})
+	return keys
 }

@@ -249,7 +249,18 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	houseType := rest[0]
 	if err := c.hsvc.BuyHouse(userID, houseType); err != nil {
-		interaction.RespondError(b, i, lang, "housing.no_money")
+		price := 0
+		if ht := housingsvc.Houses[houseType]; ht != nil {
+			price = ht.Price
+		}
+		msg := i18n.T("housing.no_money", lang, map[string]any{"price": price})
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
 		return
 	}
 	houseName := i18n.T("housing.types."+houseType, lang)

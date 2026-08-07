@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/model"
 	mktsvc "guacagamblebot/internal/service/market"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
@@ -36,6 +37,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("market", "select", c.onSelectItem)
 	r.Component("market", "filter", c.onFilter)
 	r.Component("market", "nav", c.onNav)
+	r.Component("market", "action", c.onActionChoice)
 	r.Modal("market", "order", c.onOrderModal)
 }
 
@@ -276,12 +278,56 @@ func (c *Cog) onSelectItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	modal := components.ModalResponse(
-		components.Encode("market", "order", itemID),
+	price := it.Price
+	var st model.MarketState
+	if err := c.store.DB.Where("item_id = ?", itemID).First(&st).Error; err == nil && st.CurrentPrice > 0 {
+		price = st.CurrentPrice
+	}
+
+	embed := components.Embed(
 		i18n.T("market.modal_title", lang, map[string]any{"item": c.displayName(it.Name, lang)}),
-		components.TextInput("action",
-			i18n.T("market.modal_action_label", lang), true, "buy",
-			discordgo.TextInputShort, 3, 4),
+		i18n.T("market.action_confirm", lang, map[string]any{"price": price}),
+		0xf1c40f,
+	)
+
+	buyBtn := components.Button(i18n.T("market.action_buy", lang),
+		components.Encode("market", "action", "buy", itemID), discordgo.PrimaryButton)
+	sellBtn := components.Button(i18n.T("market.action_sell", lang),
+		components.Encode("market", "action", "sell", itemID), discordgo.DangerButton)
+
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: []discordgo.MessageComponent{components.ActionRow(buyBtn, sellBtn)},
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+func (c *Cog) onActionChoice(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+
+	if len(rest) < 2 {
+		interaction.RespondError(b, i, lang, "market.error")
+		return
+	}
+	action, itemID := rest[0], rest[1]
+	if action != "buy" && action != "sell" {
+		interaction.RespondError(b, i, lang, "market.error")
+		return
+	}
+
+	it := items.Get(itemID)
+	if it == nil {
+		interaction.RespondError(b, i, lang, "market.item_not_found")
+		return
+	}
+
+	modal := components.ModalResponse(
+		components.Encode("market", "order", action, itemID),
+		i18n.T("market.modal_title", lang, map[string]any{"item": c.displayName(it.Name, lang)}),
 		components.TextInput("amount",
 			i18n.T("market.modal_amount_label", lang), true, "1",
 			discordgo.TextInputShort, 1, 5),
@@ -328,14 +374,12 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
 
-	if len(rest) < 1 {
+	if len(rest) < 2 {
 		interaction.RespondError(b, i, lang, "market.error")
 		return
 	}
-	itemID := rest[0]
+	action, itemID := rest[0], rest[1]
 	values := interaction.ModalValues(i)
-
-	action := strings.ToLower(strings.TrimSpace(values["action"]))
 	amountStr := strings.TrimSpace(values["amount"])
 	amount, err := strconv.Atoi(amountStr)
 	if err != nil || amount <= 0 || amount > 999 {
@@ -382,9 +426,6 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if leveled {
 			content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
 		}
-		if qid := c.store.PopQuestCompleted(userID); qid != "" {
-			content += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -392,9 +433,12 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				Flags:   discordgo.MessageFlagsEphemeral,
 			},
 		})
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
 
 	default:
-		interaction.RespondError(b, i, lang, "market.invalid_action")
+		interaction.RespondError(b, i, lang, "market.error")
 		return
 	}
 
@@ -465,8 +509,8 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 	if leveled {
 		sellMsg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		sellMsg += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		sellMsg += "\n\n" + questssvc.QuestNotificationMsg(n, lang)
 	}
 	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
 

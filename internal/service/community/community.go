@@ -103,6 +103,41 @@ var Buildings = map[string]*BuildingDef{
 			return map[string]any{"glory_bonus": level * 10}
 		},
 	},
+	"hospital": {
+		Key: "hospital", MaxLevel: 10,
+		CostFunc: func(level int) map[string]int {
+			switch level {
+			case 1:
+				return map[string]int{"money": 8000, "Wheat": 200, "Carrot": 100}
+			case 2:
+				return map[string]int{"money": 40000, "Potato": 300, "Tomato": 200}
+			case 3:
+				return map[string]int{"money": 150000, "Strawberry": 400, "Golden Apple": 50}
+			case 4:
+				return map[string]int{"money": 500000, "Golden Apple": 200, "Golden Potato": 100}
+			case 5:
+				return map[string]int{"money": 1500000, "Golden Potato": 300, "Blood Tomato": 150}
+			case 6:
+				return map[string]int{"money": 4000000, "Golden Carrot": 150, "Golden Apple": 400}
+			case 7:
+				return map[string]int{"money": 10000000, "Golden Carrot": 300, "Blood Tomato": 300}
+			case 8:
+				return map[string]int{"money": 25000000, "Golden Carrot": 500, "Ghost Wheat": 500}
+			case 9:
+				return map[string]int{"money": 50000000, "Ghost Wheat": 800, "Golden Carrot": 600}
+			case 10:
+				return map[string]int{"money": 100000000, "Ghost Wheat": 1500, "Golden Carrot": 1000}
+			}
+			return map[string]int{"money": 8000, "Wheat": 200, "Carrot": 100}
+		},
+		BonusFunc: func(level int) map[string]any {
+			if level == 0 {
+				return nil
+			}
+			discount := math.Min(100, float64(level*10))
+			return map[string]any{"heal_discount": discount}
+		},
+	},
 }
 
 type BuildingInfo struct {

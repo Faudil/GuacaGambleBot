@@ -62,6 +62,18 @@ var Recipes = map[string]Recipe{
 	"enchanted_orchard":   {Result: "enchanted_orchard", Ingredients: map[string]int{"rough_diamond": 2, "emerald": 2}, LevelRequired: 10, XP: 250, RequiredResearch: "advanced_botany"},
 	"volcano_egg":         {Result: "volcano_egg", Ingredients: map[string]int{"rough_diamond": 1, "golden_apple": 1, "pure_dna": 1, "bone_dust": 10}, LevelRequired: 10, XP: 200, RequiredResearch: "dna_research"},
 
+	// --- Pet food (tier 1) ---
+	"warrior_stew":   {Result: "warrior_stew", Ingredients: map[string]int{"sardine": 3, "wheat": 2}, LevelRequired: 2, XP: 20},
+	"stonebread":     {Result: "stonebread", Ingredients: map[string]int{"pebble": 3, "potato": 2}, LevelRequired: 2, XP: 20},
+	"zephyr_berries": {Result: "zephyr_berries", Ingredients: map[string]int{"trout": 3, "carrot": 2}, LevelRequired: 2, XP: 20},
+	"hunters_soup":   {Result: "hunters_soup", Ingredients: map[string]int{"carp": 3, "tomato": 2}, LevelRequired: 3, XP: 25},
+
+	// --- Pet potions (tier 2, pet_nutrition research) ---
+	"berserker_elixir": {Result: "berserker_elixir", Ingredients: map[string]int{"shark": 2, "golden_apple": 1, "emerald": 1}, LevelRequired: 15, XP: 150, RequiredResearch: "pet_nutrition"},
+	"adamant_tonic":    {Result: "adamant_tonic", Ingredients: map[string]int{"iron_ore": 5, "star_fruit": 1, "silver_ore": 3}, LevelRequired: 15, XP: 150, RequiredResearch: "pet_nutrition"},
+	"gale_draught":     {Result: "gale_draught", Ingredients: map[string]int{"swordfish": 2, "nova_fruit": 1, "gold_nugget": 3}, LevelRequired: 15, XP: 150, RequiredResearch: "pet_nutrition"},
+	"oracles_insight":  {Result: "oracles_insight", Ingredients: map[string]int{"pufferfish": 2, "blood_tomato": 1, "rough_diamond": 1}, LevelRequired: 15, XP: 150, RequiredResearch: "pet_nutrition"},
+
 	// --- Common equipment (equip_common) ---
 	"craft_stick":          {Result: "stick", Ingredients: map[string]int{"wheat": 2, "pebble": 1}, LevelRequired: 1, XP: 15, RequiredResearch: "equip_common", IsEquipment: true},
 	"craft_leather_armor":  {Result: "leather_armor", Ingredients: map[string]int{"iron_ore": 3, "coal": 2}, LevelRequired: 2, XP: 20, RequiredResearch: "equip_common", IsEquipment: true},

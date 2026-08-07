@@ -498,7 +498,7 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 	if state.Species.ItemID == "kraken_tentacle" {
 		rep = 40
 	}
-	s.npcSvc.AddReputation(userID, "irian", rep)
+	s.npcSvc.AddActivityReputation(userID, "fishing", rep)
 
 	if err := achievement.IncrementStat(s.store.DB, userID, "items_fished", 1); err != nil {
 		return nil, err

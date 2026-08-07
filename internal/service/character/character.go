@@ -1,6 +1,7 @@
 package character
 
 import (
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
@@ -41,6 +42,8 @@ type ProfileResult struct {
 	EquipLUK      int
 	TotalJobLevel int
 	SetBonuses    []items.EquippedSetInfo
+	GloryTotal    int
+	Mastery       bool
 }
 
 // Profile returns the full character profile.
@@ -75,6 +78,20 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 	equipped, _ := s.store.GetEquipped(userID)
 	instSTR, instDEX, instINT, instVIT, instLUK, setInfos := equipBonusesFromInstances(equipped)
 
+	// Total glory from unlocked achievements + secret Mastery legend flag.
+	var unlockedAch []model.UserAchievement
+	s.store.DB.Where("user_id = ?", userID).Find(&unlockedAch)
+	gloryByID := make(map[string]int, len(achievement.All()))
+	for _, a := range achievement.All() {
+		gloryByID[a.ID] = a.Glory
+	}
+	gloryTotal := 0
+	for _, ua := range unlockedAch {
+		gloryTotal += gloryByID[ua.AchievementID]
+	}
+	var masteryCount int64
+	s.store.DB.Model(&model.UserJournalMastery{}).Where("user_id = ?", userID).Count(&masteryCount)
+
 	_ = eq // silence unused warning
 	return &ProfileResult{
 		Wallet:        wallet,
@@ -97,6 +114,8 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 		EquipLUK:      instLUK,
 		TotalJobLevel: int(jobTotal),
 		SetBonuses:    setInfos,
+		GloryTotal:    gloryTotal,
+		Mastery:       masteryCount > 0,
 	}, nil
 }
 

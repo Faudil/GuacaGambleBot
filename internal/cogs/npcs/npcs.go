@@ -1,6 +1,7 @@
 package npcs
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -220,6 +221,29 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 
 		event, err := c.svc.Chat(userID, npcID, lang)
 		if err != nil {
+			var cde *npcsvc.ChatCooldownError
+			if errors.As(err, &cde) {
+				mins := int(time.Until(cde.Until).Minutes())
+				if mins < 1 {
+					mins = 1
+				}
+				desc := i18n.T("npcs.chat_cooldown", lang, map[string]any{
+					"name":    npcData.Name,
+					"minutes": mins,
+				})
+				embed := components.Embed(
+					fmt.Sprintf("%s %s — %s", npcData.Emoji, npcData.Name, i18n.T("npcs.chat_btn", lang)),
+					desc,
+					npcData.Color,
+				)
+				comps := []discordgo.MessageComponent{
+					components.ActionRow(
+						components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+					),
+				}
+				_ = b.Session.InteractionRespond(i.Interaction,
+					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			}
 			return
 		}
 

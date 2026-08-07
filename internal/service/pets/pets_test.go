@@ -81,3 +81,88 @@ func TestRollGachaLegendary(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, RarityLegendary, pt.Rarity)
 }
+
+func TestCreatePetAutoActivatesFirst(t *testing.T) {
+	svc, _ := testService(t)
+	first, err := svc.CreatePet(1, "Dragon")
+	require.NoError(t, err)
+	require.NotNil(t, first)
+	assert.True(t, first.IsActive, "first pet should be auto-activated")
+
+	second, err := svc.CreatePet(1, "Escargot")
+	require.NoError(t, err)
+	require.NotNil(t, second)
+	assert.False(t, second.IsActive, "second pet must not steal activation")
+
+	active, err := svc.GetActivePet(1)
+	require.NoError(t, err)
+	assert.Equal(t, first.ID, active.ID)
+}
+
+func TestSetActivePetExclusive(t *testing.T) {
+	svc, _ := testService(t)
+	a, err := svc.CreatePet(1, "Dragon")
+	require.NoError(t, err)
+	b, err := svc.CreatePet(1, "Escargot")
+	require.NoError(t, err)
+	require.True(t, a.IsActive)
+	require.False(t, b.IsActive)
+
+	require.NoError(t, svc.SetActivePet(1, b.ID, 0))
+
+	active, err := svc.GetActivePet(1)
+	require.NoError(t, err)
+	assert.Equal(t, b.ID, active.ID, "switching activation must be exclusive")
+
+	pets, err := svc.GetPets(1)
+	require.NoError(t, err)
+	for _, p := range pets {
+		if p.ID == b.ID {
+			assert.True(t, p.IsActive)
+		} else {
+			assert.False(t, p.IsActive)
+		}
+	}
+}
+
+func TestHealCost(t *testing.T) {
+	assert.Equal(t, 1, HealCost(1, 0))
+	assert.Equal(t, 1, HealCost(2, 0))
+	assert.Equal(t, 50, HealCost(100, 0))
+	assert.Equal(t, 25, HealCost(100, 50))
+	assert.Equal(t, 45, HealCost(100, 10))
+	assert.Equal(t, 0, HealCost(100, 100), "100% discount must make the heal free")
+	assert.Equal(t, 1, HealCost(100, 99))
+}
+
+func TestHealPetGuards(t *testing.T) {
+	svc, s := testService(t)
+	pet, err := svc.CreatePet(1, "Dragon")
+	require.NoError(t, err)
+
+	err = svc.HealPet(pet, 10)
+	assert.ErrorIs(t, err, ErrPetAlreadyFullHP, "full HP must be rejected")
+
+	pet.HP = 10
+	_, err = s.UpdateBalance(1, 100)
+	require.NoError(t, err)
+	require.NoError(t, svc.UpdatePet(pet))
+
+	require.NoError(t, svc.HealPet(pet, 10))
+	assert.Equal(t, pet.MaxHP, pet.HP)
+
+	bal, err := s.GetBalance(1)
+	require.NoError(t, err)
+	assert.Equal(t, 190, bal, "heal must deduct exactly the paid cost")
+
+	pet.HP = 5
+	require.NoError(t, svc.UpdatePet(pet))
+	err = svc.HealPet(pet, 100000)
+	assert.ErrorIs(t, err, ErrInsufficientFunds)
+	assert.Equal(t, 5, pet.HP, "HP must not change on failure")
+
+	pet.HP = 5
+	require.NoError(t, svc.UpdatePet(pet))
+	require.NoError(t, svc.HealPet(pet, 0), "free heal (100% discount) must work")
+	assert.Equal(t, pet.MaxHP, pet.HP)
+}

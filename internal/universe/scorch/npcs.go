@@ -26,6 +26,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"riggs": {
 		ID: "riggs", Name: "Riggs", Emoji: "\U0001f441\ufe0f\u200d\U0001f5e8\ufe0f", Color: 0x607B8B,
+		LinkedActivities: []string{"hunting"},
 
 		DescriptionEN: "Settlement security. Patrols the perimeter. He's been out past the treeline more times than anyone.",
 		DescriptionFR: "Sécurité de la colonie. Patrouille le périmètre. Il est allé au-delà de la ligne d'arbres plus de fois que quiconque.",
@@ -47,6 +48,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"mother": {
 		ID: "mother", Name: "Mother Glitch", Emoji: "\u2699\ufe0f", Color: 0x8B4789,
+		LinkedActivities: []string{"fishing"},
 
 		DescriptionEN: "Maintains the water filters. Talks to the machines. Water is always clean.",
 		DescriptionFR: "Entretient les filtres à eau. Parle aux machines. L'eau est toujours propre.",

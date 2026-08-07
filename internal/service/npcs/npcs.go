@@ -50,6 +50,29 @@ func (s *Service) GetNPCData(id string) *universe.NPCData {
 	return s.universe.NPCs[id]
 }
 
+// NPCIDForActivity returns the NPC linked to the given activity (e.g.
+// "mining", "fishing", "gambling") in the active universe, or "" if none.
+func (s *Service) NPCIDForActivity(activity string) string {
+	for _, n := range s.universe.NPCs {
+		for _, a := range n.LinkedActivities {
+			if a == activity {
+				return n.ID
+			}
+		}
+	}
+	return ""
+}
+
+// AddActivityReputation awards a small amount of reputation with the NPC
+// linked to the given activity. Returns 0 if the universe has no such NPC.
+func (s *Service) AddActivityReputation(userID int64, activity string, points int) (int, error) {
+	npcID := s.NPCIDForActivity(activity)
+	if npcID == "" {
+		return 0, nil
+	}
+	return s.AddReputation(userID, npcID, points)
+}
+
 func (s *Service) GetAllNPCMeta() []*universe.NPCData {
 	out := make([]*universe.NPCData, 0, len(s.universe.NPCs))
 	for _, n := range s.universe.NPCs {

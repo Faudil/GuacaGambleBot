@@ -73,3 +73,55 @@ func assertNotContains(t *testing.T, list []*Achievement, id string) {
 		}
 	}
 }
+
+func TestHuntZoneUnlockAchievements(t *testing.T) {
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 3, Balance: 100}).Error)
+
+	// No unlocks yet: none of the zone achievements fire.
+	unlocks, err := CheckAndUnlock(d, 3)
+	require.NoError(t, err)
+	assertNotContains(t, unlocks, "hunt_unlock_mountain")
+	assertNotContains(t, unlocks, "hunt_unlock_volcano")
+
+	// Unlock mountain -> only the mountain achievement fires.
+	require.NoError(t, d.Create(&model.UserHuntUnlock{UserID: 3, ZoneKey: "mountain"}).Error)
+	unlocks, err = CheckAndUnlock(d, 3)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "hunt_unlock_mountain")
+	assertNotContains(t, unlocks, "hunt_unlock_ocean")
+
+	// Unlock volcano -> the volcano achievement fires as well.
+	require.NoError(t, d.Create(&model.UserHuntUnlock{UserID: 3, ZoneKey: "volcano"}).Error)
+	unlocks, err = CheckAndUnlock(d, 3)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "hunt_unlock_volcano")
+}
+
+func TestHuntBossKillAchievements(t *testing.T) {
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 4, Balance: 100}).Error)
+
+	// One forest boss kill -> first-boss achievement only.
+	require.NoError(t, d.Create(&model.UserHuntZoneStat{UserID: 4, ZoneKey: "forest", Wins: 1, BossKills: 1}).Error)
+	unlocks, err := CheckAndUnlock(d, 4)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "hunt_boss_forest")
+	assertNotContains(t, unlocks, "hunt_boss_10")
+	assertNotContains(t, unlocks, "hunt_boss_cave")
+
+	// Total of 10 boss kills across zones -> hunt_boss_10 fires.
+	require.NoError(t, d.Create(&model.UserHuntZoneStat{UserID: 4, ZoneKey: "cave", BossKills: 4}).Error)
+	require.NoError(t, d.Create(&model.UserHuntZoneStat{UserID: 4, ZoneKey: "desert", BossKills: 5}).Error)
+	unlocks, err = CheckAndUnlock(d, 4)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "hunt_boss_10")
+	assertNotContains(t, unlocks, "hunt_boss_50")
+
+	// 100 total -> the top milestone fires.
+	require.NoError(t, d.Model(&model.UserHuntZoneStat{}).
+		Where("user_id = ? AND zone_key = ?", int64(4), "forest").Update("boss_kills", 91).Error)
+	unlocks, err = CheckAndUnlock(d, 4)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "hunt_boss_100")
+}

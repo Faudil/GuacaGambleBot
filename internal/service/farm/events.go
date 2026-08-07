@@ -82,7 +82,7 @@ func (s *Service) rollMerchant(userID int64, zoneKey string) *Event {
 	names := []string{"farm.merchant_name_1", "farm.merchant_name_2", "farm.merchant_name_3"}
 	merchantName := names[rand.Intn(len(names))]
 
-	exoticSeeds := []string{"star_fruit_seed", "golden_apple_seed", "strawberry_seed"}
+	exoticSeeds := []string{"star_fruit_seed", "golden_apple_seed", "strawberry_seed", "coffee_seed", "cocoa_seed", "pumpkin_seed"}
 	exoticSeed := exoticSeeds[rand.Intn(len(exoticSeeds))]
 	price := 100 + rand.Intn(400)
 

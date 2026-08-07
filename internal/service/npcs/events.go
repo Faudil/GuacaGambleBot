@@ -20,11 +20,39 @@ type ChatEvent struct {
 	ItemID   string
 }
 
+// ChatCooldownError is returned when a player tries to chat with an NPC
+// before the cooldown has elapsed. Until is when the next chat is allowed.
+type ChatCooldownError struct {
+	Until time.Time
+}
+
+func (e ChatCooldownError) Error() string {
+	return "npc chat on cooldown until " + e.Until.UTC().Format(time.RFC3339)
+}
+
+// chatRewards is the diminishing daily reputation ladder for chatting with an
+// NPC: the first chat of the day is worth the most, later chats less.
+var chatRewards = []int{50, 25, 10, 5}
+
+func chatRewardFor(count int) int {
+	if count < 1 {
+		return 0
+	}
+	if count > len(chatRewards) {
+		return chatRewards[len(chatRewards)-1]
+	}
+	return chatRewards[count-1]
+}
+
 func pickRandom(lines []string) string {
 	if len(lines) == 0 {
 		return ""
 	}
 	return lines[rand.Intn(len(lines))]
+}
+
+func (s *Service) chatActivity(npcID string) string {
+	return "npc_chat_" + npcID
 }
 
 func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, error) {
@@ -33,66 +61,91 @@ func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, err
 		return nil, errors.New("npc not found")
 	}
 
-	rep, _ := s.GetReputation(userID, npcID)
-	lvl := rep.Level
-
-	secretMap := map[string]string{
-		"elara":    "secret_elara",
-		"thorek":   "secret_thorek",
-		"irian":    "secret_irian",
-		"sheriff_vance": "secret_vance",
-		"the_whisper":   "secret_whisper",
-		"gamblebot":     "secret_gamblebot",
-	}
-
-	// Priority order: secret > rare > special > regular
-	if lvl >= 3 {
-		secretID := secretMap[npcID]
-		seen, _ := s.HasSeenSecret(userID, npcID, secretID)
-		if !seen {
-			text := s.getSecretText(npcID, lang)
-			if text != "" {
-				s.MarkSecretSeen(userID, npcID, secretID)
-				s.AddReputation(userID, npcID, 25)
-				s.updateLastInteraction(userID, npcID)
-				return &ChatEvent{ID: secretID, Text: text, RepBonus: 25}, nil
+	cooldown := time.Duration(s.cfg.NPCChatCooldownHours) * time.Hour
+	if cooldown > 0 {
+		ready, err := s.store.CheckCooldown(userID, s.chatActivity(npcID), cooldown)
+		if err != nil {
+			return nil, err
+		}
+		if !ready {
+			var cd model.Cooldown
+			if err := s.store.DB.Where("user_id = ? AND activity_name = ?", userID, s.chatActivity(npcID)).First(&cd).Error; err == nil {
+				return nil, &ChatCooldownError{Until: cd.LastUsed.UTC().Add(cooldown)}
 			}
+			return nil, &ChatCooldownError{Until: time.Now().UTC().Add(cooldown)}
+		}
+		if err := s.store.SetCooldown(userID, s.chatActivity(npcID)); err != nil {
+			return nil, err
 		}
 	}
 
-	roll := rand.Float64()
-
-	// Rare events: 15% chance, level 3+
-	if roll < 0.15 && lvl >= 3 {
-		text := pickRandom(npcData.QuipsHigh(lang))
-		if text != "" {
-			bonus := 5 + rand.Intn(6)
-			s.AddReputation(userID, npcID, bonus)
-			s.updateLastInteraction(userID, npcID)
-			return &ChatEvent{ID: "rare", Text: text, RepBonus: bonus}, nil
-		}
+	bonus, err := s.chatDailyBonus(userID, npcID)
+	if err != nil {
+		return nil, err
 	}
 
-	// Special quips: 30% chance, high rep pool
-	if roll < 0.45 && lvl >= 2 {
-		text := pickRandom(npcData.QuipsHigh(lang))
-		if text != "" {
-			bonus := 2 + rand.Intn(2)
-			s.AddReputation(userID, npcID, bonus)
-			s.updateLastInteraction(userID, npcID)
-			return &ChatEvent{ID: "special_high", Text: text, RepBonus: bonus}, nil
-		}
-	}
-
-	// Regular quips
 	text := pickRandom(npcData.Quips(lang))
 	if text == "" {
 		text = npcData.Chat(lang)
 	}
-	bonus := 1 + rand.Intn(2)
-	s.AddReputation(userID, npcID, bonus)
+	eventID := "regular"
+
+	// One-time secret at level 3+: +25 on top of the chat reward.
+	rep, _ := s.GetReputation(userID, npcID)
+	if rep.Level >= 3 {
+		secretID := secretMap[npcID]
+		seen, _ := s.HasSeenSecret(userID, npcID, secretID)
+		if !seen {
+			secretText := s.getSecretText(npcID, lang)
+			if secretText != "" {
+				if err := s.MarkSecretSeen(userID, npcID, secretID); err != nil {
+					return nil, err
+				}
+				bonus += 25
+				eventID = secretID
+				text = secretText
+			}
+		}
+	}
+
+	added, err := s.AddReputation(userID, npcID, bonus)
+	if err != nil {
+		return nil, err
+	}
 	s.updateLastInteraction(userID, npcID)
-	return &ChatEvent{ID: "regular", Text: text, RepBonus: bonus}, nil
+	return &ChatEvent{ID: eventID, Text: text, RepBonus: added}, nil
+}
+
+var secretMap = map[string]string{
+	"elara":        "secret_elara",
+	"thorek":       "secret_thorek",
+	"irian":        "secret_irian",
+	"sheriff_vance": "secret_vance",
+	"the_whisper":  "secret_whisper",
+	"gamblebot":    "secret_gamblebot",
+}
+
+// chatDailyBonus returns the diminishing reputation reward for today's chat
+// count with the NPC and increments that counter.
+func (s *Service) chatDailyBonus(userID int64, npcID string) (int, error) {
+	today := time.Now().Format("2006-01-02")
+	var daily model.UserNPCDailyRep
+	err := s.store.DB.Where("user_id = ? AND npc_id = ? AND date_str = ?", userID, npcID, today).First(&daily).Error
+	count := 1
+	if err == nil {
+		count = daily.Chats + 1
+	} else if err != gorm.ErrRecordNotFound {
+		return 0, err
+	}
+	if err := s.store.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "npc_id"}, {Name: "date_str"}},
+		DoUpdates: clause.Assignments(map[string]any{"chats": gorm.Expr("chats + 1")}),
+	}).Create(&model.UserNPCDailyRep{
+		UserID: userID, NPCID: npcID, DateStr: today, Chats: 1,
+	}).Error; err != nil {
+		return 0, err
+	}
+	return chatRewardFor(count), nil
 }
 
 func (s *Service) getSecretText(npcID string, lang string) string {

@@ -11,10 +11,36 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	npcsvc "guacagamblebot/internal/service/npcs"
+	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )
 
-var ErrHuntLimit = errors.New("hunt daily limit reached")
+var (
+	ErrHuntLimit    = errors.New("hunt daily limit reached")
+	ErrHuntCooldown = errors.New("hunt cooldown active")
+	ErrZoneLocked   = errors.New("hunt zone locked")
+)
+
+// FirstZones lists the zones available from the start without unlocking.
+var FirstZones = map[string]bool{
+	"forest": true,
+	"cave":   true,
+	"desert": true,
+}
+
+// ZoneUnlockRequirements describes how each progressive zone is unlocked:
+// the zone key maps to the previous zone and the number of wins required
+// there before the zone becomes accessible.
+var ZoneUnlockRequirements = map[string]struct {
+	Previous     string
+	RequiredWins int
+}{
+	"mountain": {Previous: "desert", RequiredWins: 3},
+	"ocean":    {Previous: "mountain", RequiredWins: 3},
+	"tundra":   {Previous: "ocean", RequiredWins: 3},
+	"volcano":  {Previous: "tundra", RequiredWins: 3},
+}
 
 type EnemyTemplate struct {
 	Name  string
@@ -32,14 +58,19 @@ type LootEntry struct {
 }
 
 type Zone struct {
-	Key         string
-	Emoji       string
-	LevelMin    int
-	LevelMax    int
-	XPMult      float64
-	Enemies     []EnemyTemplate
-	LootTable   []LootEntry
+	Key       string
+	Emoji     string
+	LevelMin  int
+	LevelMax  int
+	XPMult    float64
+	Enemies   []EnemyTemplate
+	Boss      EnemyTemplate
+	LootTable []LootEntry
 }
+
+// BossSpawnChance is the probability (per hunt) that the zone boss appears
+// instead of a regular enemy.
+const BossSpawnChance = 0.12
 
 var Zones = map[string]Zone{
 	"forest": {
@@ -48,10 +79,14 @@ var Zones = map[string]Zone{
 			{Name: "Slime Gluant", Emoji: "💧", HP: 25, Atk: 5, Def: 2, Spd: 5},
 			{Name: "Sanglier Sauvage", Emoji: "🐗", HP: 35, Atk: 8, Def: 5, Spd: 10},
 		},
+		Boss: EnemyTemplate{Name: "Seigneur de la Forêt", Emoji: "🌳", HP: 55, Atk: 12, Def: 5, Spd: 8},
 		LootTable: []LootEntry{
 			{Item: "pebble", Chance: 0.50, MaxQty: 3},
 			{Item: "tomato", Chance: 0.30, MaxQty: 2},
 			{Item: "coal", Chance: 0.15, MaxQty: 1},
+			{Item: "wheat_seed", Chance: 0.25, MaxQty: 2},
+			{Item: "wheat", Chance: 0.25, MaxQty: 2},
+			{Item: "tomato_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "forest_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
@@ -61,10 +96,13 @@ var Zones = map[string]Zone{
 			{Name: "Gobelin Voleur", Emoji: "👺", HP: 40, Atk: 18, Def: 5, Spd: 25},
 			{Name: "Araignée Géante", Emoji: "🕷️", HP: 50, Atk: 15, Def: 8, Spd: 30},
 		},
+		Boss: EnemyTemplate{Name: "Roi des Gobelins", Emoji: "👑", HP: 90, Atk: 28, Def: 10, Spd: 20},
 		LootTable: []LootEntry{
 			{Item: "coal", Chance: 0.60, MaxQty: 3},
 			{Item: "iron_ore", Chance: 0.40, MaxQty: 2},
 			{Item: "sardine", Chance: 0.20, MaxQty: 1},
+			{Item: "potato_seed", Chance: 0.15, MaxQty: 2},
+			{Item: "carrot_seed", Chance: 0.12, MaxQty: 1},
 			{Item: "cave_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
@@ -74,10 +112,14 @@ var Zones = map[string]Zone{
 			{Name: "Scarabée de Sable", Emoji: "🪲", HP: 60, Atk: 22, Def: 12, Spd: 15},
 			{Name: "Coyote Affamé", Emoji: "🐺", HP: 70, Atk: 28, Def: 8, Spd: 30},
 		},
+		Boss: EnemyTemplate{Name: "Roi Scorpion", Emoji: "🦂", HP: 130, Atk: 40, Def: 18, Spd: 25},
 		LootTable: []LootEntry{
 			{Item: "copper_ore", Chance: 0.50, MaxQty: 3},
 			{Item: "silver_ore", Chance: 0.30, MaxQty: 2},
 			{Item: "gold_nugget", Chance: 0.15, MaxQty: 1},
+			{Item: "corn_seed", Chance: 0.15, MaxQty: 2},
+			{Item: "corn", Chance: 0.15, MaxQty: 2},
+			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "desert_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -87,10 +129,14 @@ var Zones = map[string]Zone{
 			{Name: "Chèvre des Rochers", Emoji: "🐐", HP: 80, Atk: 25, Def: 15, Spd: 20},
 			{Name: "Géant de Pierre", Emoji: "🗿", HP: 110, Atk: 30, Def: 25, Spd: 5},
 		},
+		Boss: EnemyTemplate{Name: "Titan de Pierre", Emoji: "🗿", HP: 200, Atk: 48, Def: 35, Spd: 10},
 		LootTable: []LootEntry{
 			{Item: "iron_ore", Chance: 0.50, MaxQty: 4},
 			{Item: "emerald", Chance: 0.20, MaxQty: 1},
 			{Item: "platinum", Chance: 0.15, MaxQty: 1},
+			{Item: "oat_seed", Chance: 0.15, MaxQty: 2},
+			{Item: "oat", Chance: 0.15, MaxQty: 2},
+			{Item: "coffee_seed", Chance: 0.08, MaxQty: 1},
 			{Item: "mountain_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -100,10 +146,13 @@ var Zones = map[string]Zone{
 			{Name: "Requin des Abysses", Emoji: "🦈", HP: 100, Atk: 35, Def: 12, Spd: 35},
 			{Name: "Méduse Toxique", Emoji: "🪼", HP: 80, Atk: 28, Def: 8, Spd: 20},
 		},
+		Boss: EnemyTemplate{Name: "Kraken des Abysses", Emoji: "🐙", HP: 260, Atk: 55, Def: 25, Spd: 40},
 		LootTable: []LootEntry{
 			{Item: "sardine", Chance: 0.50, MaxQty: 3},
 			{Item: "swordfish", Chance: 0.25, MaxQty: 1},
 			{Item: "old_boot", Chance: 0.15, MaxQty: 1},
+			{Item: "carrot_seed", Chance: 0.10, MaxQty: 1},
+			{Item: "cocoa_seed", Chance: 0.08, MaxQty: 1},
 			{Item: "ocean_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -113,10 +162,13 @@ var Zones = map[string]Zone{
 			{Name: "Loup des Glaces", Emoji: "🐺", HP: 120, Atk: 38, Def: 15, Spd: 30},
 			{Name: "Yeti Furieux", Emoji: "🦍", HP: 150, Atk: 35, Def: 30, Spd: 10},
 		},
+		Boss: EnemyTemplate{Name: "Grand Loup Blanc", Emoji: "🐺", HP: 320, Atk: 60, Def: 40, Spd: 35},
 		LootTable: []LootEntry{
 			{Item: "platinum", Chance: 0.40, MaxQty: 3},
 			{Item: "emerald", Chance: 0.25, MaxQty: 2},
 			{Item: "rough_diamond", Chance: 0.15, MaxQty: 1},
+			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
+			{Item: "golden_apple_seed", Chance: 0.04, MaxQty: 1},
 			{Item: "tundra_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
@@ -126,10 +178,13 @@ var Zones = map[string]Zone{
 			{Name: "Golem de Magma", Emoji: "🗿", HP: 140, Atk: 40, Def: 30, Spd: 5},
 			{Name: "Drake de Feu", Emoji: "🐉", HP: 120, Atk: 45, Def: 18, Spd: 30},
 		},
+		Boss: EnemyTemplate{Name: "Dragon Primordial", Emoji: "🐉", HP: 400, Atk: 75, Def: 45, Spd: 40},
 		LootTable: []LootEntry{
 			{Item: "gold_nugget", Chance: 0.50, MaxQty: 4},
 			{Item: "rough_diamond", Chance: 0.30, MaxQty: 2},
 			{Item: "magma_carp", Chance: 0.20, MaxQty: 2},
+			{Item: "coffee_seed", Chance: 0.10, MaxQty: 1},
+			{Item: "star_fruit_seed", Chance: 0.04, MaxQty: 1},
 			{Item: "volcano_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
@@ -153,6 +208,25 @@ func NewEnemy(zoneKey string) *Combatant {
 	}
 	t := zone.Enemies[rand.Intn(len(zone.Enemies))]
 	lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
+	return buildCombatant(t, lvl)
+}
+
+// NewZoneEncounter rolls a hunt encounter: with BossSpawnChance probability the
+// zone boss appears instead of a regular enemy. It returns the enemy and
+// whether it is the zone boss.
+func NewZoneEncounter(zoneKey string) (*Combatant, bool) {
+	zone, ok := Zones[zoneKey]
+	if !ok {
+		return NewEnemy(zoneKey), false
+	}
+	if zone.Boss.Name != "" && rand.Float64() < BossSpawnChance {
+		lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
+		return buildCombatant(zone.Boss, lvl), true
+	}
+	return NewEnemy(zoneKey), false
+}
+
+func buildCombatant(t EnemyTemplate, lvl int) *Combatant {
 	return &Combatant{
 		Name:    t.Name,
 		Emoji:   t.Emoji,
@@ -166,21 +240,32 @@ func NewEnemy(zoneKey string) *Combatant {
 }
 
 type BattleLogEntry struct {
-	Text string
+	AttackerName  string
+	AttackerEmoji string
+	TargetName    string
+	Damage        int
+	Crit          bool
+	PetHP         int
+	EnemyHP       int
 }
 
 type BattleResult struct {
-	PetHP      int
-	PetMaxHP   int
-	EnemyHP    int
-	EnemyMaxHP int
-	PlayerWon  bool
-	EnemyWon   bool
-	Log        []BattleLogEntry
-	XP         int
-	Loot       []string
-	LeveledUp  bool
-	NewLevel   int
+	PetStartHP    int
+	PetHP         int
+	PetMaxHP      int
+	EnemyHP       int
+	EnemyMaxHP    int
+	EnemyName     string
+	EnemyEmoji    string
+	EnemyLevel    int
+	IsBoss        bool
+	PlayerWon     bool
+	EnemyWon      bool
+	Log           []BattleLogEntry
+	XP            int
+	Loot          []string
+	LeveledUp     bool
+	NewLevel      int
 	CharLeveledUp bool
 	CharNewLevel  int
 }
@@ -189,16 +274,58 @@ var ErrNoPet = errors.New("no active pet")
 var ErrPetKO = errors.New("pet is KO")
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
+}
+
+// HasZoneAccess reports whether a user may hunt in the given zone. The first
+// zones are always open; the later zones require a prior unlock.
+func (s *Service) HasZoneAccess(userID int64, zoneKey string) (bool, error) {
+	if FirstZones[zoneKey] {
+		return true, nil
+	}
+	return s.store.HasUnlockedZone(userID, zoneKey)
+}
+
+// RecordHuntWin registers a victory in a zone. When the required number of
+// wins in the previous zone is reached, the next zone is unlocked and its
+// key is returned so callers can announce it.
+func (s *Service) RecordHuntWin(userID int64, zoneKey string) (string, error) {
+	wins, err := s.store.IncrementZoneWins(userID, zoneKey)
+	if err != nil {
+		return "", err
+	}
+	for next, req := range ZoneUnlockRequirements {
+		if req.Previous != zoneKey || wins < req.RequiredWins {
+			continue
+		}
+		already, err := s.store.HasUnlockedZone(userID, next)
+		if err != nil {
+			return "", err
+		}
+		if !already {
+			if err := s.store.UnlockZone(userID, next); err != nil {
+				return "", err
+			}
+			return next, nil
+		}
+	}
+	return "", nil
+}
+
+// RecordZoneBossKill registers a zone boss kill and returns the new total
+// boss kill count for that zone.
+func (s *Service) RecordZoneBossKill(userID int64, zoneKey string) (int, error) {
+	return s.store.IncrementZoneBossKills(userID, zoneKey)
 }
 
 func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, error) {
-	ok, _, err := s.store.CheckGameLimit(userID, "hunt", 30)
+	ok, _, err := s.store.CheckGameLimit(userID, "hunt", s.cfg.HuntMaxPerDay)
 	if err != nil {
 		return nil, err
 	}
@@ -206,17 +333,25 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		return nil, ErrHuntLimit
 	}
 
-	ready, err := s.store.CheckCooldown(userID, "hunt", 30*time.Second)
+	ready, err := s.store.CheckCooldown(userID, "hunt", time.Duration(s.cfg.HuntCooldownSeconds)*time.Second)
 	if err != nil {
 		return nil, err
 	}
 	if !ready {
-		return nil, ErrHuntLimit
+		return nil, ErrHuntCooldown
 	}
 
 	zone, ok := Zones[zoneKey]
 	if !ok {
 		return nil, errors.New("invalid zone")
+	}
+
+	access, err := s.HasZoneAccess(userID, zoneKey)
+	if err != nil {
+		return nil, err
+	}
+	if !access {
+		return nil, ErrZoneLocked
 	}
 
 	var pet model.UserPet
@@ -231,7 +366,20 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		return nil, ErrPetKO
 	}
 
-	enemy := NewEnemy(zoneKey)
+	enemy, isBoss := NewZoneEncounter(zoneKey)
+	enemyEmoji := "👹"
+	if isBoss {
+		if zone.Boss.Name == enemy.Name {
+			enemyEmoji = zone.Boss.Emoji
+		}
+	} else {
+		for _, e := range zone.Enemies {
+			if e.Name == enemy.Name {
+				enemyEmoji = e.Emoji
+				break
+			}
+		}
+	}
 
 	petHP := pet.HP
 	petMaxHP := pet.MaxHP
@@ -244,6 +392,11 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	petHP = int(float64(petHP) * (1.0 + vitBonus))
 	if petHP > petMaxHP {
 		petHP = petMaxHP
+	}
+
+	petEmoji := "🐾"
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+		petEmoji = pt.Emoji
 	}
 
 	if charsvc.HasBuff(s.store, userID, "pet_bond") {
@@ -262,6 +415,7 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		charsvc.ConsumeBuff(s.store, userID, "bulwark")
 	}
 
+	petStartHP := petHP
 	var log []BattleLogEntry
 
 	for petHP > 0 && enemy.HP > 0 {
@@ -269,14 +423,24 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		if petDmg < 1 {
 			petDmg = 1
 		}
+		crit := false
 		if rand.Intn(100) < pet.CritC {
 			petDmg = int(float64(petDmg) * pet.CritD)
+			crit = true
 		}
 		enemy.HP -= petDmg
 		if enemy.HP < 0 {
 			enemy.HP = 0
 		}
-		log = append(log, BattleLogEntry{Text: petDmgMsg(pet.Nickname, petDmg)})
+		log = append(log, BattleLogEntry{
+			AttackerName:  pet.Nickname,
+			AttackerEmoji: petEmoji,
+			TargetName:    enemy.Name,
+			Damage:        petDmg,
+			Crit:          crit,
+			PetHP:         petHP,
+			EnemyHP:       enemy.HP,
+		})
 
 		if enemy.HP <= 0 {
 			enemy.IsAlive = false
@@ -291,7 +455,14 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		if petHP < 0 {
 			petHP = 0
 		}
-		log = append(log, BattleLogEntry{Text: enemyDmgMsg(enemy.Name, enemyDmg)})
+		log = append(log, BattleLogEntry{
+			AttackerName:  enemy.Name,
+			AttackerEmoji: enemyEmoji,
+			TargetName:    pet.Nickname,
+			Damage:        enemyDmg,
+			PetHP:         petHP,
+			EnemyHP:       enemy.HP,
+		})
 	}
 
 	playerWon := enemy.HP <= 0
@@ -303,6 +474,11 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	newLevel := pet.Level
 
 	if playerWon {
+		if isBoss {
+			s.npcSvc.AddActivityReputation(userID, "hunting", 5)
+		} else {
+			s.npcSvc.AddActivityReputation(userID, "hunting", 1)
+		}
 		baseXP := enemy.Level * (15 + rand.Intn(11))
 		xp = int(float64(baseXP) * zone.XPMult)
 
@@ -365,38 +541,23 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	_ = unlocks
 
 	return &BattleResult{
-		PetHP:      petHP,
-		PetMaxHP:   petMaxHP,
-		EnemyHP:    enemy.HP,
-		EnemyMaxHP: enemy.MaxHP,
-		PlayerWon:  playerWon,
-		EnemyWon:   enemyWon,
-		Log:        log,
-		XP:         xp,
-		Loot:       lootItems,
-		LeveledUp:  leveledUp,
-		NewLevel:   newLevel,
+		PetStartHP:    petStartHP,
+		PetHP:         petHP,
+		PetMaxHP:      petMaxHP,
+		EnemyHP:       enemy.HP,
+		EnemyMaxHP:    enemy.MaxHP,
+		EnemyName:     enemy.Name,
+		EnemyEmoji:    enemyEmoji,
+		EnemyLevel:    enemy.Level,
+		IsBoss:        isBoss,
+		PlayerWon:     playerWon,
+		EnemyWon:      enemyWon,
+		Log:           log,
+		XP:            xp,
+		Loot:          lootItems,
+		LeveledUp:     leveledUp,
+		NewLevel:      newLevel,
 		CharLeveledUp: charLeveled,
 		CharNewLevel:  charLvl,
 	}, nil
-}
-
-func petDmgMsg(name string, dmg int) string {
-	return name + " deals " + itoa(dmg) + " damage!"
-}
-
-func enemyDmgMsg(name string, dmg int) string {
-	return name + " deals " + itoa(dmg) + " damage!"
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	s := ""
-	for n > 0 {
-		s = string(rune('0'+n%10)) + s
-		n /= 10
-	}
-	return s
 }

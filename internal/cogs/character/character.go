@@ -240,11 +240,16 @@ func profileEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Me
 		i18n.T("character.total_jobs_label", lang), res.TotalJobLevel,
 	)
 	desc += fmt.Sprintf(
-		"🏦 %s: $%d | 🔒 %s: $%d\n🏆 %s: %d",
+		"🏦 %s: $%d | 🔒 %s: $%d\n🏆 %s: %d | 🌟 %s: %d",
 		i18n.T("character.wallet_label", lang), res.Wallet,
 		i18n.T("character.bank_label", lang), res.Bank,
 		i18n.T("character.achievements_label", lang), res.AchCount,
+		i18n.T("character.glory_label", lang), res.GloryTotal,
 	)
+
+	if res.Mastery {
+		desc += "\n\n🏅 **" + i18n.T("character.mastery_label", lang) + "**"
+	}
 
 	embed := components.Embed(
 		i18n.T("character.profile_title", lang, map[string]any{"user": interaction.Mention(userID)}),

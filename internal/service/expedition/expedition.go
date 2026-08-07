@@ -39,9 +39,9 @@ type ExpeditionResult struct {
 }
 
 func (s *Service) Generate(petType string, petLevel int, durationHours int, lang string) *ExpeditionResult {
-	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato"}
-	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry"}
-	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald"}
+	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato", "wheat_seed", "carrot_seed"}
+	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry", "potato_seed", "tomato_seed", "pumpkin_seed"}
+	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed"}
 	locations := []string{"forest", "desert", "cave", "plains", "mountain", "swamp", "valley", "coral", "volcano"}
 
 	numEvents := durationHours * 2

@@ -186,3 +186,73 @@ func TestAdvanceStepCompletesQuest(t *testing.T) {
 	st.DB.Where("user_id = ? AND quest_id = ?", 1, "tutorial").First(&uq)
 	assert.Equal(t, "COMPLETED", uq.Status)
 }
+
+func TestEnsureTutorialEggGrantsToStuckPlayer(t *testing.T) {
+	svc, st := testService(t)
+	// Player stuck at the hunting step with no pet and no egg.
+	huntIdx := -1
+	for i, s := range QuestRegistry["tutorial"].Steps {
+		if s.TextKey == "quests.day4_will.step1_activity" {
+			huntIdx = i
+			break
+		}
+	}
+	require.GreaterOrEqual(t, huntIdx, 0)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "tutorial", StepIndex: huntIdx,
+	}).Error)
+
+	granted, err := svc.EnsureTutorialEgg(1)
+	require.NoError(t, err)
+	assert.True(t, granted)
+
+	var inv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, "forest_egg").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+
+	// Second call must not grant again.
+	granted, err = svc.EnsureTutorialEgg(1)
+	require.NoError(t, err)
+	assert.False(t, granted)
+}
+
+func TestEnsureTutorialEggSkipsEarlySteps(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 2, QuestID: "tutorial", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 2, QuestID: "tutorial", StepIndex: 0,
+	}).Error)
+
+	granted, err := svc.EnsureTutorialEgg(2)
+	require.NoError(t, err)
+	assert.False(t, granted)
+}
+
+func TestEnsureTutorialEggSkipsWhenPetExists(t *testing.T) {
+	svc, st := testService(t)
+	huntIdx := -1
+	for i, s := range QuestRegistry["tutorial"].Steps {
+		if s.TextKey == "quests.day4_will.step1_activity" {
+			huntIdx = i
+			break
+		}
+	}
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 3, QuestID: "tutorial", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 3, QuestID: "tutorial", StepIndex: huntIdx,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserPet{
+		UserID: 3, PetType: "Dragon", Nickname: "Draco",
+	}).Error)
+
+	granted, err := svc.EnsureTutorialEgg(3)
+	require.NoError(t, err)
+	assert.False(t, granted)
+}

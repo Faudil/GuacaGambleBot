@@ -25,6 +25,26 @@ const (
 	StepBossBattle
 )
 
+// MissingItem describes an item requirement that is not yet satisfied.
+type MissingItem struct {
+	ItemID string
+	Needed int
+	Have   int
+}
+
+// RequirementError carries structured information about which quest
+// requirements are not yet satisfied, so handlers can show helpful guidance.
+type RequirementError struct {
+	MoneyNeeded  int
+	MoneyHave    int
+	MissingItems []MissingItem
+	NeedsHouse   bool
+}
+
+func (e *RequirementError) Error() string {
+	return "quest requirements not satisfied"
+}
+
 type QuestReward struct {
 	Money         int
 	XP            int
@@ -101,9 +121,9 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.day3_base.step1_transition"},
 			{Type: StepActivity, TextKey: "quests.day3_base.step2_activity", Extra: map[string]any{"target_stat": "bank_deposits", "target_count": 1}},
 			// Day 4 — Hunting + Pet Care (merged with day3 wrap)
-			{Type: StepDialogue, TextKey: "quests.day3_base.step3_dialogue", Rewards: &QuestReward{Money: 300}},
+			{Type: StepDialogue, TextKey: "quests.day3_base.step3_dialogue", Rewards: &QuestReward{Money: 300, ItemIDs: []string{"forest_egg"}}},
 			{Type: StepActivity, TextKey: "quests.day4_will.step1_activity", Extra: map[string]any{"target_stat": "items_hunted", "target_count": 2}},
-			{Type: StepDialogue, TextKey: "quests.day4_will.step2_dialogue", Rewards: &QuestReward{ItemIDs: []string{"mystery_egg"}}},
+			{Type: StepDialogue, TextKey: "quests.day4_will.step2_dialogue"},
 			{Type: StepActivity, TextKey: "quests.day4_will.step3_activity", Extra: map[string]any{"target_stat": "pets_fed", "target_count": 1}},
 			// Day 5 — Casino + Market (merged with day4 wrap)
 			{Type: StepDialogue, TextKey: "quests.day4_will.step4_dialogue", Rewards: &QuestReward{Money: 300}},
@@ -112,7 +132,7 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.day5_odds.step3_activity", Extra: map[string]any{"target_stat": "items_sold_market", "target_count": 1}},
 			{Type: StepDialogue, TextKey: "quests.day5_odds.step4_dialogue", Rewards: &QuestReward{Money: 300}},
 
-			{Type: StepRequirement, TextKey: "quests.day6_contribution.step1_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 5, "wheat": 5}}},
+			{Type: StepRequirement, TextKey: "quests.day6_contribution.step1_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 5, "wheat": 3}}},
 			// Day 7 — Guardian + Delve
 			{Type: StepDialogue, TextKey: "quests.day7_sprout.step0_event"},
 			{Type: StepBossBattle, TextKey: "quests.day7_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
@@ -168,25 +188,26 @@ func New(s *store.Store, cfg *config.Config) *Service {
 
 // RecordActivityComplete is called by the store when an activity step reaches
 // its target. It advances the step with proper custom_data for the next step.
-// The bool return indicates whether the quest was fully completed (COMPLETED).
-func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, error) {
+// Returns whether the quest fully completed (COMPLETED) and the i18n text key
+// of the next step (empty when completed).
+func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, string, error) {
 	def := QuestRegistry[questID]
 	if def == nil {
-		return false, nil
+		return false, "", nil
 	}
 	var uqd model.UserQuestData
 	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, questID).First(&uqd).Error; err != nil {
-		return false, err
+		return false, "", err
 	}
 	if uqd.StepIndex >= len(def.Steps) {
-		return false, nil
+		return false, "", nil
 	}
 	step := def.Steps[uqd.StepIndex]
 	if step.Rewards != nil {
 		r := step.Rewards
 		if r.Money > 0 {
 			if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
-				return false, err
+				return false, "", err
 			}
 		}
 		for _, itemID := range r.ItemIDs {
@@ -201,9 +222,9 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, er
 		if err := s.store.DB.Model(&model.UserQuest{}).
 			Where("user_id = ? AND quest_id = ?", userID, questID).
 			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
-			return false, err
+			return false, "", err
 		}
-		return true, nil
+		return true, "", nil
 	}
 	updates := map[string]any{"step_index": nextIdx, "progress_value": 0}
 	sType := def.Steps[nextIdx].Type
@@ -217,13 +238,96 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, er
 	if err := s.store.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", userID, questID).
 		Updates(updates).Error; err != nil {
-		return false, err
+		return false, "", err
 	}
-	return false, nil
+	return false, def.Steps[nextIdx].TextKey, nil
 }
 
 func (s *Service) GetQuestDef(id string) *QuestDef {
 	return QuestRegistry[id]
+}
+
+// tutorialHuntStepIndex returns the index of the first tutorial step that
+// requires a pet (the hunting activity), or -1 if not found.
+func tutorialHuntStepIndex(def *QuestDef) int {
+	for i, st := range def.Steps {
+		if st.TextKey == "quests.day4_will.step1_activity" {
+			return i
+		}
+	}
+	return -1
+}
+
+// EnsureTutorialEgg repairs players who reached the tutorial hunting/feeding
+// steps before the Mystery Egg reward was moved earlier in the quest — leaving
+// them stuck without a pet. Grants the egg once if the player is on or past the
+// hunting step and has no pet and no egg. Returns true when an egg was granted.
+func (s *Service) EnsureTutorialEgg(userID int64) (bool, error) {
+	def := QuestRegistry["tutorial"]
+	if def == nil {
+		return false, nil
+	}
+	var uqd model.UserQuestData
+	err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, "tutorial").First(&uqd).Error
+	if err != nil {
+		return false, nil
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return false, nil
+	}
+
+	// First step that requires a pet (hunting activity).
+	huntIdx := tutorialHuntStepIndex(def)
+	if huntIdx < 0 || uqd.StepIndex < huntIdx {
+		return false, nil
+	}
+
+	// Already owns a pet?
+	var petCount int64
+	if err := s.store.DB.Model(&model.UserPet{}).Where("user_id = ?", userID).Count(&petCount).Error; err == nil && petCount > 0 {
+		return false, nil
+	}
+	// Already has the egg?
+	var inv model.Inventory
+	err = s.store.DB.Where("user_id = ? AND item_id = ?", userID, "forest_egg").First(&inv).Error
+	if err == nil && inv.Quantity > 0 {
+		return false, nil
+	}
+
+	err = s.store.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
+	}).Create(&model.Inventory{UserID: userID, ItemID: "forest_egg", Quantity: 1}).Error
+	if err != nil {
+		return false, err
+	}
+	slog.Info("quests: granted tutorial Mystery Egg to stuck player", "user", userID, "step", uqd.StepIndex)
+	return true, nil
+}
+
+// HasUnhatchedTutorialEgg reports whether the player is on or past the tutorial
+// hunting step, has no pets, and is still holding the unhatched Mystery Egg —
+// i.e. they are stuck and need to hatch it to progress.
+func (s *Service) HasUnhatchedTutorialEgg(userID int64) bool {
+	def := QuestRegistry["tutorial"]
+	if def == nil {
+		return false
+	}
+	var uqd model.UserQuestData
+	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, "tutorial").First(&uqd).Error; err != nil {
+		return false
+	}
+	huntIdx := tutorialHuntStepIndex(def)
+	if huntIdx < 0 || uqd.StepIndex < huntIdx {
+		return false
+	}
+	var petCount int64
+	if err := s.store.DB.Model(&model.UserPet{}).Where("user_id = ?", userID).Count(&petCount).Error; err == nil && petCount > 0 {
+		return false
+	}
+	var inv model.Inventory
+	err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "forest_egg").First(&inv).Error
+	return err == nil && inv.Quantity > 0
 }
 
 func (s *Service) GetAllActiveQuests(userID int64) ([]QuestInfo, error) {
@@ -408,6 +512,8 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 		return errors.New("no requirement data")
 	}
 
+	reqErr := &RequirementError{}
+
 	// Check money requirement
 	if money := toInt(extra["req_money"]); money > 0 {
 		var user model.User
@@ -415,7 +521,8 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 			return errors.New("user not found")
 		}
 		if user.Balance < money {
-			return errors.New("not enough money")
+			reqErr.MoneyNeeded = money
+			reqErr.MoneyHave = user.Balance
 		}
 	}
 
@@ -428,11 +535,16 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 			}
 			var inv model.Inventory
 			err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
-			if err != nil {
-				return errors.New("missing item: " + itemID)
+			have := 0
+			if err == nil {
+				have = inv.Quantity
 			}
-			if inv.Quantity < qty {
-				return errors.New("not enough " + itemID)
+			if have < qty {
+				reqErr.MissingItems = append(reqErr.MissingItems, MissingItem{
+					ItemID: itemID,
+					Needed: qty,
+					Have:   have,
+				})
 			}
 		}
 	}
@@ -442,8 +554,12 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 		var housing model.UserHousing
 		err := s.store.DB.Where("user_id = ?", userID).First(&housing).Error
 		if err != nil {
-			return errors.New("you need to buy a house first")
+			reqErr.NeedsHouse = true
 		}
+	}
+
+	if reqErr.MoneyNeeded > 0 || len(reqErr.MissingItems) > 0 || reqErr.NeedsHouse {
+		return reqErr
 	}
 
 	return nil
@@ -532,4 +648,26 @@ func QuestCompletedMsg(questID string, lang string) string {
 	}
 	title := i18n.T(def.TitleKey, lang)
 	return i18n.T("quests.completed_activity_msg", lang, map[string]any{"title": title})
+}
+
+// QuestNotificationMsg returns a localized string to notify the user about a
+// quest event surfaced by RecordActivity: either a full quest completion or a
+// step advancement (pointing at the next objective).
+func QuestNotificationMsg(n store.QuestNotification, lang string) string {
+	if n.QuestID == "" {
+		return ""
+	}
+	if n.Completed {
+		return QuestCompletedMsg(n.QuestID, lang)
+	}
+	def := QuestRegistry[n.QuestID]
+	if def == nil {
+		return ""
+	}
+	title := i18n.T(def.TitleKey, lang)
+	next := ""
+	if n.NextStepKey != "" {
+		next = i18n.T(n.NextStepKey, lang)
+	}
+	return i18n.T("quests.step_advanced", lang, map[string]any{"title": title, "next": next})
 }

@@ -67,6 +67,13 @@ var ResearchDefs = map[string]*ResearchDef{
 		UnlocksRecipes:    []string{"volcano_egg"},
 		BonusDesc:         "Unlocks: Volcano Egg",
 	},
+	"pet_nutrition": {
+		ID: "pet_nutrition", Name: "Pet Nutrition", Description: "Master alchemical feeding to brew potions that empower your pets.",
+		TimeHours: 12, CostMoney: 6000, CostItems: map[string]int{"golden_apple": 2, "mutagen": 2},
+		RequiredFurniture: "enchanting_table",
+		UnlocksRecipes:    []string{"berserker_elixir", "adamant_tonic", "gale_draught", "oracles_insight"},
+		BonusDesc:         "Unlocks: Pet potion crafting (Berserker Elixir, Adamant Tonic, Gale Draught, Oracle's Insight)",
+	},
 
 	// --- Equipment Rarity Research ---
 	"equip_common": {

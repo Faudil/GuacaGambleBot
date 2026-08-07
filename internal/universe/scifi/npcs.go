@@ -26,6 +26,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"zara": {
 		ID: "zara", Name: "ZARA", Emoji: "\U0001f4a0", Color: 0x9b59b6,
+		LinkedActivities: []string{"archeology"},
 
 		DescriptionEN: "Fragment 7 of HELIOS. Adrift in the ship's network. She remembers everything except why.",
 		DescriptionFR: "Fragment 7 d'HELIOS. À la dérive dans le réseau du vaisseau. Elle se souvient de tout sauf du pourquoi.",
@@ -47,6 +48,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"okonkwo": {
 		ID: "okonkwo", Name: "Dr. Okonkwo", Emoji: "\U0001f331", Color: 0x2ecc71,
+		LinkedActivities: []string{"farming"},
 
 		DescriptionEN: "Chief botanist. Maintains the hydroponic vats that produce the ship's oxygen and food.",
 		DescriptionFR: "Botaniste en chef. Maintient les cuves hydroponiques qui produisent l'oxygène et la nourriture du vaisseau.",
@@ -68,6 +70,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"kellan": {
 		ID: "kellan", Name: "Kellan", Emoji: "\U0001f527", Color: 0xe67e22,
+		LinkedActivities: []string{"mining"},
 
 		DescriptionEN: "Chief engineer. If it breaks, he fixes it. If it hasn't broken yet, he's watching it.",
 		DescriptionFR: "Ingénieur en chef. Si ça casse, il répare. Si ça n'a pas encore cassé, il surveille.",
@@ -89,6 +92,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"arcade": {
 		ID: "arcade", Name: "ARCADE", Emoji: "\U0001f3b0", Color: 0xf1c40f,
+		LinkedActivities: []string{"gambling"},
 
 		DescriptionEN: "Ship entertainment AI. Degraded but functional. It has been shuffling the same playlist for 800 years.",
 		DescriptionFR: "IA de divertissement du vaisseau. Dégradée mais fonctionnelle. Elle diffuse la même playlist depuis 800 ans.",

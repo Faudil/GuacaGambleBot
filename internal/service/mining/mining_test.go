@@ -12,7 +12,11 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
+	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
@@ -21,7 +25,12 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	require.NoError(t, db.Migrate(d))
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
-	svc := New(s, cfg)
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	svc := New(s, cfg, npcSvc)
 	return svc, s
 }
 
@@ -279,8 +288,9 @@ func TestLoreAtDepth(t *testing.T) {
 }
 
 func TestLootAtDepth(t *testing.T) {
-	assert.Len(t, lootAtDepth(1), 2)
+	assert.Len(t, lootAtDepth(1), 3)
 	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
+	assert.Contains(t, lootAtDepth(1), MineItem{"wheat_seed", 2})
 	assert.Len(t, lootAtDepth(15), 3)
 	assert.Len(t, lootAtDepth(20), 3)
 	assert.Len(t, lootAtDepth(30), 2)

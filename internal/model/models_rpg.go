@@ -45,6 +45,19 @@ type UserLoreEntry struct {
 	DiscoveredAt time.Time `gorm:"column:discovered_at;autoCreateTime"`
 }
 
+type UserHuntUnlock struct {
+	UserID     int64     `gorm:"primaryKey;column:user_id"`
+	ZoneKey    string    `gorm:"primaryKey;column:zone_key"`
+	UnlockedAt time.Time `gorm:"column:unlocked_at;autoCreateTime"`
+}
+
+type UserHuntZoneStat struct {
+	UserID    int64 `gorm:"primaryKey;column:user_id"`
+	ZoneKey   string `gorm:"primaryKey;column:zone_key"`
+	Wins      int   `gorm:"column:wins;default:0"`
+	BossKills int   `gorm:"column:boss_kills;default:0"`
+}
+
 type WeeklyRank struct {
 	UserID   int64 `gorm:"primaryKey;column:user_id"`
 	ServerID int64 `gorm:"primaryKey;column:server_id"`
@@ -67,5 +80,7 @@ func (UserCharacter) TableName() string     { return "user_characters" }
 func (UserEquipment) TableName() string     { return "user_equipment" }
 func (ActiveBuff) TableName() string        { return "active_buffs" }
 func (UserLoreEntry) TableName() string     { return "user_lore" }
+func (UserHuntUnlock) TableName() string    { return "user_hunt_unlocks" }
+func (UserHuntZoneStat) TableName() string  { return "user_hunt_zone_stats" }
 func (WeeklyRank) TableName() string        { return "weekly_ranks" }
 func (WeeklyModifier) TableName() string     { return "weekly_modifiers" }

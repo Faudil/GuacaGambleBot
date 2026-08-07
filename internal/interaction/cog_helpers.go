@@ -10,6 +10,8 @@ import (
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/logger"
+	questssvc "guacagamblebot/internal/service/quests"
+	"guacagamblebot/internal/store"
 )
 
 // RespondError replies to an interaction with a single ephemeral error/info
@@ -50,6 +52,19 @@ func SendAchievements(b *Bot, i *discordgo.InteractionCreate, lang string, unloc
 	}
 	embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, 0xf1c40f)
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Embeds: []*discordgo.MessageEmbed{embed}})
+}
+
+// SendQuestNotification posts a follow-up ephemeral embed (visible only to the
+// player) about a quest event surfaced by RecordActivity.
+func SendQuestNotification(b *Bot, i *discordgo.InteractionCreate, n store.QuestNotification, lang string) {
+	if n.QuestID == "" {
+		return
+	}
+	embed := components.Embed(i18n.T("quests.notification_title", lang), questssvc.QuestNotificationMsg(n, lang), 0x9b59b6)
+	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Embeds: []*discordgo.MessageEmbed{embed},
+		Flags:  discordgo.MessageFlagsEphemeral,
+	})
 }
 
 // Mention formats a Discord user mention from a numeric user id.

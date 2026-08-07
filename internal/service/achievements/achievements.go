@@ -38,6 +38,10 @@ func (s *Service) List(userID int64) ([]View, error) {
 
 	out := make([]View, 0, len(achievement.All()))
 	for _, a := range achievement.All() {
+		// Secret achievements stay invisible until earned.
+		if a.Hidden && !unlocked[a.ID] {
+			continue
+		}
 		out = append(out, View{
 			ID:       a.ID,
 			Emoji:    a.Emoji,

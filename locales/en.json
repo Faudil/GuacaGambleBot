@@ -88,10 +88,20 @@
     "daily_interest": "Daily interest"
   },
   "inventory": {
+    "error": "❌ Could not load inventory.",
     "empty": "🎒 Your bag is empty, {user}! Go mining or buy some stuff.",
     "title": "🎒 {user}'s Backpack",
     "footer": "Use !use <item name> to use it!",
-    "category_equipment": "⚔️ Equipment"
+    "category_equipment": "⚔️ Equipment",
+    "category_archeology": "🦴 Archeology",
+    "category_farming": "🚜 Farming",
+    "category_fishing": "🎣 Fishing",
+    "category_food": "🍲 Food",
+    "category_materials": "🌱 Materials",
+    "category_mining": "⛏️ Mining",
+    "category_other": "📦 Other",
+    "category_special": "✨ Special",
+    "category_tools": "🔧 Tools"
   },
   "biomes": {
     "forest": "Forest",
@@ -118,6 +128,7 @@
     "trade_cancelled": "❌ Trade cancelled.",
     "no_item_owned": "❌ You don't have any **{item_name}**.",
     "used_item": "✨ You used **{item_name}**, it has been removed from your inventory",
+    "trade_usage": "Usage: `!sell @user <item> <price>` — sell an item to another player.",
     "trade_proposal_title": "🤝 Trade Proposal",
     "trade_proposal_desc": "**{seller}** wants to sell you **{item}** for **${price}**.\n{buyer}, do you accept ?",
     "accept_label": "✅ Accept Offer",
@@ -749,8 +760,10 @@
     "filter_placeholder": "📂 Filter by category",
     "select_placeholder": "🛒 Select item to trade",
     "modal_title": "Market Order , {item}",
-    "modal_action_label": "Buy or Sell?",
     "modal_amount_label": "Quantity",
+    "action_confirm": "Current price: **${price}**. Choose an action:",
+    "action_buy": "🛒 Buy",
+    "action_sell": "💰 Sell",
     "item_not_found": "❌ This item does not exist!",
     "item_not_sellable": "❌ This item is not in this week's rotation.",
     "sold_msg": "💰 You sold **{amount}x {item}** for **${gain}**.",
@@ -760,7 +773,6 @@
     "no_items": "❌ No items available in this category.",
     "invalid_id": "❌ Invalid Item ID.",
     "invalid_amount": "❌ Invalid quantity (1-999).",
-    "invalid_action": "❌ Please type &#39;buy&#39; or &#39;sell&#39;.",
     "error": "❌ Something went wrong.",
     "cat_all": "All Items",
     "cat_mining": "Mining",
@@ -796,6 +808,62 @@
     "pve_hunter": {
       "name": "Monster Hunter",
       "desc": "Win 25 expedition fights (PvE)."
+    },
+    "hunt_unlock_mountain": {
+      "name": "Mountain Explorer",
+      "desc": "Unlock the Mountain zone."
+    },
+    "hunt_unlock_ocean": {
+      "name": "Ocean Explorer",
+      "desc": "Unlock the Ocean zone."
+    },
+    "hunt_unlock_tundra": {
+      "name": "Tundra Explorer",
+      "desc": "Unlock the Tundra zone."
+    },
+    "hunt_unlock_volcano": {
+      "name": "Volcano King",
+      "desc": "Unlock the Volcano zone."
+    },
+    "hunt_boss_forest": {
+      "name": "Scourge of the Forest",
+      "desc": "Defeat the Lord of the Forest."
+    },
+    "hunt_boss_cave": {
+      "name": "Terror of the Caverns",
+      "desc": "Defeat the Goblin King."
+    },
+    "hunt_boss_desert": {
+      "name": "Nightmare of the Desert",
+      "desc": "Defeat the Scorpion King."
+    },
+    "hunt_boss_mountain": {
+      "name": "Mountain Breaker",
+      "desc": "Defeat the Stone Titan."
+    },
+    "hunt_boss_ocean": {
+      "name": "Master of the Seas",
+      "desc": "Defeat the Abyssal Kraken."
+    },
+    "hunt_boss_tundra": {
+      "name": "Ice Breaker",
+      "desc": "Defeat the Great White Wolf."
+    },
+    "hunt_boss_volcano": {
+      "name": "Dragon Slayer",
+      "desc": "Defeat the Primordial Dragon."
+    },
+    "hunt_boss_10": {
+      "name": "Boss Hunter",
+      "desc": "Defeat 10 zone bosses."
+    },
+    "hunt_boss_50": {
+      "name": "Boss Slayer",
+      "desc": "Defeat 50 zone bosses."
+    },
+    "hunt_boss_100": {
+      "name": "Legendary Hunter",
+      "desc": "Defeat 100 zone bosses."
     },
     "eco_1k": {
       "name": "New Rich",
@@ -1113,7 +1181,11 @@
     "unlocked": "Unlocked",
     "locked": "Locked",
     "empty": "You haven't unlocked any achievements yet.",
-    "entry": "{emoji} **{name}** (+{glory} Glory) , {status}"
+    "entry": "{emoji} **{name}** (+{glory} Glory) , {status}",
+    "journal_mastery": {
+      "name": "The Mastery Legend",
+      "desc": "Complete every journal path to become a living legend."
+    }
   },
   "duel": {
     "no_bot": "🤖 You cannot challenge a bot (they cheat).",
@@ -1758,6 +1830,16 @@
     "tip_6": "🍀 High LUK increases your chances of rare harvest events.",
     "tip_7": "🧳 The Wandering Merchant appears randomly. Always be ready to trade!",
     "tip_8": "🥕 Try farming carrots in the Vegetable Patch at dawn. You might find something special.",
+    "seedmaker_btn": "🌱 Seed Maker",
+    "seedmaker_title": "🌱 Seed Maker",
+    "seedmaker_desc": "Process your harvest into seeds!\n**1 fruit → 2-4 seeds**",
+    "seedmaker_choose_placeholder": "Pick a fruit to process...",
+    "seedmaker_no_crops": "❌ You don't have any harvestable fruits to process!",
+    "seedmaker_option_desc": "{qty}x owned · yields 2-4 seeds",
+    "seedmaker_result_title": "🌱 Seeds Processed!",
+    "seedmaker_result_desc": "You processed **{crop}** and got **{qty}x {seed}**!",
+    "seedmaker_invalid_crop": "❌ **{item}** can't be processed into seeds.",
+    "seedmaker_cmd_usage": "📖 Usage: `!seedmaker <crop> [quantity]` — ex: `!seedmaker 3 wheat`",
     "zone_public_desc": "The communal fields stretch before you, alive with the chatter of passing villagers. The soil here is well-trodden but fertile.",
     "zone_veggie_desc": "Your private patch, tucked behind the old mill. Rich, dark soil promises bountiful harvests. A scarecrow stands watch at the edge.",
     "zone_greenhouse_desc": "Warmth envelops you as you step inside. Steam fogs the glass panels. Strange and exotic plants thrive in the tropical air.",
@@ -1899,7 +1981,7 @@
   "hunt": {
     "wrong_expedition": "❌ This is not your expedition!",
     "generating": "⚔️ **Generating expedition...**",
-    "no_pet": "❌ You don't have an active pet! (`!equip`)",
+    "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
     "pet_ko": "❌ **{name}** is K.O.! Feed it to heal before leaving again.",
     "dashboard_title": "🗺️ Expedition Board",
     "dashboard_desc": "Your pet **{name}** (Lvl {lvl}) is ready.\nChoose the biome you want to explore. The harder the biome, the more XP you gain!",
@@ -1911,6 +1993,12 @@
     "tundra_zone": "❄️ Frozen Tundra",
     "volcano_zone": "🌋 Volcano",
     "level_range": "Lvl. {min} to {max}",
+    "remaining": "⚔️ **{remaining}/{max}** hunts left today.",
+    "zone_locked_progress": "🔒 {current}/{required} wins in {prev_emoji} {prev_name}",
+    "zone_locked_error": "🔒 Zone locked! Win **{required}** battles in {prev_emoji} **{prev_name}** to unlock it.",
+    "zone_unlocked": "🎉 **NEW ZONE UNLOCKED!** {emoji} **{name}** is now accessible!",
+    "boss_tag": "👑 BOSS",
+    "boss_defeated": "\n\n👑 **BOSS defeated!**",
     "select_zone": "🌍 Select a biome to hunt in...",
     "expedition_title": "{emoji} Expedition: {name}",
     "vs": "VS",
@@ -1922,9 +2010,15 @@
     "victory_msg": "\n\n✨ **{pet}** defeated the monster and gains **+{xp} XP**!",
     "defeat_msg": "\n\n🩸 **{pet}** is severely injured and flees the battle... You still gain {xp} XP",
     "flee_msg": "\n\n💨 The monster fled into the wild... You gain {xp} XP!",
+    "your_pet": "Your pet",
+    "history_win": "⚔️ **{pet}** won a fight in the **{zone}** zone and earned **{xp} XP**.",
+    "history_loss": "😰 **{pet}** was defeated while hunting in the **{zone}** zone...",
     "loot_found": "\n\n🎁 **Loot obtained:**\n",
     "no_loot": "\n\n🎁 *The monster left nothing behind...*",
     "level_up": "\n🎉 **LEVEL UP!** {pet} reached Level {level}!",
+    "cooldown": "⏳ You need to wait {seconds} seconds between hunts!",
+    "limit_reached": "❌ You've used all {max} hunts for today! Come back tomorrow.",
+    "error": "❌ Something went wrong during the hunt. Please try again.",
     "back": "← Back",
     "wild_suffix": " Wild",
     "enemies": {
@@ -1941,7 +2035,14 @@
       "Loup des Glaces": "Ice Wolf",
       "Yeti Furieux": "Furious Yeti",
       "Golem de Magma": "Magma Golem",
-      "Drake de Feu": "Fire Drake"
+      "Drake de Feu": "Fire Drake",
+      "Seigneur de la Forêt": "Lord of the Forest",
+      "Roi des Gobelins": "Goblin King",
+      "Roi Scorpion": "Scorpion King",
+      "Titan de Pierre": "Stone Titan",
+      "Kraken des Abysses": "Abyssal Kraken",
+      "Grand Loup Blanc": "Great White Wolf",
+      "Dragon Primordial": "Primordial Dragon"
     }
   },
   "sanctuary": {
@@ -1993,7 +2094,7 @@
     "help_commands": "**Commands:**",
     "help_commands_list": "`!expedition start <1/4/8/24>` : Start an expedition\n`!expedition status` : View the logbook\n`!expedition claim` : Collect rewards",
     "invalid_duration": "❌ Invalid duration. Choose: 1, 4, 8, or 24 hours.",
-    "no_pet": "❌ You don't have an active pet! (`!equip`)",
+    "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
     "already_active": "❌ You already have an active expedition. Finish it first.",
     "no_active": "❌ You don't have an active expedition.",
     "start_success": "🚀 **{pet}** left on an expedition for **{duration}h**!",
@@ -2030,28 +2131,59 @@
     "hatch": {
       "no_egg": "❌ You don't have a biome egg in your inventory! Hunt for one or buy at the `!shop`.",
       "hatching_title": "🥚 Hatching in progress...",
-      "step1": "The egg trembles...\n*Crack...*",
+      "step1": "The **{egg}** trembles...\n*Crack...*",
       "step2": "The shell breaks!\n*CRACK CRACK...*",
+      "step1_footer": "✨ Rarity: {rarity}",
+      "step2_personality": "A **{personality}** presence stirs inside...",
       "success_title": "{emoji} A NEW COMPANION!",
-      "success_desc": "{emoji} A **{egg}** hatches!\n**{emoji} {pet}** emerges!\n{biome} | {type} | Lvl 1 | {personality}\n\nUse `/pets` to see your new companion!",
+      "success_desc": "{emoji} A **{egg}** hatches!\n**{emoji} {pet}** emerges!\n{biome} | {type} | Lvl 1 | {personality}\n\n🌟 **Rarity:** {rarity}\n\nUse `/pets` to see your new companion!",
       "no_slots": "❌ You don't have enough pet slots! You can only have {max} pets at once.",
-      "error": "❌ Something went wrong while hatching! Please try again.",
-      "prefix_success": "{emoji} **{pet}** hatched from a **{egg}**! {type}"
+      "error": "❌ Something went wrong while hatching! Please try again."
     },
     "list": {
       "title": "🐾 {name}'s Menagerie",
-      "no_pets": "🐾 You have no pets. Hunt in biomes for eggs or buy them at the shop!",
-      "active": "🔵 (Active)",
-      "inactive": "🔴 (Inactive)",
-      "footer": "To equip a pet: !equip <ID>"
+      "no_pets": "🐾 You have no pets yet!\n\n**Getting started:**\n1️⃣ `/start` — begin the tutorial (grants a starter egg)\n2️⃣ `/hatch` — hatch an egg from your inventory\n3️⃣ `/pets` — select your new companion\n\nOr buy biome eggs at the `!shop`!",
+      "active": "✅ Active",
+      "inactive": "🔄 Inactive",
+      "select_placeholder": "Select a pet to manage...",
+      "hatch_btn": "🥚 Hatch an Egg",
+      "footer": "Select a pet below to view its details, feed it, or send it to battle."
     },
     "equip": {
       "success": "✅ Pet equipped successfully!",
       "fail": "❌ Unable to equip this pet. Are you sure you own it?"
     },
+    "detail": {
+      "back": "← Back",
+      "combat": "🛡️ Combat",
+      "precision": "🎯 Precision",
+      "progression": "📈 Progression",
+      "skills": "💡 Skills",
+      "history": "📜 Recent History",
+      "btn_name": "Name",
+      "btn_rename": "Rename",
+      "btn_feed": "🍖 Feed",
+      "btn_battle": "⚔️ Battle",
+      "btn_skills": "⚡ Skills",
+      "btn_activate": "⭐ Activate",
+      "btn_active": "✅ Active",
+      "btn_heal": "🏥 Heal"
+    },
     "rename": {
       "too_long": "❌ This name is too long (Max 20 characters).",
-      "success": "🏷️ Your active pet is now named **{name}**!"
+      "success": "🏷️ Your active pet is now named **{name}**!",
+      "modal_title": "Name your pet",
+      "input_label": "Pet name",
+      "input_placeholder": "Enter a name (max 20 characters)"
+    },
+    "delete": {
+      "confirm_title": "🕊️ Release your pet?",
+      "confirm_desc": "{emoji} **{name}** ({rarity} · Lvl {level}) will be set free forever.\n\nThis **cannot be undone**!",
+      "confirm_btn": "🕊️ Set Free",
+      "cancel_btn": "Cancel",
+      "success_title": "🕊️ {name} is free!",
+      "success_desc": "{emoji} **{name}** has been set free. It trots happily into the wilderness...\n\nGoodbye, friend.",
+      "error": "❌ Something went wrong while releasing your pet. Please try again."
     },
     "sell": {
       "self_sell": "❌ You cannot sell a pet to yourself!",
@@ -2086,12 +2218,32 @@
       "miam_title": "🍖 Yummy!",
       "miam_desc": "You gave **1x {item}** to {emoji} **{name}**.\n\n✨ **EFFECT:** {stat} {sign}{amount}\n\n📊 *Stomach: {food} / {max_food}*",
       "full": "🛑 **{name}** is full! It has reached its maximum food potential ({current}/{max}).",
-      "refuse": "🤢 **{name}** sniffs the **{item}** and refuses to eat it. It's not nourishing."
+      "refuse": "🤢 **{name}** sniffs the **{item}** and refuses to eat it. It's not nourishing.",
+      "menu_title": "🍖 What will you feed {name}?",
+      "menu_desc": "Each meal permanently strengthens your pet.\n🍽️ Fed: **{current}/{max}**",
+      "menu_placeholder": "Choose a food or ingredient...",
+      "no_food": "❌ You have nothing to feed **{name}**!\n\nGather ingredients (**fish, crops, ores**) to feed it directly, or craft proper meals with `!craft`.",
+      "error": "❌ Something went wrong while feeding your pet. Please try again.",
+      "success": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat} · 💕 +{bond} bond)\n🍽️ Fed: **{current}/{max}**",
+      "success_raw": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat})\n🍽️ Fed: **{current}/{max}**",
+      "success_bond": "🍬 **{name}** savored the **{item}**! 💕 +{bond} bond",
+      "stats": {
+        "max_hp": "Max HP",
+        "atk": "ATK",
+        "defense": "DEF",
+        "speed": "SPD",
+        "dge": "DGE",
+        "acc": "ACC",
+        "crit_c": "Crit Chance",
+        "crit_d": "Crit Damage"
+      }
     },
     "heal": {
       "full_hp": "✨ **{name}** is already in top shape!",
-      "no_money": "❌ You don't have enough money to pay for healing price: {price}$)",
-      "success": "🏥 **{name}** rested well and recovered **{hp} HP**! HP is now at maximum. (you paid {price}$)"
+      "no_money": "❌ You don't have enough money to pay for healing! Price: {price}$",
+      "success": "🏥 **{name}** rested well and recovered **{hp} HP**! HP is now at maximum. (you paid {price}$)",
+      "on_expedition": "❌ **{name}** is on an expedition! Wait for it to return before healing.",
+      "error": "❌ Something went wrong while healing your pet. Please try again."
     },
     "stats": {
       "title": "📊 {name}'s Stats {emoji}",
@@ -2394,7 +2546,7 @@
     "shop_title": "🏙️ Real Estate Agency",
     "shop_desc": "Welcome! Looking for a place to stay?",
     "buy_success": "🎉 **Congratulations!** You are now the owner of a **{house}**!",
-    "no_money": "❌ You don't have enough money (${price}).",
+    "no_money": "❌ You don't have enough money ({price}$).",
     "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**.",
     "max_level": "❌ Your home is already at maximum level.",
     "collect_success": "💰 **Rent Collected!** You gained **${amount}** from your property.",
@@ -2459,9 +2611,12 @@
     "building_bank_desc": "Increases job payouts.",
     "building_statue_name": "The Great Statue",
     "building_statue_desc": "A tribute to the server's wealth. Gives glory.",
+    "building_hospital_name": "Pet Hospital",
+    "building_hospital_desc": "Heal your pets for less. Each level cuts healing costs by 10% — free at max level.",
     "bonus_shop_discount": "{val}% Shop Discount",
     "bonus_job_payout": "+{val}% Job Payout",
     "bonus_glory_bonus": "+{val} Glory globally",
+    "bonus_heal_discount": "-{val}% Heal Cost",
     "no_bonus_yet": "No active bonuses.",
     "not_found": "❌ Building '{name}' not found.",
     "max_level": "❌ {name} has reached its maximum level!",
@@ -2494,6 +2649,7 @@
   },
   "quests": {
     "menu_desc": "Track your active quests and progress.",
+    "notification_title": "📜 Quest Update",
     "btn_show": "Show Quests",
     "no_active": "❌ You have no active quests.",
     "continue_label": "Continue",
@@ -2505,6 +2661,7 @@
     "complete_objective_first": "⚡ Complete the current objective first (mine, farm, hunt, etc.), then use the Refresh button to check your progress!",
     "completed_msg": "✅ **{title}** , Quest completed!",
     "completed_activity_msg": "✅ **{title}** complete! Type `/quest` to check your progress.",
+    "step_advanced": "✅ **{title}** — objective complete!\n🎯 **Next:** {next}\n\nType `/quest` to see your progress.",
     "activity_intro": "📋 **{quest}**\n\n**{label}** , complete this activity, then come back to continue.",
     "active_list": "**Your Active Quests:**\n\nSelect one with `!quest <id>`:\n",
     "daily_challenge": {
@@ -2521,6 +2678,12 @@
     },
     "req_button": "Fulfill Requirement",
     "req_missing": "❌ You do not have the required money or items!",
+    "tutorial_egg_granted": "🎁 You found a **Forest Egg**! Irian must have dropped it earlier. Hatch it with `/hatch`, then select it with `/pets`.",
+    "tutorial_egg_hint": "🎁 You're holding a **Forest Egg**! Hatch it with `/hatch`, then select it with `/pets` so you can continue your journey.",
+    "req_missing_house": "🏠 You don't own a house yet — buy one with `/house`!",
+    "req_missing_money": "💰 You need **${needed}** (you have ${have}).",
+    "req_missing_item": "🎒 {item}: {have} / {needed}",
+    "req_farm_hint": "🛠️ Earn money and gather resources with `/daily`, `/farm`, `/fish`, `/mine`, `/hunt` — then sell your loot on `/market`!",
     "req_done": "✅ Requirements fulfilled!",
     "req_money_status": "💰 Money: ${current} / ${required}",
     "req_item_status": "🎒 {item}: {current} / {required}",
@@ -2558,14 +2721,14 @@
       "step0_req": "GambleBot runs the capsule data through the terminal. A partial schematic flickers onto the screen.\n\n\"Strata Blueprints, section one. Need a stationary terminal to decode the rest. Buy a Starter Shack via `!house shop`. Cost: 500 credits and 2 Iron Ore.\"",
       "step1_transition": "The shack terminal powers on. GambleBot's voice crackles through the speaker.\n\n\"Good. Now protect your coins. `!deposit` one time. If you lose it all gambling, at least your savings stay safe.\"",
       "step2_activity": "Goal: Make 1 deposit using `!deposit`.",
-      "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\""
+      "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\"\n\nIrian meets you at the edge of town with a gift: a **Forest Egg** cradled in moss, warm to the touch. \"A wild seed of the woods. Use `!hatch` to open it. Could be anything inside.\""
     },
     "day4_will": {
       "title": "Day 4: The Wilds",
       "description": "Hunting and the mystery egg.",
       "step0_dialogue": "Irian waits at the treeline. She gets straight to it.\n\n\"The woods aren't safe. Old experiments still run loose. But the Vault needs a DNA sample from local wildlife. So we hunt. Use `!hunt` a couple times. Your pet does the fighting.\"",
       "step1_activity": "Goal: Hunt 2 times using `!hunt`.",
-      "step2_dialogue": "Your pet drags something out of the brush. A pulsing egg wrapped in faded biotech seals, warm to the touch.\n\nIrian kneels beside it. \"An Ancient gene-lab artifact. A **Mystery Egg**. Use `!hatch` to open it. Could be anything inside.\"\n\nShe taps a seal. \"After it hatches, feed the new one with `!pets`. A hungry pet is a dead pet.\"",
+      "step2_dialogue": "Your pet drags the DNA sample out of the brush. Irian examines it and nods. \"That's what we needed.\"\n\nShe glances at the egg you carry. \"When it hatches, feed the new one with `!pets`. A hungry pet is a dead pet.\"",
       "step3_activity": "Goal: Feed your pet 1 time using `!pets`.",
       "step4_dialogue": "Your companion settles down after feeding. Irian watches for a moment.\n\n\"Take care of it. Whatever's ahead, you'll need something at your side.\"\n\nShe looks toward the Casino. \"GambleBot found something under his floorboards. Go see for yourself.\""
     },
@@ -2581,8 +2744,8 @@
     "day6_contribution": {
       "title": "Day 6: Community",
       "description": "Investing in the village.",
-      "step0_dialogue": "The four of you gather around the hologram projector. Thorek, Elara, Irian, and GambleBot. The projection lists its demands.\n\nElara speaks first. \"It's a test. The Ancients didn't just want someone strong enough to reach the Vault. They wanted someone who could hold a community together.\"\n\nThorek grunts. \"Fine. Let's prove it. `!community` to donate. We need **5 Iron Ore** and **5 Wheat**. Hit that threshold and the Vault opens.\"",
-      "step1_req": "Goal: Donate 5 Iron Ore and 5 Wheat using `!community`.\n\nThe resources are logged. The hologram steadies. Then a warning cuts across it, sharp and red.\n\n\"Guardian unit: separated from network. Autonomous mode: active. Command override: rejected.\"\n\nIrian looks up from the readout, face hard. \"It's awake. And it doesn't answer to anyone anymore.\""
+      "step0_dialogue": "The four of you gather around the hologram projector. Thorek, Elara, Irian, and GambleBot. The projection lists its demands.\n\nElara speaks first. \"It's a test. The Ancients didn't just want someone strong enough to reach the Vault. They wanted someone who could hold a community together.\"\n\nThorek grunts. \"Fine. Let's prove it. `!community` to donate. We need **5 Iron Ore** and **3 Wheat**. Hit that threshold and the Vault opens.\"",
+      "step1_req": "Goal: Donate 5 Iron Ore and 3 Wheat using `!community`.\n\nThe resources are logged. The hologram steadies. Then a warning cuts across it, sharp and red.\n\n\"Guardian unit: separated from network. Autonomous mode: active. Command override: rejected.\"\n\nIrian looks up from the readout, face hard. \"It's awake. And it doesn't answer to anyone anymore.\""
     },
     "day7_sprout": {
       "title": "Day 7: The Vault",
@@ -2626,7 +2789,7 @@
     "title": "🏆 Boss League 🏆",
     "locked": "🔒 You don't have any boss battle available yet. Raise a pet to level 20 to unlock the Boss League, or progress through the tutorial quest.",
     "stage_info": "Stage {stage}/5 - **{name}**",
-    "no_pet": "❌ You don't have an active pet! Use `!pets` to list your pets and `!equip <id>` to equip one.",
+    "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
     "pet_ko": "❌ Your active pet **{name}** is K.O.! Heal it first using `!heal`.",
     "fight_intro": "⚔️ **Challenge Accepted!** {pet_emoji} **{pet_name}** is challenging **{boss_name}** ({boss_emoji})!",
     "defeat": "💀 **Defeat!** Your pet **{pet_name}** was defeated by **{boss_name}**.",
@@ -2636,6 +2799,8 @@
     "champion": "🏆 **Boss League Champion** 🏆\nYou have defeated all the bosses and conquered the league! You are a master trainer!",
     "stats_label": "Level: {level}\nSpecies: {species}\nHP: {hp} | Atk: {atk} | Def: {defense} | Speed: {speed}",
     "fight_button": "Fight!",
+    "fight_hint": "💡 Press the button to challenge this boss!",
+    "no_battle_step": "❌ No boss battle step is available here.",
     "challenge_footer": "Prepare your pet and fight!",
     "already_champion": "🏆 You are already the Boss League Champion! There are no more opponents to fight."
   },
@@ -2665,6 +2830,7 @@
     "topic_chat": "What's new?",
     "chat_btn": "Chat",
     "chat_again_btn": "Chat Again",
+    "chat_cooldown": "⏳ {name} has nothing more to say for now. Come back in {minutes} minutes.",
     "rep_points": "Reputation",
     "affinity_label_desc": "{points} / {next}",
     "coins_label": "Coins",
@@ -2750,7 +2916,26 @@
     "equip_none_available": "❌ You don't have any unequipped items for this slot.",
     "equip_error": "❌ Failed to equip item.",
     "xp_gained": "📈 +{xp} Character XP",
-    "level_up": "🎉 **LEVEL UP!** You are now level {level}! (+2 skill points)"
+    "level_up": "🎉 **LEVEL UP!** You are now level {level}! (+2 skill points)",
+    "glory_label": "Glory",
+    "mastery_label": "The Mastery Legend"
+  },
+  "shop": {
+    "buy_now_label": "🛒 BUY NOW!",
+    "too_broke": "❌ You're too broke!",
+    "bought_msg": "✅ **{user}** grabbed the offer! They got **{item}**.",
+    "sold_label": "SOLD!",
+    "not_your_shop": "❌ This is not your shop!",
+    "too_broke_item": "❌ You're too broke for this item!",
+    "buy_success": "✅ You bought **{item}** for **${price}**!",
+    "bought_footer": "Bought: {item}",
+    "personal_title": "🛒 {user}'s Shop",
+    "personal_desc": "Pick an item to buy! Note: **you can only buy one item** out of the 4.\n\n",
+    "flash_sale_title": "⚡ FLASH SALE!",
+    "flash_sale_desc": "A traveling merchant offers: **{item}**\n{desc}\nNormal price: ~~${price}~~\n**Flash Price: ${flash_price}** (-{discount}%)",
+    "balance_footer": "💰 Balance: ${balance}",
+    "price_label": "Price",
+    "error": "❌ An error occurred."
   },
   "skills": {
     "title": "⚡ Active Skills",
@@ -2795,6 +2980,7 @@
     "no_shard": "❌ You need an **Artifact Shard** to reset your artifact. Buy one from the shop!",
     "no_money": "❌ You don't have enough coins to reset your artifact.",
     "error": "❌ Could not modify your artifact.",
+    "level_up": "🔮 **Your artifact leveled up!**",
     "level_up_title": "🎉 Artifact Level Up!",
     "level_up_desc": "Your artifact reached level {level}! Choose a stat to improve:"
   },
@@ -3367,5 +3553,129 @@
       "heroic_4": "The power coursing through you defied the Veil's corruption."
     },
     "delve_veil_key": "🔮 **Veil Key found!** Use it to enter the Veil Rift raid."
+  },
+  "journal": {
+    "title": "📖 Journal",
+    "desc": "Your story, your pace. Complete milestones to grow in each path. Nothing here is mandatory — follow what you enjoy.",
+    "error": "❌ Could not load your journal. Try again.",
+    "completed": "🎉 Just completed:",
+    "path_complete": "— path mastered!",
+    "ranks": {
+      "0": "Unranked",
+      "1": "Apprentice",
+      "2": "Journeyman",
+      "3": "Expert",
+      "4": "Master"
+    },
+    "reward": {
+      "money": "{amount}💰",
+      "crowns": "{amount}👑"
+    },
+    "btn_leaderboard": "Leaderboard",
+    "btn_back": "Back to journal",
+    "lb_desc": "Top path progress on this server:",
+    "lb_entry": "**{rank}.** {user} — {name} ({step} steps)",
+    "paths": {
+      "prospector": {
+        "title": "Prospector",
+        "desc": "Miner, fish, farm, hunt and dig.",
+        "step1": "Mine 25 ores",
+        "step2": "Catch 25 fish",
+        "step3": "Harvest 25 crops",
+        "step4": "Win 10 hunts",
+        "step5": "Mine 150 ores, or catch 100 fish, or harvest 100 crops",
+        "step6": "Dig up 15 fossils",
+        "step7": "Mine 300 ores, catch 200 fish AND harvest 200 crops"
+      },
+      "highroller": {
+        "title": "High Roller",
+        "desc": "Coinflip, slots, blackjack, roulette, lotto.",
+        "step1": "Play 15 coinflips",
+        "step2": "Win 5 slots games",
+        "step3": "Win 3 blackjack games",
+        "step4": "Enter 3 lotto draws",
+        "step5": "Play 10 roulette rounds",
+        "step6": "Win a bet you placed",
+        "step7": "Win 2 wagers",
+        "step8": "Win 10,000 total from casino games"
+      },
+      "merchant": {
+        "title": "Merchant Prince",
+        "desc": "Earn, trade, bank and invest.",
+        "step1": "Earn 1,000 in total",
+        "step2": "Sell 20 items at the market",
+        "step3": "Buy 20 items at the market",
+        "step4": "Stash 2,000 in the bank",
+        "step5": "Own a house",
+        "step6": "Contribute 500 to community projects",
+        "step7": "Earn 10,000 in total",
+        "step8": "Hold 100,000 in your wallet"
+      },
+      "shadow": {
+        "title": "Shadow",
+        "desc": "Theft, notoriety and infamy.",
+        "step1": "Commit your first successful theft",
+        "step2": "Complete 5 successful thefts",
+        "step3": "Reach 50 notoriety",
+        "step4": "Complete 15 successful thefts",
+        "step5": "Reach 50 thief infamy",
+        "step6": "Complete 30 successful thefts",
+        "step7": "Wear the Mask of Malveillance"
+      },
+      "champion": {
+        "title": "Champion",
+        "desc": "Duels, hunts, pets, bosses, delve.",
+        "step1": "Win 5 PvP duels",
+        "step2": "Win 15 hunts",
+        "step3": "Raise a pet to level 10",
+        "step4": "Defeat 2 Boss League stages",
+        "step5": "Defeat a hunt zone boss",
+        "step6": "Complete a delve run",
+        "step7": "Reach character level 25",
+        "step8": "Become Boss League Champion"
+      },
+      "builder": {
+        "title": "Builder",
+        "desc": "Housing, furniture, pets care, community.",
+        "step1": "Own a house",
+        "step2": "Upgrade your house to level 2",
+        "step3": "Place 3 pieces of furniture",
+        "step4": "Build a sanctuary",
+        "step5": "Feed your pets 20 times",
+        "step6": "Contribute 100 to community projects",
+        "step7": "Complete a research project",
+        "step8": "Contribute 1,000 to community projects"
+      },
+      "hunter": {
+        "title": "Hunter",
+        "desc": "Hunt zones, zone bosses and trophies.",
+        "step1": "Win 5 hunts",
+        "step2": "Unlock 3 hunt zones",
+        "step3": "Defeat 3 zone bosses",
+        "step4": "Win 25 hunts",
+        "step5": "Defeat 10 zone bosses",
+        "step6": "Defeat the Volcano Dragon",
+        "step7": "Slay the boss of every hunt zone",
+        "step8": "Defeat 100 zone bosses"
+      },
+      "historian": {
+        "title": "Historian",
+        "desc": "Lore fragments, fossils, research and secrets.",
+        "step1": "Discover 5 lore fragments",
+        "step2": "Dig up 10 fossils",
+        "step3": "Complete a research project",
+        "step4": "Discover 20 lore fragments",
+        "step5": "Earn 25 achievements",
+        "step6": "Discover 3 NPC secrets",
+        "step7": "Reach reputation level 5 with any NPC",
+        "step8": "Discover 45 lore fragments"
+      }
+    },
+    "mastery": {
+      "title": "🏆 The Mastery Legend",
+      "desc": "You have mastered every journal path. A legend whispered only to those who complete everything — carry it proudly.",
+      "announce_title": "🏆 **{user} has mastered the Journal!**",
+      "announce_desc": "Every path completed. Every milestone conquered. A new legend has been written into the chronicles of this world!"
+    }
   }
 }

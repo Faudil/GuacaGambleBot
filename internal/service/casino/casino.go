@@ -7,6 +7,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	charsvc "guacagamblebot/internal/service/character"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
@@ -62,12 +63,13 @@ type CoinflipResult struct {
 }
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
 }
 
 func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
@@ -143,6 +145,11 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	}
 
 	if res.IsWin {
+		if res.WinType == "JACKPOT" {
+			s.npcSvc.AddActivityReputation(userID, "gambling", 5)
+		} else {
+			s.npcSvc.AddActivityReputation(userID, "gambling", 1)
+		}
 		if luckyBreak {
 			res.Payout = int(float64(res.Payout) * 1.5)
 			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
@@ -255,6 +262,7 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 
 	res := &CoinflipResult{Result: result, Win: win}
 	if win {
+		s.npcSvc.AddActivityReputation(userID, "gambling", 1)
 		if _, err := s.store.UpdateBalance(userID, amount); err != nil {
 			return nil, err
 		}

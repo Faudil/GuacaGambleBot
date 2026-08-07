@@ -15,8 +15,10 @@ import (
 	"guacagamblebot/internal/interaction"
 	farmsvc "guacagamblebot/internal/service/farm"
 	"guacagamblebot/internal/items"
-	questssvc "guacagamblebot/internal/service/quests"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 var eventSessions = map[int64]*activeEvent{}
@@ -34,16 +36,26 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: farmsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: farmsvc.New(s, cfg, npcSvc)}
 	r.Slash("farm", "Farming minigame", c.onSlashMenu)
 	r.Prefix("farm", c.onPrefixMenu)
 	r.Prefix("fm", c.onPrefixMenu)
+	r.Prefix("seedmaker", c.onSeedMakerPrefix)
+	r.Prefix("semoir", c.onSeedMakerPrefix)
 	r.Component("farm", "menu", c.onMenu)
 	r.Component("farm", "zone", c.onZone)
 	r.Component("farm", "plot", c.onPlot)
 	r.Component("farm", "harvest", c.onHarvest)
 	r.Component("farm", "seed", c.onSeedPick)
 	r.Component("farm", "seed_choose", c.onSeedChoose)
+	r.Component("farm", "seedmaker", c.onSeedMaker)
+	r.Component("farm", "seedmaker_choose", c.onSeedMakerChoose)
 	r.Component("farm", "water", c.onWater)
 	r.Component("farm", "fertilize", c.onFertilize)
 	r.Component("farm", "inspect", c.onInspect)
@@ -156,6 +168,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 		components.ActionRow(btns...),
 		components.ActionRow(
 			components.Button(i18n.T("farm.inspect_main_btn", lang), components.Encode("farm", "inspect_main"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.seedmaker_btn", lang), components.Encode("farm", "seedmaker"), discordgo.SecondaryButton),
 			components.Button(i18n.T("farm.stats_btn", lang), components.Encode("farm", "stats"), discordgo.SecondaryButton),
 		),
 	}
@@ -527,6 +540,160 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, back))
 }
 
+func (c *Cog) onSeedMaker(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	var options []discordgo.SelectMenuOption
+	for _, crop := range farmsvc.Crops {
+		qty := c.svc.GetItemQuantity(userID, crop.Name)
+		if qty < 1 {
+			continue
+		}
+		options = append(options, discordgo.SelectMenuOption{
+			Label: items.DisplayName(crop.Name),
+			Value: crop.Name,
+			Description: i18n.T("farm.seedmaker_option_desc", lang, map[string]any{
+				"qty": qty,
+			}),
+			Emoji: &discordgo.ComponentEmoji{Name: "🌱"},
+		})
+	}
+
+	if len(options) == 0 {
+		interaction.RespondError(b, i, lang, "farm.seedmaker_no_crops")
+		return
+	}
+
+	menu := discordgo.SelectMenu{
+		CustomID:    components.Encode("farm", "seedmaker_choose"),
+		Placeholder: i18n.T("farm.seedmaker_choose_placeholder", lang),
+		Options:     options,
+	}
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(menu),
+		components.ActionRow(
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+			components.Embed(i18n.T("farm.seedmaker_title", lang), i18n.T("farm.seedmaker_desc", lang), 0x006400), comps))
+}
+
+func (c *Cog) onSeedMakerChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	data := i.MessageComponentData()
+	if len(data.Values) < 1 {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	cropName := data.Values[0]
+
+	if !c.svc.HasItem(userID, cropName) {
+		interaction.RespondError(b, i, lang, "farm.seedmaker_no_crops")
+		return
+	}
+
+	seedID, qty, err := c.svc.ConvertToSeeds(userID, cropName)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.seedmaker_no_crops")
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("farm.seedmaker_result_title", lang),
+		i18n.T("farm.seedmaker_result_desc", lang, map[string]any{
+			"crop": items.DisplayName(cropName),
+			"qty":  qty,
+			"seed": items.DisplayName(seedID),
+		}),
+		0x00FF00,
+	)
+	back := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, back))
+}
+
+func (c *Cog) onSeedMakerPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+
+	parts := strings.Fields(m.Content)
+	if len(parts) < 2 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("farm.seedmaker_cmd_usage", lang))
+		return
+	}
+
+	cropName := resolveCropName(parts[1])
+	if cropName == "" {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("farm.seedmaker_invalid_crop", lang, map[string]any{"item": parts[1]}))
+		return
+	}
+
+	qty := 1
+	if len(parts) >= 3 {
+		qty, _ = strconv.Atoi(parts[2])
+	}
+	if qty < 1 {
+		qty = 1
+	}
+	if qty > 10 {
+		qty = 10
+	}
+
+	owned := c.svc.GetItemQuantity(userID, cropName)
+	if owned < qty {
+		qty = owned
+	}
+	if qty < 1 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("farm.seedmaker_no_crops", lang))
+		return
+	}
+
+	totalSeeds := 0
+	var seedID string
+	for i := 0; i < qty; i++ {
+		sid, n, err := c.svc.ConvertToSeeds(userID, cropName)
+		if err != nil {
+			break
+		}
+		seedID = sid
+		totalSeeds += n
+	}
+	if totalSeeds < 1 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("farm.seedmaker_no_crops", lang))
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("farm.seedmaker_result_title", lang),
+		i18n.T("farm.seedmaker_result_desc", lang, map[string]any{
+			"crop": items.DisplayName(cropName),
+			"qty":  totalSeeds,
+			"seed": items.DisplayName(seedID),
+		}),
+		0x00FF00,
+	)
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+func resolveCropName(raw string) string {
+	lower := strings.ToLower(raw)
+	for _, crop := range farmsvc.Crops {
+		if strings.EqualFold(crop.Name, lower) || strings.EqualFold(items.DisplayName(crop.Name), lower) {
+			return crop.Name
+		}
+	}
+	return ""
+}
+
 func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -679,10 +846,6 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		desc += "\n\n" + i18n.T("farm.secret_golden_carrot", lang)
 	}
 
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		desc += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-	}
-
 	embed := components.Embed(
 		i18n.T("farm.harvest_title", lang),
 		desc,
@@ -695,6 +858,10 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 
 	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
 	if uerr == nil && len(unlocks) > 0 {

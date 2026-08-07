@@ -8,6 +8,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
@@ -211,12 +212,13 @@ type EventResult struct {
 }
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	npcSvc *npcsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
 }
 
 func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
@@ -559,6 +561,7 @@ func (s *Service) AwardResult(userID int64, res *DigResult) error {
 		}
 		s.trackFossilHarvest(userID, res.ItemName, qty)
 	}
+	s.addDigReputation(userID, res.Quality)
 	if res.XP > 0 {
 		s.addArcheologistXP(userID, res.XP)
 	}
@@ -566,6 +569,26 @@ func (s *Service) AwardResult(userID int64, res *DigResult) error {
 		return err
 	}
 	return nil
+}
+
+// addDigReputation awards a small reputation bonus scaled by the rarity of
+// the dig result with the linked NPC (ZARA in scifi).
+func (s *Service) addDigReputation(userID int64, quality string) {
+	points := map[string]int{
+		"damaged":   1,
+		"common":    1,
+		"rare":      2,
+		"epic":      3,
+		"journal":   3,
+		"legendary": 4,
+		"living":    5,
+		"cursed":    5,
+		"pure_dna":  5,
+		"shadow":    10,
+	}[quality]
+	if points > 0 {
+		s.npcSvc.AddActivityReputation(userID, "archeology", points)
+	}
 }
 
 func (s *Service) trackFossilHarvest(userID int64, fossilID string, quantity int) {
@@ -578,19 +601,6 @@ func (s *Service) trackFossilHarvest(userID int64, fossilID string, quantity int
 }
 
 func (s *Service) SellResult(userID int64, res *DigResult) (int, error) {
-	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, res.ItemName).First(&inv).Error; err != nil {
-		return 0, errors.New("item not in inventory")
-	}
-	if inv.Quantity < 1 {
-		return 0, errors.New("item not in inventory")
-	}
-	if inv.Quantity <= 1 {
-		s.store.DB.Delete(&inv)
-	} else {
-		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
-	}
-
 	price := int(float64(res.Value) * 1.2)
 	newBal, err := s.store.UpdateBalance(userID, price)
 	if err != nil {

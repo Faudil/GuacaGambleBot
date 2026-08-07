@@ -17,6 +17,8 @@ import (
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
+	"guacagamblebot/internal/universe/scifi"
+	"guacagamblebot/internal/universe/scorch"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
@@ -26,6 +28,26 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	hoakhaven.Register()
 	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	s := store.New(d, cfg)
+	inv := invsvc.New(s, cfg)
+	return New(s, cfg, def, inv), s
+}
+
+func testServiceWithUniverse(t *testing.T, universeID string) (*Service, *store.Store) {
+	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "npcs_"+universeID+".db")), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Migrate(d))
+	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50, Universe: universeID}
+	switch universeID {
+	case "scorch":
+		scorch.Register()
+	case "scifi":
+		scifi.Register()
+	default:
+		hoakhaven.Register()
+	}
+	def := universe.Get(universeID)
 	require.NotNil(t, def)
 	s := store.New(d, cfg)
 	inv := invsvc.New(s, cfg)
@@ -167,4 +189,111 @@ func TestGetDailyRepCap(t *testing.T) {
 	cap := GetDailyRepCap()
 	assert.Equal(t, 500, cap.Flat)
 	assert.Equal(t, 0, cap.PerLevel)
+}
+
+func TestChatCooldown(t *testing.T) {
+	svc, _ := testService(t)
+	svc.cfg.NPCChatCooldownHours = 6
+
+	event, err := svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	assert.Equal(t, 50, event.RepBonus)
+
+	_, err = svc.Chat(1, "elara", "en")
+	require.Error(t, err)
+	var cde *ChatCooldownError
+	require.ErrorAs(t, err, &cde)
+	assert.True(t, time.Until(cde.Until) > 0)
+}
+
+func TestChatNoCooldown(t *testing.T) {
+	svc, _ := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	_, err := svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	_, err = svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+}
+
+func TestChatDiminishingRewards(t *testing.T) {
+	svc, _ := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	for i, want := range []int{50, 25, 10, 5} {
+		event, err := svc.Chat(1, "elara", "en")
+		require.NoError(t, err)
+		assert.Equal(t, want, event.RepBonus, "chat #%d", i+1)
+	}
+
+	// Extra chats stay at the floor of 5.
+	event, err := svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	assert.Equal(t, 5, event.RepBonus)
+
+	rep, err := svc.GetReputation(1, "elara")
+	require.NoError(t, err)
+	assert.Equal(t, 95, rep.Reputation) // 50+25+10+5+5, no level-up below 100
+	assert.Equal(t, 1, rep.Level)
+}
+
+func TestChatSecretBonusOnce(t *testing.T) {
+	svc, st := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+	require.NoError(t, st.DB.Create(&model.UserNPCReputation{
+		UserID: 1, NPCID: "elara", Reputation: 0, Level: 3,
+	}).Error)
+
+	event, err := svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "secret_elara", event.ID)
+	assert.Equal(t, 75, event.RepBonus) // 50 first chat + 25 secret
+
+	event, err = svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	assert.NotEqual(t, "secret_elara", event.ID)
+	assert.Equal(t, 25, event.RepBonus)
+}
+
+func TestNPCIDForActivity(t *testing.T) {
+	svc, _ := testService(t)
+	assert.Equal(t, "thorek", svc.NPCIDForActivity("mining"))
+	assert.Equal(t, "elara", svc.NPCIDForActivity("farming"))
+	assert.Equal(t, "elara", svc.NPCIDForActivity("pets"))
+	assert.Equal(t, "irian", svc.NPCIDForActivity("fishing"))
+	assert.Equal(t, "irian", svc.NPCIDForActivity("hunting"))
+	assert.Equal(t, "gamblebot", svc.NPCIDForActivity("gambling"))
+	assert.Equal(t, "", svc.NPCIDForActivity("archeology")) // not in hoakhaven
+	assert.Equal(t, "", svc.NPCIDForActivity("unknown"))
+}
+
+func TestNPCIDForActivityScorch(t *testing.T) {
+	svc, _ := testServiceWithUniverse(t, "scorch")
+	assert.Equal(t, "riggs", svc.NPCIDForActivity("hunting"))
+	assert.Equal(t, "mother", svc.NPCIDForActivity("fishing"))
+	assert.Equal(t, "", svc.NPCIDForActivity("gambling"))
+}
+
+func TestNPCIDForActivityScifi(t *testing.T) {
+	svc, _ := testServiceWithUniverse(t, "scifi")
+	assert.Equal(t, "zara", svc.NPCIDForActivity("archeology"))
+	assert.Equal(t, "kellan", svc.NPCIDForActivity("mining"))
+	assert.Equal(t, "okonkwo", svc.NPCIDForActivity("farming"))
+	assert.Equal(t, "arcade", svc.NPCIDForActivity("gambling"))
+}
+
+func TestAddActivityReputation(t *testing.T) {
+	svc, _ := testService(t)
+	added, err := svc.AddActivityReputation(1, "mining", 3)
+	require.NoError(t, err)
+	assert.Equal(t, 3, added)
+
+	rep, err := svc.GetReputation(1, "thorek")
+	require.NoError(t, err)
+	assert.Equal(t, 3, rep.Reputation)
+
+	// Unknown activity (no linked NPC) is a silent no-op.
+	added, err = svc.AddActivityReputation(1, "unknown", 3)
+	require.NoError(t, err)
+	assert.Equal(t, 0, added)
 }

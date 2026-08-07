@@ -119,8 +119,6 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 		}
 	}
 
-	charsvc.AddXP(s.store, userID, 5)
-
 	if err := achievement.IncrementStat(s.store.DB, userID, "daily_uses", 1); err != nil {
 		return nil, err
 	}

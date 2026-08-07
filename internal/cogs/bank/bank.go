@@ -123,11 +123,11 @@ func (c *Cog) onSlashDeposit(b *interaction.Bot, i *discordgo.InteractionCreate)
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
-	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 }
 
 func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
@@ -159,8 +159,8 @@ func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *disco
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		embed.Description = questssvc.QuestNotificationMsg(n, lang)
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
@@ -292,12 +292,12 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		embed.Description = questssvc.QuestCompletedMsg(qid, lang)
-	}
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 }
 
 func (c *Cog) onWithdrawSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {

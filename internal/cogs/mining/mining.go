@@ -13,9 +13,11 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
+	invsvc "guacagamblebot/internal/service/inventory"
 	miningsvc "guacagamblebot/internal/service/mining"
-	questssvc "guacagamblebot/internal/service/quests"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type userSession struct {
@@ -36,7 +38,13 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: miningsvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: miningsvc.New(s, cfg, npcSvc)}
 	r.Slash("mine", "Mining expedition", c.onSlashMenu)
 	r.Slash("m", "Mining expedition", c.onSlashMenu)
 	r.Prefix("mine", c.onPrefixMenu)
@@ -457,12 +465,12 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		if msg != "" {
 			resultMsg = msg + "\n\n" + resultMsg
 		}
-		if qid := c.store.PopQuestCompleted(userID); qid != "" {
-			resultMsg += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
 				components.Embed("✅ Expedition Complete!", resultMsg, 0x00FF00), nil))
+		if n, ok := c.store.PopQuestNotification(userID); ok {
+			interaction.SendQuestNotification(b, i, n, lang)
+		}
 		if len(res.Unlocks) > 0 {
 			interaction.SendAchievements(b, i, lang, res.Unlocks)
 		}
@@ -501,13 +509,14 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.LeveledUp {
 		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
-	if qid := c.store.PopQuestCompleted(userID); qid != "" {
-		title += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-	}
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
 			components.Embed("✅ Expedition Complete!", title, color), nil))
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
 
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)

@@ -14,8 +14,11 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	casinosvc "guacagamblebot/internal/service/casino"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 var one = float64(1)
@@ -27,7 +30,13 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: casinosvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npcSvc := npcsvc.New(s, cfg, def, inv)
+	c := &Cog{store: s, cfg: cfg, svc: casinosvc.New(s, cfg, npcSvc)}
 	r.SlashWithOptions("casino", "Casino : machines à sous et pile ou face.",
 		[]*discordgo.ApplicationCommandOption{
 			{
@@ -241,7 +250,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
-	questMsg := c.store.PopQuestCompleted(userID)
+	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -282,13 +291,14 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		if res.LeveledUp {
 			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
-		if qid := questMsg; qid != "" {
-			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
 		resultComps := c.slotsResultComps(amount, lang)
 		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, resultComps))
+
+		if questMsg.QuestID != "" {
+			interaction.SendQuestNotification(b, i, questMsg, lang)
+		}
 
 		unlocks, _ := achievement.CheckAndUnlock(b.DB, userID)
 		if len(unlocks) > 0 {
@@ -316,7 +326,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
-	questMsg := c.store.PopQuestCompleted(userID)
+	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da
@@ -345,13 +355,14 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		if res.LeveledUp {
 			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
-		if qid := questMsg; qid != "" {
-			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
-		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
 		resultComps := c.coinflipResultComps(choice, amount, lang)
 		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, resultComps))
+
+		if questMsg.QuestID != "" {
+			interaction.SendQuestNotification(b, i, questMsg, lang)
+		}
 
 		unlocks, _ := achievement.CheckAndUnlock(b.DB, userID)
 		if len(unlocks) > 0 {
@@ -377,7 +388,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
-	questMsg := c.store.PopQuestCompleted(userID)
+	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang)
@@ -434,8 +445,8 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		if res.LeveledUp {
 			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
-		if qid := questMsg; qid != "" {
-			status += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		if questMsg.QuestID != "" {
+			status += "\n\n" + questssvc.QuestNotificationMsg(questMsg, lang)
 		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
@@ -470,7 +481,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
-	questMsg := c.store.PopQuestCompleted(userID)
+	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	_, menuComps := c.menu(lang)
 	blurple := 0x7289da
@@ -509,8 +520,8 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		if res.LeveledUp {
 			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 		}
-		if qid := questMsg; qid != "" {
-			text += "\n\n" + questssvc.QuestCompletedMsg(qid, lang)
+		if questMsg.QuestID != "" {
+			text += "\n\n" + questssvc.QuestNotificationMsg(questMsg, lang)
 		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
