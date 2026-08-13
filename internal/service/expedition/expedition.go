@@ -3,12 +3,14 @@ package expedition
 import (
 	"encoding/json"
 	"math/rand"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	petsvc "guacagamblebot/internal/service/pets"
@@ -44,7 +46,8 @@ type ExpeditionResult struct {
 func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionResult {
 	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato", "wheat_seed", "carrot_seed"}
 	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry", "potato_seed", "tomato_seed", "pumpkin_seed"}
-	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed"}
+	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed",
+		"miner_helmet", "hunters_bow", "golden_ring", "ancient_amulet"}
 	locations := []string{"forest", "desert", "cave", "plains", "mountain", "swamp", "valley", "coral", "volcano"}
 
 	numEvents := durationHours * 2
@@ -246,6 +249,40 @@ func (s *Service) GetActive(userID int64) (*model.PetExpedition, error) {
 
 func (s *Service) Claim(exp *model.PetExpedition) (leveled bool, lvl int, err error) {
 	leveled, lvl = charsvc.AddXP(s.store, exp.UserID, exp.RewardXP/2)
+
+	// Hand out the loot the pet brought back: gear becomes equipment
+	// instances, everything else lands in the regular inventory.
+	var rawItems []string
+	_ = json.Unmarshal([]byte(exp.RewardItems), &rawItems)
+	for _, id := range rawItems {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		it := items.Get(id)
+		if it != nil && it.EquipSlot != "" {
+			rar := it.Rarity
+			affixes := items.RollAffixes(rar, it.EquipSlot)
+			var applied []items.AppliedAffix
+			for _, a := range affixes {
+				applied = append(applied, items.AppliedAffix{
+					ID:    a.ID,
+					Name:  a.Name,
+					Stat:  a.Stat,
+					Value: items.RollAffixValue(a),
+				})
+			}
+			if _, gerr := s.store.CreateEquipmentFromAffixes(exp.UserID, it.ID, it.Name, it.Emoji,
+				string(rar), it.EquipSlot, it.MinLevel,
+				it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
+				applied, it.SetID); gerr != nil {
+				continue
+			}
+		} else if gerr := s.store.AddItemRaw(s.store.DB, exp.UserID, id, 1); gerr != nil {
+			continue
+		}
+	}
+
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.PetExpedition{}).
 			Where("id = ?", exp.ID).

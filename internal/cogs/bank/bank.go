@@ -50,14 +50,16 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
@@ -225,7 +227,7 @@ func (c *Cog) onPrefixWithdraw(b *interaction.Bot, s *discordgo.Session, m *disc
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
 
-func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
 		i18n.T("bank.menu_title", lang),
 		i18n.T("bank.menu_desc", lang),
@@ -233,9 +235,9 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("bank.btn_deposit", lang), components.Encode("bank", "deposit"), discordgo.PrimaryButton),
-			components.Button(i18n.T("bank.btn_withdraw", lang), components.Encode("bank", "withdraw"), discordgo.SecondaryButton),
-			components.Button(i18n.T("bank.btn_balance", lang), components.Encode("bank", "balance"), discordgo.SuccessButton),
+			components.Button(i18n.T("bank.btn_deposit", lang), components.EncodeOwner(userID, "bank", "deposit"), discordgo.PrimaryButton),
+			components.Button(i18n.T("bank.btn_withdraw", lang), components.EncodeOwner(userID, "bank", "withdraw"), discordgo.SecondaryButton),
+			components.Button(i18n.T("bank.btn_balance", lang), components.EncodeOwner(userID, "bank", "balance"), discordgo.SuccessButton),
 		),
 	}
 	return embed, comps
@@ -292,7 +294,7 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 	if n, ok := c.store.PopQuestNotification(userID); ok {
@@ -325,7 +327,7 @@ func (c *Cog) onWithdrawSubmit(b *interaction.Bot, i *discordgo.InteractionCreat
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 	}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -344,7 +346,7 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
 		components.Field(i18n.T("bank.daily_interest", lang), "+$"+strconv.Itoa(interest)+" / jour", false),
 	}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }

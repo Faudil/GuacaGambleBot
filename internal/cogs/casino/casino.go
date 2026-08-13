@@ -70,6 +70,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(interaction.UserID(i))
 	opts := i.ApplicationCommandData().Options
 	if len(opts) > 0 {
 		amount := 0
@@ -92,12 +93,13 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	userID := interaction.ToInt64(m.Author.ID)
 	parts := strings.Fields(m.Content)
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 
@@ -119,14 +121,14 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 		}
 	}
 
-	embed, comps := c.menu(lang)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
 
-func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
 		i18n.T("slots.title", lang),
 		i18n.T("slots.state_start", lang),
@@ -134,8 +136,8 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("🎰 "+i18n.T("slots.title", lang), components.Encode("casino", "slots"), discordgo.PrimaryButton),
-			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.Encode("casino", "coinflip"), discordgo.SuccessButton),
+			components.Button("🎰 "+i18n.T("slots.title", lang), components.EncodeOwner(userID, "casino", "slots"), discordgo.PrimaryButton),
+			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.EncodeOwner(userID, "casino", "coinflip"), discordgo.SuccessButton),
 		),
 	}
 	return embed, comps
@@ -156,8 +158,9 @@ func (c *Cog) slotsEmbed(s1, s2, s3, stateText string, amount int, lang string, 
 
 func (c *Cog) onSlotsOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	modal := components.ModalResponse(
-		components.Encode("casino", "slots_submit"),
+		components.EncodeOwner(userID, "casino", "slots_submit"),
 		i18n.T("slots.title", lang),
 		components.TextInput("amount", i18n.T("economy.quantity", lang), true, "50", discordgo.TextInputShort, 1, 12),
 	)
@@ -169,8 +172,9 @@ func (c *Cog) onSlotsOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onCoinflipOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	modal := components.ModalResponse(
-		components.Encode("casino", "coinflip_submit"),
+		components.EncodeOwner(userID, "casino", "coinflip_submit"),
 		i18n.T("coinflip.legit_label", lang),
 		components.TextInput("choice", i18n.T("coinflip.legit_label", lang), true, "heads/tails", discordgo.TextInputShort, 1, 10),
 		components.TextInput("amount", i18n.T("economy.quantity", lang), true, "100", discordgo.TextInputShort, 1, 12),
@@ -253,7 +257,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	blurple := 0x7289da
-	_, menuComps := c.menu(lang)
+	_, menuComps := c.menu(lang, userID)
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(responseType, embed, menuComps))
@@ -293,7 +297,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
-		resultComps := c.slotsResultComps(amount, lang)
+		resultComps := c.slotsResultComps(amount, lang, userID)
 		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, resultComps))
 
 		if questMsg.QuestID != "" {
@@ -328,7 +332,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
-	_, menuComps := c.menu(lang)
+	_, menuComps := c.menu(lang, userID)
 	blurple := 0x7289da
 
 	startMsg := i18n.T("coinflip.start_msg", lang, map[string]any{"choice": choice, "amount": amount})
@@ -357,7 +361,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
-		resultComps := c.coinflipResultComps(choice, amount, lang)
+		resultComps := c.coinflipResultComps(choice, amount, lang, userID)
 		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, resultComps))
 
 		if questMsg.QuestID != "" {
@@ -391,7 +395,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	blurple := 0x7289da
-	_, menuComps := c.menu(lang)
+	_, menuComps := c.menu(lang, userID)
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	msg, err := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
@@ -450,7 +454,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		}
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
-		resultComps := c.slotsResultComps(amount, lang)
+		resultComps := c.slotsResultComps(amount, lang, userID)
 		_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 			Channel:    m.ChannelID,
 			ID:         msgID,
@@ -483,7 +487,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
-	_, menuComps := c.menu(lang)
+	_, menuComps := c.menu(lang, userID)
 	blurple := 0x7289da
 	startMsg := i18n.T("coinflip.start_msg", lang, map[string]any{"choice": choice, "amount": amount})
 	embed := components.Embed(i18n.T("slots.title", lang), startMsg, blurple)
@@ -525,7 +529,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		}
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
-		resultComps := c.coinflipResultComps(choice, amount, lang)
+		resultComps := c.coinflipResultComps(choice, amount, lang, userID)
 		_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 			Channel:    m.ChannelID,
 			ID:         msgID,
@@ -535,22 +539,22 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 	}()
 }
 
-func (c *Cog) slotsResultComps(amount int, lang string) []discordgo.MessageComponent {
+func (c *Cog) slotsResultComps(amount int, lang string, userID int64) []discordgo.MessageComponent {
 	return []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("🔄 Retry", components.Encode("casino", "slots_retry", strconv.Itoa(amount)), discordgo.PrimaryButton),
-			components.Button("🎰 "+i18n.T("slots.title", lang), components.Encode("casino", "slots"), discordgo.PrimaryButton),
-			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.Encode("casino", "coinflip"), discordgo.SuccessButton),
+			components.Button("🔄 Retry", components.EncodeOwner(userID, "casino", "slots_retry", strconv.Itoa(amount)), discordgo.PrimaryButton),
+			components.Button("🎰 "+i18n.T("slots.title", lang), components.EncodeOwner(userID, "casino", "slots"), discordgo.PrimaryButton),
+			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.EncodeOwner(userID, "casino", "coinflip"), discordgo.SuccessButton),
 		),
 	}
 }
 
-func (c *Cog) coinflipResultComps(choice string, amount int, lang string) []discordgo.MessageComponent {
+func (c *Cog) coinflipResultComps(choice string, amount int, lang string, userID int64) []discordgo.MessageComponent {
 	return []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("🔄 Retry", components.Encode("casino", "coinflip_retry", choice, strconv.Itoa(amount)), discordgo.SuccessButton),
-			components.Button("🎰 "+i18n.T("slots.title", lang), components.Encode("casino", "slots"), discordgo.PrimaryButton),
-			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.Encode("casino", "coinflip"), discordgo.SuccessButton),
+			components.Button("🔄 Retry", components.EncodeOwner(userID, "casino", "coinflip_retry", choice, strconv.Itoa(amount)), discordgo.SuccessButton),
+			components.Button("🎰 "+i18n.T("slots.title", lang), components.EncodeOwner(userID, "casino", "slots"), discordgo.PrimaryButton),
+			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.EncodeOwner(userID, "casino", "coinflip"), discordgo.SuccessButton),
 		),
 	}
 }

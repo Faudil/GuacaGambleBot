@@ -30,6 +30,8 @@
     "perk_points_label": "Choix de Talent",
     "profile_error": "Impossible de charger le profil.",
     "profile_title": "📊 Profil de {user}",
+    "requires_level": "🔒 Votre niveau est trop bas pour équiper cet objet.",
+    "requires_level_lbl": "🔒 Niv. {level}",
     "skill_points_label": "Points de Compétence",
     "slot_accessory": "Accessoire",
     "slot_armor": "Armure",

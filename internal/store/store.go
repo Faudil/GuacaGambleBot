@@ -528,12 +528,13 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 }
 
 // recordActivityForQuest atomically increments the quest progress inside a
-// transaction and marks the quest completed exactly once (guarded by the status
-// transition), then hands the completion event to the quest advancement hook.
-// The hook and the notification write happen outside the transaction because
-// they use the store's own connection, which would deadlock inside it.
+// transaction. Only daily_quest is marked completed here (guarded by the status
+// transition so it completes exactly once); other quests (e.g. tutorial) keep
+// their ACTIVE status and the step advancement/completion is delegated to the
+// quest advancement hook, which runs outside the transaction because it uses
+// the store's own connection, which would deadlock inside it.
 func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat string, amount int) error {
-	var completedNow, daily bool
+	var reached, daily bool
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var d model.UserQuestData
 		if err := tx.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
@@ -562,7 +563,11 @@ func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat str
 		if newVal < int(targetCount) {
 			return nil
 		}
+		reached = true
 		daily = q.QuestID == "daily_quest"
+		if !daily {
+			return nil
+		}
 		res := tx.Model(&model.UserQuest{}).
 			Where("user_id = ? AND quest_id = ? AND status = 'ACTIVE'", userID, q.QuestID).
 			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()})
@@ -570,18 +575,15 @@ func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat str
 			return res.Error
 		}
 		if res.RowsAffected == 0 {
+			reached = false
 			return nil
 		}
-		completedNow = true
-		if daily {
-			return s.grantDailyQuestReward(tx, userID)
-		}
-		return nil
+		return s.grantDailyQuestReward(tx, userID)
 	})
 	if err != nil {
 		return err
 	}
-	if !completedNow {
+	if !reached {
 		return nil
 	}
 	if daily {

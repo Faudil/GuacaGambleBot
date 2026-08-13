@@ -118,7 +118,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			discordgo.SelectMenu{
-				CustomID:    components.Encode("hunt", "zone"),
+				CustomID:    components.EncodeOwner(userID, "hunt", "zone"),
 				Placeholder: i18n.T("hunt.select_zone", lang),
 				Options:     opts,
 			},
@@ -246,7 +246,7 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("hunt.back", lang), components.Encode("hunt", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("hunt.back", lang), components.EncodeOwner(userID, "hunt", "menu"), discordgo.SecondaryButton),
 		),
 	}
 
@@ -400,7 +400,8 @@ func (c *Cog) maybePetInteraction(b *interaction.Bot, i *discordgo.InteractionCr
 	if pet == nil {
 		return
 	}
-	ready, _ := c.store.CheckCooldown(interaction.ToInt64(interaction.UserID(i)), "pet_interaction", 180*time.Minute)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	ready, _ := c.store.CheckCooldown(userID, "pet_interaction", 180*time.Minute)
 	if !ready {
 		return
 	}
@@ -434,7 +435,7 @@ func (c *Cog) maybePetInteraction(b *interaction.Bot, i *discordgo.InteractionCr
 		Components: []discordgo.MessageComponent{
 			components.ActionRow(
 				discordgo.SelectMenu{
-					CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
+					CustomID:    components.EncodeOwner(userID, "pets", "interact", strconv.FormatInt(pet.ID, 10)),
 					Placeholder: i18n.T("pets.interact.placeholder", lang),
 					Options:     opts,
 				},

@@ -30,6 +30,8 @@
     "perk_points_label": "Perk Choices",
     "profile_error": "Could not load profile data.",
     "profile_title": "📊 {user}'s Profile",
+    "requires_level": "🔒 Your level is too low to equip that item.",
+    "requires_level_lbl": "🔒 Lv {level}",
     "skill_points_label": "Skill Points",
     "slot_accessory": "Accessory",
     "slot_armor": "Armor",

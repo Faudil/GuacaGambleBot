@@ -78,7 +78,8 @@ func (c *Cog) onTrack(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onLeaderboard(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.buildLeaderboard(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.buildLeaderboard(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -225,7 +226,7 @@ func (c *Cog) buildEmbed(sess *discordgo.Session, lang string, guildID, userID i
 			label = "📍"
 		}
 		btns = append(btns, components.Button(label+" "+i18n.T(p.TitleKey, lang),
-			components.Encode("journal", "track", p.PathID), discordgo.SecondaryButton))
+			components.EncodeOwner(userID, "journal", "track", p.PathID), discordgo.SecondaryButton))
 	}
 	for len(btns) > 0 {
 		n := 5
@@ -236,14 +237,14 @@ func (c *Cog) buildEmbed(sess *discordgo.Session, lang string, guildID, userID i
 		btns = btns[n:]
 	}
 	comps = append(comps, components.ActionRow(
-		components.Button("🏆 "+i18n.T("journal.btn_leaderboard", lang), components.Encode("journal", "leaderboard"), discordgo.PrimaryButton),
-		components.Button("🔄", components.Encode("journal", "show"), discordgo.SecondaryButton),
+		components.Button("🏆 "+i18n.T("journal.btn_leaderboard", lang), components.EncodeOwner(userID, "journal", "leaderboard"), discordgo.PrimaryButton),
+		components.Button("🔄", components.EncodeOwner(userID, "journal", "show"), discordgo.SecondaryButton),
 	))
 
 	return components.Embed(i18n.T("journal.title", lang)+" — <@"+strconv.FormatInt(userID, 10)+">", desc.String(), 0x2ecc71), comps
 }
 
-func (c *Cog) buildLeaderboard(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) buildLeaderboard(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	var desc strings.Builder
 	desc.WriteString(i18n.T("journal.lb_desc", lang) + "\n")
 
@@ -265,7 +266,7 @@ func (c *Cog) buildLeaderboard(lang string) (*discordgo.MessageEmbed, []discordg
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("◀ "+i18n.T("journal.btn_back", lang), components.Encode("journal", "back"), discordgo.SecondaryButton),
+			components.Button("◀ "+i18n.T("journal.btn_back", lang), components.EncodeOwner(userID, "journal", "back"), discordgo.SecondaryButton),
 		),
 	}
 	return components.Embed(i18n.T("journal.title", lang), desc.String(), 0xf1c40f), comps

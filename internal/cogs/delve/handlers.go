@@ -1313,6 +1313,10 @@ func (c *Cog) onRescue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		c.errorMsg(b, i, "That player is no longer fallen.")
 		return
 	}
+	if victimSession.GuildID != s.GuildID || victimSession.Floor != s.Floor {
+		c.errorMsg(b, i, "That player is not on your floor.")
+		return
+	}
 
 	c.svc.AddFlag(victimSession, "fell_in_battle")
 	c.svc.EndSession(victimSession, "rescued")

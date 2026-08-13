@@ -153,7 +153,7 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 				style = discordgo.DangerButton
 			}
 		}
-		btns = append(btns, components.Button(label, components.Encode("arch", "site", site.Key), style))
+		btns = append(btns, components.Button(label, components.EncodeOwner(userID, "arch", "site", site.Key), style))
 	}
 
 	comps := []discordgo.MessageComponent{
@@ -302,7 +302,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		embed := components.Embed(i18n.T(result.TitleID, lang), desc, 0x006400)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("arch.back_dig", lang), components.Encode("arch", "action", "continue"), discordgo.SecondaryButton),
+				components.Button(i18n.T("arch.back_dig", lang), components.EncodeOwner(userID, "arch", "action", "continue"), discordgo.SecondaryButton),
 			),
 		}
 		digSessions[userID] = &digSession{state: sess.state}
@@ -321,7 +321,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(i18n.T(result.TitleID, lang), desc, 0x006400)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("arch.back_menu", lang), components.Encode("arch", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	delete(digSessions, userID)
@@ -389,7 +389,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	delete(digSessions, userID)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("arch.back_menu", lang), components.Encode("arch", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -397,6 +397,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 }
 
 func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, state *archsvc.GameState) {
+	userID := interaction.ToInt64(interaction.UserID(i))
 	depthPct := float64(state.Depth) / float64(state.MaxDepth)
 	if depthPct < 0 {
 		depthPct = 0
@@ -461,10 +462,10 @@ func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, l
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("arch.dynamite_btn", lang), components.Encode("arch", "action", "dynamite"), discordgo.DangerButton),
-			components.Button(i18n.T("arch.hammer_btn", lang), components.Encode("arch", "action", "hammer"), discordgo.PrimaryButton),
-			components.Button(i18n.T("arch.brush_btn", lang), components.Encode("arch", "action", "brush"), discordgo.SuccessButton),
-			components.Button(i18n.T("arch.scan_btn", lang), components.Encode("arch", "action", "scan"), discordgo.SecondaryButton),
+			components.Button(i18n.T("arch.dynamite_btn", lang), components.EncodeOwner(userID, "arch", "action", "dynamite"), discordgo.DangerButton),
+			components.Button(i18n.T("arch.hammer_btn", lang), components.EncodeOwner(userID, "arch", "action", "hammer"), discordgo.PrimaryButton),
+			components.Button(i18n.T("arch.brush_btn", lang), components.EncodeOwner(userID, "arch", "action", "brush"), discordgo.SuccessButton),
+			components.Button(i18n.T("arch.scan_btn", lang), components.EncodeOwner(userID, "arch", "action", "scan"), discordgo.SecondaryButton),
 		),
 	}
 
@@ -473,6 +474,7 @@ func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, l
 }
 
 func (c *Cog) showEventEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, evt *archsvc.DigEvent, state *archsvc.GameState) {
+	userID := interaction.ToInt64(interaction.UserID(i))
 	desc := i18n.T(evt.DescID, lang)
 
 	embed := components.Embed(
@@ -487,7 +489,7 @@ func (c *Cog) showEventEmbed(b *interaction.Bot, i *discordgo.InteractionCreate,
 		if style == 0 {
 			style = discordgo.PrimaryButton
 		}
-		customID := components.Encode("arch", "event", ch.Value, itoa(int(evt.Type)))
+		customID := components.EncodeOwner(userID, "arch", "event", ch.Value, itoa(int(evt.Type)))
 		btns = append(btns, components.Button(i18n.T(ch.LabelID, lang), customID, style))
 	}
 
@@ -498,6 +500,7 @@ func (c *Cog) showEventEmbed(b *interaction.Bot, i *discordgo.InteractionCreate,
 }
 
 func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, res *archsvc.DigResult) {
+	uid := interaction.ToInt64(interaction.UserID(i))
 	color := 0x00FF00
 	switch res.Quality {
 	case "disaster":
@@ -532,8 +535,8 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 
 	var btns []discordgo.MessageComponent
 	if res.Quality != "disaster" && res.Quality != "damaged" {
-		btns = append(btns, components.Button(i18n.T("arch.keep_btn", lang), components.Encode("arch", "post", "keep"), discordgo.SuccessButton))
-		btns = append(btns, components.Button(i18n.T("arch.sell_btn", lang), components.Encode("arch", "post", "sell"), discordgo.PrimaryButton))
+		btns = append(btns, components.Button(i18n.T("arch.keep_btn", lang), components.EncodeOwner(uid, "arch", "post", "keep"), discordgo.SuccessButton))
+		btns = append(btns, components.Button(i18n.T("arch.sell_btn", lang), components.EncodeOwner(uid, "arch", "post", "sell"), discordgo.PrimaryButton))
 	} else {
 		c.svc.AwardResult(userID(interaction.UserID(i)), res)
 	}
@@ -543,7 +546,7 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 		comps = append(comps, components.ActionRow(btns...))
 	}
 	comps = append(comps, components.ActionRow(
-		components.Button(i18n.T("arch.back_menu", lang), components.Encode("arch", "menu"), discordgo.SecondaryButton),
+		components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(uid, "arch", "menu"), discordgo.SecondaryButton),
 	))
 
 	_ = b.Session.InteractionRespond(i.Interaction,

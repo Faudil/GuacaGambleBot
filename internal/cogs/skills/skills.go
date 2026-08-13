@@ -123,16 +123,16 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("🎰 "+i18n.T("skills.game_slots", lang), components.Encode("skills", "sw", "slots"), discordgo.PrimaryButton),
-				components.Button("🪙 "+i18n.T("skills.game_coinflip", lang), components.Encode("skills", "sw", "coinflip"), discordgo.PrimaryButton),
+				components.Button("🎰 "+i18n.T("skills.game_slots", lang), components.EncodeOwner(userID, "skills", "sw", "slots"), discordgo.PrimaryButton),
+				components.Button("🪙 "+i18n.T("skills.game_coinflip", lang), components.EncodeOwner(userID, "skills", "sw", "coinflip"), discordgo.PrimaryButton),
 			),
 			components.ActionRow(
-				components.Button("🃏 "+i18n.T("skills.game_blackjack", lang), components.Encode("skills", "sw", "blackjack"), discordgo.PrimaryButton),
-				components.Button("🔫 "+i18n.T("skills.game_roulette", lang), components.Encode("skills", "sw", "roulette"), discordgo.PrimaryButton),
+				components.Button("🃏 "+i18n.T("skills.game_blackjack", lang), components.EncodeOwner(userID, "skills", "sw", "blackjack"), discordgo.PrimaryButton),
+				components.Button("🔫 "+i18n.T("skills.game_roulette", lang), components.EncodeOwner(userID, "skills", "sw", "roulette"), discordgo.PrimaryButton),
 			),
 			components.ActionRow(
-				components.Button("🎫 "+i18n.T("skills.game_lotto", lang), components.Encode("skills", "sw", "lotto"), discordgo.PrimaryButton),
-				components.Button("🎲 "+i18n.T("skills.game_bet", lang), components.Encode("skills", "sw", "bet"), discordgo.PrimaryButton),
+				components.Button("🎫 "+i18n.T("skills.game_lotto", lang), components.EncodeOwner(userID, "skills", "sw", "lotto"), discordgo.PrimaryButton),
+				components.Button("🎲 "+i18n.T("skills.game_bet", lang), components.EncodeOwner(userID, "skills", "sw", "bet"), discordgo.PrimaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -205,7 +205,7 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 			fmt.Fprintf(sb, "%s **%s** — *%s*\n> %s | CD: %dm\n\n",
 				st.Emoji, st.Name, st.Description, i18n.T("skills.uses_left", lang, map[string]any{"left": st.UsesLeft, "max": st.DailyLimit}), st.CooldownMins)
 			availButtons = append(availButtons,
-				components.Button(st.Emoji+" "+st.Name, components.Encode("skills", "activate", st.ID), discordgo.SuccessButton))
+				components.Button(st.Emoji+" "+st.Name, components.EncodeOwner(userID, "skills", "activate", st.ID), discordgo.SuccessButton))
 		case "locked":
 			fmt.Fprintf(sb, "🔒 **%s** — %s\n> %s **Lv.%d**\n\n",
 				st.Name, st.Description, i18n.T("skills.unlocks_at", lang), st.UnlockLevel)
@@ -221,7 +221,7 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 	// Build components: refresh button + up to 10 activate buttons
 	var comps []discordgo.MessageComponent
 	comps = append(comps, components.ActionRow(
-		components.Button(i18n.T("skills.btn_refresh", lang), components.Encode("skills", "refresh"), discordgo.SecondaryButton),
+		components.Button(i18n.T("skills.btn_refresh", lang), components.EncodeOwner(userID, "skills", "refresh"), discordgo.SecondaryButton),
 	))
 	for _, b := range availButtons {
 		if len(comps) < 4 { // max 4 rows (1 refresh + 3 skill rows)

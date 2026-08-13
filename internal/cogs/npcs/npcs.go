@@ -111,7 +111,7 @@ func (c *Cog) menu(lang string, b *interaction.Bot, i *discordgo.InteractionCrea
 		})
 	}
 	menu := discordgo.SelectMenu{
-		CustomID:    components.Encode("npc", "select"),
+		CustomID:    components.EncodeOwner(userID, "npc", "select"),
 		Placeholder: i18n.T("npcs.select_placeholder", lang),
 		Options:     options,
 	}
@@ -180,17 +180,17 @@ func (c *Cog) makeNPCSelect(npcID string) func(b *interaction.Bot, i *discordgo.
 
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("💬 "+i18n.T("npcs.chat_btn", lang), components.Encode("npc", "chat_"+npcID), discordgo.PrimaryButton),
-				components.Button("🎁 "+i18n.T("npcs.gift_button", lang), components.Encode("npc", "gift_"+npcID), discordgo.SuccessButton),
-				components.Button("📜 "+i18n.T("npcs.topic_bio", lang), components.Encode("npc", "bio_"+npcID), discordgo.SecondaryButton),
+				components.Button("💬 "+i18n.T("npcs.chat_btn", lang), components.EncodeOwner(userID, "npc", "chat_"+npcID), discordgo.PrimaryButton),
+				components.Button("🎁 "+i18n.T("npcs.gift_button", lang), components.EncodeOwner(userID, "npc", "gift_"+npcID), discordgo.SuccessButton),
+				components.Button("📜 "+i18n.T("npcs.topic_bio", lang), components.EncodeOwner(userID, "npc", "bio_"+npcID), discordgo.SecondaryButton),
 			),
 			components.ActionRow(
-				components.Button("💡 "+i18n.T("npcs.topic_advice", lang), components.Encode("npc", "advice_"+npcID), discordgo.SecondaryButton),
-				components.Button("👑 "+i18n.T("npcs.rankup_button", lang), components.Encode("npc", "rankup_"+npcID), discordgo.SecondaryButton),
-				components.Button("🏪 "+i18n.T("npcs.shop_button", lang), components.Encode("npc", "shop_"+npcID), discordgo.SecondaryButton),
+				components.Button("💡 "+i18n.T("npcs.topic_advice", lang), components.EncodeOwner(userID, "npc", "advice_"+npcID), discordgo.SecondaryButton),
+				components.Button("👑 "+i18n.T("npcs.rankup_button", lang), components.EncodeOwner(userID, "npc", "rankup_"+npcID), discordgo.SecondaryButton),
+				components.Button("🏪 "+i18n.T("npcs.shop_button", lang), components.EncodeOwner(userID, "npc", "shop_"+npcID), discordgo.SecondaryButton),
 			),
 			components.ActionRow(
-				components.Button("↩️", components.Encode("npc", "back"), discordgo.DangerButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", "back"), discordgo.DangerButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -238,7 +238,7 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 				)
 				comps := []discordgo.MessageComponent{
 					components.ActionRow(
-						components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+						components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 					),
 				}
 				_ = b.Session.InteractionRespond(i.Interaction,
@@ -262,8 +262,8 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("💬 "+i18n.T("npcs.chat_again_btn", lang), components.Encode("npc", "chat_"+npcID), discordgo.PrimaryButton),
-				components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+				components.Button("💬 "+i18n.T("npcs.chat_again_btn", lang), components.EncodeOwner(userID, "npc", "chat_"+npcID), discordgo.PrimaryButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -274,6 +274,7 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 func (c *Cog) onGiftRequest(npcID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		userID := interaction.ToInt64(interaction.UserID(i))
 		npcData := c.svc.GetNPCData(npcID)
 		if npcData == nil {
 			return
@@ -282,7 +283,7 @@ func (c *Cog) onGiftRequest(npcID string) func(b *interaction.Bot, i *discordgo.
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseModal,
 			Data: &discordgo.InteractionResponseData{
-				CustomID: components.Encode("npc", "gift_submit", npcID),
+				CustomID: components.EncodeOwner(userID, "npc", "gift_submit", npcID),
 				Title:    i18n.T("npcs.gift_title", lang, map[string]any{"name": npcData.Name}),
 				Components: []discordgo.MessageComponent{
 					discordgo.ActionsRow{Components: []discordgo.MessageComponent{
@@ -354,7 +355,7 @@ func (c *Cog) onGiftSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+			components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -364,6 +365,7 @@ func (c *Cog) onGiftSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onBio(npcID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		userID := interaction.ToInt64(interaction.UserID(i))
 		npcData := c.svc.GetNPCData(npcID)
 		if npcData == nil {
 			return
@@ -375,7 +377,7 @@ func (c *Cog) onBio(npcID string) func(b *interaction.Bot, i *discordgo.Interact
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -386,6 +388,7 @@ func (c *Cog) onBio(npcID string) func(b *interaction.Bot, i *discordgo.Interact
 func (c *Cog) onAdvice(npcID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		userID := interaction.ToInt64(interaction.UserID(i))
 		npcData := c.svc.GetNPCData(npcID)
 		if npcData == nil {
 			return
@@ -397,7 +400,7 @@ func (c *Cog) onAdvice(npcID string) func(b *interaction.Bot, i *discordgo.Inter
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -452,7 +455,7 @@ func (c *Cog) onRankUp(npcID string) func(b *interaction.Bot, i *discordgo.Inter
 		)
 		comps = []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -508,7 +511,7 @@ func (c *Cog) onShop(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 				}
 				row = append(row, components.Button(
 					item.Emoji+" "+label,
-					components.Encode("npc", "buy_"+npcID+"_"+item.ItemID),
+					components.EncodeOwner(userID, "npc", "buy_"+npcID+"_"+item.ItemID),
 					discordgo.SuccessButton,
 				))
 			}
@@ -517,7 +520,7 @@ func (c *Cog) onShop(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 			comps = append(comps, components.ActionRow(row...))
 		}
 		comps = append(comps, components.ActionRow(
-			components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+			components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 		))
 
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -549,8 +552,8 @@ func (c *Cog) onShopBuy(npcID string, itemID string) func(b *interaction.Bot, i 
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("↩️ "+i18n.T("npcs.shop_button", lang), components.Encode("npc", "shop_"+npcID), discordgo.SecondaryButton),
-				components.Button("↩️", components.Encode("npc", npcID), discordgo.SecondaryButton),
+				components.Button("↩️ "+i18n.T("npcs.shop_button", lang), components.EncodeOwner(userID, "npc", "shop_"+npcID), discordgo.SecondaryButton),
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,

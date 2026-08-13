@@ -123,7 +123,7 @@ func (c *Cog) toolSelection(lang string, userID int64) (*discordgo.MessageEmbed,
 	for _, t := range owned {
 		row = append(row, discordgo.Button{
 			Label:    i18n.T(t.LocaleNameKey(), lang),
-			CustomID: components.Encode("mine", "tool_select", t.ItemID),
+			CustomID: components.EncodeOwner(userID, "mine", "tool_select", t.ItemID),
 			Style:    discordgo.PrimaryButton,
 			Emoji:    &discordgo.ComponentEmoji{Name: t.Emoji()},
 		})
@@ -218,12 +218,12 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 		components.ActionRow(
 			discordgo.Button{
 				Label:    "⛏️ " + i18n.T("mining.dig_label", lang),
-				CustomID: components.Encode("mine", "descend"),
+				CustomID: components.EncodeOwner(userID, "mine", "descend"),
 				Style:    discordgo.PrimaryButton,
 			},
 			discordgo.Button{
 				Label:    i18n.T("mining.leave_label", lang),
-				CustomID: components.Encode("mine", "leave"),
+				CustomID: components.EncodeOwner(userID, "mine", "leave"),
 				Style:    discordgo.SuccessButton,
 			},
 		),
@@ -304,7 +304,7 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 	for i, opt := range ev.Options {
 		btn := discordgo.Button{
 			Label:    i18n.T(opt.Label, lang),
-			CustomID: components.Encode("mine", "event", ev.ID, fmt.Sprint(i)),
+			CustomID: components.EncodeOwner(userID, "mine", "event", ev.ID, fmt.Sprint(i)),
 			Style:    discordgo.PrimaryButton,
 		}
 		row = append(row, btn)

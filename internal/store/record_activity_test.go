@@ -40,6 +40,63 @@ func TestRecordActivityTutorialQuest(t *testing.T) {
 	assert.Equal(t, 1, d.StepIndex, "step should stay at activity step (advance on Continue click)")
 	assert.Equal(t, 10, d.ProgressValue, "progress should be at target count")
 	assert.Equal(t, `{"target_count":10,"target_stat":"items_mined"}`, d.CustomData, "custom_data should keep activity config")
+
+	var uq model.UserQuest
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = ?", 1, "tutorial").First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status, "tutorial must stay ACTIVE after an activity target is reached")
+}
+
+func TestRecordActivityTutorialStaysActiveWithHook(t *testing.T) {
+	s := newStore(t)
+	s.SetQuestAdvanceFn(func(userID int64, questID string) (bool, string, error) {
+		return false, "quests.day1_strata.step2_transition", nil
+	})
+
+	require.NoError(t, s.CreateQuest(1, "tutorial"))
+	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
+		Updates(map[string]any{
+			"step_index":    1,
+			"progress_value": 0,
+			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+		}).Error)
+
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	var uq model.UserQuest
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = ?", 1, "tutorial").First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status, "hook that advances a step must not complete the quest")
+
+	n, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.False(t, n.Completed)
+	assert.Equal(t, "quests.day1_strata.step2_transition", n.NextStepKey)
+}
+
+func TestRecordActivityTutorialCompletionDelegatedToHook(t *testing.T) {
+	s := newStore(t)
+	s.SetQuestAdvanceFn(func(userID int64, questID string) (bool, string, error) {
+		return true, "", nil
+	})
+
+	require.NoError(t, s.CreateQuest(1, "tutorial"))
+	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
+		Updates(map[string]any{
+			"step_index":    1,
+			"progress_value": 0,
+			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+		}).Error)
+
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	var uq model.UserQuest
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = ?", 1, "tutorial").First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status, "completing the quest is the hook's responsibility, not the store's")
+
+	n, ok := s.PopQuestNotification(1)
+	require.True(t, ok)
+	assert.True(t, n.Completed)
 }
 
 func TestRecordActivityOnlyMatchesCorrectStat(t *testing.T) {

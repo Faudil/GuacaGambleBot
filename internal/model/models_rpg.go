@@ -24,6 +24,7 @@ type UserEquipment struct {
 	Emoji      string    `gorm:"column:emoji"`
 	Rarity     string    `gorm:"column:rarity"`
 	EquipSlot  string    `gorm:"column:equip_slot"`
+	MinLevel   int       `gorm:"column:min_level;default:1"`
 	StatSTR    int       `gorm:"column:stat_str;default:0"`
 	StatDEX    int       `gorm:"column:stat_dex;default:0"`
 	StatINT    int       `gorm:"column:stat_int;default:0"`

@@ -166,7 +166,7 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 		desc = i18n.T(step.TextKey, lang)
 		btns = append(btns,
 			components.Button(i18n.T("quests.continue_label", lang),
-				components.Encode("quest", "advance", qid),
+				components.EncodeOwner(userID, "quest", "advance", qid),
 				discordgo.SuccessButton),
 		)
 	case questssvc.StepBossBattle:
@@ -189,13 +189,13 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 		desc += "\n" + i18n.T("boss_league.fight_hint", lang)
 		btns = append(btns,
 			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang),
-				components.Encode("boss", "fight"),
+				components.EncodeOwner(userID, "boss", "fight"),
 				discordgo.DangerButton),
 		)
 	}
 
 	btns = append(btns,
-		components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
+		components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
 	)
 
 	embed := components.Embed(
@@ -249,7 +249,7 @@ type fightOutcome struct {
 func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	backBtn := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
+			components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
 		),
 	}
 
@@ -317,8 +317,8 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 	}
 	o.comps = []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang), components.Encode("boss", "fight"), discordgo.DangerButton),
-			components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
+			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang), components.EncodeOwner(userID, "boss", "fight"), discordgo.DangerButton),
+			components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
 		),
 	}
 	o.spawn = c.bossRetroFrame(o, o.petD.MaxHP, o.bossD.MaxHP,

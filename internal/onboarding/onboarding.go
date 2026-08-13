@@ -46,6 +46,26 @@ func Register(r *interaction.Router, st *store.Store, cfg *config.Config) {
 	r.Session().AddHandler(c.onMessage)
 }
 
+// isAdmin reports whether an interaction author may configure the bot
+// (server administrator or manage-server permission).
+func isAdmin(i *discordgo.InteractionCreate) bool {
+	if i.Member != nil && i.Member.Permissions&(discordgo.PermissionAdministrator|discordgo.PermissionManageServer) != 0 {
+		return true
+	}
+	return false
+}
+
+// isAdminMsg reports whether a prefix message author may configure the bot.
+func isAdminMsg(s *discordgo.Session, m *discordgo.Message) bool {
+	if m.Member != nil && m.Member.Permissions&(discordgo.PermissionAdministrator|discordgo.PermissionManageServer) != 0 {
+		return true
+	}
+	if perms, err := s.State.MessagePermissions(m); err == nil {
+		return perms&(discordgo.PermissionAdministrator|discordgo.PermissionManageServer) != 0
+	}
+	return false
+}
+
 // onGuildCreate fires for every guild the bot is in (including on (re)connect).
 // We only post the onboarding menu once per guild, tracked via OnboardedAt.
 func (c *Cog) onGuildCreate(s *discordgo.Session, g *discordgo.GuildCreate) {
@@ -157,12 +177,19 @@ func (c *Cog) pickChannel(g *discordgo.GuildCreate) string {
 func (c *Cog) onSetupSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	embed, comps := c.menu(lang, c.current(gid))
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onSetupPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	if !isAdminMsg(s, m) {
+		return
+	}
 	gid := interaction.ToInt64(m.GuildID)
 	lang := c.store.GetLanguage(gid)
 	embed, comps := c.menu(lang, c.current(gid))
@@ -175,6 +202,10 @@ func (c *Cog) onSetupPrefix(b *interaction.Bot, s *discordgo.Session, m *discord
 func (c *Cog) onChannelSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	for _, v := range i.MessageComponentData().Values {
 		if cid := interaction.ToInt64(v); cid != 0 {
 			c.save(gid, func(ss *model.ServerSetting) { ss.ChannelID = cid })
@@ -188,6 +219,10 @@ func (c *Cog) onChannelSelect(b *interaction.Bot, i *discordgo.InteractionCreate
 func (c *Cog) onLanguageSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	for _, v := range i.MessageComponentData().Values {
 		if v == "en" || v == "fr" {
 			c.save(gid, func(ss *model.ServerSetting) { ss.Language = v })
@@ -201,6 +236,10 @@ func (c *Cog) onLanguageSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 func (c *Cog) onUniverseSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	for _, v := range i.MessageComponentData().Values {
 		if universe.Get(v) != nil {
 			c.save(gid, func(ss *model.ServerSetting) { ss.Universe = v })
@@ -214,6 +253,10 @@ func (c *Cog) onUniverseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 func (c *Cog) onAdvanced(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	ss := c.current(gid)
 	modal := components.ModalResponse(
 		components.Encode("onboarding", "advanced_submit"),
@@ -229,6 +272,10 @@ func (c *Cog) onAdvanced(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onAdvancedSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	values := interaction.ModalValues(i)
 	if p := strings.TrimSpace(values["prefix"]); p != "" {
 		c.save(gid, func(ss *model.ServerSetting) { ss.Prefix = p })
@@ -241,6 +288,10 @@ func (c *Cog) onAdvancedSubmit(b *interaction.Bot, i *discordgo.InteractionCreat
 func (c *Cog) onToggle(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	c.save(gid, func(ss *model.ServerSetting) { ss.Enabled = !ss.Enabled })
 	embed, comps := c.menu(lang, c.current(gid))
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -250,6 +301,10 @@ func (c *Cog) onToggle(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onFinish(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	ss := c.current(gid)
 	if ss.ChannelID == 0 {
 		interaction.RespondError(b, i, lang, "onboarding.need_channel")
@@ -272,6 +327,10 @@ func (c *Cog) onFinish(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onReconfigure(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gid := interaction.ToInt64(i.GuildID)
 	lang := c.store.GetLanguage(gid)
+	if !isAdmin(i) {
+		interaction.RespondError(b, i, lang, "onboarding.no_permission")
+		return
+	}
 	embed, comps := c.menu(lang, c.current(gid))
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))

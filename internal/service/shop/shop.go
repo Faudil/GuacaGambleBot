@@ -108,7 +108,7 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 				return err
 			}
 			_, err := s.store.CreateEquipment(userID, it.ID, it.Name, it.Emoji,
-				string(rar), it.EquipSlot,
+				string(rar), it.EquipSlot, it.MinLevel,
 				totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
 				affixData, it.SetID)
 			return err

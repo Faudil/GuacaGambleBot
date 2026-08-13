@@ -1,0 +1,5 @@
+{
+  "common": {
+    "not_your_menu": "❌ This menu belongs to {user}. Run the command yourself to interact with your own menu."
+  }
+}

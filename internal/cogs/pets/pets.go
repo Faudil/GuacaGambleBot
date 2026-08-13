@@ -128,7 +128,7 @@ func (c *Cog) menuFromUser(userID int64, lang string) (*discordgo.MessageEmbed, 
 		}
 		comps = append(comps, components.ActionRow(
 			discordgo.SelectMenu{
-				CustomID:    components.Encode("pets", "pet"),
+				CustomID:    components.EncodeOwner(userID, "pets", "pet"),
 				Placeholder: i18n.T("pets.list.select_placeholder", lang),
 				Options:     opts,
 			},
@@ -136,7 +136,7 @@ func (c *Cog) menuFromUser(userID int64, lang string) (*discordgo.MessageEmbed, 
 	}
 
 	comps = append(comps, components.ActionRow(
-		components.Button(i18n.T("pets.list.hatch_btn", lang), components.Encode("pets", "hatch"), discordgo.SuccessButton),
+		components.Button(i18n.T("pets.list.hatch_btn", lang), components.EncodeOwner(userID, "pets", "hatch"), discordgo.SuccessButton),
 	))
 
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.list.footer", lang)}
@@ -174,6 +174,7 @@ func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	data := i.MessageComponentData()
 	petIDStr := ""
 	if len(data.Values) > 0 {
@@ -186,7 +187,7 @@ func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	petID, _ := strconv.ParseInt(petIDStr, 10, 64)
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil {
+	if err != nil || pet == nil || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
@@ -198,6 +199,7 @@ func (c *Cog) onPetDetail(b *interaction.Bot, i *discordgo.InteractionCreate) {
 // petDetail renders the full pet detail view: stats, skills, history and the
 // management buttons (including activating the pet when it is not active).
 func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	userID := pet.UserID
 	petIDStr := strconv.FormatInt(pet.ID, 10)
 	pt := petsvc.PetTypes[pet.PetType]
 	emoji := "🐾"
@@ -294,24 +296,24 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 	}
 
 	row1 := []discordgo.MessageComponent{
-		components.Button(i18n.T("pets.detail.back", lang), components.Encode("pets", "menu"), discordgo.SecondaryButton),
-		components.Button(i18n.T(nameKey, lang), components.Encode("pets", "rename_btn", petIDStr), discordgo.PrimaryButton),
-		components.Button(i18n.T("pets.detail.btn_feed", lang), components.Encode("pets", "feed", petIDStr), discordgo.SuccessButton),
-		components.Button(i18n.T("pets.detail.btn_battle", lang), components.Encode("pets", "battle", petIDStr), discordgo.DangerButton),
+		components.Button(i18n.T("pets.detail.back", lang), components.EncodeOwner(userID, "pets", "menu"), discordgo.SecondaryButton),
+		components.Button(i18n.T(nameKey, lang), components.EncodeOwner(userID, "pets", "rename_btn", petIDStr), discordgo.PrimaryButton),
+		components.Button(i18n.T("pets.detail.btn_feed", lang), components.EncodeOwner(userID, "pets", "feed", petIDStr), discordgo.SuccessButton),
+		components.Button(i18n.T("pets.detail.btn_battle", lang), components.EncodeOwner(userID, "pets", "battle", petIDStr), discordgo.DangerButton),
 	}
-	activateBtn := components.Button(i18n.T("pets.detail.btn_activate", lang), components.Encode("pets", "activate", petIDStr), discordgo.PrimaryButton)
+	activateBtn := components.Button(i18n.T("pets.detail.btn_activate", lang), components.EncodeOwner(userID, "pets", "activate", petIDStr), discordgo.PrimaryButton)
 	if pet.IsActive {
-		disabled := components.Button(i18n.T("pets.detail.btn_active", lang), components.Encode("pets", "pet", petIDStr), discordgo.SecondaryButton).(discordgo.Button)
+		disabled := components.Button(i18n.T("pets.detail.btn_active", lang), components.EncodeOwner(userID, "pets", "pet", petIDStr), discordgo.SecondaryButton).(discordgo.Button)
 		disabled.Disabled = true
 		activateBtn = disabled
 	}
 	row1 = append(row1, activateBtn)
 	row2 := []discordgo.MessageComponent{}
 	if pet.SkillPoints > 0 {
-		row2 = append(row2, components.Button(i18n.T("pets.detail.btn_skills", lang), components.Encode("pets", "skills", petIDStr), discordgo.PrimaryButton))
+		row2 = append(row2, components.Button(i18n.T("pets.detail.btn_skills", lang), components.EncodeOwner(userID, "pets", "skills", petIDStr), discordgo.PrimaryButton))
 	}
-	row2 = append(row2, components.Button(i18n.T("pets.detail.btn_heal", lang), components.Encode("pets", "heal", petIDStr), discordgo.SuccessButton))
-	row2 = append(row2, components.Button("🗑️", components.Encode("pets", "delete", petIDStr), discordgo.SecondaryButton))
+	row2 = append(row2, components.Button(i18n.T("pets.detail.btn_heal", lang), components.EncodeOwner(userID, "pets", "heal", petIDStr), discordgo.SuccessButton))
+	row2 = append(row2, components.Button("🗑️", components.EncodeOwner(userID, "pets", "delete", petIDStr), discordgo.SecondaryButton))
 
 	comps := []discordgo.MessageComponent{components.ActionRow(row1...)}
 	if len(row2) > 0 {
@@ -523,13 +525,14 @@ func (c *Cog) pvpRetroFrame(p1d, p2d components.DisplayPet, journal []string, la
 
 func (c *Cog) onRenameOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	petID := "0"
 	if len(rest) > 0 {
 		petID = rest[0]
 	}
 	modal := components.ModalResponse(
-		components.Encode("pets", "rename_submit", petID),
+		components.EncodeOwner(userID, "pets", "rename_submit", petID),
 		i18n.T("pets.rename.modal_title", lang),
 		components.TextInput("name", i18n.T("pets.rename.input_label", lang), true, i18n.T("pets.rename.input_placeholder", lang), discordgo.TextInputShort, 1, 20),
 	)
@@ -541,6 +544,7 @@ func (c *Cog) onRenameOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onRenameSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
 	petIDStr := "0"
 	if len(rest) > 0 {
@@ -548,7 +552,7 @@ func (c *Cog) onRenameSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 	}
 	petID, _ := strconv.ParseInt(petIDStr, 10, 64)
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil {
+	if err != nil || pet == nil || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
@@ -648,7 +652,7 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Components: []discordgo.MessageComponent{
 				components.ActionRow(
 					discordgo.SelectMenu{
-						CustomID:    components.Encode("pets", "feed_select", petIDStr),
+						CustomID:    components.EncodeOwner(userID, "pets", "feed_select", petIDStr),
 						Placeholder: i18n.T("pets.feed.menu_placeholder", lang),
 						Options:     opts,
 					},
@@ -814,8 +818,8 @@ func (c *Cog) onDelete(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("pets.delete.confirm_btn", lang), components.Encode("pets", "delete_confirm", petIDStr), discordgo.DangerButton),
-			components.Button(i18n.T("pets.delete.cancel_btn", lang), components.Encode("pets", "pet", petIDStr), discordgo.SecondaryButton),
+			components.Button(i18n.T("pets.delete.confirm_btn", lang), components.EncodeOwner(userID, "pets", "delete_confirm", petIDStr), discordgo.DangerButton),
+			components.Button(i18n.T("pets.delete.cancel_btn", lang), components.EncodeOwner(userID, "pets", "pet", petIDStr), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -856,7 +860,7 @@ func (c *Cog) onDeleteConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("pets.detail.back", lang), components.Encode("pets", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("pets.detail.back", lang), components.EncodeOwner(userID, "pets", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -917,7 +921,7 @@ func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
 			components.ActionRow(
 				discordgo.SelectMenu{
-					CustomID:    components.Encode("pets", "battle_accept", rest[0]),
+					CustomID:    components.EncodeOwner(userID, "pets", "battle_accept", rest[0]),
 					Placeholder: "Select opponent",
 					Options:     opts,
 				},
@@ -967,8 +971,8 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
 				components.ActionRow(
-					components.Button(i18n.T("pets.battle.accept_label", lang), components.Encode("pets", "battle_accept", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.SuccessButton),
-					components.Button(i18n.T("pets.battle.decline_label", lang), components.Encode("pets", "battle_decline", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.DangerButton),
+					components.Button(i18n.T("pets.battle.accept_label", lang), components.EncodeOwner(userID, "pets", "battle_accept", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.SuccessButton),
+					components.Button(i18n.T("pets.battle.decline_label", lang), components.EncodeOwner(userID, "pets", "battle_decline", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.DangerButton),
 				),
 			}))
 		return
@@ -1397,13 +1401,14 @@ func (c *Cog) findEgg(userID int64) (string, string) {
 
 func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) == 0 {
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil || pet.SkillPoints <= 0 {
+	if err != nil || pet == nil || pet.SkillPoints <= 0 || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.skills.no_points")
 		return
 	}
@@ -1454,7 +1459,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
 			components.ActionRow(
 				discordgo.SelectMenu{
-					CustomID:    components.Encode("pets", "skill_choose", rest[0]),
+					CustomID:    components.EncodeOwner(userID, "pets", "skill_choose", rest[0]),
 					Placeholder: i18n.T("pets.skills.select", lang),
 					Options:     opts,
 				},
@@ -1464,6 +1469,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 func (c *Cog) onSkillChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	data := i.MessageComponentData()
 	if len(data.Values) == 0 {
 		return
@@ -1483,7 +1489,7 @@ func (c *Cog) onSkillChoose(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	slot, _ := strconv.Atoi(parts[1])
 
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil {
+	if err != nil || pet == nil || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
@@ -1514,16 +1520,20 @@ func (c *Cog) onSkillChoose(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	data := i.MessageComponentData()
+	if len(data.Values) == 0 {
+		return
+	}
+	choiceID := data.Values[0]
 	_, _, rest := components.Decode(data.CustomID)
-	if len(rest) < 2 {
+	if len(rest) == 0 {
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
-	choiceID := rest[1]
 
 	pet, err := c.svc.GetPetByID(petID)
-	if err != nil || pet == nil {
+	if err != nil || pet == nil || pet.UserID != userID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
@@ -1575,6 +1585,7 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 // ─── Interaction Trigger ──────────────────────────────────────
 
 func (c *Cog) tryInteraction(b *interaction.Bot, i *discordgo.InteractionCreate, pet *model.UserPet, context string) {
+	userID := pet.UserID
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	ready, _ := c.store.CheckCooldown(pet.UserID, "pet_interaction", 180*time.Minute)
 	if !ready {
@@ -1616,7 +1627,7 @@ func (c *Cog) tryInteraction(b *interaction.Bot, i *discordgo.InteractionCreate,
 		Components: []discordgo.MessageComponent{
 			components.ActionRow(
 				discordgo.SelectMenu{
-					CustomID:    components.Encode("pets", "interact", strconv.FormatInt(pet.ID, 10)),
+					CustomID:    components.EncodeOwner(userID, "pets", "interact", strconv.FormatInt(pet.ID, 10)),
 					Placeholder: i18n.T("pets.interact.placeholder", lang),
 					Options:     opts,
 				},
@@ -1785,7 +1796,7 @@ func (c *Cog) artifactView(userID int64, lang string) (*discordgo.MessageEmbed, 
 				emoji = def.Emoji
 			}
 			allocBtns = append(allocBtns,
-				components.Button(emoji, components.Encode("pets", "artifact_stat_choose", strconv.FormatInt(int64(i), 10)), discordgo.PrimaryButton))
+				components.Button(emoji, components.EncodeOwner(userID, "pets", "artifact_stat_choose", strconv.FormatInt(int64(i), 10)), discordgo.PrimaryButton))
 		}
 	}
 
@@ -1798,7 +1809,7 @@ func (c *Cog) artifactView(userID int64, lang string) (*discordgo.MessageEmbed, 
 		comps = append(comps, components.ActionRow(allocBtns...))
 	}
 	comps = append(comps, components.ActionRow(
-		components.Button("🔄 Reset", components.Encode("pets", "artifact_reset"), discordgo.DangerButton),
+		components.Button("🔄 Reset", components.EncodeOwner(userID, "pets", "artifact_reset"), discordgo.DangerButton),
 	))
 	return embed, comps
 }
@@ -1948,8 +1959,8 @@ func (c *Cog) onWeeklyLeaderboard(b *interaction.Bot, i *discordgo.InteractionCr
 }
 
 func (c *Cog) weeklyLeaderboardEmbed(i *discordgo.InteractionCreate, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	serverID := interaction.ToInt64(i.GuildID)
 	userID := interaction.ToInt64(interaction.UserID(i))
+	serverID := interaction.ToInt64(i.GuildID)
 	ranks, _ := c.svc.GetWeeklyLeaderboard(i.GuildID, 10)
 
 	lines := ""
@@ -2007,8 +2018,8 @@ func (c *Cog) weeklyLeaderboardEmbed(i *discordgo.InteractionCreate, lang string
 	embed := components.Embed(i18n.T("weekly.title", lang), desc, 0xf1c40f)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("leaderboard.btn_refresh", lang), components.Encode("pets", "weekly_refresh"), discordgo.PrimaryButton),
-			components.Button("📜 History", components.Encode("pets", "weekly_history"), discordgo.SecondaryButton),
+			components.Button(i18n.T("leaderboard.btn_refresh", lang), components.EncodeOwner(userID, "pets", "weekly_refresh"), discordgo.PrimaryButton),
+			components.Button("📜 History", components.EncodeOwner(userID, "pets", "weekly_history"), discordgo.SecondaryButton),
 		),
 	}
 	return embed, comps

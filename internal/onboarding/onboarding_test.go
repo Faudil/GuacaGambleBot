@@ -112,7 +112,7 @@ func TestChannelSelectPersistsChannel(t *testing.T) {
 	r.DispatchInteraction(&discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
 		Type:    discordgo.InteractionMessageComponent,
 		GuildID: "100", Token: "tok",
-		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
+		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}, Permissions: discordgo.PermissionAdministrator},
 		Data: discordgo.MessageComponentInteractionData{
 			CustomID: components.Encode("onboarding", "channel"),
 			Values:   []string{"123"},

@@ -201,7 +201,7 @@ func (svc *Service) EndSession(session *model.DelveSession, outcome string) erro
 
 			affixData, _ := json.Marshal(applied)
 			svc.store.CreateEquipment(session.UserID, di.ID, di.Name, di.Emoji,
-				rarStr, slot,
+				rarStr, slot, minLevelForRarity(di.Rarity),
 				totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
 				affixData, "")
 		} else {

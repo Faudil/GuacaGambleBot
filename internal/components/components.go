@@ -1,6 +1,7 @@
 package components
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -28,6 +29,27 @@ func Decode(customID string) (domain, action string, rest []string) {
 		rest = parts[2:]
 	}
 	return
+}
+
+// EncodeOwner appends the embed owner's user id as the final element of a
+// custom_id, so the router can verify that only the user who created the
+// message may interact with its components.
+func EncodeOwner(ownerID int64, parts ...string) string {
+	return Encode(append(parts, strconv.FormatInt(ownerID, 10))...)
+}
+
+// OwnerID extracts the owner user id previously appended by EncodeOwner. It
+// returns false when the custom_id carries no trailing owner id.
+func OwnerID(customID string) (int64, bool) {
+	_, _, rest := Decode(customID)
+	if len(rest) == 0 {
+		return 0, false
+	}
+	id, err := strconv.ParseInt(rest[len(rest)-1], 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return id, true
 }
 
 // Embed builds a basic message embed.

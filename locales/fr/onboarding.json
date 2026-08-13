@@ -18,6 +18,7 @@
     "menu_desc": "Configurons le bot pour votre serveur. Choisissez le salon où je peux parler, une langue et ajustez quelques options.",
     "menu_title": "Bienvenue sur GuacaGambleBot ! 🎰",
     "need_channel": "Veuillez choisir un salon avant de terminer.",
+    "no_permission": "⛔ Seuls les administrateurs du serveur peuvent configurer le bot.",
     "prefix_label": "Préfixe des commandes",
     "setup_desc": "Configure le bot pour ce serveur.",
     "status_disabled": "Désactivé",

@@ -40,6 +40,29 @@ func RespondError(b *Bot, i *discordgo.InteractionCreate, lang, key string) {
 	}
 }
 
+// NotYourMenu replies ephemerally that only the embed's owner may interact with
+// the message. Returns true when the clicker is the owner, false otherwise.
+func NotYourMenu(b *Bot, i *discordgo.InteractionCreate, lang string, ownerID int64) bool {
+	uid := ToInt64(UserID(i))
+	if uid == ownerID {
+		return true
+	}
+	content := i18n.T("common.not_your_menu", lang)
+	if ownerID > 0 {
+		content = i18n.T("common.not_your_menu", lang, map[string]any{"user": Mention(ownerID)})
+	}
+	if b.Session != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: content,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+	}
+	return false
+}
+
 // SendAchievements posts a follow-up embed listing the newly unlocked
 // achievements.
 func SendAchievements(b *Bot, i *discordgo.InteractionCreate, lang string, unlocks []*achievement.Achievement) {

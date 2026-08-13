@@ -153,22 +153,22 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	for _, z := range zones {
 		switch z {
 		case "public":
-			btns = append(btns, components.Button(i18n.T("farm.public_label", lang), components.Encode("farm", "zone", "public"), discordgo.SecondaryButton))
+			btns = append(btns, components.Button(i18n.T("farm.public_label", lang), components.EncodeOwner(userID, "farm", "zone", "public"), discordgo.SecondaryButton))
 		case "veggie":
-			btns = append(btns, components.Button(i18n.T("farm.veggie_label", lang), components.Encode("farm", "zone", "veggie"), discordgo.PrimaryButton))
+			btns = append(btns, components.Button(i18n.T("farm.veggie_label", lang), components.EncodeOwner(userID, "farm", "zone", "veggie"), discordgo.PrimaryButton))
 		case "greenhouse":
-			btns = append(btns, components.Button(i18n.T("farm.greenhouse_label", lang), components.Encode("farm", "zone", "greenhouse"), discordgo.SuccessButton))
+			btns = append(btns, components.Button(i18n.T("farm.greenhouse_label", lang), components.EncodeOwner(userID, "farm", "zone", "greenhouse"), discordgo.SuccessButton))
 		case "orchard":
-			btns = append(btns, components.Button(i18n.T("farm.orchard_label", lang), components.Encode("farm", "zone", "orchard"), discordgo.DangerButton))
+			btns = append(btns, components.Button(i18n.T("farm.orchard_label", lang), components.EncodeOwner(userID, "farm", "zone", "orchard"), discordgo.DangerButton))
 		}
 	}
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(btns...),
 		components.ActionRow(
-			components.Button(i18n.T("farm.inspect_main_btn", lang), components.Encode("farm", "inspect_main"), discordgo.SecondaryButton),
-			components.Button(i18n.T("farm.seedmaker_btn", lang), components.Encode("farm", "seedmaker"), discordgo.SecondaryButton),
-			components.Button(i18n.T("farm.stats_btn", lang), components.Encode("farm", "stats"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.inspect_main_btn", lang), components.EncodeOwner(userID, "farm", "inspect_main"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.seedmaker_btn", lang), components.EncodeOwner(userID, "farm", "seedmaker"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.stats_btn", lang), components.EncodeOwner(userID, "farm", "stats"), discordgo.SecondaryButton),
 		),
 	}
 	return embed, comps
@@ -198,7 +198,7 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+				components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -225,7 +225,7 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Event:   evt,
 			ZoneKey: zoneKey,
 		}
-		c.showEvent(b, i, lang, evt)
+		c.showEvent(b, i, lang, userID, evt)
 		return
 	}
 
@@ -256,20 +256,20 @@ func (c *Cog) showZone(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 		if p.ItemName == "" {
 			row = append(row, components.Button(
 				i18n.T("farm.plot_empty_btn", lang, map[string]any{"n": p.PlotIndex + 1}),
-				components.Encode("farm", "plot", zoneKey, strconv.Itoa(p.PlotIndex)),
+				components.EncodeOwner(userID, "farm", "plot", zoneKey, strconv.Itoa(p.PlotIndex)),
 				discordgo.SecondaryButton,
 			))
 		} else if p.Ready {
 			row = append(row, components.Button(
 				i18n.T("farm.plot_ready_btn", lang, map[string]any{"item": plotDisplayName(&p)}),
-				components.Encode("farm", "harvest", zoneKey, strconv.Itoa(p.PlotIndex)),
+				components.EncodeOwner(userID, "farm", "harvest", zoneKey, strconv.Itoa(p.PlotIndex)),
 				discordgo.SuccessButton,
 			))
 		} else {
 			btnLabel := plotDisplayName(&p) + " " + strconv.Itoa(p.Progress) + "%"
 			row = append(row, components.Button(
 				btnLabel,
-				components.Encode("farm", "inspect", zoneKey, strconv.Itoa(p.PlotIndex)),
+				components.EncodeOwner(userID, "farm", "inspect", zoneKey, strconv.Itoa(p.PlotIndex)),
 				discordgo.PrimaryButton,
 			))
 		}
@@ -277,14 +277,14 @@ func (c *Cog) showZone(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 
 	comps = append(comps, components.ActionRow(row...))
 	comps = append(comps, components.ActionRow(
-		components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+		components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 	))
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-func (c *Cog) showEvent(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, evt *farmsvc.Event) {
+func (c *Cog) showEvent(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64, evt *farmsvc.Event) {
 	var desc string
 	if evt.Type == farmsvc.EventMerchant {
 		merchantName, _ := evt.Data["merchant"].(string)
@@ -320,7 +320,8 @@ func (c *Cog) showEvent(b *interaction.Bot, i *discordgo.InteractionCreate, lang
 		} else {
 			label = i18n.T(ch.Label, lang)
 		}
-		btns = append(btns, components.Button(label, ch.CustomID, style))
+		customID := components.EncodeOwner(userID, strings.Split(ch.CustomID, "::")...)
+		btns = append(btns, components.Button(label, customID, style))
 	}
 
 	comps := []discordgo.MessageComponent{components.ActionRow(btns...)}
@@ -369,7 +370,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 
@@ -428,7 +429,7 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	menu := discordgo.SelectMenu{
-		CustomID:    components.Encode("farm", "seed_choose", zoneKey, plotIdx),
+		CustomID:    components.EncodeOwner(userID, "farm", "seed_choose", zoneKey, plotIdx),
 		Placeholder: i18n.T("farm.choose_seed_placeholder", lang),
 		Options:     options,
 	}
@@ -441,7 +442,7 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(menu),
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "zone", zoneKey), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "zone", zoneKey), discordgo.SecondaryButton),
 		),
 	}
 
@@ -499,7 +500,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+				components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -518,7 +519,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -551,14 +552,14 @@ func (c *Cog) onSeedMaker(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	menu := discordgo.SelectMenu{
-		CustomID:    components.Encode("farm", "seedmaker_choose"),
+		CustomID:    components.EncodeOwner(userID, "farm", "seedmaker_choose"),
 		Placeholder: i18n.T("farm.seedmaker_choose_placeholder", lang),
 		Options:     options,
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(menu),
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -599,7 +600,7 @@ func (c *Cog) onSeedMakerChoose(b *interaction.Bot, i *discordgo.InteractionCrea
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -745,7 +746,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -812,7 +813,7 @@ func (c *Cog) onWater(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -844,7 +845,7 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -918,21 +919,21 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if !p.Watered {
 			btns = append(btns, components.Button(
 				i18n.T("farm.water_btn", lang),
-				components.Encode("farm", "water", zoneKey, rest[1]),
+				components.EncodeOwner(userID, "farm", "water", zoneKey, rest[1]),
 				discordgo.PrimaryButton,
 			))
 		}
 		if c.svc.HasItem(userID, "fertilizer") {
 			btns = append(btns, components.Button(
 				i18n.T("farm.fertilize_btn", lang),
-				components.Encode("farm", "fertilize", zoneKey, rest[1]),
+				components.EncodeOwner(userID, "farm", "fertilize", zoneKey, rest[1]),
 				discordgo.DangerButton,
 			))
 		}
 	}
 	btns = append(btns, components.Button(
 		i18n.T("farm.back", lang),
-		components.Encode("farm", "zone", zoneKey),
+		components.EncodeOwner(userID, "farm", "zone", zoneKey),
 		discordgo.SecondaryButton,
 	))
 
@@ -996,7 +997,7 @@ func (c *Cog) onInspectFarm(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -1033,7 +1034,7 @@ func (c *Cog) onStats(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,

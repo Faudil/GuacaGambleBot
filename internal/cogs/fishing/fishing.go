@@ -1,6 +1,7 @@
 package fishing
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"sync"
@@ -141,17 +142,17 @@ func (c *Cog) baitMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 	var comps []discordgo.MessageComponent
 	if freeOk || hasCommon {
 		comps = append(comps, components.ActionRow(
-			components.Button(i18n.T("fishing.common_bait_btn", lang), components.Encode("fish", "bait_common"), discordgo.SuccessButton),
+			components.Button(i18n.T("fishing.common_bait_btn", lang), components.EncodeOwner(userID, "fish", "bait_common"), discordgo.SuccessButton),
 		))
 	}
 	if hasRare {
 		comps = append(comps, components.ActionRow(
-			components.Button(i18n.T("fishing.rare_bait_btn", lang), components.Encode("fish", "bait_rare"), discordgo.PrimaryButton),
+			components.Button(i18n.T("fishing.rare_bait_btn", lang), components.EncodeOwner(userID, "fish", "bait_rare"), discordgo.PrimaryButton),
 		))
 	}
 	if hasLegendary {
 		comps = append(comps, components.ActionRow(
-			components.Button(i18n.T("fishing.legendary_bait_btn", lang), components.Encode("fish", "bait_legendary"), discordgo.DangerButton),
+			components.Button(i18n.T("fishing.legendary_bait_btn", lang), components.EncodeOwner(userID, "fish", "bait_legendary"), discordgo.DangerButton),
 		))
 	}
 	return embed, comps
@@ -222,18 +223,18 @@ func (c *Cog) spotMenu(lang string, userID int64, tier fishingsvc.BaitTier) (*di
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("fishing.pond_label", lang), components.Encode("fish", "spot_pond"), discordgo.SuccessButton),
-			components.Button(i18n.T("fishing.river_label", lang), components.Encode("fish", "spot_river"), discordgo.PrimaryButton),
-			components.Button(i18n.T("fishing.ocean_label", lang), components.Encode("fish", "spot_ocean"), discordgo.DangerButton),
+			components.Button(i18n.T("fishing.pond_label", lang), components.EncodeOwner(userID, "fish", "spot_pond"), discordgo.SuccessButton),
+			components.Button(i18n.T("fishing.river_label", lang), components.EncodeOwner(userID, "fish", "spot_river"), discordgo.PrimaryButton),
+			components.Button(i18n.T("fishing.ocean_label", lang), components.EncodeOwner(userID, "fish", "spot_ocean"), discordgo.DangerButton),
 		),
 	}
 	if lavaUnlocked {
 		comps = append(comps, components.ActionRow(
-			components.Button(i18n.T("fishing.lava_label", lang), components.Encode("fish", "spot_lava"), discordgo.SecondaryButton),
+			components.Button(i18n.T("fishing.lava_label", lang), components.EncodeOwner(userID, "fish", "spot_lava"), discordgo.SecondaryButton),
 		))
 	}
 	comps = append(comps, components.ActionRow(
-		components.Button(i18n.T("fishing.back", lang), components.Encode("fish", "menu"), discordgo.SecondaryButton),
+		components.Button(i18n.T("fishing.back", lang), components.EncodeOwner(userID, "fish", "menu"), discordgo.SecondaryButton),
 	))
 	return embed, comps
 }
@@ -348,7 +349,7 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	c.startBiteWait(userID, b.Session, lang)
 
-	embed, comps := c.waitEmbed(lang)
+	embed, comps := c.waitEmbed(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -389,7 +390,7 @@ func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang strin
 			current.phase = phaseNibble
 			sessionsMu.Unlock()
 
-			c.editWaitMessage(session, channelID, msgID, "nibble", lang)
+			c.editWaitMessage(session, channelID, msgID, "nibble", lang, userID)
 
 			nibbleWindow := 2 + time.Duration(rand.Intn(2))*time.Second
 			time.Sleep(nibbleWindow)
@@ -403,7 +404,7 @@ func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang strin
 			current.phase = phaseWaiting
 			sessionsMu.Unlock()
 
-			c.editWaitMessage(session, channelID, msgID, "waiting", lang)
+			c.editWaitMessage(session, channelID, msgID, "waiting", lang, userID)
 		}
 
 		time.Sleep(time.Duration(segDuration) * time.Second)
@@ -418,7 +419,7 @@ func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang strin
 		current.biteExpires = time.Now().Add(7 * time.Second)
 		sessionsMu.Unlock()
 
-		c.editWaitMessage(session, channelID, msgID, "bite", lang, current.biteExpires)
+		c.editWaitMessage(session, channelID, msgID, "bite", lang, userID, current.biteExpires)
 
 		time.Sleep(7 * time.Second)
 
@@ -430,14 +431,14 @@ func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang strin
 		}
 		sessionsMu.Unlock()
 
-		c.editWaitMessage(session, channelID, msgID, "expired", lang)
+		c.editWaitMessage(session, channelID, msgID, "expired", lang, userID)
 	}()
 }
 
-func (c *Cog) editWaitMessage(s *discordgo.Session, channelID, msgID, state string, lang string, expires ...time.Time) {
+func (c *Cog) editWaitMessage(s *discordgo.Session, channelID, msgID, state string, lang string, userID int64, expires ...time.Time) {
 	reelBtn := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("fishing.reel_in_btn", lang), components.Encode("fish", "strike"), discordgo.PrimaryButton),
+			components.Button(i18n.T("fishing.reel_in_btn", lang), components.EncodeOwner(userID, "fish", "strike"), discordgo.PrimaryButton),
 		),
 	}
 
@@ -491,7 +492,7 @@ func (c *Cog) editWaitMessage(s *discordgo.Session, channelID, msgID, state stri
 	}
 }
 
-func (c *Cog) waitEmbed(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) waitEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
 		i18n.T("fishing.wait_title", lang),
 		i18n.T("fishing.wait_desc", lang),
@@ -499,7 +500,7 @@ func (c *Cog) waitEmbed(lang string) (*discordgo.MessageEmbed, []discordgo.Messa
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("fishing.reel_in_btn", lang), components.Encode("fish", "strike"), discordgo.PrimaryButton),
+			components.Button(i18n.T("fishing.reel_in_btn", lang), components.EncodeOwner(userID, "fish", "strike"), discordgo.PrimaryButton),
 		),
 	}
 	return embed, comps
@@ -572,7 +573,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				existing.phase = phaseFighting
 			}
 			sessionsMu.Unlock()
-			embed, comps := c.fightEmbed(state, lang)
+			embed, comps := c.fightEmbed(state, lang, userID)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 		}
@@ -619,7 +620,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		sessionsMu.Unlock()
 
-		embed, comps := c.fightEmbed(state, lang)
+		embed, comps := c.fightEmbed(state, lang, userID)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 
@@ -637,7 +638,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 }
 
-func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	desc := fightFlavor(state, lang)
 
 	if state.Mood != "" {
@@ -701,9 +702,9 @@ func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string) (*discor
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("fishing.reel_btn", lang), components.Encode("fish", "reel"), discordgo.PrimaryButton),
-			components.Button(i18n.T("fishing.pull_btn", lang), components.Encode("fish", "pull"), discordgo.DangerButton),
-			components.Button(i18n.T("fishing.rest_btn", lang), components.Encode("fish", "rest"), discordgo.SuccessButton),
+			components.Button(i18n.T("fishing.reel_btn", lang), components.EncodeOwner(userID, "fish", "reel"), discordgo.PrimaryButton),
+			components.Button(i18n.T("fishing.pull_btn", lang), components.EncodeOwner(userID, "fish", "pull"), discordgo.DangerButton),
+			components.Button(i18n.T("fishing.rest_btn", lang), components.EncodeOwner(userID, "fish", "rest"), discordgo.SuccessButton),
 		),
 	}
 	return embed, comps
@@ -763,7 +764,7 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	embed, comps := c.fightEmbed(state, lang)
+	embed, comps := c.fightEmbed(state, lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -771,7 +772,7 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 func (c *Cog) quietCatchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.MessageEmbed {
 	desc := i18n.T("fishing.quiet_desc", lang, map[string]any{
 		"name":   fishDisplayName(res.ItemName, lang),
-		"weight": itoa(res.Weight),
+		"weight": kgWeight(res.Weight),
 		"size":   itoa(res.Size),
 		"xp":     itoa(res.XP),
 	})
@@ -835,7 +836,7 @@ func (c *Cog) catchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.M
 		i18n.T("fishing.caught_title", lang),
 		i18n.T("fishing.caught_desc", lang, map[string]any{
 			"name":   name,
-			"weight": itoa(res.Weight),
+			"weight": kgWeight(res.Weight),
 			"size":   itoa(res.Size),
 			"xp":     itoa(res.XP),
 		})+milestone+loreText+lvlText,
@@ -969,6 +970,10 @@ func barString(current, max int, fillChar, partialChar, emptyChar string) string
 		b.WriteString(emptyChar)
 	}
 	return b.String()
+}
+
+func kgWeight(lb int) string {
+	return fmt.Sprintf("%.1f", float64(lb)*0.45359237)
 }
 
 func itoa(n int) string {

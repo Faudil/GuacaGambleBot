@@ -335,7 +335,7 @@ func (s *Service) ShopBuy(userID int64, npcID string, itemID string) error {
 			})
 		}
 		if _, err := s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
-			string(rar), it.EquipSlot,
+			string(rar), it.EquipSlot, it.MinLevel,
 			it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
 			applied, it.SetID); err != nil {
 			return err

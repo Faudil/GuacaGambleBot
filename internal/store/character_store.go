@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -17,6 +18,7 @@ var (
 	ErrNoSkillPoints = errors.New("no skill points available")
 	ErrInvalidStat   = errors.New("invalid stat")
 	ErrNoPerkPoints  = errors.New("no perk points available")
+	ErrLevelTooLow   = errors.New("level too low to equip this item")
 )
 
 // XPForCharacterLevel returns the XP required to reach the next level.
@@ -222,9 +224,14 @@ func (s *Store) GetAllUserEquipment(userID int64) ([]model.UserEquipment, error)
 }
 
 // CreateEquipment creates a new UserEquipment instance and returns it.
+// minLevel is the minimum character level required to equip the piece.
 func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equipSlot string,
+	minLevel int,
 	statSTR, statDEX, statINT, statVIT, statLUK int,
 	affixes []byte, setID string) (*model.UserEquipment, error) {
+	if minLevel <= 0 {
+		minLevel = 1
+	}
 	affixStr := "[]"
 	if len(affixes) > 0 {
 		affixStr = string(affixes)
@@ -236,6 +243,7 @@ func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equip
 		Emoji:      emoji,
 		Rarity:     rarity,
 		EquipSlot:  equipSlot,
+		MinLevel:   minLevel,
 		StatSTR:    statSTR,
 		StatDEX:    statDEX,
 		StatINT:    statINT,
@@ -252,16 +260,24 @@ func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equip
 }
 
 // EquipInstance equips a UserEquipment instance. If another item was equipped
-// in the same slot, it is unequipped first.
+// in the same slot, it is unequipped first. Items above the character's level
+// are rejected.
 func (s *Store) EquipInstance(userID int64, equipID uint) error {
+	var target model.UserEquipment
+	if err := s.DB.First(&target, equipID).Error; err != nil {
+		return err
+	}
+	if target.UserID != userID {
+		return nil
+	}
+	c, err := s.EnsureCharacter(userID)
+	if err != nil {
+		return err
+	}
+	if c.Level < target.MinLevel {
+		return fmt.Errorf("%w: requires level %d (you are %d)", ErrLevelTooLow, target.MinLevel, c.Level)
+	}
 	return s.DB.Transaction(func(tx *gorm.DB) error {
-		var target model.UserEquipment
-		if err := tx.First(&target, equipID).Error; err != nil {
-			return err
-		}
-		if target.UserID != userID {
-			return nil
-		}
 		if err := tx.Model(&model.UserEquipment{}).
 			Where("user_id = ? AND equip_slot = ? AND is_equipped = ?", userID, target.EquipSlot, true).
 			Update("is_equipped", false).Error; err != nil {
@@ -283,7 +299,7 @@ func (s *Store) UnequipSlot(userID int64, slot string) error {
 // CreateEquipmentFromAffixes is a convenience that accepts parsed affixes and
 // tallies the total stats from base + affixes before creating the row.
 func (s *Store) CreateEquipmentFromAffixes(userID int64, baseID, name, emoji string,
-	rarity string, equipSlot string,
+	rarity string, equipSlot string, minLevel int,
 	baseSTR, baseDEX, baseINT, baseVIT, baseLUK int,
 	affixes []items.AppliedAffix, setID string) (*model.UserEquipment, error) {
 
@@ -303,7 +319,7 @@ func (s *Store) CreateEquipmentFromAffixes(userID int64, baseID, name, emoji str
 		}
 	}
 	data, _ := json.Marshal(affixes)
-	return s.CreateEquipment(userID, baseID, name, emoji, rarity, equipSlot,
+	return s.CreateEquipment(userID, baseID, name, emoji, rarity, equipSlot, minLevel,
 		totalSTR, totalDEX, totalINT, totalVIT, totalLUK, data, setID)
 }
 

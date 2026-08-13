@@ -9,6 +9,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	npcsvc "guacagamblebot/internal/service/npcs"
@@ -500,6 +501,21 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 				}
 			}
 		}
+
+		// Hunts can drop level-appropriate gear (better odds on boss hunts).
+		dropChance := 0.08
+		if isBoss {
+			dropChance = 0.25
+		}
+		char, _ := s.store.EnsureCharacter(userID)
+		charLvl := 1
+		if char != nil {
+			charLvl = char.Level
+		}
+		if gear, ok := s.rollHuntGear(userID, charLvl, dropChance); ok {
+			s.grantGearInstance(userID, gear)
+			lootItems = append(lootItems, gear.ID)
+		}
 	} else if enemyWon {
 		baseXP := enemy.Level * (15 + rand.Intn(11)) / 10
 		xp = baseXP
@@ -560,4 +576,46 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		CharLeveledUp: charLeveled,
 		CharNewLevel:  charLvl,
 	}, nil
+}
+
+// rollHuntGear decides whether a hunt drops gear and picks a level-appropriate
+// piece (within 10 levels below the player, never above).
+func (s *Service) rollHuntGear(userID int64, charLevel int, chance float64) (items.Item, bool) {
+	if rand.Float64() >= chance {
+		return items.Item{}, false
+	}
+	var pool []items.Item
+	for _, it := range items.AllItems() {
+		if it.EquipSlot == "" || it.MinLevel <= 0 || it.MinLevel > charLevel {
+			continue
+		}
+		if it.MinLevel < charLevel-9 {
+			continue
+		}
+		pool = append(pool, it)
+	}
+	if len(pool) == 0 {
+		return items.Item{}, false
+	}
+	return pool[rand.Intn(len(pool))], true
+}
+
+// grantGearInstance turns a catalog gear item into an equipment instance with
+// rolled affixes for the player.
+func (s *Service) grantGearInstance(userID int64, it items.Item) {
+	rar := it.Rarity
+	affixes := items.RollAffixes(rar, it.EquipSlot)
+	var applied []items.AppliedAffix
+	for _, a := range affixes {
+		applied = append(applied, items.AppliedAffix{
+			ID:    a.ID,
+			Name:  a.Name,
+			Stat:  a.Stat,
+			Value: items.RollAffixValue(a),
+		})
+	}
+	_, _ = s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
+		string(rar), it.EquipSlot, it.MinLevel,
+		it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
+		applied, it.SetID)
 }

@@ -58,15 +58,16 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
 	embed := profileEmbed(c.svc, lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, profileButtons(lang)))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, profileButtons(lang, userID)))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed := profileEmbed(c.svc, lang, interaction.ToInt64(m.Author.ID))
+	userID := interaction.ToInt64(m.Author.ID)
+	embed := profileEmbed(c.svc, lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: profileButtons(lang),
+		Components: profileButtons(lang, userID),
 	})
 }
 
@@ -85,7 +86,7 @@ func (c *Cog) showView(view string, b *interaction.Bot, i *discordgo.Interaction
 		comps = equipmentButtons(c.svc, lang, userID)
 	default:
 		embed = profileEmbed(c.svc, lang, userID)
-		comps = profileButtons(lang)
+		comps = profileButtons(lang, userID)
 	}
 
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -157,10 +158,18 @@ func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.I
 		}
 
 		slotName := slotDisplayName(slot, lang)
+		char, _ := c.store.EnsureCharacter(userID)
+		charLevel := 1
+		if char != nil {
+			charLevel = char.Level
+		}
 		opts := make([]discordgo.SelectMenuOption, 0, len(items))
 		for _, eq := range items {
 			label := fmt.Sprintf("[%s] %s", eq.Rarity, eq.Name)
 			desc := statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
+			if eq.MinLevel > charLevel {
+				desc = i18n.T("character.requires_level_lbl", lang, map[string]any{"level": eq.MinLevel}) + " · " + desc
+			}
 			if len(desc) > 100 {
 				desc = desc[:100]
 			}
@@ -182,7 +191,7 @@ func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.I
 					components.ActionRow(
 						discordgo.SelectMenu{
 							MenuType:    discordgo.StringSelectMenu,
-							CustomID:    components.Encode("character", "equip_pick", slot),
+							CustomID:    components.EncodeOwner(userID, "character", "equip_pick", slot),
 							Placeholder: i18n.T("character.equip_select_placeholder", lang),
 							Options:     opts,
 						},
@@ -207,6 +216,10 @@ func (c *Cog) onEquipPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if err := c.store.EquipInstance(userID, uint(equipID)); err != nil {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		if errors.Is(err, store.ErrLevelTooLow) {
+			interaction.RespondError(b, i, lang, "character.requires_level")
+			return
+		}
 		interaction.RespondError(b, i, lang, "character.equip_error")
 		return
 	}
@@ -348,7 +361,7 @@ func equipmentEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.
 			return fmt.Sprintf("❌ **%s:** %s\n", slotDisplayName(slot, lang), i18n.T("character.empty_slot", lang))
 		}
 		rarEmoji := rarityEmoji(eq.Rarity)
-		line := fmt.Sprintf("✅ **%s:** %s %s %s\n", slotDisplayName(slot, lang), rarEmoji, eq.Emoji, eq.Name)
+		line := fmt.Sprintf("✅ **%s:** %s %s %s (`Lv %d`)\n", slotDisplayName(slot, lang), rarEmoji, eq.Emoji, eq.Name, eq.MinLevel)
 		line += statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
 
 		// Show affixes
@@ -386,11 +399,11 @@ func equipmentEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.
 
 // --- Button builders ---
 
-func profileButtons(lang string) []discordgo.MessageComponent {
+func profileButtons(lang string, userID int64) []discordgo.MessageComponent {
 	return []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.SecondaryButton),
-			components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.SecondaryButton),
+			components.Button(i18n.T("character.btn_stats", lang), components.EncodeOwner(userID, "character", "stats"), discordgo.SecondaryButton),
+			components.Button(i18n.T("character.btn_equipment", lang), components.EncodeOwner(userID, "character", "equipment"), discordgo.SecondaryButton),
 		),
 	}
 }
@@ -399,17 +412,17 @@ func statsButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.M
 	res, _ := svc.Profile(userID)
 	rows := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("character.btn_profile", lang), components.Encode("character", "profile"), discordgo.SecondaryButton),
-			components.Button(i18n.T("character.btn_equipment", lang), components.Encode("character", "equipment"), discordgo.SecondaryButton),
+			components.Button(i18n.T("character.btn_profile", lang), components.EncodeOwner(userID, "character", "profile"), discordgo.SecondaryButton),
+			components.Button(i18n.T("character.btn_equipment", lang), components.EncodeOwner(userID, "character", "equipment"), discordgo.SecondaryButton),
 		),
 	}
 	if res.SkillPoints > 0 {
 		rows = append(rows, components.ActionRow(
-			components.Button("STR +", components.Encode("character", "stat_up_str"), discordgo.SuccessButton),
-			components.Button("DEX +", components.Encode("character", "stat_up_dex"), discordgo.SuccessButton),
-			components.Button("INT +", components.Encode("character", "stat_up_int"), discordgo.SuccessButton),
-			components.Button("VIT +", components.Encode("character", "stat_up_vit"), discordgo.SuccessButton),
-			components.Button("LUK +", components.Encode("character", "stat_up_luk"), discordgo.SuccessButton),
+			components.Button("STR +", components.EncodeOwner(userID, "character", "stat_up_str"), discordgo.SuccessButton),
+			components.Button("DEX +", components.EncodeOwner(userID, "character", "stat_up_dex"), discordgo.SuccessButton),
+			components.Button("INT +", components.EncodeOwner(userID, "character", "stat_up_int"), discordgo.SuccessButton),
+			components.Button("VIT +", components.EncodeOwner(userID, "character", "stat_up_vit"), discordgo.SuccessButton),
+			components.Button("LUK +", components.EncodeOwner(userID, "character", "stat_up_luk"), discordgo.SuccessButton),
 		))
 	}
 	if res.PerkPoints > 0 {
@@ -420,7 +433,7 @@ func statsButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.M
 				for _, p := range choices {
 					perkRow = append(perkRow, components.Button(
 						p.Emoji+" "+p.Name,
-						components.Encode("character", "perk", p.ID),
+						components.EncodeOwner(userID, "character", "perk", p.ID),
 						discordgo.PrimaryButton,
 					))
 				}
@@ -439,18 +452,18 @@ func equipmentButtons(svc *charsvc.Service, lang string, userID int64) []discord
 	}
 
 	row1 := []discordgo.MessageComponent{
-		components.Button(i18n.T("character.btn_profile", lang), components.Encode("character", "profile"), discordgo.SecondaryButton),
-		components.Button(i18n.T("character.btn_stats", lang), components.Encode("character", "stats"), discordgo.SecondaryButton),
+		components.Button(i18n.T("character.btn_profile", lang), components.EncodeOwner(userID, "character", "profile"), discordgo.SecondaryButton),
+		components.Button(i18n.T("character.btn_stats", lang), components.EncodeOwner(userID, "character", "stats"), discordgo.SecondaryButton),
 	}
 
 	row2 := []discordgo.MessageComponent{}
 	for _, slot := range []string{"weapon", "armor", "accessory", "trinket"} {
 		if eqBySlot[slot] {
 			label := i18n.T("character.btn_unequip", lang, map[string]any{"slot": slotDisplayName(slot, lang)})
-			row2 = append(row2, components.Button(label, components.Encode("character", "unequip_"+slot), discordgo.DangerButton))
+			row2 = append(row2, components.Button(label, components.EncodeOwner(userID, "character", "unequip_"+slot), discordgo.DangerButton))
 		} else {
 			label := i18n.T("character.btn_equip", lang, map[string]any{"slot": slotDisplayName(slot, lang)})
-			row2 = append(row2, components.Button(label, components.Encode("character", "equip_"+slot), discordgo.SuccessButton))
+			row2 = append(row2, components.Button(label, components.EncodeOwner(userID, "character", "equip_"+slot), discordgo.SuccessButton))
 		}
 	}
 

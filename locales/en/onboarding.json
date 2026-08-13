@@ -18,6 +18,7 @@
     "menu_desc": "Let's set up the bot for your server. Pick the channel where I can talk, choose a language, and tweak a few options.",
     "menu_title": "Welcome to GuacaGambleBot! 🎰",
     "need_channel": "Please choose a channel before finishing setup.",
+    "no_permission": "⛔ Only server admins can configure the bot.",
     "prefix_label": "Command prefix",
     "setup_desc": "Configure the bot for this server.",
     "status_disabled": "Disabled",

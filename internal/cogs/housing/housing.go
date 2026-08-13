@@ -75,7 +75,7 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	_, err := c.hsvc.GetHousing(userID)
 	if err != nil {
-		return c.shopMenu(lang)
+		return c.shopMenu(lang, userID)
 	}
 	embed := components.Embed(
 		i18n.T("housing.menu_title", lang),
@@ -84,22 +84,22 @@ func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, [
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("housing.btn_show", lang), components.Encode("house", "show"), discordgo.PrimaryButton),
-			components.Button(i18n.T("housing.btn_collect", lang), components.Encode("house", "collect"), discordgo.SuccessButton),
+			components.Button(i18n.T("housing.btn_show", lang), components.EncodeOwner(userID, "house", "show"), discordgo.PrimaryButton),
+			components.Button(i18n.T("housing.btn_collect", lang), components.EncodeOwner(userID, "house", "collect"), discordgo.SuccessButton),
 		),
 		components.ActionRow(
-			components.Button(i18n.T("housing.btn_tree", lang), components.Encode("house", "tree"), discordgo.SecondaryButton),
-			components.Button(i18n.T("housing.btn_upgrade", lang), components.Encode("house", "upgrade"), discordgo.PrimaryButton),
+			components.Button(i18n.T("housing.btn_tree", lang), components.EncodeOwner(userID, "house", "tree"), discordgo.SecondaryButton),
+			components.Button(i18n.T("housing.btn_upgrade", lang), components.EncodeOwner(userID, "house", "upgrade"), discordgo.PrimaryButton),
 		),
 		components.ActionRow(
-			components.Button("🪑 Furniture", components.Encode("house", "furniture"), discordgo.SecondaryButton),
-			components.Button("🏡 Sanctuary", components.Encode("house", "sanctuary"), discordgo.SuccessButton),
+			components.Button("🪑 Furniture", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
+			components.Button("🏡 Sanctuary", components.EncodeOwner(userID, "house", "sanctuary"), discordgo.SuccessButton),
 		),
 	}
 	return embed, comps
 }
 
-func (c *Cog) shopMenu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) shopMenu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	desc := ""
 	for _, ht := range housingsvc.Houses {
 		desc += fmt.Sprintf("**%s** — $%d\n", i18n.T("housing.types."+ht.ID, lang), ht.Price)
@@ -116,7 +116,7 @@ func (c *Cog) shopMenu(lang string) (*discordgo.MessageEmbed, []discordgo.Messag
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 	for _, ht := range housingsvc.Houses {
-		row = append(row, components.Button(i18n.T("housing.types."+ht.ID, lang), components.Encode("house", "buy", ht.ID), discordgo.PrimaryButton))
+		row = append(row, components.Button(i18n.T("housing.types."+ht.ID, lang), components.EncodeOwner(userID, "house", "buy", ht.ID), discordgo.PrimaryButton))
 		if len(row) == 5 {
 			comps = append(comps, components.ActionRow(row...))
 			row = nil
@@ -370,14 +370,14 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 
-	row = append(row, components.Button("🔙 Back", components.Encode("house", "show"), discordgo.SecondaryButton))
-	row = append(row, components.Button("🔬 Research", components.Encode("house", "research_view"), discordgo.PrimaryButton))
+	row = append(row, components.Button("🔙 Back", components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton))
+	row = append(row, components.Button("🔬 Research", components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton))
 	comps = append(comps, components.ActionRow(row...))
 
 	// Place/Remove buttons
 	actionRow := []discordgo.MessageComponent{}
 	for _, pf := range placedFurniture {
-		actionRow = append(actionRow, components.Button(fmt.Sprintf("❌ %s", pf.FurnitureID), components.Encode("house", "remove", pf.FurnitureID), discordgo.DangerButton))
+		actionRow = append(actionRow, components.Button(fmt.Sprintf("❌ %s", pf.FurnitureID), components.EncodeOwner(userID, "house", "remove", pf.FurnitureID), discordgo.DangerButton))
 		if len(actionRow) == 5 {
 			comps = append(comps, components.ActionRow(actionRow...))
 			actionRow = nil
@@ -393,7 +393,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			continue
 		}
 		label := fmt.Sprintf("📦 %s", fd.ID)
-		actionRow = append(actionRow, components.Button(label, components.Encode("house", "place", fd.ID), discordgo.SuccessButton))
+		actionRow = append(actionRow, components.Button(label, components.EncodeOwner(userID, "house", "place", fd.ID), discordgo.SuccessButton))
 		if len(actionRow) == 5 {
 			comps = append(comps, components.ActionRow(actionRow...))
 			actionRow = nil
@@ -562,7 +562,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
-	row = append(row, components.Button("🔙 Back", components.Encode("house", "furniture"), discordgo.SecondaryButton))
+	row = append(row, components.Button("🔙 Back", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton))
 
 	// Active ready-to-complete buttons
 	for _, a := range activeList {
@@ -572,7 +572,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 			if rd != nil {
 				label = fmt.Sprintf("✅ %s", rd.Name)
 			}
-			row = append(row, components.Button(label, components.Encode("house", "complete_research", a.ResearchID), discordgo.SuccessButton))
+			row = append(row, components.Button(label, components.EncodeOwner(userID, "house", "complete_research", a.ResearchID), discordgo.SuccessButton))
 		}
 	}
 	comps = append(comps, components.ActionRow(row...))
@@ -595,7 +595,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		if c.fsvc.IsPlaced(userID, rd.RequiredFurniture) {
 			label := fmt.Sprintf("📖 %s", rd.ID)
-			actionRow = append(actionRow, components.Button(label, components.Encode("house", "start_research", rd.ID), discordgo.PrimaryButton))
+			actionRow = append(actionRow, components.Button(label, components.EncodeOwner(userID, "house", "start_research", rd.ID), discordgo.PrimaryButton))
 			if len(actionRow) == 5 {
 				comps = append(comps, components.ActionRow(actionRow...))
 				actionRow = nil

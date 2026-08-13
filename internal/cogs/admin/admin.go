@@ -45,6 +45,18 @@ func isAdmin(i *discordgo.InteractionCreate) bool {
 	return false
 }
 
+// isAdminMsg reports whether the author of a prefix message is an administrator,
+// using the gateway state when the message member payload lacks permissions.
+func isAdminMsg(s *discordgo.Session, m *discordgo.Message) bool {
+	if m.Member != nil && m.Member.Permissions&discordgo.PermissionAdministrator != 0 {
+		return true
+	}
+	if perms, err := s.State.MessagePermissions(m); err == nil {
+		return perms&discordgo.PermissionAdministrator != 0
+	}
+	return false
+}
+
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	if !isAdmin(i) {
@@ -205,6 +217,9 @@ func (c *Cog) onSetLangBtn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) onSetLang(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	if !isAdminMsg(s, m) {
+		return
+	}
 	parts := strings.Fields(m.Content)
 	if len(parts) < 2 {
 		return
@@ -221,6 +236,9 @@ func (c *Cog) onSetLang(b *interaction.Bot, s *discordgo.Session, m *discordgo.M
 }
 
 func (c *Cog) onAirdrop(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	if !isAdminMsg(s, m) {
+		return
+	}
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	parts := strings.Fields(m.Content)
 	if len(parts) < 3 {
@@ -249,6 +267,9 @@ func (c *Cog) onAirdrop(b *interaction.Bot, s *discordgo.Session, m *discordgo.M
 }
 
 func (c *Cog) onGiveCrowns(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	if !isAdminMsg(s, m) {
+		return
+	}
 	parts := strings.Fields(m.Content)
 	if len(parts) < 3 {
 		return
@@ -269,6 +290,9 @@ func (c *Cog) onGiveCrowns(b *interaction.Bot, s *discordgo.Session, m *discordg
 }
 
 func (c *Cog) onResetEconomy(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	if !isAdminMsg(s, m) {
+		return
+	}
 	if err := c.svc.ResetEconomy(); err != nil {
 		return
 	}

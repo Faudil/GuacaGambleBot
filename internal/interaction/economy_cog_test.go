@@ -95,7 +95,7 @@ func TestEconomyBalanceButton(t *testing.T) {
 		Type:    discordgo.InteractionMessageComponent,
 		GuildID: "100", Token: "tok",
 		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
-		Data:   discordgo.MessageComponentInteractionData{CustomID: components.Encode("economy", "balance")},
+		Data:   discordgo.MessageComponentInteractionData{CustomID: components.EncodeOwner(200, "economy", "balance")},
 	}})
 	assert.Equal(t, 1, rt.callbackCount(), "balance button should respond")
 }
@@ -107,7 +107,7 @@ func TestEconomyDailyButton(t *testing.T) {
 		Type:    discordgo.InteractionMessageComponent,
 		GuildID: "100", Token: "tok",
 		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
-		Data:   discordgo.MessageComponentInteractionData{CustomID: components.Encode("economy", "daily")},
+		Data:   discordgo.MessageComponentInteractionData{CustomID: components.EncodeOwner(200, "economy", "daily")},
 	}})
 	assert.Equal(t, 1, rt.callbackCount(), "daily button should respond")
 	bal, err := st.GetBalance(200)

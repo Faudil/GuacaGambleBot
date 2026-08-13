@@ -108,7 +108,7 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 		text := i18n.T(step.TextKey, lang)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(i18n.T("start.continue_btn", lang), components.Encode("start", "continue", "tutorial"), discordgo.SuccessButton),
+				components.Button(i18n.T("start.continue_btn", lang), components.EncodeOwner(userID, "start", "continue", "tutorial"), discordgo.SuccessButton),
 			),
 		}
 		return components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps
@@ -138,7 +138,7 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(label, components.Encode("start", "continue", "tutorial"), discordgo.SuccessButton),
+				components.Button(label, components.EncodeOwner(userID, "start", "continue", "tutorial"), discordgo.SuccessButton),
 			),
 		}
 		return components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps
@@ -196,7 +196,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
-					components.Button(i18n.T("quests.activity_view_btn", lang), components.Encode("start", "continue", questID), discordgo.SuccessButton),
+					components.Button(i18n.T("quests.activity_view_btn", lang), components.EncodeOwner(userID, "start", "continue", questID), discordgo.SuccessButton),
 				),
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
@@ -211,7 +211,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			text := i18n.T(def.TitleKey, lang) + "\n\n❌ " + err.Error()
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
-					components.Button(i18n.T("quests.req_button", lang), components.Encode("start", "continue", questID), discordgo.SuccessButton),
+					components.Button(i18n.T("quests.req_button", lang), components.EncodeOwner(userID, "start", "continue", questID), discordgo.SuccessButton),
 				),
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
@@ -229,7 +229,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("⚔️ "+i18n.T("start.boss_fight_btn", lang), components.Encode("boss", "fight"), discordgo.DangerButton),
+				components.Button("⚔️ "+i18n.T("start.boss_fight_btn", lang), components.EncodeOwner(userID, "boss", "fight"), discordgo.DangerButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -272,7 +272,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(btnLabel, components.Encode("start", "continue", questID), discordgo.SuccessButton),
+			components.Button(btnLabel, components.EncodeOwner(userID, "start", "continue", questID), discordgo.SuccessButton),
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,

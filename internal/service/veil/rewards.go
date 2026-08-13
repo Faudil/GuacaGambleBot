@@ -90,7 +90,7 @@ func rollLegendaryForPlayer(userID int64) *LegendaryDrop {
 	svc := &Service{}
 	_, err := svc.store.CreateEquipmentFromAffixes(
 		userID, entry.ID, entry.Name, entry.Emoji,
-		"legendary", entry.Slot,
+		"legendary", entry.Slot, 25,
 		entry.StatSTR, entry.StatDEX, entry.StatINT, entry.StatVIT, entry.StatLUK,
 		affixes, "rift_walker")
 	if err != nil {

@@ -109,6 +109,23 @@ type LootResult struct {
 	Value int
 }
 
+// minLevelForRarity maps a delve loot rarity to the minimum character level
+// required to equip the generated piece.
+func minLevelForRarity(r Rarity) int {
+	switch r {
+	case Legendary:
+		return 20
+	case Epic:
+		return 15
+	case Rare:
+		return 10
+	case Uncommon:
+		return 5
+	default:
+		return 1
+	}
+}
+
 func rollRarity(floor int, lukBonus float64) Rarity {
 	r := rand.Float64() - lukBonus
 	switch {

@@ -11,6 +11,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
@@ -216,10 +217,7 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, st
 			}
 		}
 		for _, itemID := range r.ItemIDs {
-			s.store.DB.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-				DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-			}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
+			s.grantRewardItem(userID, itemID)
 		}
 	}
 	nextIdx := uqd.StepIndex + 1
@@ -246,6 +244,38 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, st
 		return false, "", err
 	}
 	return false, def.Steps[nextIdx].TextKey, nil
+}
+
+// grantRewardItem hands a quest reward to the player. Equipment pieces are
+// turned into real UserEquipment instances (with rolled affixes); everything
+// else lands in the regular inventory.
+func (s *Service) grantRewardItem(userID int64, itemID string) {
+	it := items.Get(itemID)
+	if it != nil && it.EquipSlot != "" {
+		rar := it.Rarity
+		affixes := items.RollAffixes(rar, it.EquipSlot)
+		var applied []items.AppliedAffix
+		for _, a := range affixes {
+			applied = append(applied, items.AppliedAffix{
+				ID:    a.ID,
+				Name:  a.Name,
+				Stat:  a.Stat,
+				Value: items.RollAffixValue(a),
+			})
+		}
+		_, err := s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
+			string(rar), it.EquipSlot, it.MinLevel,
+			it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
+			applied, it.SetID)
+		if err != nil {
+			return
+		}
+		return
+	}
+	s.store.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
+	}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
 }
 
 func (s *Service) GetQuestDef(id string) *QuestDef {
@@ -417,10 +447,7 @@ func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) err
 				}
 			}
 			for _, itemID := range r.ItemIDs {
-				s.store.DB.Clauses(clause.OnConflict{
-					Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-					DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-				}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
+				s.grantRewardItem(userID, itemID)
 			}
 		}
 	}

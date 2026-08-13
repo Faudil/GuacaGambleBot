@@ -68,14 +68,16 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
@@ -234,7 +236,7 @@ func (c *Cog) onPrefixGive(b *interaction.Bot, s *discordgo.Session, m *discordg
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
 
-func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
 		i18n.T("economy.menu_title", lang),
 		i18n.T("economy.menu_desc", lang),
@@ -243,9 +245,9 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.menu_footer", lang)}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("economy.btn_balance", lang), components.Encode("economy", "balance"), discordgo.PrimaryButton),
-			components.Button(i18n.T("economy.btn_daily", lang), components.Encode("economy", "daily"), discordgo.SuccessButton),
-			components.Button(i18n.T("economy.btn_give", lang), components.Encode("economy", "give"), discordgo.SecondaryButton),
+			components.Button(i18n.T("economy.btn_balance", lang), components.EncodeOwner(userID, "economy", "balance"), discordgo.PrimaryButton),
+			components.Button(i18n.T("economy.btn_daily", lang), components.EncodeOwner(userID, "economy", "daily"), discordgo.SuccessButton),
+			components.Button(i18n.T("economy.btn_give", lang), components.EncodeOwner(userID, "economy", "give"), discordgo.SecondaryButton),
 		),
 	}
 	return embed, comps
@@ -266,7 +268,7 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.Field(i18n.T("economy.daily_interest", lang), "+$"+strconv.Itoa(res.Interest)+" / jour", false),
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.balance_footer", lang)}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -298,7 +300,7 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	fields = append(fields, components.Field(i18n.T("economy.your_balance", lang), "$"+strconv.Itoa(res.NewBalance), false))
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 
@@ -357,7 +359,7 @@ func (c *Cog) onGiveSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
 		components.Field(i18n.T("economy.quantity", lang), "**$"+strconv.Itoa(amount)+"**", false),
 	}
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, sender)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 

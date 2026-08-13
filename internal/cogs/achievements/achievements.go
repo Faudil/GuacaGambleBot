@@ -33,21 +33,23 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menu(lang)
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
 
-func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
 		i18n.T("achievements.list_title", lang),
 		i18n.T("achievements.menu_desc", lang),
@@ -55,7 +57,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(i18n.T("achievements.btn_show", lang), components.Encode("achievements", "show"), discordgo.PrimaryButton),
+			components.Button(i18n.T("achievements.btn_show", lang), components.EncodeOwner(userID, "achievements", "show"), discordgo.PrimaryButton),
 		),
 	}
 	return embed, comps
@@ -93,7 +95,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed.Description = strings.Join(lines, "\n")
 	}
 
-	_, comps := c.menu(lang)
+	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }

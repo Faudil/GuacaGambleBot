@@ -135,56 +135,56 @@ func (c *Cog) buildSanctuaryEmbed(userID int64, lang string) (*discordgo.Message
 		desc+nextTier,
 		0x2ecc71,
 	)
-	return embed, c.buildButtons(san, tier, used, max, lang)
+	return embed, c.buildButtons(san, tier, used, max, lang, userID)
 }
 
-func (c *Cog) buildButtons(san *model.UserSanctuary, tier, used, max int, lang string) []discordgo.MessageComponent {
+func (c *Cog) buildButtons(san *model.UserSanctuary, tier, used, max int, lang string, userID int64) []discordgo.MessageComponent {
 	var buttons []discordgo.MessageComponent
 
 	if tier > 0 && san.UnderConstruction == nil {
 		buttons = append(buttons,
-			components.Button("📦 Collect", components.Encode("sanctuary", "collect"), discordgo.SuccessButton),
+			components.Button("📦 Collect", components.EncodeOwner(userID, "sanctuary", "collect"), discordgo.SuccessButton),
 		)
 	}
 
 	if used > 0 {
 		buttons = append(buttons,
-			components.Button("🔙 Recall", components.Encode("sanctuary", "recall"), discordgo.PrimaryButton),
+			components.Button("🔙 Recall", components.EncodeOwner(userID, "sanctuary", "recall"), discordgo.PrimaryButton),
 		)
 	}
 
 	if used < max && tier > 0 {
 		buttons = append(buttons,
-			components.Button("🏞️ Retire", components.Encode("sanctuary", "retire"), discordgo.SecondaryButton),
+			components.Button("🏞️ Retire", components.EncodeOwner(userID, "sanctuary", "retire"), discordgo.SecondaryButton),
 		)
 	}
 
 	if san.UnderConstruction != nil {
 		if san.FinishTime != nil && time.Now().After(*san.FinishTime) {
 			buttons = append(buttons,
-				components.Button("✅ Complete", components.Encode("sanctuary", "complete"), discordgo.SuccessButton),
+				components.Button("✅ Complete", components.EncodeOwner(userID, "sanctuary", "complete"), discordgo.SuccessButton),
 			)
 		}
 	} else if _, ok := sansvc.SanctuaryTiers[tier+1]; ok {
 		buttons = append(buttons,
-			components.Button("⬆️ Upgrade", components.Encode("sanctuary", "upgrade"), discordgo.PrimaryButton),
+			components.Button("⬆️ Upgrade", components.EncodeOwner(userID, "sanctuary", "upgrade"), discordgo.PrimaryButton),
 		)
 	}
 
 	if used > 0 {
 		buttons = append(buttons,
-			components.Button("⭐ Showcase", components.Encode("sanctuary", "showcase"), discordgo.SecondaryButton),
+			components.Button("⭐ Showcase", components.EncodeOwner(userID, "sanctuary", "showcase"), discordgo.SecondaryButton),
 		)
 	}
 
 	if len(buttons) == 0 {
 		if tier == 0 {
 			buttons = append(buttons,
-				components.Button("🏗️ Build", components.Encode("sanctuary", "upgrade"), discordgo.SuccessButton),
+				components.Button("🏗️ Build", components.EncodeOwner(userID, "sanctuary", "upgrade"), discordgo.SuccessButton),
 			)
 		} else {
 			buttons = append(buttons,
-				components.Button("🔄 Refresh", components.Encode("sanctuary", "view"), discordgo.SecondaryButton),
+				components.Button("🔄 Refresh", components.EncodeOwner(userID, "sanctuary", "view"), discordgo.SecondaryButton),
 			)
 		}
 	}
@@ -330,7 +330,7 @@ func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			[]discordgo.MessageComponent{
 				components.ActionRow(
 					discordgo.SelectMenu{
-						CustomID:    components.Encode("sanctuary", "retire"),
+						CustomID:    components.EncodeOwner(userID, "sanctuary", "retire"),
 						Placeholder: i18n.T("sanctuary.retire_placeholder", lang),
 						Options:     opts,
 					},
@@ -369,7 +369,7 @@ func (c *Cog) onRecallSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			[]discordgo.MessageComponent{
 				components.ActionRow(
 					discordgo.SelectMenu{
-						CustomID:    components.Encode("sanctuary", "recall"),
+						CustomID:    components.EncodeOwner(userID, "sanctuary", "recall"),
 						Placeholder: i18n.T("sanctuary.recall_placeholder", lang),
 						Options:     opts,
 					},
@@ -412,7 +412,7 @@ func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 			[]discordgo.MessageComponent{
 				components.ActionRow(
 			discordgo.SelectMenu{
-					CustomID:    components.Encode("sanctuary", "showcase_select"),
+					CustomID:    components.EncodeOwner(userID, "sanctuary", "showcase_select"),
 					Placeholder: i18n.T("sanctuary.showcase_placeholder", lang),
 						Options:     opts,
 					},
@@ -422,6 +422,7 @@ func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 
 func (c *Cog) onShowcaseSet(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	data := i.MessageComponentData()
 	if len(data.Values) == 0 {
 		return
@@ -445,7 +446,7 @@ func (c *Cog) onShowcaseSet(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			[]discordgo.MessageComponent{
 				components.ActionRow(
 					discordgo.SelectMenu{
-						CustomID:    components.Encode("sanctuary", "showcase_slot", data.Values[0]),
+						CustomID:    components.EncodeOwner(userID, "sanctuary", "showcase_slot", data.Values[0]),
 						Placeholder: "Select a showcase slot...",
 						Options:     slotOpts,
 					},
