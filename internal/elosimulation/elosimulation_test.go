@@ -1,14 +1,25 @@
 package elosimulation
 
 import (
+	"path/filepath"
 	"testing"
 
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 
+	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	"guacagamblebot/internal/store"
 )
 
 func TestToBattlePetConversion(t *testing.T) {
+	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "p.db")), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := store.New(d, &config.Config{})
+
 	p := &model.UserPet{
 		ID:       42,
 		Nickname: "TestPet",
@@ -24,7 +35,7 @@ func TestToBattlePetConversion(t *testing.T) {
 		CritD:    2.0,
 		SpcC:     5,
 	}
-	bp := toBattlePet(p)
+	bp := toBattlePet(st, p)
 	assert.Equal(t, p.ID, bp.ID)
 	assert.Equal(t, p.Nickname, bp.Nickname)
 	assert.Equal(t, p.Level, bp.Level)

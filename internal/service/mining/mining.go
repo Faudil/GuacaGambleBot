@@ -25,17 +25,17 @@ type MineItem struct {
 func lootAtDepth(depth int) []MineItem {
 	switch {
 	case depth <= 1:
-		return []MineItem{{"pebble", 1}, {"coal", 5}, {"wheat_seed", 2}}
+		return []MineItem{{"pebble", 1}, {"coal", 5}}
 	case depth <= 3:
-		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}, {"carrot_seed", 7}, {"corn_seed", 5}}
+		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}}
 	case depth == 4:
-		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}, {"potato_seed", 8}, {"tomato_seed", 10}}
+		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}}
 	case depth == 5:
-		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}, {"pumpkin_seed", 15}}
+		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}}
 	case depth <= 7:
-		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}, {"coffee_seed", 25}}
+		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}}
 	case depth <= 9:
-		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}, {"cocoa_seed", 30}}
+		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}}
 	case depth <= 14:
 		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}}
 	case depth <= 19:
@@ -63,29 +63,6 @@ const (
 	loreFracture = "mine_lore_fracture"
 	loreKing     = "mine_lore_king"
 )
-
-type BranchChoice string
-
-const (
-	BranchStandard BranchChoice = "standard"
-	BranchReckless BranchChoice = "reckless"
-)
-
-func (c BranchChoice) RiskMod() int {
-	switch c {
-	case BranchReckless:
-		return 15
-	default:
-		return 0
-	}
-}
-
-func (c BranchChoice) LootTierOffset() int {
-	if c == BranchReckless {
-		return 1
-	}
-	return 0
-}
 
 type ToolInfo struct {
 	ItemID        string
@@ -294,10 +271,10 @@ type EventDef struct {
 }
 
 type NarrativeEvent struct {
-	ID         string
-	Stage      EventStage
-	Rarity     EventRarity
-	Options    []NarrativeOption
+	ID      string
+	Stage   EventStage
+	Rarity  EventRarity
+	Options []NarrativeOption
 }
 
 type DescendResult struct {
@@ -333,7 +310,7 @@ var eventPool = func() []EventDef {
 	}
 	return []EventDef{
 		// ═══ SHALLOW — COMMON ═══
-		{ID: "collapse", Stage: StageShallow, Rarity: EventCommon, MinDepth: 3, 
+		{ID: "collapse", Stage: StageShallow, Rarity: EventCommon, MinDepth: 3,
 			Options: []NarrativeOption{
 				o("mining.ev_collapse_o1", "mining.ev_collapse_o1d", ef("mining.ev_collapse_r1")),
 				o("mining.ev_collapse_o2", "mining.ev_collapse_o2d", efr("mining.ev_collapse_r2", -15, 3)),
@@ -697,7 +674,7 @@ func (s *Service) ConsumeItem(userID int64, itemID string) error {
 		Delete(&model.Inventory{}).Error
 }
 
-func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice BranchChoice, toolID string, ghostVeilTurns int) (*DescendResult, error) {
+func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns int) (*DescendResult, error) {
 	ok, _, err := s.store.CheckGameLimit(userID, "mine_descend", dailyDescendLimit)
 	if err != nil {
 		return nil, err
@@ -717,11 +694,14 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 		ti = GetToolInfo("")
 	}
 
-	risk := (depth-1)*5 + choice.RiskMod() - ti.RiskReduction
+	risk := (depth-1)*5 - ti.RiskReduction
 	levelReduc := int(float64(ml) * 1.5)
 	risk -= levelReduc
 	vitReduc := int(charsvc.GetVITReduction(s.store, userID) * 100)
 	risk -= vitReduc
+	if charsvc.HasPassive(s.store, userID, "perk_collapse_resist") {
+		risk -= 5
+	}
 
 	if ghostVeilTurns > 0 {
 		risk -= 10
@@ -821,7 +801,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 		return &DescendResult{Item: nil, Bag: bag, Event: easterEgg, LoreID: loreID}, nil
 	}
 
-	lvl := depth + choice.LootTierOffset() + ti.LootTierBonus
+	lvl := depth + ti.LootTierBonus
 	if lvl < 1 {
 		lvl = 1
 	}
@@ -880,6 +860,9 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, choice Branch
 
 func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*LeaveResult, error) {
 	strMult := charsvc.GetSTRBonus(s.store, userID)
+	if charsvc.HasPassive(s.store, userID, "perk_mine_yield") {
+		strMult += 0.05
+	}
 	if strMult > 1.0 {
 		for i := range bag {
 			bag[i].Count = int(float64(bag[i].Count) * strMult)
@@ -967,6 +950,6 @@ func LoreDisplayName(loreID string) string {
 	return loreID
 }
 
-func GhostVeilBuffID() string          { return ghostVeilBuff }
-func LoreKethariID() string             { return loreKethari }
-func AncientCoreShardItemID() string    { return ancientCoreShardItem }
+func GhostVeilBuffID() string        { return ghostVeilBuff }
+func LoreKethariID() string          { return loreKethari }
+func AncientCoreShardItemID() string { return ancientCoreShardItem }

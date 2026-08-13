@@ -195,6 +195,9 @@ func (s *Service) Plant(userID int64, zoneKey string, plotIndex int, seedName st
 		reduction = 0.5
 	}
 	finalGrowTime := int(float64(growTime) * (1 - reduction))
+	if charsvc.HasPassive(s.store, userID, "perk_green_thumb") {
+		finalGrowTime = finalGrowTime * 9 / 10
+	}
 
 	if err := s.store.DB.Create(&model.UserFarming{
 		UserID:     userID,

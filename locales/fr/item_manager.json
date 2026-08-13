@@ -1,0 +1,18 @@
+{
+  "item_manager": {
+    "accept_label": "✅ Accepter l'offre",
+    "no_item": "❌ Le vendeur n'a plus l'objet !",
+    "no_item_owned": "❌ Tu n'as pas de **{item_name}**.",
+    "no_money": "❌ Tu n'as pas assez d'argent.",
+    "not_for_you": "Ce n'est pas pour toi !",
+    "refuse_label": "Refuser",
+    "trade_cancelled": "❌ Échange annulé.",
+    "trade_proposal_desc": "**{seller}** veut te vendre **{item}** pour **${price}**.\n{buyer}, acceptes-tu ?",
+    "trade_proposal_title": "🤝 Proposition d'échange",
+    "trade_success": "🤝 **Affaire conclue !**\n{seller} a vendu **{item}** à {buyer} pour **${price}**.",
+    "trade_usage": "Utilisation : `!sell @utilisateur \u003cobjet\u003e \u003cprix\u003e` , Vendre un objet à un autre joueur.",
+    "unknown_error": "❌ Erreur inconnue.",
+    "used_item": "✨ Tu as utilisé **{item_name}**, il a été retiré de ton inventaire",
+    "winner": "Gagnant"
+  }
+}

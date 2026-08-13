@@ -282,7 +282,3 @@ func GetBreachBoon(votes map[string]int, lang string) string {
 		return i18n.T("veil.encounter.breach_boon_default", lang)
 	}
 }
-
-var _ = json.Marshal
-var _ = components.Encode
-var _ = store.UnmarshalJSON

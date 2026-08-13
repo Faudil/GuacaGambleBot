@@ -5,14 +5,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
 // translations holds the loaded locale data: lang -> nested map.
 var translations = map[string]map[string]any{}
 
-// Load reads every *.json file in dir as a language pack (filename without
-// extension is the language code, e.g. "en", "fr").
+// Languages returns the sorted list of loaded language codes.
+func Languages() []string {
+	langs := make([]string, 0, len(translations))
+	for l := range translations {
+		langs = append(langs, l)
+	}
+	sort.Strings(langs)
+	return langs
+}
+
+// Load reads every subdirectory of dir as a language pack (directory name is
+// the language code, e.g. "en", "fr"). Each *.json file inside a language
+// directory is one namespace and is merged at the top level.
 func Load(dir string) error {
 	translations = map[string]map[string]any{}
 	entries, err := os.ReadDir(dir)
@@ -20,21 +32,45 @@ func Load(dir string) error {
 		return err
 	}
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+		if !e.IsDir() {
 			continue
 		}
-		lang := strings.TrimSuffix(e.Name(), ".json")
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		lang := e.Name()
+		pack, err := loadLanguagePack(filepath.Join(dir, lang))
 		if err != nil {
-			return err
+			return fmt.Errorf("language %s: %w", lang, err)
+		}
+		translations[lang] = pack
+	}
+	return nil
+}
+
+func loadLanguagePack(dir string) (map[string]any, error) {
+	pack := map[string]any{}
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() || !strings.HasSuffix(f.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, f.Name()))
+		if err != nil {
+			return nil, err
 		}
 		var m map[string]any
 		if err := json.Unmarshal(data, &m); err != nil {
-			return err
+			return nil, fmt.Errorf("%s: %w", f.Name(), err)
 		}
-		translations[lang] = m
+		for k, v := range m {
+			if _, exists := pack[k]; exists {
+				return nil, fmt.Errorf("%s: duplicate top-level key %q across namespace files", f.Name(), k)
+			}
+			pack[k] = v
+		}
 	}
-	return nil
+	return pack, nil
 }
 
 func getNested(m map[string]any, keys []string) any {

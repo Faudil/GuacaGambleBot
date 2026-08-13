@@ -99,11 +99,8 @@ func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult,
 
 	if tc > to {
 		res.WinnerID = challengerID
-		if _, err := s.store.UpdateBalance(challengerID, amount); err != nil {
-			return nil, err
-		}
-		if _, err := s.store.UpdateBalance(opponentID, -amount); err != nil {
-			return nil, err
+		if _, _, err := s.store.Transfer(opponentID, challengerID, amount); err != nil {
+			return nil, mapMoneyErr(err)
 		}
 		if err := achievement.IncrementStat(s.store.DB, challengerID, "pvp_wins", 1); err != nil {
 			return nil, err
@@ -113,11 +110,8 @@ func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult,
 		}
 	} else if to > tc {
 		res.WinnerID = opponentID
-		if _, err := s.store.UpdateBalance(opponentID, amount); err != nil {
-			return nil, err
-		}
-		if _, err := s.store.UpdateBalance(challengerID, -amount); err != nil {
-			return nil, err
+		if _, _, err := s.store.Transfer(challengerID, opponentID, amount); err != nil {
+			return nil, mapMoneyErr(err)
 		}
 		if err := achievement.IncrementStat(s.store.DB, opponentID, "pvp_wins", 1); err != nil {
 			return nil, err
@@ -135,4 +129,11 @@ func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult,
 	res.UnlocksC, _ = achievement.CheckAndUnlock(s.store.DB, challengerID)
 	res.UnlocksO, _ = achievement.CheckAndUnlock(s.store.DB, opponentID)
 	return res, nil
+}
+
+func mapMoneyErr(err error) error {
+	if errors.Is(err, store.ErrInsufficientFunds) {
+		return ErrNoMoney
+	}
+	return err
 }

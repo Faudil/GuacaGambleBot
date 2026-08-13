@@ -36,7 +36,7 @@ func testService(t *testing.T) (*Service, *store.Store) {
 
 func TestDescend(t *testing.T) {
 	svc, _ := testService(t)
-	res, err := svc.Descend(1, 1, nil, BranchStandard, "", 0)
+	res, err := svc.Descend(1, 1, nil, "", 0)
 	require.NoError(t, err)
 	if !res.Collapsed {
 		assert.NotNil(t, res.Item)
@@ -50,7 +50,7 @@ func TestDescendCollapse(t *testing.T) {
 	bag := []BagEntry{}
 	collapsed := false
 	for i := 0; i < 50; i++ {
-		res, err := svc.Descend(1, 40, bag, BranchReckless, "", 0)
+		res, err := svc.Descend(1, 40, bag, "", 0)
 		require.NoError(t, err)
 		if res.Collapsed {
 			collapsed = true
@@ -64,7 +64,7 @@ func TestDescendCollapse(t *testing.T) {
 func TestDescendCanGoAnyDepth(t *testing.T) {
 	svc, _ := testService(t)
 	for depth := 1; depth <= 30; depth++ {
-		res, err := svc.Descend(1, depth, nil, BranchStandard, "", 0)
+		res, err := svc.Descend(1, depth, nil, "", 0)
 		require.NoError(t, err)
 		if res.Collapsed {
 			break
@@ -72,29 +72,30 @@ func TestDescendCanGoAnyDepth(t *testing.T) {
 	}
 }
 
-func TestDescendRecklessGivesBetterLoot(t *testing.T) {
+func TestDescendDeeperGivesBetterLoot(t *testing.T) {
 	svc, s := testService(t)
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 20, XP: 0})
-	standardVal := 0
-	recklessVal := 0
+	shallowVal := 0
+	deepVal := 0
 	trials := 20
 	for i := 0; i < trials; i++ {
-		r1, err := svc.Descend(1, 5, nil, BranchStandard, "", 0)
+		r1, err := svc.Descend(1, 3, nil, "", 0)
 		if err != nil || r1.Collapsed {
 			continue
 		}
-		r2, err := svc.Descend(1, 5, nil, BranchReckless, "", 0)
+		r2, err := svc.Descend(1, 15, nil, "", 0)
 		if err != nil || r2.Collapsed {
 			continue
 		}
 		if r1.Item != nil {
-			standardVal += r1.Item.Value
+			shallowVal += r1.Item.Value
 		}
 		if r2.Item != nil {
-			recklessVal += r2.Item.Value
+			deepVal += r2.Item.Value
 		}
 	}
-	t.Logf("Standard total value: %d, Reckless total value: %d", standardVal, recklessVal)
+	t.Logf("Shallow total value: %d, Deep total value: %d", shallowVal, deepVal)
+	assert.Greater(t, deepVal, shallowVal, "deeper digging should yield more valuable loot")
 }
 
 func TestDescendLevelReducesRisk(t *testing.T) {
@@ -111,9 +112,9 @@ func TestDescendLevelReducesRisk(t *testing.T) {
 	trials := 30
 
 	for i := 0; i < trials; i++ {
-		r1, err := svc.Descend(1, 15, nil, BranchStandard, "", 0)
+		r1, err := svc.Descend(1, 15, nil, "", 0)
 		require.NoError(t, err)
-		r2, err := svc.Descend(2, 15, nil, BranchStandard, "", 0)
+		r2, err := svc.Descend(2, 15, nil, "", 0)
 		require.NoError(t, err)
 		if r1.Collapsed {
 			collapse1++
@@ -134,7 +135,7 @@ func TestDescendHiddenChamber(t *testing.T) {
 	found := false
 	for i := 0; i < 500; i++ {
 		bag := []BagEntry{}
-		res, err := svc.Descend(1, 40, bag, BranchReckless, "", 0)
+		res, err := svc.Descend(1, 40, bag, "", 0)
 		require.NoError(t, err)
 		if res.Event != nil && res.Event.Type == "hidden_chamber" {
 			found = true
@@ -149,7 +150,7 @@ func TestDescendEventSpawn(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 20, XP: 0})
 	found := false
 	for i := 0; i < 100; i++ {
-		res, err := svc.Descend(1, 15, nil, BranchStandard, "", 0)
+		res, err := svc.Descend(1, 15, nil, "", 0)
 		require.NoError(t, err)
 		if res.NarrativeEvent != nil {
 			found = true
@@ -224,7 +225,7 @@ func TestMineReinforceBuffPreventsCollapse(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	_ = s.SetActiveBuff(1, "reinforce")
 
-	res, err := svc.Descend(1, 40, nil, BranchReckless, "", 0)
+	res, err := svc.Descend(1, 40, nil, "", 0)
 	require.NoError(t, err)
 	assert.False(t, res.Collapsed, "reinforce should prevent collapse on first descend")
 
@@ -288,9 +289,8 @@ func TestLoreAtDepth(t *testing.T) {
 }
 
 func TestLootAtDepth(t *testing.T) {
-	assert.Len(t, lootAtDepth(1), 3)
+	assert.Len(t, lootAtDepth(1), 2)
 	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
-	assert.Contains(t, lootAtDepth(1), MineItem{"wheat_seed", 2})
 	assert.Len(t, lootAtDepth(15), 3)
 	assert.Len(t, lootAtDepth(20), 3)
 	assert.Len(t, lootAtDepth(30), 2)

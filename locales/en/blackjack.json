@@ -1,0 +1,26 @@
+{
+  "blackjack": {
+    "accept_label": "Accept Duel",
+    "beat": "{s1} beats {s2}",
+    "bust": "{user} busted!",
+    "challenge_msg": "🃏 **{challenger}** challenges **{opponent}** to Blackjack for **${amount}**!",
+    "draw": "Perfect Draw!",
+    "draw_msg": "🤝 **Draw!** ({reason})\nYour bets have been refunded.",
+    "footer": "It's {user}'s turn",
+    "game_over": "🛑 **GAME OVER**",
+    "hand": "Hand: {hand} (**{score}**)",
+    "hit_label": "Hit",
+    "invalid_bet": "❌ Invalid bet.",
+    "invalid_opponent": "❌ Invalid opponent.",
+    "no_money_opponent": "❌ {user} doesn't have enough money (${balance}).",
+    "no_money_problem": "❌ Funds issue, duel cancelled.",
+    "no_money_self": "❌ You don't have enough money (${balance}).",
+    "not_your_turn": "It's not your turn!",
+    "player_turn": "👤 **{user}** (In progress...)",
+    "player_waiting": "👤 **{user}** (Waiting)",
+    "pot": "💰 **Pot: ${amount}**",
+    "stand_label": "Stand",
+    "title": "🃏 Blackjack Duel",
+    "win_msg": "🎉 **{user} wins the duel!** ({reason})\nThey win **${amount}**."
+  }
+}

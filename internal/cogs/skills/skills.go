@@ -27,6 +27,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("sk", c.onPrefixMenu)
 	r.Component("skills", "refresh", c.onRefresh)
 	r.Component("skills", "activate", c.onActivate)
+	r.Component("skills", "sw", c.onSecondWindPick)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -96,6 +97,49 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	switch skillID {
+	case "overclock":
+		// Immediate effect: reset fishing/hunting cooldowns and refund mining descends.
+		_ = c.store.ClearCooldown(userID, "fish")
+		_ = c.store.ClearCooldown(userID, "hunt")
+		_ = c.store.GrantGameLimitCredit(userID, "mine_descend", 3)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(
+				discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed(
+					i18n.T("skills.activated_title", lang),
+					i18n.T("skills.overclock_done", lang),
+					0x2ecc71,
+				),
+				nil,
+			))
+		return
+	case "second_wind":
+		// Immediate effect: pick one daily game limit to reset.
+		embed := components.Embed(
+			i18n.T("skills.sw_title", lang),
+			i18n.T("skills.sw_desc", lang),
+			0x3498db,
+		)
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("🎰 "+i18n.T("skills.game_slots", lang), components.Encode("skills", "sw", "slots"), discordgo.PrimaryButton),
+				components.Button("🪙 "+i18n.T("skills.game_coinflip", lang), components.Encode("skills", "sw", "coinflip"), discordgo.PrimaryButton),
+			),
+			components.ActionRow(
+				components.Button("🃏 "+i18n.T("skills.game_blackjack", lang), components.Encode("skills", "sw", "blackjack"), discordgo.PrimaryButton),
+				components.Button("🔫 "+i18n.T("skills.game_roulette", lang), components.Encode("skills", "sw", "roulette"), discordgo.PrimaryButton),
+			),
+			components.ActionRow(
+				components.Button("🎫 "+i18n.T("skills.game_lotto", lang), components.Encode("skills", "sw", "lotto"), discordgo.PrimaryButton),
+				components.Button("🎲 "+i18n.T("skills.game_bet", lang), components.Encode("skills", "sw", "bet"), discordgo.PrimaryButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+		return
+	}
+
 	// Confirm and refresh the display
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(
@@ -103,6 +147,34 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.Embed(
 				i18n.T("skills.activated_title", lang),
 				i18n.T("skills.activated_desc", lang, map[string]any{"skill": sk.Emoji + " " + sk.Name}),
+				0x2ecc71,
+			),
+			nil,
+		))
+}
+
+func (c *Cog) onSecondWindPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		interaction.RespondError(b, i, lang, "skills.not_found")
+		return
+	}
+	game := rest[0]
+
+	if err := c.store.ResetGameLimit(userID, game); err != nil {
+		interaction.RespondError(b, i, lang, "skills.error")
+		return
+	}
+
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(
+			discordgo.InteractionResponseUpdateMessage,
+			components.Embed(
+				i18n.T("skills.activated_title", lang),
+				i18n.T("skills.sw_picked", lang, map[string]any{"game": i18n.T("skills.game_"+game, lang)}),
 				0x2ecc71,
 			),
 			nil,

@@ -1,0 +1,20 @@
+{
+  "roulette": {
+    "already_joined": "Tu es déjà inscrit.",
+    "bang_msg": "💥 **BANG !** {user} est mort...",
+    "clic_msg": "😅 **CLIC !** {user} survit...",
+    "finish_title": "🩸 FIN DE LA PARTIE",
+    "join_label": "Rejoindre la partie",
+    "joined_msg": "✅ {user} a rejoint la table !",
+    "min_players": "Il faut au moins 2 joueurs !",
+    "next_turn": "C'est au tour de {user} de prendre l'arme.",
+    "no_money": "Pas assez d'argent !",
+    "not_your_turn": "Ce n'est pas ton tour !",
+    "only_leader": "Seul celui qui a créé la partie peut la lancer.",
+    "open_msg": "🔫 **Roulette Russe ouverte !** Mise : **${amount}**\nCliquez pour rejoindre. {user}, lance quand tout le monde est prêt.",
+    "start_announcement": "🔫 **La partie commence !** Il y a 1 balle dans le barillet.\nC'est à {user} de tirer.",
+    "start_label": "Lancer (Leader)",
+    "survivors_win": "💀 **{user}** a perdu **${fee}**.\n💰 Les {count} survivants gagnent chacun **${share}** !",
+    "trigger_label": "😱 Presser la détente"
+  }
+}

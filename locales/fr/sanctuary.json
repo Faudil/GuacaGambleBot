@@ -1,0 +1,25 @@
+{
+  "sanctuary": {
+    "collect_empty": "❌ Aucune ressource à collecter.",
+    "collect_error": "❌ Tu ne peux collecter qu'une fois toutes les 24 heures.",
+    "collect_success": "📦 Collecte de **{count}** objets depuis ton sanctuaire :\n{items}",
+    "complete_error": "❌ La construction n'est pas encore terminée.",
+    "complete_success": "✅ Construction terminée ! Ton sanctuaire a été amélioré !",
+    "max_tier": "❌ Ton sanctuaire est déjà au niveau maximum !",
+    "no_active_pets": "❌ Tu n'as aucun familier actif à mettre en retraite !",
+    "no_sanctuary": "❌ Ce joueur n'a pas encore construit de sanctuaire !",
+    "no_sanctuary_pets": "❌ Tu n'as aucun familier dans ton sanctuaire !",
+    "no_showcase": "Aucun familier exposé.",
+    "recall_placeholder": "Sélectionne un familier...",
+    "recall_prompt": "Choisis un familier à rappeler du sanctuaire.\n(Frais : 100$)",
+    "retire_placeholder": "Sélectionne un familier...",
+    "retire_prompt": "Choisis un familier à mettre en retraite au sanctuaire.",
+    "showcase_error": "❌ Impossible de mettre à jour la vitrine.",
+    "showcase_placeholder": "Choisis un familier pour la vitrine...",
+    "showcase_prompt": "Sélectionne un familier à exposer, ou retire-en un.",
+    "showcase_slot_prompt": "Choisis un emplacement de vitrine (1-5), ou retire de la vitrine (0).",
+    "upgrade_error": "❌ Impossible de commencer la construction. Vérifie les matériaux requis.",
+    "upgrade_started": "🔧 Construction commencée : **{name}** ({hours}h).\nUtilise `/sanctuary` pour suivre la progression.",
+    "visit_title": "🏡 Sanctuaire de {user}"
+  }
+}

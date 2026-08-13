@@ -1,0 +1,18 @@
+{
+  "inventory": {
+    "category_archeology": "🦴 Archeology",
+    "category_equipment": "⚔️ Equipment",
+    "category_farming": "🚜 Farming",
+    "category_fishing": "🎣 Fishing",
+    "category_food": "🍲 Food",
+    "category_materials": "🌱 Materials",
+    "category_mining": "⛏️ Mining",
+    "category_other": "📦 Other",
+    "category_special": "✨ Special",
+    "category_tools": "🔧 Tools",
+    "empty": "🎒 Your bag is empty, {user}! Go mining or buy some stuff.",
+    "error": "❌ Could not load inventory.",
+    "footer": "Use !use \u003citem name\u003e to use it!",
+    "title": "🎒 {user}'s Backpack"
+  }
+}

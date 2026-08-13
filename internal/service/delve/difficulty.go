@@ -6,15 +6,20 @@ import (
 )
 
 const (
+	// RecLevelBase is the recommended level for floor 1. Delve is a mid-game
+	// activity: underleveled players are punished hard instead of being
+	// hard-locked out.
+	RecLevelBase = 12
+
 	RecLevelPerFloor = 3
-	RecLevelOffset   = 2
+	RecLevelOffset   = 0
 
 	UnderLeveledMult    = 0.30
 	UnderLeveledXPBonus = 0.25
 )
 
 func RecommendedLevel(floor int) int {
-	lv := floor*RecLevelPerFloor - RecLevelOffset
+	lv := RecLevelBase + RecLevelPerFloor*(floor-1) - RecLevelOffset
 	if lv < 1 {
 		return 1
 	}

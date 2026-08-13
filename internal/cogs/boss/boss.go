@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	bosssvc "guacagamblebot/internal/service/boss"
+	charsvc "guacagamblebot/internal/service/character"
 	petsvc "guacagamblebot/internal/service/pets"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
@@ -33,6 +34,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("boss", c.onPrefix)
 	r.Prefix("league", c.onPrefix)
 	r.Prefix("bl", c.onPrefix)
+	r.Component("boss", "fight", c.onFightButton)
+	r.Component("boss", "show", c.onShowButton)
 }
 
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -52,10 +55,22 @@ func (c *Cog) onPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Me
 	}
 	switch sub {
 	case "fight":
-		embed := c.fight(interaction.ToInt64(m.Author.ID), lang)
-		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Embeds: []*discordgo.MessageEmbed{embed},
+		o, errEmbed, errComps := c.prepareFight(interaction.ToInt64(m.Author.ID), lang)
+		if o == nil {
+			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+				Embeds:     []*discordgo.MessageEmbed{errEmbed},
+				Components: errComps,
+			})
+			return
+		}
+		sent, _ := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+			Embeds: []*discordgo.MessageEmbed{o.spawn},
 		})
+		msgID := ""
+		if sent != nil {
+			msgID = sent.ID
+		}
+		go c.animateFight(nil, nil, s, m.ChannelID, msgID, o, lang)
 	default:
 		embed, _ := c.show(interaction.ToInt64(m.Author.ID), lang)
 		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -173,14 +188,14 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 		}
 		desc += "\n" + i18n.T("boss_league.fight_hint", lang)
 		btns = append(btns,
-			components.Button(i18n.T("quests.activity_view_btn", lang),
-				components.Encode("quest", "advance", qid),
-				discordgo.SuccessButton),
+			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang),
+				components.Encode("boss", "fight"),
+				discordgo.DangerButton),
 		)
 	}
 
 	btns = append(btns,
-		components.Button("🔄", components.Encode("quest", "show"), discordgo.SecondaryButton),
+		components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
 	)
 
 	embed := components.Embed(
@@ -196,46 +211,121 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 	return embed, comps
 }
 
-func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
+func (c *Cog) onFightButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	o, errEmbed, errComps := c.prepareFight(userID, lang)
+	if o == nil {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, errEmbed, errComps))
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, o.spawn, nil))
+	go c.animateFight(b, i, nil, "", "", o, lang)
+}
+
+func (c *Cog) onShowButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.show(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// fightOutcome carries the frames and data needed to animate a boss fight.
+type fightOutcome struct {
+	spawn *discordgo.MessageEmbed
+	final *discordgo.MessageEmbed
+	comps []discordgo.MessageComponent
+	turns []battle.BattleTurn
+
+	petD  components.DisplayPet
+	bossD components.DisplayPet
+}
+
+// prepareFight validates the boss fight, runs it, and prepares the animated
+// frames. On failure it returns a nil outcome plus the error embed/buttons.
+func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	backBtn := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
+		),
+	}
+
 	ok, _, err := c.store.CheckGameLimit(userID, "boss_fight", 5)
 	if err != nil {
-		return components.Embed("❌", "Error checking limit.", 0xe74c3c)
+		return nil, components.Embed("❌", "Error checking limit.", 0xe74c3c), backBtn
 	}
 	if !ok {
-		return components.Embed("❌", i18n.T("economy.daily_footer", lang), 0xe74c3c)
+		return nil, components.Embed("❌", i18n.T("economy.daily_footer", lang), 0xe74c3c), backBtn
 	}
 
 	qid, def, _, uqd := c.findBossBattleQuest(userID)
 	if qid == "" {
-		return components.Embed("❌", i18n.T("boss_league.locked", lang), 0xe74c3c)
+		return nil, components.Embed("❌", i18n.T("boss_league.locked", lang), 0xe74c3c), backBtn
 	}
 
 	stepIdx := uqd.StepIndex
 
 	bossStage := questStepBossStage(def, stepIdx)
 	if bossStage < 0 {
-		return components.Embed("❌", i18n.T("boss_league.no_battle_step", lang), 0xe74c3c)
+		return nil, components.Embed("❌", i18n.T("boss_league.no_battle_step", lang), 0xe74c3c), backBtn
 	}
 	if bossStage >= len(bosssvc.BossLeague) {
-		return components.Embed("❌", "Unknown boss stage.", 0xe74c3c)
+		return nil, components.Embed("❌", "Unknown boss stage.", 0xe74c3c), backBtn
 	}
 
 	pet, err := petsvc.New(c.store, c.cfg).GetActivePet(userID)
 	if err != nil || pet == nil {
-		return components.Embed("❌", i18n.T("boss_league.no_pet", lang), 0xe74c3c)
+		return nil, components.Embed("❌", i18n.T("boss_league.no_pet", lang), 0xe74c3c), backBtn
 	}
 
 	if pet.HP <= 0 {
-		return components.Embed("❌", i18n.T("boss_league.pet_ko", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c)
+		return nil, components.Embed("❌", i18n.T("boss_league.pet_ko", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c), backBtn
 	}
 
 	bossCfg := bosssvc.BossLeague[bossStage]
 	bossPet := c.svc.CreateBossPet(bossCfg)
 
-	userBP := petToBattlePet(pet)
-	battle.Simulate(userBP, bossPet)
+	userBP := c.petToBattlePet(pet)
+	result := battle.Simulate(userBP, bossPet)
+	// A lost fight leaves the pet wounded (or K.O.): persist the remaining HP
+	// so the loss has consequences and the pet must be healed before the next
+	// attempt. Wins keep the pet's pre-fight HP.
+	if userBP.HP <= 0 {
+		pet.HP = userBP.HP
+	}
 	_ = petsvc.New(c.store, c.cfg).UpdatePet(pet)
 	_ = c.store.IncrementGameLimit(userID, "boss_fight")
+
+	bossName := bossCfg.NameEN
+	if lang == "fr" {
+		bossName = bossCfg.NameFR
+	}
+
+	o := &fightOutcome{
+		petD: components.DisplayPet{
+			Name: pet.Nickname, Emoji: userBP.Emoji, Level: pet.Level,
+			HP: userBP.MaxHP, MaxHP: userBP.MaxHP,
+		},
+		bossD: components.DisplayPet{
+			Name: bossName, Emoji: bossPet.Emoji, Level: bossPet.Level,
+			HP: bossPet.MaxHP, MaxHP: bossPet.MaxHP,
+		},
+		turns: result.Turns,
+	}
+	o.comps = []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang), components.Encode("boss", "fight"), discordgo.DangerButton),
+			components.Button("🔄", components.Encode("boss", "show"), discordgo.SecondaryButton),
+		),
+	}
+	o.spawn = c.bossRetroFrame(o, o.petD.MaxHP, o.bossD.MaxHP,
+		[]string{i18n.T("boss_league.fight_intro", lang, map[string]any{
+			"pet_emoji": o.petD.Emoji, "pet_name": o.petD.Name,
+			"boss_name": o.bossD.Name, "boss_emoji": o.bossD.Emoji,
+		})}, lang)
 
 	if userBP.HP > 0 && bossPet.HP <= 0 {
 		_, _ = c.svc.UpdateBalance(userID, bossCfg.RewardMoney)
@@ -245,17 +335,22 @@ func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
 		// Record boss victory in quest system (grants quest step rewards + trinket)
 		_ = c.qsvc.RecordBossVictory(userID, bossStage)
 
-		bossName := bossCfg.NameEN
-		if lang == "fr" {
-			bossName = bossCfg.NameFR
-		}
+		o.final = c.bossRetroFrame(o, userBP.HP, bossPet.HP, result.Log, lang)
+		o.final.Title = i18n.T("boss_league.victory", lang, map[string]any{"boss_name": o.bossD.Name})
+		o.final.Color = 0x2ecc71
 
-		desc := fmt.Sprintf("🏆 **Victory!** You defeated **%s**!\n\n", bossName)
 		if bossCfg.RewardMoney > 0 {
-			desc += fmt.Sprintf("💵 +$%d\n", bossCfg.RewardMoney)
+			o.final.Description += fmt.Sprintf("\n💵 +$%d", bossCfg.RewardMoney)
 		}
 		for item, qty := range bossCfg.RewardItems {
-			desc += fmt.Sprintf("📦 %s x%d\n", items.DisplayName(item), qty)
+			o.final.Description += fmt.Sprintf("\n📦 %s x%d", items.DisplayName(item), qty)
+		}
+		if bossCfg.XP > 0 {
+			charLeveled, charLvl := charsvc.AddXP(c.store, userID, bossCfg.XP)
+			o.final.Description += fmt.Sprintf("\n✨ +%d XP", bossCfg.XP)
+			if charLeveled {
+				o.final.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charLvl})
+			}
 		}
 
 		// Check if quest completed
@@ -263,44 +358,88 @@ func (c *Cog) fight(userID int64, lang string) *discordgo.MessageEmbed {
 		if uqd2 != nil && uqd2.StepIndex >= len(def.Steps) {
 			uq2, _, _ := c.qsvc.GetQuestProgress(userID, qid)
 			if uq2 != nil && uq2.Status == "COMPLETED" {
-				desc += "\n" + i18n.T("start.completed_desc", lang)
+				o.final.Description += "\n" + i18n.T("start.completed_desc", lang)
 			}
 		}
 
-		embed := components.Embed(i18n.T("boss_league.victory", lang, map[string]any{"boss_name": bossName}), desc, 0x2ecc71)
 		if len(unlocks) > 0 {
 			achStr := ""
 			for _, a := range unlocks {
 				achName := i18n.T("achievements."+a.ID+".name", lang)
 				achStr += fmt.Sprintf("🎖️ %s (+%d Glory)\n", achName, a.Glory)
 			}
-			embed.Fields = append(embed.Fields, components.Field("🎖️ Achievements", achStr, false))
+			o.final.Fields = append(o.final.Fields, components.Field("🎖️ Achievements", achStr, false))
 		}
-		return embed
+	} else {
+		o.final = c.bossRetroFrame(o, userBP.HP, bossPet.HP, result.Log, lang)
+		o.final.Title = i18n.T("boss_league.defeat", lang, map[string]any{"pet_name": o.petD.Name, "boss_name": o.bossD.Name})
+		o.final.Color = 0xe74c3c
+		o.final.Description += "\n\n" + i18n.T("boss_league.try_again", lang)
 	}
+	return o, nil, nil
+}
 
-	bossName := bossCfg.NameEN
-	if lang == "fr" {
-		bossName = bossCfg.NameFR
+// animateFight replays the fight turns with live HP bars. When msgID is empty
+// the frames edit the interaction response; when msgID is set they edit the
+// given channel message (prefix path).
+func (c *Cog) animateFight(b *interaction.Bot, i *discordgo.InteractionCreate, s *discordgo.Session, channelID, msgID string, o *fightOutcome, lang string) {
+	if msgID == "" && b == nil {
+		return
 	}
-	return components.Embed(
-		i18n.T("boss_league.defeat", lang, map[string]any{"pet_name": pet.Nickname, "boss_name": bossName}),
-		"Train your pet and try again!",
-		0xe74c3c,
+	edit := func(frame *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
+		if msgID == "" {
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, comps))
+		} else {
+			_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				Channel: channelID,
+				ID:      msgID,
+				Embeds:  &[]*discordgo.MessageEmbed{frame},
+			})
+		}
+	}
+	interaction.AnimateFight(
+		o.turns,
+		func(journal []string, t battle.BattleTurn) *discordgo.MessageEmbed {
+			return c.bossRetroFrame(o, t.Pet1HP, t.Pet2HP, journal, lang)
+		},
+		edit,
+		func(_ []string) { edit(o.final, o.comps) },
 	)
 }
 
-func petToBattlePet(pet *model.UserPet) *battle.BattlePet {
+// bossRetroFrame renders one retro RPG battle frame: pet vs boss with colored
+// HP bars and the combat journal.
+func (c *Cog) bossRetroFrame(o *fightOutcome, petHP, bossHP int, journal []string, lang string) *discordgo.MessageEmbed {
+	o.petD.HP = petHP
+	o.bossD.HP = bossHP
+	o.petD.IsKO = petHP <= 0
+	o.bossD.IsKO = bossHP <= 0
+	return components.FightFrameEmbed(
+		i18n.T("boss_league.title", lang),
+		o.petD, o.bossD,
+		components.FightLabelsFor(lang, i18n.T("hunt.vs", lang)),
+		journal,
+	)
+}
+
+func (c *Cog) petToBattlePet(pet *model.UserPet) *battle.BattlePet {
 	pt := petsvc.PetTypes[pet.PetType]
 	emoji := "🐾"
 	if pt != nil {
 		emoji = pt.Emoji
 	}
+	var skills []model.UserPetSkill
+	c.store.DB.Where("pet_id = ?", pet.ID).Find(&skills)
+	skillIDs := make([]string, 0, len(skills))
+	for _, s := range skills {
+		skillIDs = append(skillIDs, s.SkillID)
+	}
 	return &battle.BattlePet{
-		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji,
+		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji, PetType: pet.PetType,
 		Level: pet.Level, HP: pet.HP, MaxHP: pet.MaxHP,
 		Atk: pet.Atk, Defense: pet.Defense, Speed: pet.Speed,
 		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,
+		Skills: skillIDs,
 	}
 }
 

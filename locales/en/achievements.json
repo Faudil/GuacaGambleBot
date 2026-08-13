@@ -1,0 +1,397 @@
+{
+  "achievements": {
+    "bet_pro": {
+      "desc": "Win 25 bets.",
+      "name": "Visionary"
+    },
+    "bet_rookie": {
+      "desc": "Win a bet.",
+      "name": "Sunday Bettor"
+    },
+    "blackjack_lost_100k": {
+      "desc": "Lose $100,000 in Blackjack.",
+      "name": "Table Depression ($100k)"
+    },
+    "blackjack_lost_1k": {
+      "desc": "Lose $1,000 in Blackjack.",
+      "name": "Too Greedy ($1k)"
+    },
+    "blackjack_lost_1m": {
+      "desc": "Lose $1,000,000 in Blackjack.",
+      "name": "You Gave Away Your House ($1M)"
+    },
+    "blackjack_lost_5k": {
+      "desc": "Lose $5,000 in Blackjack.",
+      "name": "Constant Bust ($5k)"
+    },
+    "blackjack_won_100k": {
+      "desc": "Win $100,000 in Blackjack.",
+      "name": "The Dealer Cries ($100k)"
+    },
+    "blackjack_won_1k": {
+      "desc": "Win $1,000 in Blackjack.",
+      "name": "21! ($1k)"
+    },
+    "blackjack_won_1m": {
+      "desc": "Win $1,000,000 in Blackjack.",
+      "name": "Ace of Spades of Aces ($1M)"
+    },
+    "blackjack_won_5k": {
+      "desc": "Win $5,000 in Blackjack.",
+      "name": "Card Counter ($5k)"
+    },
+    "boss_league_1": {
+      "desc": "Defeat the first Boss League opponent.",
+      "name": "Novice Badge"
+    },
+    "boss_league_2": {
+      "desc": "Defeat the second Boss League opponent.",
+      "name": "Stone Badge"
+    },
+    "boss_league_3": {
+      "desc": "Defeat the third Boss League opponent.",
+      "name": "Sky Badge"
+    },
+    "boss_league_4": {
+      "desc": "Defeat the fourth Boss League opponent.",
+      "name": "Abyss Badge"
+    },
+    "boss_league_5": {
+      "desc": "Become the Boss League Champion by defeating the final boss!",
+      "name": "League Champion"
+    },
+    "btn_show": "Show",
+    "coinflip_lost_100k": {
+      "desc": "Lose $100,000 in Coinflip.",
+      "name": "Ruined by a Coin"
+    },
+    "coinflip_lost_1k": {
+      "desc": "Lose $1,000 in Coinflip.",
+      "name": "Bad Streak"
+    },
+    "coinflip_lost_1m": {
+      "desc": "Lose $1,000,000 in Coinflip.",
+      "name": "The Fall Guy"
+    },
+    "coinflip_lost_5k": {
+      "desc": "Lose $5,000 in Coinflip.",
+      "name": "Unlucky"
+    },
+    "coinflip_won_100k": {
+      "desc": "Win $100,000 in Coinflip.",
+      "name": "Double or Nothing"
+    },
+    "coinflip_won_1k": {
+      "desc": "Win $1,000 in Coinflip.",
+      "name": "Beginner's Luck"
+    },
+    "coinflip_won_1m": {
+      "desc": "Win $1,000,000 in Coinflip.",
+      "name": "Heads or Tails Master"
+    },
+    "coinflip_won_5k": {
+      "desc": "Win $5,000 in Coinflip.",
+      "name": "Coin Regular"
+    },
+    "community_initiate": {
+      "desc": "Invest 10,000 coins or 200 items in a community project.",
+      "name": "Civic Duty"
+    },
+    "community_pillar": {
+      "desc": "Invest 5,000,000 coins or 50,000 items in a community project.",
+      "name": "The Patron"
+    },
+    "community_supporter": {
+      "desc": "Invest 500,000 coins or 5,000 items in a community project.",
+      "name": "Pillar of the Community"
+    },
+    "daily_1": {
+      "desc": "Claim your daily pay for the 1st time.",
+      "name": "Engaged Worker"
+    },
+    "daily_10": {
+      "desc": "Claim your daily pay 10 times.",
+      "name": "Employee of the Month"
+    },
+    "daily_100": {
+      "desc": "Claim your daily pay 100 times.",
+      "name": "Habit Makes the Monk"
+    },
+    "daily_365": {
+      "desc": "Claim your daily pay 365 times (That's 1 full year!).",
+      "name": "One-Year Veteran"
+    },
+    "daily_50": {
+      "desc": "Claim your daily pay 50 times.",
+      "name": "Morning Routine"
+    },
+    "eco_100k": {
+      "desc": "Reach $100,000 in your account.",
+      "name": "Millionaire in the Making"
+    },
+    "eco_10k": {
+      "desc": "Reach $10,000 in your account.",
+      "name": "Annuity Holder"
+    },
+    "eco_1k": {
+      "desc": "Reach $1,000 in your account.",
+      "name": "New Rich"
+    },
+    "eco_1m": {
+      "desc": "Reach $1,000,000 in your account.",
+      "name": "Billionaire"
+    },
+    "eco_50k": {
+      "desc": "Reach $50,000 in your account.",
+      "name": "Wolf of Wall Street"
+    },
+    "eco_rich": {
+      "desc": "Earn a cumulative total of $10,000.",
+      "name": "Capitalist"
+    },
+    "empty": "You haven't unlocked any achievements yet.",
+    "entry": "{emoji} **{name}** (+{glory} Glory) , {status}",
+    "hunt_boss_10": {
+      "desc": "Defeat 10 zone bosses.",
+      "name": "Boss Hunter"
+    },
+    "hunt_boss_100": {
+      "desc": "Defeat 100 zone bosses.",
+      "name": "Legendary Hunter"
+    },
+    "hunt_boss_50": {
+      "desc": "Defeat 50 zone bosses.",
+      "name": "Boss Slayer"
+    },
+    "hunt_boss_cave": {
+      "desc": "Defeat the Goblin King.",
+      "name": "Terror of the Caverns"
+    },
+    "hunt_boss_desert": {
+      "desc": "Defeat the Scorpion King.",
+      "name": "Nightmare of the Desert"
+    },
+    "hunt_boss_forest": {
+      "desc": "Defeat the Lord of the Forest.",
+      "name": "Scourge of the Forest"
+    },
+    "hunt_boss_mountain": {
+      "desc": "Defeat the Stone Titan.",
+      "name": "Mountain Breaker"
+    },
+    "hunt_boss_ocean": {
+      "desc": "Defeat the Abyssal Kraken.",
+      "name": "Master of the Seas"
+    },
+    "hunt_boss_tundra": {
+      "desc": "Defeat the Great White Wolf.",
+      "name": "Ice Breaker"
+    },
+    "hunt_boss_volcano": {
+      "desc": "Defeat the Primordial Dragon.",
+      "name": "Dragon Slayer"
+    },
+    "hunt_unlock_mountain": {
+      "desc": "Unlock the Mountain zone.",
+      "name": "Mountain Explorer"
+    },
+    "hunt_unlock_ocean": {
+      "desc": "Unlock the Ocean zone.",
+      "name": "Ocean Explorer"
+    },
+    "hunt_unlock_tundra": {
+      "desc": "Unlock the Tundra zone.",
+      "name": "Tundra Explorer"
+    },
+    "hunt_unlock_volcano": {
+      "desc": "Unlock the Volcano zone.",
+      "name": "Volcano King"
+    },
+    "job_miner": {
+      "desc": "Mine 100 ores.",
+      "name": "Dwarf of Moria"
+    },
+    "journal_mastery": {
+      "desc": "Complete every journal path to become a living legend.",
+      "name": "The Mastery Legend"
+    },
+    "list_title": "Achievements",
+    "locked": "Locked",
+    "lore_10": {
+      "desc": "Discover 10 lore fragments.",
+      "name": "Archivist"
+    },
+    "lore_25": {
+      "desc": "Discover 25 lore fragments.",
+      "name": "Historian of the Strata"
+    },
+    "lore_5": {
+      "desc": "Discover 5 lore fragments.",
+      "name": "Curious Mind"
+    },
+    "lore_all": {
+      "desc": "Discover all 48 lore fragments.",
+      "name": "Seer"
+    },
+    "lotto_rookie": {
+      "desc": "Play 10 Lotto tickets.",
+      "name": "Regular Player"
+    },
+    "lotto_winner": {
+      "desc": "Win the Lotto Jackpot!",
+      "name": "The Big Winner"
+    },
+    "menu_desc": "View the trophies you have earned.",
+    "pet_collector_all": {
+      "desc": "Own absolutely all pet species (19).",
+      "name": "Master of the Animal World"
+    },
+    "pet_collector_common": {
+      "desc": "Own all Common pets (8).",
+      "name": "Amateur Zoologist"
+    },
+    "pet_collector_epic": {
+      "desc": "Own all Epic pets (4).",
+      "name": "Animal Expert"
+    },
+    "pet_collector_legendary": {
+      "desc": "Own a Legendary pet.",
+      "name": "Legend Trainer"
+    },
+    "pet_collector_rare": {
+      "desc": "Own all Rare pets (6).",
+      "name": "Confirmed Zoologist"
+    },
+    "pet_feeder": {
+      "desc": "Feed 50 items to your pets.",
+      "name": "Starred Chef"
+    },
+    "pet_level_10": {
+      "desc": "Level up a pet to level 10.",
+      "name": "Novice Breeder"
+    },
+    "pet_level_20": {
+      "desc": "Level up a pet to level 20.",
+      "name": "Trainer"
+    },
+    "pet_level_50": {
+      "desc": "Level up a pet to level 50.",
+      "name": "Monster Master"
+    },
+    "pet_master": {
+      "desc": "Reach level 50 and 75+ bond with a pet.",
+      "name": "Living Legend"
+    },
+    "pve_hunter": {
+      "desc": "Win 25 expedition fights (PvE).",
+      "name": "Monster Hunter"
+    },
+    "pvp_gladiator": {
+      "desc": "Win 50 PvP fights.",
+      "name": "Gladiator"
+    },
+    "pvp_punching_bag": {
+      "desc": "Lose 10 PvP fights. Hang in there...",
+      "name": "Punching Bag"
+    },
+    "pvp_rookie": {
+      "desc": "Win your first PvP fight.",
+      "name": "Budding Fighter"
+    },
+    "rank_bronze": {
+      "desc": "Place a pet in Bronze rank.",
+      "name": "Born Competitor"
+    },
+    "rank_diamond": {
+      "desc": "Place a pet in Diamond rank.",
+      "name": "The Elite"
+    },
+    "rank_gold": {
+      "desc": "Place a pet in Gold rank.",
+      "name": "Golden Gladiator"
+    },
+    "rank_silver": {
+      "desc": "Place a pet in Silver rank.",
+      "name": "Challenger"
+    },
+    "rank_top5": {
+      "desc": "Take a pet to the World Top 5.",
+      "name": "Master of Olympus"
+    },
+    "roulette_lost_100k": {
+      "desc": "Lose $100,000 in Roulette.",
+      "name": "Suicidal ($100k)"
+    },
+    "roulette_lost_1k": {
+      "desc": "Lose $1,000 in Roulette.",
+      "name": "First Injury ($1k)"
+    },
+    "roulette_lost_1m": {
+      "desc": "Lose $1,000,000 in Roulette.",
+      "name": "Personal Cemetery ($1M)"
+    },
+    "roulette_lost_5k": {
+      "desc": "Lose $5,000 in Roulette.",
+      "name": "Hospital Regular ($5k)"
+    },
+    "roulette_won_100k": {
+      "desc": "Win $100,000 in Roulette.",
+      "name": "Immortality ($100k)"
+    },
+    "roulette_won_1k": {
+      "desc": "Win $1,000 in Roulette.",
+      "name": "Miraculous ($1k)"
+    },
+    "roulette_won_1m": {
+      "desc": "Win $1,000,000 in Roulette.",
+      "name": "Legendary Survivor ($1M)"
+    },
+    "roulette_won_5k": {
+      "desc": "Win $5,000 in Roulette.",
+      "name": "Death-Defying ($5k)"
+    },
+    "slots_lost_100k": {
+      "desc": "Lose $100,000 in Slots.",
+      "name": "Lever Addict"
+    },
+    "slots_lost_1k": {
+      "desc": "Lose $1,000 in Slots.",
+      "name": "The Machine Is Rigged"
+    },
+    "slots_lost_1m": {
+      "desc": "Lose $1,000,000 in Slots.",
+      "name": "Casino Big Donor"
+    },
+    "slots_lost_5k": {
+      "desc": "Lose $5,000 in Slots.",
+      "name": "One-Armed Bandit"
+    },
+    "slots_won_100k": {
+      "desc": "Win $100,000 in Slots.",
+      "name": "The Perfect Alignment"
+    },
+    "slots_won_1k": {
+      "desc": "Win $1,000 in Slots.",
+      "name": "Lucky Shooter"
+    },
+    "slots_won_1m": {
+      "desc": "Win $1,000,000 in Slots.",
+      "name": "Walking Jackpot"
+    },
+    "slots_won_5k": {
+      "desc": "Win $5,000 in Slots.",
+      "name": "Pocket Full of Tokens"
+    },
+    "ui": {
+      "ach_line": "{emoji} **{name}** (+{glory} Glory)\n*{desc}*",
+      "glory_total": "**Total Glory Points: {total}** 🌟",
+      "new_achievement_glory": "*+{glory} Glory pts*",
+      "new_achievement_title": "🎉 New Achievement Unlocked !",
+      "no_achievements": "You haven't unlocked any achievements yet.",
+      "pet_glory_info": "*(including {glory} awarded by your pets' rank)*",
+      "succes_title": "🏆 {user}'s Achievements",
+      "unknown_user": "Unknown"
+    },
+    "unlocked": "Unlocked"
+  }
+}

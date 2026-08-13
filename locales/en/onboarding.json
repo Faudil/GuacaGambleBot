@@ -1,0 +1,27 @@
+{
+  "onboarding": {
+    "advanced_title": "Advanced settings",
+    "btn_advanced": "Advanced",
+    "btn_disable": "Disable bot",
+    "btn_enable": "Enable bot",
+    "btn_finish": "Finish setup",
+    "btn_reconfigure": "Reconfigure",
+    "channel_placeholder": "Select a channel…",
+    "configured_desc": "The bot is ready! I'll use {channel} as my home channel. Type /economy to get started.",
+    "configured_title": "Setup complete ✅",
+    "field_channel": "Channel",
+    "field_language": "Language",
+    "field_prefix": "Prefix",
+    "field_status": "Status",
+    "field_universe": "Storyline",
+    "language_placeholder": "Select a language",
+    "menu_desc": "Let's set up the bot for your server. Pick the channel where I can talk, choose a language, and tweak a few options.",
+    "menu_title": "Welcome to GuacaGambleBot! 🎰",
+    "need_channel": "Please choose a channel before finishing setup.",
+    "prefix_label": "Command prefix",
+    "setup_desc": "Configure the bot for this server.",
+    "status_disabled": "Disabled",
+    "status_enabled": "Enabled",
+    "universe_placeholder": "Choose a storyline…"
+  }
+}

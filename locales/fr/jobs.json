@@ -1,0 +1,17 @@
+{
+  "jobs": {
+    "archeologist": "Archéologue",
+    "btn_show": "Voir Métiers",
+    "crafter": "Artisan",
+    "farmer": "Fermier",
+    "fisher": "Pêcheur",
+    "footer": "Niveau Global: {total} | Continuez !",
+    "gambler": "Joueur",
+    "hunter": "Chasseur",
+    "menu_desc": "Voir vos niveaux de métier et progression.",
+    "menu_title": "⚒️ Métiers \u0026 Compétences",
+    "miner": "Mineur",
+    "title": "📊 Compétences",
+    "xp_line": "Niv. {level} | XP: {xp}/{next}\n{bar}"
+  }
+}

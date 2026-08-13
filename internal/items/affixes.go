@@ -62,7 +62,7 @@ var AffixPool = []AffixDef{
 	{ID: "of_the_titan", Name: "of the Titan", Stat: "str", MinVal: 12, MaxVal: 20, MinRar: RarityLegendary, Weight: 1},
 	{ID: "of_eternity", Name: "of Eternity", Stat: "vit", MinVal: 12, MaxVal: 20, MinRar: RarityLegendary, Weight: 1},
 	{ID: "of_the_chosen", Name: "of the Chosen", Stat: "str", MinVal: 5, MaxVal: 10, MinRar: RarityLegendary, Slots: []string{"weapon", "armor"}, Weight: 1},
-	{ID: "of_the_chosen", Name: "of the Chosen", Stat: "dex", MinVal: 5, MaxVal: 10, MinRar: RarityLegendary, Slots: []string{"weapon", "armor"}, Weight: 1},
+	{ID: "of_the_chosen_dex", Name: "of the Tempest", Stat: "dex", MinVal: 5, MaxVal: 10, MinRar: RarityLegendary, Slots: []string{"weapon", "armor"}, Weight: 1},
 }
 
 // RollAffixes picks random affixes for a given rarity and slot.

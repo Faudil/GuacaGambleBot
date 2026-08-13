@@ -276,7 +276,7 @@ func simulateRound(st *store.Store) {
 		return
 	}
 
-	result := battle.Simulate(toBattlePet(p1), toBattlePet(p2), "")
+	result := battle.Simulate(toBattlePet(st, p1), toBattlePet(st, p2), "")
 
 	var score float64
 	if result.WinnerID == p1.ID {
@@ -326,7 +326,24 @@ func simulateRound(st *store.Store) {
 	} else if score == 0.0 {
 		addWeeklyScore(st, serverID, p2.UserID, p1.UserID, 5)
 	} else {
-		addWeeklyScore(st, serverID, p1.UserID, p2.UserID, 2)
+		addWeeklyScoreDraw(st, serverID, p1.UserID, p2.UserID, 2)
+	}
+}
+
+// addWeeklyScoreDraw grants score to both players without recording a win or
+// a loss (draw result).
+func addWeeklyScoreDraw(st *store.Store, serverID, userA, userB int64, scoreDelta int) {
+	weekID := currentWeekID()
+	for _, uid := range []int64{userA, userB} {
+		_ = st.DB.Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "user_id"}, {Name: "server_id"}, {Name: "week_id"}},
+			DoUpdates: clause.Assignments(map[string]any{
+				"score": gorm.Expr("score + ?", scoreDelta),
+			}),
+		}).Create(&model.WeeklyRank{
+			UserID: uid, ServerID: serverID, WeekID: weekID,
+			Score: scoreDelta, Wins: 0, Losses: 0,
+		}).Error
 	}
 }
 
@@ -356,10 +373,22 @@ func addWeeklyScore(st *store.Store, serverID, winnerUserID, loserUserID int64, 
 	}).Error
 }
 
-func toBattlePet(p *model.UserPet) *battle.BattlePet {
-	bp := &battle.BattlePet{
+func toBattlePet(st *store.Store, p *model.UserPet) *battle.BattlePet {
+	emoji := "🐾"
+	if pt := pets.PetTypes[p.PetType]; pt != nil {
+		emoji = pt.Emoji
+	}
+	var skills []model.UserPetSkill
+	st.DB.Where("pet_id = ?", p.ID).Find(&skills)
+	skillIDs := make([]string, 0, len(skills))
+	for _, s := range skills {
+		skillIDs = append(skillIDs, s.SkillID)
+	}
+	return &battle.BattlePet{
 		ID:       p.ID,
 		Nickname: p.Nickname,
+		Emoji:    emoji,
+		PetType:  p.PetType,
 		Level:    p.Level,
 		MaxHP:    p.MaxHP,
 		HP:       p.HP,
@@ -371,6 +400,6 @@ func toBattlePet(p *model.UserPet) *battle.BattlePet {
 		CritC:    p.CritC,
 		CritD:    p.CritD,
 		SpcC:     p.SpcC,
+		Skills:   skillIDs,
 	}
-	return bp
 }

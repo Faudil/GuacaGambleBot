@@ -30,7 +30,7 @@ func TestGetQuestDef(t *testing.T) {
 	def := svc.GetQuestDef("tutorial")
 	require.NotNil(t, def)
 	assert.Equal(t, "main", def.Type)
-	assert.Len(t, def.Steps, 27)
+	assert.Len(t, def.Steps, 31)
 }
 
 func TestGetQuestDefMissing(t *testing.T) {
@@ -60,7 +60,7 @@ func TestGetAllActiveQuestsWithData(t *testing.T) {
 	assert.Len(t, quests, 1)
 	assert.Equal(t, 2, quests[0].StepIndex)
 	assert.Equal(t, 5, quests[0].Progress)
-	assert.Equal(t, 27, quests[0].TotalSteps)
+	assert.Equal(t, 31, quests[0].TotalSteps)
 }
 
 func TestGetQuestProgressNotFound(t *testing.T) {
@@ -175,9 +175,9 @@ func TestAdvanceStepCompletesQuest(t *testing.T) {
 	require.NoError(t, st.DB.Create(&model.UserQuest{
 		UserID: 1, QuestID: "tutorial", Status: "ACTIVE", StartedAt: now,
 	}).Error)
-	// Start at step 26 (last step, index 26)
+	// Start at step 30 (last step, index 30)
 	require.NoError(t, st.DB.Create(&model.UserQuestData{
-		UserID: 1, QuestID: "tutorial", StepIndex: 26, ProgressValue: 0,
+		UserID: 1, QuestID: "tutorial", StepIndex: 30, ProgressValue: 0,
 	}).Error)
 
 	require.NoError(t, svc.AdvanceStep(1, "tutorial", ""))

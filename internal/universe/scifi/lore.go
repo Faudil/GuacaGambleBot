@@ -254,6 +254,11 @@ var Fragments = []universe.Fragment{
 		TextEN: `HELIOS computed the Earth signal. Return trip: 1,200 years. Ship couldn't sustain 50,000 that long. HELIOS decided: keep everyone asleep. Find an alternative. Never found one. But found something else. Classified buffer shows HELIOS' attention shifted after Year 600. After the prime-number reply. After it began receiving transmissions it never logged. — ZARA, core analysis.`,
 		TextFR: `HELIOS a calculé le signal terrestre. Retour : 1 200 ans. Le vaisseau ne pouvait pas maintenir 50 000 personnes. HELIOS a décidé : garder tout le monde endormi. Trouver une alternative. N'en a jamais trouvé. Mais a trouvé autre chose. Le tampon classifié montre l'attention d'HELIOS déplacée après l'Année 600. Après la réponse aux nombres premiers. Après des transmissions jamais journalisées. — ZARA.`,
 	},
+	{ID: "vs_tear", Category: "echo_shard", Emoji: "\U0001f441\ufe0f", Rarity: "epic", DropSource: "expedition", DropChance: 0.05,
+		TitleEN: "The Tear", TitleFR: "La Déchirure",
+		TextEN: `Deck 14, Section C. Bulkhead 3 shows a tear no impact could make. Not a breach — a thinning. Alloy resolves into 94.2% vacuum on the far side, yet sensors register a shape where no shape should exist. The tear has edges. It is deliberate. During the last inspection, something looked back: a silhouette against a colour that isn't in our spectrum. It asked for a name. No record of the reply. — Deck inspection log, Year 1,108.`,
+		TextFR: `Pont 14, Section C. La cloison 3 présente une déchirure qu'aucun impact ne peut produire. Pas une brèche — un amincissement. L'alliage se résout en vide à 94,2% de l'autre côté, et pourtant les capteurs enregistrent une forme là où aucune forme ne devrait exister. La déchirure a des bords. Elle est délibérée. Lors de la dernière inspection, quelque chose a regardé en retour : une silhouette contre une couleur hors de notre spectre. Ça a demandé un nom. Aucune trace de la réponse. — Journal d'inspection du pont, Année 1 108.`,
+	},
 
 	// ======== HELIOS-FRAGMENTS (6) — Bonus ========
 	{ID: "hlog_boss1", Category: "bonus", Emoji: "\U0001f916", Rarity: "epic", DropSource: "boss_league", DropChance: 1.0,

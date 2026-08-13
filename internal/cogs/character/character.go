@@ -2,6 +2,7 @@ package character
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -40,6 +41,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("character", "stat_up_int", c.onStatUp("int"))
 	r.Component("character", "stat_up_vit", c.onStatUp("vit"))
 	r.Component("character", "stat_up_luk", c.onStatUp("luk"))
+	r.Component("character", "perk", c.onPerkPick)
 	r.Component("character", "equip_weapon", c.onEquipSelect("weapon"))
 	r.Component("character", "equip_armor", c.onEquipSelect("armor"))
 	r.Component("character", "equip_accessory", c.onEquipSelect("accessory"))
@@ -109,9 +111,36 @@ func (c *Cog) onEquipment(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onStatUp(stat string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		userID := interaction.ToInt64(interaction.UserID(i))
-		_ = c.store.AllocateStat(userID, stat)
+		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		if err := c.store.AllocateStat(userID, stat); err != nil {
+			key := "character.no_points"
+			if errors.Is(err, store.ErrInvalidStat) {
+				key = "character.invalid_stat"
+			}
+			interaction.RespondError(b, i, lang, key)
+			return
+		}
 		c.showView("stats", b, i)
 	}
+}
+
+func (c *Cog) onPerkPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(interaction.UserID(i))
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	desc, err := charsvc.ApplyPerk(c.store, userID, rest[0])
+	if err != nil {
+		interaction.RespondError(b, i, lang, "character.no_perk_points")
+		return
+	}
+	embed := statsEmbed(c.svc, lang, userID)
+	embed.Description += "\n\n✅ " + desc
+	comps := statsButtons(c.svc, lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 // --- Equipment ---
@@ -271,21 +300,25 @@ func statsEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Mess
 
 	sb := &strings.Builder{}
 	if res.SkillPoints > 0 {
-		fmt.Fprintf(sb, "✨ **%s:** %d\n\n", i18n.T("character.skill_points_label", lang), res.SkillPoints)
+		fmt.Fprintf(sb, "✨ **%s:** %d — %s\n\n", i18n.T("character.skill_points_label", lang), res.SkillPoints, i18n.T("character.stat_alloc_hint", lang))
+	}
+	if res.PerkPoints > 0 {
+		fmt.Fprintf(sb, "⭐ **%s:** %d — %s\n\n", i18n.T("character.perk_points_label", lang), res.PerkPoints, i18n.T("character.perk_pick_hint", lang))
 	}
 
-	statLine := func(emoji, name string, base, bonus int) string {
+	statLine := func(emoji, name, desc string, base, bonus int) string {
+		line := fmt.Sprintf("%s **%s:** %d", emoji, name, base)
 		if bonus > 0 {
-			return fmt.Sprintf("%s **%s:** %d (+%d)\n", emoji, name, base, bonus)
+			line += fmt.Sprintf(" (+%d)", bonus)
 		}
-		return fmt.Sprintf("%s **%s:** %d\n", emoji, name, base)
+		return fmt.Sprintf("%s — *%s*\n", line, desc)
 	}
 
-	sb.WriteString(statLine("💪", i18n.T("character.stat_str", lang), res.STR, res.EquipSTR))
-	sb.WriteString(statLine("🤸", i18n.T("character.stat_dex", lang), res.DEX, res.EquipDEX))
-	sb.WriteString(statLine("🧠", i18n.T("character.stat_int", lang), res.INT, res.EquipINT))
-	sb.WriteString(statLine("❤️", i18n.T("character.stat_vit", lang), res.VIT, res.EquipVIT))
-	sb.WriteString(statLine("🍀", i18n.T("character.stat_luk", lang), res.LUK, res.EquipLUK))
+	sb.WriteString(statLine("💪", i18n.T("character.stat_str", lang), i18n.T("character.stat_str_desc", lang), res.STR, res.EquipSTR))
+	sb.WriteString(statLine("🤸", i18n.T("character.stat_dex", lang), i18n.T("character.stat_dex_desc", lang), res.DEX, res.EquipDEX))
+	sb.WriteString(statLine("🧠", i18n.T("character.stat_int", lang), i18n.T("character.stat_int_desc", lang), res.INT, res.EquipINT))
+	sb.WriteString(statLine("❤️", i18n.T("character.stat_vit", lang), i18n.T("character.stat_vit_desc", lang), res.VIT, res.EquipVIT))
+	sb.WriteString(statLine("🍀", i18n.T("character.stat_luk", lang), i18n.T("character.stat_luk_desc", lang), res.LUK, res.EquipLUK))
 
 	// Show set bonuses
 	for _, s := range res.SetBonuses {
@@ -378,6 +411,22 @@ func statsButtons(svc *charsvc.Service, lang string, userID int64) []discordgo.M
 			components.Button("VIT +", components.Encode("character", "stat_up_vit"), discordgo.SuccessButton),
 			components.Button("LUK +", components.Encode("character", "stat_up_luk"), discordgo.SuccessButton),
 		))
+	}
+	if res.PerkPoints > 0 {
+		if char, err := svc.Store().EnsureCharacter(userID); err == nil {
+			choices := charsvc.RollPerkChoices(char)
+			if len(choices) > 0 {
+				var perkRow []discordgo.MessageComponent
+				for _, p := range choices {
+					perkRow = append(perkRow, components.Button(
+						p.Emoji+" "+p.Name,
+						components.Encode("character", "perk", p.ID),
+						discordgo.PrimaryButton,
+					))
+				}
+				rows = append(rows, components.ActionRow(perkRow...))
+			}
+		}
 	}
 	return rows
 }

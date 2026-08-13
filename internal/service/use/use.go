@@ -1,0 +1,168 @@
+package use
+
+import (
+	"errors"
+	"math/rand"
+
+	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/store"
+)
+
+var (
+	ErrNotUsable = errors.New("this item cannot be used")
+	ErrNotOwned  = errors.New("you don't own this item")
+)
+
+// apply applies the effect of a usable item and returns a description of what
+// happened. The caller is responsible for checking ownership and consuming the
+// item from inventory.
+func apply(st *store.Store, userID int64, itemID string) (string, error) {
+	switch itemID {
+	case "beer":
+		if err := st.GrantGameLimitCredit(userID, "mine_descend", 2); err != nil {
+			return "", err
+		}
+		return "🍺 **Beer!** The miner's spirits lift — +2 mining descends granted.", nil
+
+	case "hook":
+		if err := st.ClearCooldown(userID, "fish"); err != nil {
+			return "", err
+		}
+		return "🪝 **Hook!** The fishing cooldown is reset.", nil
+
+	case "coffee":
+		if err := st.ClearCooldown(userID, "daily"); err != nil {
+			return "", err
+		}
+		return "☕ **Coffee!** The daily claim cooldown is reset.", nil
+
+	case "bow":
+		if err := st.ClearCooldown(userID, "hunt"); err != nil {
+			return "", err
+		}
+		return "🏹 **Bow!** The hunting cooldown is reset.", nil
+
+	case "rigged_coin":
+		if err := st.SetActiveBuff(userID, "rigged_coin"); err != nil {
+			return "", err
+		}
+		return "🪙 **Rigged Coin!** Your next coinflip has 75% odds.", nil
+
+	case "vip_ticket":
+		if err := st.ResetGameLimit(userID, "slots"); err != nil {
+			return "", err
+		}
+		if err := st.ResetGameLimit(userID, "coinflip"); err != nil {
+			return "", err
+		}
+		return "🎟️ **VIP Ticket!** Your casino and coinflip limits are refreshed.", nil
+
+	case "casino_token":
+		if err := st.ResetGameLimit(userID, "slots"); err != nil {
+			return "", err
+		}
+		return "🎰 **Casino Token!** Your slots limit is refreshed.", nil
+
+	case "scratch_ticket":
+		win := rand.Intn(1001)
+		if _, err := st.UpdateBalance(userID, win); err != nil {
+			return "", err
+		}
+		if win == 0 {
+			return "🎰 **Scratch Ticket!** Nothing. Better luck next time!", nil
+		}
+		return "🎉 **Scratch Ticket!** You win **$" + itoa(win) + "**!", nil
+
+	case "fortune_cookie":
+		gold := 5 + rand.Intn(46)
+		if _, err := st.UpdateBalance(userID, gold); err != nil {
+			return "", err
+		}
+		return "🥠 **Fortune Cookie!** \"" + fortune() + "\" (+$" + itoa(gold) + ")", nil
+
+	case "rusty_magnet":
+		if _, err := st.UpdateBalance(userID, 50); err != nil {
+			return "", err
+		}
+		return "🧲 **Rusty Magnet!** You pull $50 of pocket change from the ground.", nil
+
+	case "magnet":
+		if _, err := st.UpdateBalance(userID, 250); err != nil {
+			return "", err
+		}
+		return "🧲 **Magnet!** You sweep up $250 in loose coins!", nil
+
+	case "electric_magnet":
+		if _, err := st.UpdateBalance(userID, 1500); err != nil {
+			return "", err
+		}
+		return "⚡ **Electric Magnet!** A fat wallet of $1,500 clings to it!", nil
+
+	default:
+		return "", ErrNotUsable
+	}
+}
+
+var fortunes = []string{
+	"A gambler's luck is made, not found.",
+	"The house always wins... eventually.",
+	"Dig deep and the mountain will reward you.",
+	"A full belly makes a happy pet.",
+	"Fortune favors the bold, but not the reckless.",
+	"The tide turns in your favor tomorrow.",
+	"Your patience will be repaid in ore.",
+}
+
+func fortune() string {
+	return fortunes[rand.Intn(len(fortunes))]
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	out := ""
+	neg := false
+	if n < 0 {
+		neg = true
+		n = -n
+	}
+	for n > 0 {
+		out = string(rune('0'+n%10)) + out
+		n /= 10
+	}
+	if neg {
+		out = "-" + out
+	}
+	return out
+}
+
+// Service exposes the item-use logic.
+type Service struct {
+	store *store.Store
+	cfg   *config.Config
+}
+
+func New(s *store.Store, cfg *config.Config) *Service {
+	return &Service{store: s, cfg: cfg}
+}
+
+// Apply checks ownership, applies the effect and removes the item from
+// inventory. It returns a human-readable description of what happened.
+func (s *Service) Apply(userID int64, itemID string) (string, error) {
+	ok, err := s.store.HasItem(userID, itemID, 1)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", ErrNotOwned
+	}
+	desc, err := apply(s.store, userID, itemID)
+	if err != nil {
+		return "", err
+	}
+	if err := s.store.RemoveInventoryItem(userID, itemID, 1); err != nil {
+		return "", err
+	}
+	return desc, nil
+}

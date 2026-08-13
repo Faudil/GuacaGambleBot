@@ -1,0 +1,28 @@
+{
+  "bank": {
+    "amount_label": "Amount",
+    "balance_title": "Your balance",
+    "bank_full": "❌ Your bank is already full (Max $500) !",
+    "btn_balance": "Balance",
+    "btn_deposit": "Deposit",
+    "btn_withdraw": "Withdraw",
+    "daily_interest": "Daily interest",
+    "deposit_done": "You deposited {amount}.",
+    "deposit_modal_title": "Deposit into your safe",
+    "deposit_title": "Deposit complete",
+    "deposited": "🏦 You deposited **${amount}**. Bank balance: **${total}/500**.",
+    "insufficient": "Insufficient funds.",
+    "invalid": "Invalid amount.",
+    "invalid_amount": "❌ Invalid amount.",
+    "menu_desc": "Manage your wallet and safe.",
+    "menu_title": "Bank",
+    "no_bank_money": "❌ You don't have enough money in the bank.",
+    "no_cash": "❌ You don't have enough cash.",
+    "positive_amount": "❌ You can't deposit 0 or less.",
+    "safe": "Safe",
+    "wallet": "Wallet",
+    "withdraw_done": "You withdrew {amount}.",
+    "withdraw_title": "Withdrawal complete",
+    "withdrawn": "💸 You withdrawn **${amount}** from the bank."
+  }
+}

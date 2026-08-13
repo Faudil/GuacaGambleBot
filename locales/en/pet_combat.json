@@ -1,0 +1,23 @@
+{
+  "pet_combat": {
+    "bite_effect": " and inflicts **Bleeding** 🩸",
+    "bleed_end": "🩹 **{pet}** is no longer bleeding!",
+    "bleed_suffers": "🩸 **{pet}** bleeds and loses **{dmg}** HP.",
+    "burn_end": "💦 **{pet}** is no longer burning!",
+    "burn_suffers": "🔥 **{pet}** burns and loses **{dmg}** HP.",
+    "crit_msg": "💥 **CRITICAL HIT!** ⚔️ {attacker_emoji} **{attacker}** deals **{dmg}** damage",
+    "dodge_msg": "💨 {target_emoji} **{target}** dodges {attacker}'s attack!",
+    "fire_effect": " and **burns** it 🔥",
+    "gating": "🛡 But {pet} focuses and blocks damage at {dmg} !!",
+    "hit_msg": "⚔️ {attacker_emoji} **{attacker}** deals **{dmg}** damage",
+    "impact_effect": " and **stuns** it 💫",
+    "journal_title": "Combat Journal",
+    "poison_effect": " and **poisons** it 🧪",
+    "poison_end": "✨ **{pet}** is no longer poisoned!",
+    "poison_suffers": "🧪 **{pet}** suffers from poison and loses **{dmg}** HP.",
+    "scratch_effect": " and **weakens** it (Accuracy/Dodge reduced) 📉",
+    "scratch_heal": " and heals for **{dmg}** HP 🩸",
+    "stunned_log": "💫 {pet_emoji} **{pet}** is stunned and cannot attack ({turns} turns left)",
+    "thorns": " but takes **{dmg}** thorn damage 🌵"
+  }
+}

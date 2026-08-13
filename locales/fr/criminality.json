@@ -1,0 +1,203 @@
+{
+  "criminality": {
+    "awakening": {
+      "first_theft_desc": "Un cri retentit dans l'obscurité. Le premier vol depuis un siècle a été commis. Les anciens pactes sont brisés. Les ombres ont désormais des dents.\n\nLa victime a reçu une quête personnelle : **« L'Ombre Masquée Tombe. »**\n\nParlez au **Shérif Aldric Vance** ou au **Murmure** en ville pour commencer votre voyage.",
+      "first_theft_footer": "Deux chemins s'offrent à vous. Choisissez sagement.",
+      "first_theft_title": "🌑 La Pègre s'Éveille",
+      "mask_desc": "Un frisson ancestral s'abat sur la région. Quelque part, un artefact oublié depuis longtemps s'éveille… Le Masque de Malveillance a été réclamé.",
+      "mask_footer": "La pègre s'agite…",
+      "mask_title": "🖤 Le Masque de Malveillance a Été Réclamé"
+    },
+    "blessing": {
+      "need_gold": "Vous avez besoin de {gold} pièces d'or pour la bénédiction",
+      "success": "🕊️ **Bénédiction du Pacifiste**\nVous êtes protégé contre le vol et la chasse pendant **7 jours**.\nCoût : {gold} pièces d'or"
+    },
+    "bounty": {
+      "anonymous": "Anonyme",
+      "board_empty": "Le tableau des primes est vide. Les criminels sont calmes aujourd'hui...",
+      "board_list": "**Primes Actives :**\n{entries}\n\nUtilisez `!hunt @joueur` pour réclamer une prime.",
+      "board_title": "🔍 Tableau des Primes",
+      "failed": "Échec du placement de la prime : {error}",
+      "invalid_target": "Cible invalide.",
+      "line": "🔍 **\u003c@{target}\u003e** , **{amount} pièces d'or** (par {placer})",
+      "min_amount": "La prime minimale est de 100 pièces d'or.",
+      "placed": "🔍 **Prime Postée !**\n{placer} a mis **{amount} pièces d'or** sur la tête de \u003c@{target}\u003e !\n\nChasseurs, utilisez `!hunt @{target}` pour collecter !",
+      "usage_list": "Utilisez !bounty @joueur \u003cmontant\u003e pour placer une prime",
+      "usage_place": "Utilisation : `!bounty @joueur \u003cmontant\u003e`"
+    },
+    "burgle": {
+      "cooldown": "Vous avez déjà cambriolé ce joueur récemment. La pression est trop forte.",
+      "fail": "Vous déclenchez un piège ! \u003c@{target}\u003e vous prend la main dans le sac ! Les gardes sont à vos trousses ! (+{notoriety} Notoriété)",
+      "fail_title": "🚨 CAMBRIOLAGE ÉCHOUÉ !",
+      "item_gone": "Cet objet n'existe plus.",
+      "level_too_low": "Vous devez être au moins niveau {level} pour cambrioler.",
+      "need_rank": "Vous devez être au moins Cambrioleur (Rang Voleur 1) pour cambrioler des maisons.",
+      "nothing_worth": "Votre cible n'a rien qui vaille la peine.",
+      "nothing_worth_alt": "Rien ne valait le risque.",
+      "pacifist_protected": "Ce joueur est protégé par la Bénédiction du Pacifiste.",
+      "result_item": "📦 Objet Volé",
+      "result_notoriety": "Notoriété +{amount}",
+      "success": "Vous vous éclipsez avec **{item}** des affaires de \u003c@{target}\u003e ! (+{notoriety} Notoriété)",
+      "target_too_low": "Ce joueur ne peut pas encore être ciblé.",
+      "usage": "Utilisation : `!burgle @joueur`"
+    },
+    "chronicle": {
+      "empty": "Aucun événement criminel enregistré.\nVotre voyage dans l'ombre commence lorsque vous faites votre premier pas.",
+      "event": {
+        "awakening_first_theft": "🌑 A commis le premier vol",
+        "awakening_first_victim": "🌑 A été la première victime",
+        "bounty_placed": "💰 A placé une prime",
+        "bounty_received": "🎯 Prime placée sur vous",
+        "burgled": "🏠 A cambriolé la maison d'un joueur",
+        "clean_slate": "🧼 A acheté une Ardoise Vierge",
+        "forgave_first_thief": "🌟 A marché sur le Chemin du Pardon",
+        "forgave_thief": "🕊️ A pardonné un voleur",
+        "hunt_lost": "💨 A perdu une chasse",
+        "hunt_started": "🔍 A commencé une chasse",
+        "hunt_won": "⚔️ A gagné une chasse",
+        "hunter_sworn": "⚖️ A prêté le Serment de Fer",
+        "mask_claimed": "🎭 A réclamé le Masque de Malveillance",
+        "pacifist_blessing": "🕊️ A reçu la Bénédiction du Pacifiste",
+        "reported_thief": "📢 A signalé un voleur",
+        "stole": "🦹 A volé un autre joueur",
+        "thief_sworn": "🗡️ A prêté le Serment Silencieux",
+        "was_stolen_from": "🎯 S'est fait pickpocket"
+      },
+      "footer": "Votre chemin à travers la pègre",
+      "title": "📖 Chronique Criminelle"
+    },
+    "cleanse": {
+      "need_gold": "Vous avez besoin de {gold} pièces d'or pour une Ardoise Vierge",
+      "success": "🧼 **Ardoise Vierge**\nVotre Notoriété a été réinitialisée à 0 pour **{gold} pièces d'or**. La chaleur retombe , pour l'instant."
+    },
+    "clue": {
+      "bootprint": "Vous trouvez une empreinte de botte près du vieux puits. Ils sont passés par ici récemment.",
+      "cloth": "Vous trouvez un morceau de tissu déchiré accroché à une clôture. Frais.",
+      "coins": "Un marchand local a été payé avec des pièces étrangement propres.",
+      "discarded": "Des emballages jetés et une pomme à moitié mangée , ils se sont arrêtés pour se reposer ici.",
+      "dog": "Un chien aboie vers une ruelle sombre. Votre instinct vous dit d'aller par là.",
+      "hooded_figure": "Un témoin a vu une figure encapuchonnée se diriger vers le quartier du marché.",
+      "sewers": "Des traces de pas mènent vers les égouts. Ils pourraient se cacher en bas.",
+      "tavern": "La piste se refroidit près de la taverne. Quelqu'un à l'intérieur sait peut-être quelque chose."
+    },
+    "error": {
+      "already_forgiven": "Vous avez déjà pardonné ce voleur pour cet incident.",
+      "already_forgiven_short": "Déjà pardonné.",
+      "failed_start_quest": "Échec du début de quête : {error}",
+      "invalid_target": "Cible invalide.",
+      "no_criminality": "Impossible de récupérer votre casier judiciaire.",
+      "no_records": "Impossible de récupérer les archives.",
+      "no_theft_record": "Aucun vol trouvé de la part de ce joueur.",
+      "not_awake": "Vous n'avez aucune raison de faire cela… pas encore.",
+      "not_hunter": "Vous devez prêter le Serment de Fer pour traquer les malfaiteurs.",
+      "not_thief": "Vous devez prêter le Serment Silencieux ou porter le Masque pour emprunter la voie de l'ombre."
+    },
+    "forgive": {
+      "invalid_target": "Cible invalide.",
+      "no_record": "Aucun vol trouvé de la part de ce joueur.",
+      "not_implemented": "🕊️ Le pardon n'est pas encore implémenté.",
+      "success": "🕊️ **Pardon.** Vous avez pardonné \u003c@{thief}\u003e. La notoriété reste mais aucune prime ne peut être placée pour ce vol.",
+      "usage": "Utilisation : `!forgive @voleur`"
+    },
+    "guard": {
+      "caught": "🚨 **Les gardes vous repèrent !** Ils vous poursuivent et vous perdez **{gold} pièces d'or** dans votre fuite !",
+      "dodge": "⚠️ Une patrouille de gardes passe par là, mais vous vous fondez dans les ombres juste à temps."
+    },
+    "hunt": {
+      "cooldown": "Vous avez déjà chassé ce joueur récemment. Laissez la piste refroidir.",
+      "invalid_target": "Cible invalide.",
+      "lose": "💨 \u003c@{target}\u003e a pris le dessus sur vous ! Vous échappez de justesse à la mort. La chasse continue...",
+      "notoriety_too_low": "La Notoriété de ce joueur ({notoriety}) est en dessous du seuil ({threshold}).",
+      "pacifist_protected": "La Bénédiction du Pacifiste protège ce joueur de la chasse.",
+      "result_captured": "\n🔒 Cible emprisonnée pour 24h",
+      "result_desc": "🏅 Mérite +{merit}  💰 Or +{gold}",
+      "started": "🎯 **Chasse Lancée !**\nVous traquez \u003c@{target}\u003e. Utilisez `!track` pour suivre sa piste. Vous avez 3 heures pour terminer la chasse.",
+      "track_clue": "🔎 **Indice Trouvé :**\n{clue}\n\nContinuez avec `!track`",
+      "track_engage_hint": "Vous l'avez retrouvé ! Utilisez `!hunt {mention} engager` pour l'affronter !",
+      "track_found": "🔍 **Cible Localisée !**\nVous avez traqué \u003c@{target}\u003e jusqu'à sa cachette ! Préparez-vous pour l'affrontement !\n\n`!hunt engager @{target}` pour l'affronter !",
+      "usage": "Utilisation : `!hunt @joueur` ou `!hunt @joueur engager`",
+      "usage_engage": "Utilisation : `!hunt engager @joueur`",
+      "win_capture": "⚔️ **Vous avez maîtrisé \u003c@{target}\u003e et l'avez emmené !**\n+{merit} Mérite | +{gold} pièces d'or | Prime : +{bounty} pièces d'or\nIl a été envoyé en prison.",
+      "win_defeat": "⚔️ **Vous avez vaincu \u003c@{target}\u003e au combat !**\n+{merit} Mérite | +{gold} pièces d'or | Prime : +{bounty} pièces d'or\nIl a échappé à la capture, mais sa Notoriété a diminué."
+    },
+    "notoriety": {
+      "alignment_field": "Alignement",
+      "failed": "Impossible de récupérer votre casier judiciaire.",
+      "hunter_rank_field": "Rang Chasseur",
+      "not_implemented": "La vérification de notoriété n'est pas encore implémentée.",
+      "notoriety_field": "Notoriété",
+      "pacifist_field": "🕊️ Bénédiction du Pacifiste",
+      "pacifist_value": "Jusqu'au {until}",
+      "prison_field": "🔒 Prison",
+      "prison_value": "Jusqu'au {until}",
+      "thief_rank_field": "Rang Voleur",
+      "title": "⚖️ Casier Judiciaire"
+    },
+    "quest": {
+      "forgive_already": "Vous avez déjà choisi la voie du pardon.",
+      "forgive_not_victim": "Seule la première victime peut emprunter ce chemin. Parlez plutôt au Shérif ou au Murmure.",
+      "forgive_success_desc": "Vous fermez les yeux et laissez tomber la colère. Le vol a eu lieu , mais il ne vous définit pas.\n\nUne lumière chaude s'installe dans votre poitrine. Vous vous sentez... plus léger.\n\n**Obtenu :** Titre « La Première Marque », +3 CHANCE (permanent), cosmétique Cicatrice, entrée de Chronique.\n\n*Quand les ombres les ont touchés, ils ont répondu par la lumière.*",
+      "forgive_success_title": "🕊️ Le Chemin du Pardon",
+      "sheriff_default_desc": "Le Shérif vous étudie d'un regard froid. « J'ai vu les ombres bouger. Un vol a été commis , le premier depuis un siècle. J'ai besoin de gens capables de les traquer et de les ramener. »\n\nIl tend la main. « Prêtez le Serment de Fer avec moi. Rejoignez la Chasse. Qu'en dites-vous ? »\n\nUtilisez `!sheriff rejoindre` pour commencer la Voie du Chasseur.",
+      "sheriff_error": "Le Shérif vous regarde avec méfiance.",
+      "sheriff_hunter_desc": "Le Shérif hoche la tête en signe de reconnaissance. « Vous avez déjà prêté le Serment de Fer. La Chasse a besoin de vous. »\n\nUtilisez `!bounty` pour consulter le tableau ou `!hunt` pour traquer une cible avec une Notoriété de 20+.",
+      "sheriff_hunter_title": "⚖️ Aldric Vance , Loge de Fer",
+      "sheriff_join_already": "Vous avez déjà commencé la Voie du Chasseur. Utilisez `!quest` pour continuer.",
+      "sheriff_join_already_hunter": "Vous avez déjà prêté le Serment de Fer, chasseur.",
+      "sheriff_join_success_desc": "Vous vous agenouillez devant le Shérif Vance. Il pose une main sur votre épaule.\n\n« Levez-vous, Initié de la Loge de Fer. À partir d'aujourd'hui, vous êtes le chien qui traque l'ombre. Votre tableau `!bounty` est maintenant ouvert. Utilisez `!quest` pour voir votre première mission. »\n\n**Obtenu :** Cape du Limier, Rang d'Initié, commande !bounty déverrouillée.",
+      "sheriff_join_success_footer": "La Chasse commence.",
+      "sheriff_join_success_title": "🛡️ Le Serment de Fer",
+      "sheriff_join_thief": "Le Shérif refuse. « Je connais votre espèce. Hors de ma vue. »",
+      "sheriff_menu_title": "⚖️ Aldric Vance",
+      "sheriff_not_awake": "Le bureau du Shérif est vide. Il est en patrouille , et n'a aucune raison de faire confiance à un étranger.",
+      "sheriff_questing_desc": "Vous avez déjà commencé la Voie du Chasseur. Continuez avec `!quest` ou revisitez le Shérif.\n\n**Étapes Actives :** Rassemblez des preuves dans la ville. Parlez aux témoins.",
+      "sheriff_questing_title": "⚖️ Aldric Vance , La Voie du Chasseur",
+      "sheriff_thief_desc": "La main du Shérif repose sur son arme. « Je sais ce que vous êtes. Avancez avec prudence. »",
+      "whisper_default_desc": "Une silhouette émerge de l'obscurité de la ruelle. Vous ne voyez jamais son visage, seulement le reflet de quelque chose de métallique sous son manteau.\n\n« L'ancien monde se brise. Le Masque a été réclamé. Les riches amassent leur or tandis que les fidèles meurent de faim. »\n\n« Joignez-vous à nous. Prêtez le Serment Silencieux. Prenez ce qui vous est dû. »\n\nUtilisez `!whisper rejoindre` pour commencer la Voie de l'Ombre.",
+      "whisper_error": "Les ombres ne disent rien.",
+      "whisper_hunter_desc": "« Un chasseur. Comme c'est charmant. » La figure se fond à nouveau dans l'obscurité.",
+      "whisper_join_already": "Vous avez déjà commencé la Voie de l'Ombre. Utilisez `!quest` pour continuer.",
+      "whisper_join_already_thief": "Vous avez déjà prêté le Serment Silencieux, marcheur d'ombre.",
+      "whisper_join_hunter": "Le Murmure ricane sombrement. « Un chasseur qui me cherche ? Comme c'est amusant. Non. »",
+      "whisper_join_success_desc": "Le Murmure sort une lame et fait une petite entaille sur votre paume. Vous ne bronchez pas.\n\n« Le sang scelle le serment. Volez les riches, protégez la fraternité, ne trahissez jamais. »\n\nLeur voix s'adoucit. « Bienvenue dans la famille. Votre commande `!steal` est prête. Utilisez `!quest` pour votre première instruction. »\n\n**Obtenu :** Capuche d'Ombre, Rang Pickpocket, commande !steal déverrouillée.",
+      "whisper_join_success_footer": "Les ombres vous accueillent.",
+      "whisper_join_success_title": "🗡️ Le Serment Silencieux",
+      "whisper_menu_title": "🕶️ Le Murmure",
+      "whisper_not_awake": "Vous trouvez un coin sombre, mais personne n'est là. Un faible murmure résonne... « Pas encore. »",
+      "whisper_questing_desc": "Votre chemin est déjà tracé. Utilisez `!quest` pour continuer l'initiation.\nLe Serment Silencieux vous attend.",
+      "whisper_questing_title": "🕶️ Le Murmure , La Voie de l'Ombre",
+      "whisper_thief_desc": "La figure encapuchonnée incline la tête. « Vous avez déjà prêté le Serment Silencieux. Les ombres attendent vos actes. »\n\nUtilisez `!steal` pour tester vos compétences ou `!heist` pour de plus gros butins.",
+      "whisper_thief_title": "🕶️ Le Murmure , La Guilde Silencieuse"
+    },
+    "report": {
+      "invalid_target": "Cible invalide.",
+      "no_record": "Aucun vol trouvé de la part de ce joueur.",
+      "not_implemented": "📢 Le signalement n'est pas encore implémenté.",
+      "success": "📢 **Voleur Signalé !** La Notoriété de \u003c@{thief}\u003e a augmenté de 5.",
+      "usage": "Utilisation : `!report @voleur`"
+    },
+    "shadow": {
+      "not_awake": "Vous n'avez aucune raison de faire cela… pas encore.",
+      "not_hunter": "Vous devez prêter le Serment de Fer pour traquer les malfaiteurs.",
+      "not_thief": "Vous devez prêter le Serment Silencieux ou porter le Masque pour emprunter la voie de l'ombre."
+    },
+    "steal": {
+      "cooldown": "Vous avez déjà ciblé ce joueur récemment. Essayez quelqu'un d'autre.",
+      "fail": "Vos doigts tremblent ! \u003c@{target}\u003e attrape votre main et appelle les gardes ! (+{notoriety} Notoriété)",
+      "level_too_low": "Vous devez être au moins niveau {level} pour voler.",
+      "limit_reached": "Vous avez utilisé vos {limit} tentatives de vol aujourd'hui.",
+      "pacifist_protected": "Ce joueur est protégé par la Bénédiction du Pacifiste. Vous ne pouvez pas le voler.",
+      "result_infamy": "+{amount}",
+      "result_notoriety": "Notoriété +{amount}",
+      "result_stolen": "{gold} pièces d'or",
+      "success": "Vous dérobez habilement **{gold} pièces d'or** de la poche de \u003c@{target}\u003e.",
+      "target_too_low": "Ce joueur ne peut pas encore être ciblé (en dessous du niveau {level}).",
+      "usage": "Utilisation : `!steal @joueur`"
+    },
+    "track": {
+      "invalid_target": "Cible invalide.",
+      "not_implemented": "🔍 Le pistage n'est pas encore implémenté.",
+      "usage": "Utilisation : `!track @joueur`"
+    }
+  }
+}

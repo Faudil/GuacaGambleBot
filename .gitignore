@@ -9,6 +9,8 @@
 # Databases (runtime data)
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 /data/
 
 # Editor / IDE

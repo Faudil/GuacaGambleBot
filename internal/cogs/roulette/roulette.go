@@ -1,6 +1,7 @@
 package roulette
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	charsvc "guacagamblebot/internal/service/character"
 	rlt "guacagamblebot/internal/service/roulette"
 	"guacagamblebot/internal/store"
 )
@@ -239,10 +241,16 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	hadLucky := charsvc.HasBuff(c.store, userID, "lucky_break")
+	game.LuckyBreak = hadLucky
 	ok, result, survivors, share := game.Trigger(userID)
 	if !ok {
 		interaction.RespondError(b, i, lang, "roulette.not_your_turn")
 		return
+	}
+	luckySaved := result == "click" && hadLucky && !game.LuckyBreak
+	if luckySaved {
+		_ = charsvc.ConsumeBuff(c.store, userID, "lucky_break")
 	}
 
 	if result == "dead" {
@@ -251,24 +259,38 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		_ = achievement.IncrementStat(b.DB, userID, "roulette_spent", game.EntryFee)
 		_ = achievement.IncrementStat(b.DB, userID, "roulette_money_lost", game.EntryFee)
 
+		feverLines := ""
+		for _, s := range survivors {
+			_ = c.store.RecordActivity(s.UserID, "casino_games_played", 1)
+			payout := share
+			if charsvc.ConsumeBuff(c.store, s.UserID, "jackpot_fever") {
+				payout = share * 3
+				feverLines += "\n🔥 <@" + fmt.Sprintf("%d", s.UserID) + "> **Jackpot Fever!** Their share tripled!"
+			}
+			if _, err := c.store.UpdateBalance(s.UserID, payout); err != nil {
+				continue
+			}
+			_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_won", 1)
+			_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_spent", game.EntryFee)
+			net := payout - game.EntryFee
+			if net > 0 {
+				_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_money_won", net)
+			}
+		}
+
 		desc := i18n.T("roulette.bang_msg", lang, map[string]any{"user": interaction.Mention(userID)})
 		desc += "\n" + i18n.T("roulette.survivors_win", lang, map[string]any{
 			"user":  interaction.Mention(userID),
 			"fee":   game.EntryFee,
 			"count": len(survivors),
 			"share": share,
-		})
+		}) + feverLines
 
-		for _, s := range survivors {
-			_ = c.store.RecordActivity(s.UserID, "casino_games_played", 1)
-			if _, err := c.store.UpdateBalance(s.UserID, share); err != nil {
-				continue
-			}
-			_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_won", 1)
-			_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_spent", game.EntryFee)
-			net := share - game.EntryFee
-			if net > 0 {
-				_ = achievement.IncrementStat(b.DB, s.UserID, "roulette_money_won", net)
+		// Participation XP for everyone who joined the chamber.
+		for _, p := range game.Players {
+			leveled, lvl := charsvc.AddXP(c.store, p.UserID, 10)
+			if leveled {
+				desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": lvl})
 			}
 		}
 
@@ -293,6 +315,9 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	cp := game.CurrentPlayer()
 	desc := i18n.T("roulette.clic_msg", lang, map[string]any{"user": interaction.Mention(userID)})
+	if luckySaved {
+		desc += "\n🍀 **Lucky Break!** The bullet deflects harmlessly past you!"
+	}
 	desc += "\n" + i18n.T("roulette.next_turn", lang, map[string]any{"user": interaction.Mention(cp.UserID)})
 
 	embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, 0x95a5a6)

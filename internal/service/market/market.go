@@ -303,6 +303,9 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 	}
 
 	totalGain := st.CurrentPrice * amount
+	if charsvc.HasPassive(s.store, userID, "perk_trader") {
+		totalGain = totalGain * 105 / 100
+	}
 	if charsvc.HasBuff(s.store, userID, "golden_touch") {
 		totalGain *= 2
 		charsvc.ConsumeBuff(s.store, userID, "golden_touch")

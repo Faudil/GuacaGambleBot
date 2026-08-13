@@ -1,0 +1,8 @@
+{
+  "bonuses": {
+    "farm": "Améliore la ferme",
+    "fish": "Aide à pêcher",
+    "hunt": "Aide à la chasse",
+    "mine": "Aide à miner"
+  }
+}

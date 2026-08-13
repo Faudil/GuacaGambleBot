@@ -1,0 +1,154 @@
+{
+  "pet_types": {
+    "Abeille": {
+      "name": "Abeille"
+    },
+    "Aigle": {
+      "name": "Aigle"
+    },
+    "Bedawang": {
+      "name": "Bedawang"
+    },
+    "Bison": {
+      "name": "Bison"
+    },
+    "Canard": {
+      "name": "Canard"
+    },
+    "Cerbère": {
+      "name": "Cerbère"
+    },
+    "Chameau": {
+      "name": "Chameau"
+    },
+    "Chat": {
+      "name": "Chat"
+    },
+    "Cheval": {
+      "name": "Cheval"
+    },
+    "Chien": {
+      "name": "Chien"
+    },
+    "Chouette": {
+      "name": "Chouette"
+    },
+    "Cochon": {
+      "name": "Cochon"
+    },
+    "Crocodile": {
+      "name": "Crocodile"
+    },
+    "Dauphin": {
+      "name": "Dauphin"
+    },
+    "Diplodocus": {
+      "name": "Diplodocus"
+    },
+    "Dragon": {
+      "name": "Dragon"
+    },
+    "Escargot": {
+      "name": "Escargot"
+    },
+    "Fenrir": {
+      "name": "Fenrir"
+    },
+    "Fourmi": {
+      "name": "Fourmi"
+    },
+    "Gorille": {
+      "name": "Gorille"
+    },
+    "Grenouille": {
+      "name": "Grenouille"
+    },
+    "Hamster": {
+      "name": "Hamster"
+    },
+    "Hérisson": {
+      "name": "Hérisson"
+    },
+    "Iguane": {
+      "name": "Iguane"
+    },
+    "Kangourou": {
+      "name": "Kangourou"
+    },
+    "Kraken": {
+      "name": "Kraken"
+    },
+    "Licorne": {
+      "name": "Licorne"
+    },
+    "Lion": {
+      "name": "Lion"
+    },
+    "Léopard": {
+      "name": "Léopard"
+    },
+    "Mamouth": {
+      "name": "Mamouth"
+    },
+    "Mouton": {
+      "name": "Mouton"
+    },
+    "Mégalodon": {
+      "name": "Mégalodon"
+    },
+    "Nidhögg": {
+      "name": "Nidhögg"
+    },
+    "Ours": {
+      "name": "Ours"
+    },
+    "Ours polaire": {
+      "name": "Ours polaire"
+    },
+    "Panda": {
+      "name": "Panda"
+    },
+    "Paresseux": {
+      "name": "Paresseux"
+    },
+    "Phoenix": {
+      "name": "Phoenix"
+    },
+    "Pieuvre": {
+      "name": "Pieuvre"
+    },
+    "Putois": {
+      "name": "Putois"
+    },
+    "Pélican": {
+      "name": "Pélican"
+    },
+    "Ratatosk": {
+      "name": "Ratatosk"
+    },
+    "Renard": {
+      "name": "Renard"
+    },
+    "Rhino": {
+      "name": "Rhino"
+    },
+    "Scorpion": {
+      "name": "Scorpion"
+    },
+    "Singe": {
+      "name": "Singe"
+    },
+    "Souris": {
+      "name": "Souris"
+    },
+    "Taupe": {
+      "name": "Taupe"
+    },
+    "Tigre": {
+      "name": "Tigre"
+    },
+    "Tyrannosaure": {
+      "name": "Tyrannosaure"
+    }
+  }
+}

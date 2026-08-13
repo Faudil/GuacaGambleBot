@@ -1,0 +1,19 @@
+{
+  "duel": {
+    "challenge_desc": "{challenger} challenges {opponent} for **${amount}**!\n**{user}**, type `!accept` to fight or `!deny` to flee.",
+    "challenge_title": "⚔️ CHALLENGE ISSUED!",
+    "deny_msg": "🛡️ {user} refused the duel (what a chicken!).",
+    "draw_msg": "🤝 **Draw!** No one loses money.",
+    "invalid_bet": "❌ The bet must be positive.",
+    "money_spent_cancel": "❌ One of you no longer has enough money. Challenge cancelled.",
+    "no_bot": "🤖 You cannot challenge a bot (they cheat).",
+    "no_challenge": "❌ No one has challenged you.",
+    "no_deny": "❌ No challenge to refuse.",
+    "no_money_opponent": "❌ {user} doesn't have enough money (${balance}).",
+    "no_money_self": "❌ You don't have enough money (${balance}).",
+    "result_title": "🎲 DUEL RESULT",
+    "roll_msg": "🎲 **{user}** rolls: {die1} + {die2} = **{total}**\n",
+    "self_duel": "❌ You cannot challenge yourself.",
+    "win_msg": "🏆 **{user}** wins **${amount}**!"
+  }
+}

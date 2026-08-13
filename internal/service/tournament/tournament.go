@@ -6,6 +6,7 @@ import (
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )
 
@@ -59,8 +60,8 @@ func (s *Service) SimulateMatch(p1, p2 *TournamentPlayer) *MatchResult {
 	p1.Pet.HP = p1.Pet.MaxHP
 	p2.Pet.HP = p2.Pet.MaxHP
 
-	bp1 := toBattlePet(p1.Pet)
-	bp2 := toBattlePet(p2.Pet)
+	bp1 := s.toBattlePet(p1.Pet)
+	bp2 := s.toBattlePet(p2.Pet)
 
 	result := battle.Simulate(bp1, bp2)
 
@@ -75,14 +76,23 @@ func (s *Service) SimulateMatch(p1, p2 *TournamentPlayer) *MatchResult {
 	return &MatchResult{WinnerID: 0, LoserID: 0, Draw: true, Log: result.Log}
 }
 
-func toBattlePet(pet *model.UserPet) *battle.BattlePet {
+func (s *Service) toBattlePet(pet *model.UserPet) *battle.BattlePet {
 	emoji := "🐾"
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+		emoji = pt.Emoji
+	}
+	var skills []model.UserPetSkill
+	s.store.DB.Where("pet_id = ?", pet.ID).Find(&skills)
+	skillIDs := make([]string, 0, len(skills))
+	for _, sk := range skills {
+		skillIDs = append(skillIDs, sk.SkillID)
+	}
 	return &battle.BattlePet{
-		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji,
+		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji, PetType: pet.PetType,
 		Level: pet.Level, HP: pet.MaxHP, MaxHP: pet.MaxHP,
 		Atk: pet.Atk, Defense: pet.Defense, Speed: pet.Speed,
 		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,
-		// Skills not loaded here - could be extended later
+		Skills: skillIDs,
 	}
 }
 

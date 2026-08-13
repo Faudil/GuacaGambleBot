@@ -1,0 +1,7 @@
+{
+  "use": {
+    "not_owned": "❌ You don't own that item.",
+    "not_usable": "❌ That item can't be used. Try `/shop` or `/inventory`.",
+    "title": "🧰 Item Used"
+  }
+}

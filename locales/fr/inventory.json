@@ -1,0 +1,18 @@
+{
+  "inventory": {
+    "category_archeology": "🦴 Archéologie",
+    "category_equipment": "⚔️ Équipement",
+    "category_farming": "🚜 Agriculture",
+    "category_fishing": "🎣 Pêche",
+    "category_food": "🍲 Nourriture",
+    "category_materials": "🌱 Matériaux",
+    "category_mining": "⛏️ Minage",
+    "category_other": "📦 Autre",
+    "category_special": "✨ Spécial",
+    "category_tools": "🔧 Outils",
+    "empty": "🎒 Ton sac est vide, {user} ! Va miner ou achète des trucs.",
+    "error": "❌ Impossible de charger l'inventaire.",
+    "footer": "Utilise !use \u003cnom de l'objet\u003e pour t'en servir !",
+    "title": "🎒 Sac à dos de {user}"
+  }
+}

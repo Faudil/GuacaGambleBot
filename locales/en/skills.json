@@ -1,0 +1,26 @@
+{
+  "skills": {
+    "activate_title": "Activate Skill",
+    "activated_desc": "{skill} is now active. Use it on your next relevant action!",
+    "activated_title": "✅ Skill Activated!",
+    "btn_refresh": "Refresh",
+    "error": "Could not load skills.",
+    "game_bet": "Betting",
+    "game_blackjack": "Blackjack",
+    "game_coinflip": "Coinflip",
+    "game_lotto": "Lotto",
+    "game_roulette": "Roulette",
+    "game_slots": "Slots",
+    "limit_reached": "Daily limit reached",
+    "not_found": "❌ That skill doesn't exist.",
+    "on_cooldown": "Cooldown:",
+    "overclock_done": "⚡ Overclock engaged!\n🎣 Fishing cooldown reset\n🏹 Hunting cooldown reset\n⛏️ +3 mining descends granted",
+    "sw_desc": "Pick one daily game limit to refresh:",
+    "sw_picked": "💨 {game} daily limit has been refreshed!",
+    "sw_title": "💨 Second Wind — Pick a game",
+    "title": "⚡ Active Skills",
+    "unavailable": "❌ Skill not available: {reason}",
+    "unlocks_at": "Unlocks at",
+    "uses_left": "{left}/{max} uses left"
+  }
+}

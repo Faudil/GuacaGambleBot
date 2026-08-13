@@ -1,0 +1,126 @@
+{
+  "journal": {
+    "btn_back": "Back to journal",
+    "btn_leaderboard": "Leaderboard",
+    "completed": "🎉 Just completed:",
+    "desc": "Your story, your pace. Complete milestones to grow in each path. Nothing here is mandatory — follow what you enjoy.",
+    "error": "❌ Could not load your journal. Try again.",
+    "lb_desc": "Top path progress on this server:",
+    "lb_entry": "**{rank}.** {user} — {name} ({step} steps)",
+    "mastery": {
+      "announce_desc": "Every path completed. Every milestone conquered. A new legend has been written into the chronicles of this world!",
+      "announce_title": "🏆 **{user} has mastered the Journal!**",
+      "desc": "You have mastered every journal path. A legend whispered only to those who complete everything — carry it proudly.",
+      "title": "🏆 The Mastery Legend"
+    },
+    "path_complete": "— path mastered!",
+    "paths": {
+      "builder": {
+        "desc": "Housing, furniture, pets care, community.",
+        "step1": "Own a house",
+        "step2": "Upgrade your house to level 2",
+        "step3": "Place 3 pieces of furniture",
+        "step4": "Build a sanctuary",
+        "step5": "Feed your pets 20 times",
+        "step6": "Contribute 100 to community projects",
+        "step7": "Complete a research project",
+        "step8": "Contribute 1,000 to community projects",
+        "title": "Builder"
+      },
+      "champion": {
+        "desc": "Duels, hunts, pets, bosses, delve.",
+        "step1": "Win 5 PvP duels",
+        "step2": "Win 15 hunts",
+        "step3": "Raise a pet to level 10",
+        "step4": "Defeat 2 Boss League stages",
+        "step5": "Defeat a hunt zone boss",
+        "step6": "Complete a delve run",
+        "step7": "Reach character level 25",
+        "step8": "Become Boss League Champion",
+        "title": "Champion"
+      },
+      "highroller": {
+        "desc": "Coinflip, slots, blackjack, roulette, lotto.",
+        "step1": "Play 15 coinflips",
+        "step2": "Win 5 slots games",
+        "step3": "Win 3 blackjack games",
+        "step4": "Enter 3 lotto draws",
+        "step5": "Play 10 roulette rounds",
+        "step6": "Win a bet you placed",
+        "step7": "Win 2 wagers",
+        "step8": "Win 10,000 total from casino games",
+        "title": "High Roller"
+      },
+      "historian": {
+        "desc": "Lore fragments, fossils, research and secrets.",
+        "step1": "Discover 5 lore fragments",
+        "step2": "Dig up 10 fossils",
+        "step3": "Complete a research project",
+        "step4": "Discover 20 lore fragments",
+        "step5": "Earn 25 achievements",
+        "step6": "Discover 3 NPC secrets",
+        "step7": "Reach reputation level 5 with any NPC",
+        "step8": "Discover 45 lore fragments",
+        "title": "Historian"
+      },
+      "hunter": {
+        "desc": "Hunt zones, zone bosses and trophies.",
+        "step1": "Win 5 hunts",
+        "step2": "Unlock 3 hunt zones",
+        "step3": "Defeat 3 zone bosses",
+        "step4": "Win 25 hunts",
+        "step5": "Defeat 10 zone bosses",
+        "step6": "Defeat the Volcano Dragon",
+        "step7": "Slay the boss of every hunt zone",
+        "step8": "Defeat 100 zone bosses",
+        "title": "Hunter"
+      },
+      "merchant": {
+        "desc": "Earn, trade, bank and invest.",
+        "step1": "Earn 1,000 in total",
+        "step2": "Sell 20 items at the market",
+        "step3": "Buy 20 items at the market",
+        "step4": "Stash 2,000 in the bank",
+        "step5": "Own a house",
+        "step6": "Contribute 500 to community projects",
+        "step7": "Earn 10,000 in total",
+        "step8": "Hold 100,000 in your wallet",
+        "title": "Merchant Prince"
+      },
+      "prospector": {
+        "desc": "Miner, fish, farm, hunt and dig.",
+        "step1": "Mine 25 ores",
+        "step2": "Catch 25 fish",
+        "step3": "Harvest 25 crops",
+        "step4": "Win 10 hunts",
+        "step5": "Mine 150 ores, or catch 100 fish, or harvest 100 crops",
+        "step6": "Dig up 15 fossils",
+        "step7": "Mine 300 ores, catch 200 fish AND harvest 200 crops",
+        "title": "Prospector"
+      },
+      "shadow": {
+        "desc": "Theft, notoriety and infamy.",
+        "step1": "Commit your first successful theft",
+        "step2": "Complete 5 successful thefts",
+        "step3": "Reach 50 notoriety",
+        "step4": "Complete 15 successful thefts",
+        "step5": "Reach 50 thief infamy",
+        "step6": "Complete 30 successful thefts",
+        "step7": "Wear the Mask of Malveillance",
+        "title": "Shadow"
+      }
+    },
+    "ranks": {
+      "0": "Unranked",
+      "1": "Apprentice",
+      "2": "Journeyman",
+      "3": "Expert",
+      "4": "Master"
+    },
+    "reward": {
+      "crowns": "{amount}👑",
+      "money": "{amount}💰"
+    },
+    "title": "📖 Journal"
+  }
+}

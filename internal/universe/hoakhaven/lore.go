@@ -44,6 +44,11 @@ var Fragments = []universe.Fragment{
 		TextEN: `'Climate model 7-R: The Great Winter is not a natural season. It's a byproduct of Aether decay. Warm periods shorten every year. If we can't stop the leak, the Strata will be uninhabitable within twelve generations. This isn't fear. It's mathematics.'`,
 		TextFR: `« Modèle climatique 7-R. Le Grand Hiver n'est pas naturel. C'est un sous-produit de la dégradation de l'Éther. Chaque année, la saison chaude raccourcit. Si on n'arrête pas la fuite, les Strates seront inhabitables dans douze générations. Ce n'est pas de la peur. Ce sont des maths. »`,
 	},
+	{ID: "log_seam", Category: "aether_log", Emoji: "\U0001f52e", Rarity: "rare", DropSource: "mining", DropChance: 0.05,
+		TitleEN: "The Thin Wall", TitleFR: "Le Mur Mince",
+		TextEN: `'Tunnel 9, Strata 4. My pick went through the wall like water. No rock beyond it. No void either. A room that wasn't a room — same air, same lamps, but wrong. Wrong like a word you've heard a thousand times, said once too slow. I touched the far wall. It gave. Like skin. Like something waiting. The foreman says I passed out from Aether. Fine. Let him think that.' — Digger Ynn's last log.`,
+		TextFR: `« Tunnel 9, Strates 4. Ma pioche a traversé la paroi comme de l'eau. Pas de roche derrière. Pas de vide non plus. Une pièce qui n'était pas une pièce — le même air, les mêmes lampes, mais faux. Faux comme un mot entendu mille fois, prononcé une fois de trop lentement. J'ai touché le mur du fond. Il a cédé. Comme de la peau. Comme quelque chose qui attend. Le contremaître dit que je me suis évanoui à cause de l'Éther. Très bien. Qu'il le croie. » — Dernier journal de la foreuse Ynn.`,
+	},
 
 	// ======== TIDE-SCROLLS (8) — Fishing ========
 	{ID: "scroll_prayer", Category: "tide_scroll", Emoji: "\U0001f64f", Rarity: "common", DropSource: "fishing", DropChance: 0.12,

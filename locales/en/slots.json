@@ -1,0 +1,22 @@
+{
+  "slots": {
+    "bet_info": "Bet: **${amount}**",
+    "gain": "💰 **Gain: ${amount}**",
+    "jackpot_bell": "🔔 **DING DING DING!** The big prize is yours!",
+    "jackpot_diamond": "💎 **OMEGA JACKPOT !!!** YOU ARE RICH !!! 💎",
+    "jackpot_generic": "🎉 **INCREDIBLE!** Three {symbol} aligned!",
+    "lose_generic": "❌ No luck... Try again!",
+    "loss": "💸 -${amount}",
+    "no_money": "❌ Not enough money (${balance}).",
+    "pair_bell": "🔔 **Nice!** Those bells ring for victory.",
+    "pair_cherry": "🍒 **Darn!** Could have been worse.",
+    "pair_diamond": "😲 **So close!** A pair of diamonds, that pays off big!",
+    "pair_grape": "🍇 **Oof!** At least you're refunded (almost).",
+    "pair_lemon": "🍋 **Not bad!** A little lemon juice to celebrate?",
+    "rolling": "🌀",
+    "state_rolling": "...",
+    "state_start": "Place your bets...",
+    "state_suspense": "Suspense...",
+    "title": "🎰 Slot Machine"
+  }
+}

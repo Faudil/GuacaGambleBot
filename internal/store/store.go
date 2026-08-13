@@ -2,8 +2,8 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
-	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -13,16 +13,16 @@ import (
 	"guacagamblebot/internal/model"
 )
 
+// ErrInsufficientFunds is returned by money-moving operations that validate the
+// user's balance inside a transaction (Debit, Transfer, BankDeposit).
+var ErrInsufficientFunds = errors.New("insufficient funds")
+
 // RepaidLender describes a partial debt repayment to a single lender.
 type RepaidLender struct {
 	LenderID int64
 	Amount   int
 }
 
-// QuestAdvanceFn is called by RecordActivity when an activity step reaches its
-// target. Implementations should advance the quest step with proper next-step
-// custom_data. questID is the quest whose step was completed. The bool return
-// indicates whether the quest was fully completed (COMPLETED status).
 // QuestAdvanceFn is called by RecordActivity when an activity step reaches its
 // target. Implementations should advance the quest step with proper next-step
 // custom_data. Returns whether the quest fully completed, plus the i18n text
@@ -44,14 +44,11 @@ type JournalAdvanceFn func(userID int64, stat string, amount int)
 
 // Store is the data-access layer over GORM.
 type Store struct {
-	DB            *gorm.DB
+	DB              *gorm.DB
 	StartingBalance int
 	DefaultPrefix   string
 	questAdvanceFn  QuestAdvanceFn
 	journalFn       JournalAdvanceFn
-
-	questNotifications   map[int64][]QuestNotification
-	questNotificationsMu sync.Mutex
 }
 
 func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
@@ -60,15 +57,20 @@ func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
 func (s *Store) SetJournalFn(fn JournalAdvanceFn) { s.journalFn = fn }
 
 func New(db *gorm.DB, cfg *config.Config) *Store {
-	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix, questNotifications: map[int64][]QuestNotification{}}
+	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix}
+}
+
+// ensureUserTx creates the user row with the starting balance if missing.
+func (s *Store) ensureUserTx(tx *gorm.DB, userID int64) error {
+	var u model.User
+	return tx.Where(model.User{UserID: userID}).
+		Attrs(map[string]any{"balance": s.StartingBalance}).
+		FirstOrCreate(&u).Error
 }
 
 // ensureUser creates the user row with the starting balance if missing.
 func (s *Store) ensureUser(userID int64) error {
-	var u model.User
-	return s.DB.Where(model.User{UserID: userID}).
-		Attrs(map[string]any{"balance": s.StartingBalance}).
-		FirstOrCreate(&u).Error
+	return s.ensureUserTx(s.DB, userID)
 }
 
 // GetBalance returns the user's wallet balance, creating the account if needed.
@@ -103,6 +105,145 @@ func (s *Store) UpdateBalance(userID int64, delta int) (int, error) {
 		return 0, err
 	}
 	return bal, nil
+}
+
+// Debit checks that the user can afford amount and deducts it from the wallet
+// in a single transaction, so concurrent callers cannot overdraw the balance.
+// It returns the new balance.
+func (s *Store) Debit(userID int64, amount int) (int, error) {
+	var newBal int
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.ensureUserTx(tx, userID); err != nil {
+			return err
+		}
+		var bal int
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).Pluck("balance", &bal).Error; err != nil {
+			return err
+		}
+		if bal < amount {
+			return ErrInsufficientFunds
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", amount)).Error; err != nil {
+			return err
+		}
+		newBal = bal - amount
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return newBal, nil
+}
+
+// Transfer moves amount from sender to recipient atomically, refusing the
+// transfer when the sender cannot afford it. It returns both new balances.
+func (s *Store) Transfer(sender, recipient int64, amount int) (senderBal, recipientBal int, err error) {
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.ensureUserTx(tx, sender); err != nil {
+			return err
+		}
+		if err := s.ensureUserTx(tx, recipient); err != nil {
+			return err
+		}
+		var bal int
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", sender).Pluck("balance", &bal).Error; err != nil {
+			return err
+		}
+		if bal < amount {
+			return ErrInsufficientFunds
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", sender).
+			UpdateColumn("balance", gorm.Expr("balance - ?", amount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", recipient).
+			UpdateColumn("balance", gorm.Expr("balance + ?", amount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", sender).Pluck("balance", &senderBal).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.User{}).
+			Where("user_id = ?", recipient).Pluck("balance", &recipientBal).Error
+	})
+	return senderBal, recipientBal, err
+}
+
+// BankDeposit moves amount from the wallet into the bank in a single
+// transaction. It returns the new wallet and bank balances.
+func (s *Store) BankDeposit(userID int64, amount int) (wallet, bank int, err error) {
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.ensureUserTx(tx, userID); err != nil {
+			return err
+		}
+		var bal int
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).Pluck("balance", &bal).Error; err != nil {
+			return err
+		}
+		if bal < amount {
+			return ErrInsufficientFunds
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", amount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("bank", gorm.Expr("bank + ?", amount)).Error; err != nil {
+			return err
+		}
+		var u model.User
+		if err := tx.Where("user_id = ?", userID).First(&u).Error; err != nil {
+			return err
+		}
+		wallet, bank = u.Balance, u.Bank
+		return nil
+	})
+	return wallet, bank, err
+}
+
+// BankWithdraw moves amount from the bank into the wallet in a single
+// transaction. It returns the new wallet and bank balances.
+func (s *Store) BankWithdraw(userID int64, amount int) (wallet, bank int, err error) {
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.ensureUserTx(tx, userID); err != nil {
+			return err
+		}
+		var bal int
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).Pluck("bank", &bal).Error; err != nil {
+			return err
+		}
+		if bal < amount {
+			return ErrInsufficientFunds
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("bank", gorm.Expr("bank - ?", amount)).Error; err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", amount)).Error; err != nil {
+			return err
+		}
+		var u model.User
+		if err := tx.Where("user_id = ?", userID).First(&u).Error; err != nil {
+			return err
+		}
+		wallet, bank = u.Balance, u.Bank
+		return nil
+	})
+	return wallet, bank, err
 }
 
 // GetBankData returns the wallet and bank balances for a user.
@@ -245,6 +386,33 @@ func (s *Store) IncrementGameLimit(userID int64, gameName string) error {
 	}).Error
 }
 
+// RemoveInventoryItem removes quantity units of itemID from a user's inventory.
+func (s *Store) RemoveInventoryItem(userID int64, itemID string, quantity int) error {
+	return s.DB.Model(&model.Inventory{}).
+		Where("user_id = ? AND item_id = ? AND quantity > 0", userID, itemID).
+		UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error
+}
+
+// GrantGameLimitCredit refunds credits from today's usage count for gameName,
+// never going below zero. Missing rows (no usage today) are left untouched.
+func (s *Store) GrantGameLimitCredit(userID int64, gameName string, credits int) error {
+	if credits <= 0 {
+		return nil
+	}
+	today := time.Now().Format("2006-01-02")
+	res := s.DB.Model(&model.GameLimit{}).
+		Where("user_id = ? AND game_name = ? AND date_str = ? AND count > 0", userID, gameName, today).
+		UpdateColumn("count", gorm.Expr("MAX(count - ?, 0)", credits))
+	return res.Error
+}
+
+// ResetGameLimit clears today's usage for gameName so the full daily limit is
+// available again. Rows from previous days are irrelevant to CheckGameLimit.
+func (s *Store) ResetGameLimit(userID int64, gameName string) error {
+	return s.DB.Where("user_id = ? AND game_name = ?", userID, gameName).
+		Delete(&model.GameLimit{}).Error
+}
+
 // GetLanguage returns the configured language for a server (defaults to "fr").
 func (s *Store) GetLanguage(serverID int64) string {
 	if serverID == 0 {
@@ -349,62 +517,8 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 		return err
 	}
 	for _, q := range active {
-		var d model.UserQuestData
-		if err := s.DB.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
-			slog.Info("RecordActivity: no quest_data row", "user_id", userID, "quest_id", q.QuestID, "err", err)
-			continue
-		}
-		var cd map[string]any
-		if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
-			slog.Info("RecordActivity: json unmarshal failed", "user_id", userID, "quest_id", q.QuestID, "custom_data", d.CustomData, "err", err)
-			continue
-		}
-		slog.Info("RecordActivity: checking quest",
-			"user_id", userID,
-			"quest_id", q.QuestID,
-			"stat", stat,
-			"custom_data", cd,
-			"target_stat_in_cd", cd["target_stat"],
-			"progress_value", d.ProgressValue,
-			"amount", amount,
-		)
-		if cd["target_stat"] != stat {
-			slog.Info("RecordActivity: stat mismatch, skipping", "expected", cd["target_stat"], "got", stat)
-			continue
-		}
-		targetCount, _ := cd["target_count"].(float64)
-		newVal := d.ProgressValue + amount
-		done := newVal >= int(targetCount)
-		slog.Info("RecordActivity: updating progress",
-			"user_id", userID,
-			"quest_id", q.QuestID,
-			"newVal", newVal,
-			"targetCount", targetCount,
-			"done", done,
-		)
-		if err := s.DB.Model(&model.UserQuestData{}).
-			Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
-			Update("progress_value", newVal).Error; err != nil {
-			slog.Info("RecordActivity: update error", "err", err)
-			return err
-		}
-		if done {
-			if q.QuestID == "daily_quest" {
-				if err := s.DB.Model(&model.UserQuest{}).
-					Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
-					Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
-					return err
-				}
-				s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: true})
-				s.grantDailyQuestReward(userID)
-			} else if s.questAdvanceFn != nil {
-				completed, nextKey, err := s.questAdvanceFn(userID, q.QuestID)
-				if err != nil {
-					slog.Warn("RecordActivity: questAdvanceFn failed", "quest_id", q.QuestID, "err", err)
-				} else {
-					s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: completed, NextStepKey: nextKey})
-				}
-			}
+		if err := s.recordActivityForQuest(userID, q, stat, amount); err != nil {
+			slog.Warn("RecordActivity failed", "user_id", userID, "quest_id", q.QuestID, "err", err)
 		}
 	}
 	if s.journalFn != nil {
@@ -413,39 +527,124 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 	return nil
 }
 
+// recordActivityForQuest atomically increments the quest progress inside a
+// transaction and marks the quest completed exactly once (guarded by the status
+// transition), then hands the completion event to the quest advancement hook.
+// The hook and the notification write happen outside the transaction because
+// they use the store's own connection, which would deadlock inside it.
+func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat string, amount int) error {
+	var completedNow, daily bool
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var d model.UserQuestData
+		if err := tx.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
+			return err
+		}
+		var cd map[string]any
+		if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
+			slog.Warn("RecordActivity: json unmarshal failed", "user_id", userID, "quest_id", q.QuestID, "custom_data", d.CustomData, "err", err)
+			return nil
+		}
+		if cd["target_stat"] != stat {
+			return nil
+		}
+		targetCount, _ := cd["target_count"].(float64)
+		if err := tx.Model(&model.UserQuestData{}).
+			Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
+			UpdateColumn("progress_value", gorm.Expr("progress_value + ?", amount)).Error; err != nil {
+			return err
+		}
+		var newVal int
+		if err := tx.Model(&model.UserQuestData{}).
+			Where("user_id = ? AND quest_id = ?", userID, q.QuestID).
+			Pluck("progress_value", &newVal).Error; err != nil {
+			return err
+		}
+		if newVal < int(targetCount) {
+			return nil
+		}
+		daily = q.QuestID == "daily_quest"
+		res := tx.Model(&model.UserQuest{}).
+			Where("user_id = ? AND quest_id = ? AND status = 'ACTIVE'", userID, q.QuestID).
+			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return nil
+		}
+		completedNow = true
+		if daily {
+			return s.grantDailyQuestReward(tx, userID)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if !completedNow {
+		return nil
+	}
+	if daily {
+		s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: true})
+		return nil
+	}
+	if s.questAdvanceFn == nil {
+		return nil
+	}
+	completed, nextKey, err := s.questAdvanceFn(userID, q.QuestID)
+	if err != nil {
+		slog.Warn("RecordActivity: questAdvanceFn failed", "quest_id", q.QuestID, "err", err)
+	} else {
+		s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: completed, NextStepKey: nextKey})
+	}
+	return nil
+}
+
+// pushQuestNotification queues a quest event so the user's next command can
+// surface it. Notifications older than 24 hours are purged on pop.
 func (s *Store) pushQuestNotification(userID int64, n QuestNotification) {
-	s.questNotificationsMu.Lock()
-	defer s.questNotificationsMu.Unlock()
-	s.questNotifications[userID] = append(s.questNotifications[userID], n)
+	if err := s.DB.Create(&model.QuestNotification{
+		UserID: userID, QuestID: n.QuestID, Completed: n.Completed, NextStepKey: n.NextStepKey,
+	}).Error; err != nil {
+		slog.Error("failed to store quest notification", "user_id", userID, "error", err)
+	}
 }
 
 // PopQuestNotification returns the oldest pending quest notification for the
 // user, consuming it. Returns ok=false when nothing is pending.
 func (s *Store) PopQuestNotification(userID int64) (QuestNotification, bool) {
-	s.questNotificationsMu.Lock()
-	defer s.questNotificationsMu.Unlock()
-	q := s.questNotifications[userID]
-	if len(q) == 0 {
+	var rows []model.QuestNotification
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ? AND created_at < ?", userID, time.Now().Add(-24*time.Hour)).
+			Delete(&model.QuestNotification{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).
+			Order("id asc").Limit(1).Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		return tx.Delete(&model.QuestNotification{}, rows[0].ID).Error
+	})
+	if err != nil {
+		slog.Error("failed to pop quest notification", "user_id", userID, "error", err)
 		return QuestNotification{}, false
 	}
-	n := q[0]
-	s.questNotifications[userID] = q[1:]
-	if len(s.questNotifications[userID]) == 0 {
-		delete(s.questNotifications, userID)
+	if len(rows) == 0 {
+		return QuestNotification{}, false
 	}
-	return n, true
+	return QuestNotification{QuestID: rows[0].QuestID, Completed: rows[0].Completed, NextStepKey: rows[0].NextStepKey}, true
 }
 
 // grantDailyQuestReward hands out the reward promised by the daily quest
 // completion message (a hatchable egg).
-func (s *Store) grantDailyQuestReward(userID int64) {
-	err := s.DB.Clauses(clause.OnConflict{
+func (s *Store) grantDailyQuestReward(tx *gorm.DB, userID int64) error {
+	return tx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
 	}).Create(&model.Inventory{UserID: userID, ItemID: "forest_egg", Quantity: 1}).Error
-	if err != nil {
-		slog.Error("store: failed to grant daily quest egg", "user", userID, "error", err)
-	}
 }
 
 // CreateQuest creates a new quest entry and its step data for a user.
@@ -520,18 +719,4 @@ func (s *Store) SetCooldown(userID int64, activity string) error {
 	}).Create(&model.Cooldown{
 		UserID: userID, ActivityName: activity, LastUsed: now,
 	}).Error
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

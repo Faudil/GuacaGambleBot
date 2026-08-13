@@ -132,13 +132,18 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.day5_odds.step3_activity", Extra: map[string]any{"target_stat": "items_sold_market", "target_count": 1}},
 			{Type: StepDialogue, TextKey: "quests.day5_odds.step4_dialogue", Rewards: &QuestReward{Money: 300}},
 
+			{Type: StepDialogue, TextKey: "quests.day6_contribution.step0_dialogue"},
 			{Type: StepRequirement, TextKey: "quests.day6_contribution.step1_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 5, "wheat": 3}}},
-			// Day 7 — Guardian + Delve
-			{Type: StepDialogue, TextKey: "quests.day7_sprout.step0_event"},
-			{Type: StepBossBattle, TextKey: "quests.day7_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
-			{Type: StepDialogue, TextKey: "quests.day7_sprout.step2_transition"},
-			{Type: StepActivity, TextKey: "quests.day7_sprout.step3_activity", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 1}},
-			{Type: StepDialogue, TextKey: "quests.day7_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1000, ItemIDs: []string{"boss_trophy"}}},
+			{Type: StepDialogue, TextKey: "quests.day6_contribution.step2_dialogue"},
+			// Day 7 — The Undercroft (find the key)
+			{Type: StepDialogue, TextKey: "quests.day7_delve.step0_dialogue"},
+			{Type: StepActivity, TextKey: "quests.day7_delve.step1_activity", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.day7_delve.step2_dialogue", Rewards: &QuestReward{Money: 200}},
+			// Day 8 — Guardian + finale
+			{Type: StepDialogue, TextKey: "quests.day8_sprout.step0_event"},
+			{Type: StepBossBattle, TextKey: "quests.day8_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
+			{Type: StepDialogue, TextKey: "quests.day8_sprout.step2_transition"},
+			{Type: StepDialogue, TextKey: "quests.day8_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1000, ItemIDs: []string{"boss_trophy"}}},
 		},
 	},
 	"daily_quest": {

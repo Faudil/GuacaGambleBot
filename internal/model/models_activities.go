@@ -48,9 +48,21 @@ type UserQuestData struct {
 	CustomData    string `gorm:"column:custom_data;default:'{}'"`
 }
 
+// QuestNotification is a queued quest-event message waiting to be surfaced to
+// the user by the next command they run.
+type QuestNotification struct {
+	ID          uint      `gorm:"primaryKey;column:id;autoIncrement"`
+	UserID      int64     `gorm:"index:idx_qn_user_created;column:user_id"`
+	QuestID     string    `gorm:"column:quest_id"`
+	Completed   bool      `gorm:"column:completed;default:false"`
+	NextStepKey string    `gorm:"column:next_step_key"`
+	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime"`
+}
+
 func (UserCropHarvest) TableName() string  { return "user_crop_harvests" }
 func (UserFossilHarvest) TableName() string { return "user_fossil_harvests" }
 func (UserFarming) TableName() string      { return "user_farming" }
 func (UserAchievement) TableName() string  { return "user_achievements" }
 func (UserQuest) TableName() string        { return "user_quests" }
 func (UserQuestData) TableName() string    { return "user_quest_data" }
+func (QuestNotification) TableName() string { return "quest_notifications" }

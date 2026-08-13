@@ -1,0 +1,26 @@
+{
+  "skills": {
+    "activate_title": "Activer la Compétence",
+    "activated_desc": "{skill} est maintenant active. Utilisez-la lors de votre prochaine action !",
+    "activated_title": "✅ Compétence Activée !",
+    "btn_refresh": "Actualiser",
+    "error": "Impossible de charger les compétences.",
+    "game_bet": "Paris",
+    "game_blackjack": "Blackjack",
+    "game_coinflip": "Pile ou Face",
+    "game_lotto": "Loto",
+    "game_roulette": "Roulette",
+    "game_slots": "Machines à Sous",
+    "limit_reached": "Limite quotidienne atteinte",
+    "not_found": "❌ Cette compétence n'existe pas.",
+    "on_cooldown": "Recharge:",
+    "overclock_done": "⚡ Overclock activé !\n🎣 Recharge de pêche réinitialisée\n🏹 Recharge de chasse réinitialisée\n⛏️ +3 descentes de mine accordées",
+    "sw_desc": "Choisissez une limite quotidienne à réinitialiser :",
+    "sw_picked": "💨 La limite quotidienne de {game} a été réinitialisée !",
+    "sw_title": "💨 Second Souffle — Choisissez un jeu",
+    "title": "⚡ Compétences Actives",
+    "unavailable": "❌ Compétence non disponible : {reason}",
+    "unlocks_at": "Débloqué au",
+    "uses_left": "{left}/{max} utilisations restantes"
+  }
+}

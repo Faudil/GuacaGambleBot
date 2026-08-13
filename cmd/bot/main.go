@@ -61,6 +61,7 @@ import (
 	skillscog "guacagamblebot/internal/cogs/skills"
 	startcog "guacagamblebot/internal/cogs/start"
 	tournamentcog "guacagamblebot/internal/cogs/tournament"
+	usecog "guacagamblebot/internal/cogs/use"
 	veilcog "guacagamblebot/internal/cogs/veil"
 	"guacagamblebot/internal/onboarding"
 )
@@ -148,6 +149,7 @@ func main() {
 	skillscog.Register(router, str, cfg)
 	startcog.Register(router, str, cfg)
 	tournamentcog.Register(router, str, cfg)
+	usecog.Register(router, str, cfg)
 	veilcog.Register(router, str, cfg)
 	onboarding.Register(router, str, cfg)
 

@@ -1,0 +1,25 @@
+{
+  "sanctuary": {
+    "collect_empty": "❌ No resources to collect.",
+    "collect_error": "❌ You can only collect once every 24 hours.",
+    "collect_success": "📦 Collected **{count}** items from your sanctuary:\n{items}",
+    "complete_error": "❌ Construction is not ready yet.",
+    "complete_success": "✅ Construction complete! Your sanctuary has been upgraded!",
+    "max_tier": "❌ Your sanctuary is already at max tier!",
+    "no_active_pets": "❌ You have no active pets to retire!",
+    "no_sanctuary": "❌ This player hasn't built a sanctuary yet!",
+    "no_sanctuary_pets": "❌ You have no pets in your sanctuary!",
+    "no_showcase": "No showcased pets.",
+    "recall_placeholder": "Choose a pet to recall...",
+    "recall_prompt": "Select a pet to recall from the sanctuary.\n($100 fee)",
+    "retire_placeholder": "Choose a pet to retire...",
+    "retire_prompt": "Select a pet to retire to the sanctuary.",
+    "showcase_error": "❌ Could not update showcase.",
+    "showcase_placeholder": "Choose a pet for showcase...",
+    "showcase_prompt": "Select a pet to showcase, or remove one from a slot.",
+    "showcase_slot_prompt": "Select a showcase slot for this pet (1-5), or remove from showcase (0).",
+    "upgrade_error": "❌ Cannot start construction. Check materials and requirements.",
+    "upgrade_started": "🔧 Construction started: **{name}** ({hours}h).\nUse `/sanctuary` to check progress.",
+    "visit_title": "🏡 {user}'s Pet Sanctuary"
+  }
+}

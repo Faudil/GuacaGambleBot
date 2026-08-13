@@ -1,0 +1,33 @@
+{
+  "economy": {
+    "balance_footer": "Commands: !dep \u003camount\u003e, !withdraw \u003camount\u003e",
+    "balance_title": "🏦 My Bank",
+    "btn_balance": "💰 Balance",
+    "btn_daily": "📅 Daily",
+    "btn_give": "💸 Give",
+    "daily_cooldown": "⏳ You already claimed your daily today. Come back tomorrow!",
+    "daily_footer": "Come back tomorrow!",
+    "daily_interest": "📈 Daily Interest",
+    "daily_title": "💸 Here's your cash",
+    "give_amount_label": "Amount",
+    "give_done": "Money sent!",
+    "give_invalid": "❌ Invalid transaction.",
+    "give_modal_title": "Gift money",
+    "give_no_money": "❌ You don't have enough money.",
+    "give_recipient_label": "Recipient (mention or ID)",
+    "give_title": "💸 Transaction complete",
+    "menu_desc": "Manage your money. Pick an action below:",
+    "menu_footer": "Use the buttons to interact.",
+    "menu_title": "🏦 Economy",
+    "quantity": "Amount",
+    "receiver": "Receiver",
+    "repaid_lender": "\n🤵 You repaid {lender} ",
+    "rsa_desc": "Guacamolistan helps a broke player!\n**{user}** just received **${amount}** from the glorious regime.",
+    "rsa_title": "🍀 WELFARE 🍀",
+    "safe": "🔒 Safe",
+    "sender": "Sender",
+    "tax_repayment": "\n📉 **Wage garnishment (debt repayment)**",
+    "wallet": "👛 Wallet",
+    "your_balance": "Your balance"
+  }
+}

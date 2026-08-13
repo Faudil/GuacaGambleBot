@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	bjsvc "guacagamblebot/internal/service/blackjack"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -319,7 +320,14 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 		if winnerID == gs.Player2ID {
 			loserID = gs.Player1ID
 		}
-		_, _ = c.store.UpdateBalance(winnerID, gs.Amount*2)
+
+		payout := gs.Amount * 2
+		fever := ""
+		if charsvc.ConsumeBuff(c.store, winnerID, "jackpot_fever") {
+			payout = gs.Amount * 3
+			fever = "\n🔥 **Jackpot Fever!** The payout is tripled!"
+		}
+		_, _ = c.store.UpdateBalance(winnerID, payout)
 
 		_ = achievement.IncrementStat(b.DB, winnerID, "blackjack_won", 1)
 		_ = achievement.IncrementStat(b.DB, loserID, "blackjack_lost", 1)
@@ -342,12 +350,21 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 		resultText := i18n.T("blackjack.win_msg", lang, map[string]any{
 			"user":   interaction.Mention(winnerID),
 			"reason": reasonText,
-			"amount": gs.Amount * 2,
-		})
+			"amount": payout,
+		}) + fever
 		embed.Description += "\n\n" + i18n.T("blackjack.game_over", lang) + "\n" + resultText
 	}
 
 	embed.Color = color
+
+	// Participation XP: both players earn XP and see their level-ups.
+	for _, uid := range []int64{gs.Player1ID, gs.Player2ID} {
+		leveled, lvl := charsvc.AddXP(c.store, uid, 10)
+		if leveled {
+			embed.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": lvl})
+		}
+	}
+
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 

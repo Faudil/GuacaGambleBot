@@ -26,6 +26,7 @@ type Game struct {
 	TurnIndex    int
 	IsActive     bool
 	LeaderID     int64
+	LuckyBreak   bool
 }
 
 func NewGame(leaderID int64, entryFee int) *Game {
@@ -79,6 +80,12 @@ func (g *Game) Trigger(userID int64) (bool, string, []Player, int) {
 	bullet := g.Cylinder[0]
 	g.Cylinder = g.Cylinder[1:]
 	if bullet {
+		if g.LuckyBreak {
+			// The trigger player's lucky_break buff deflects the bullet.
+			g.LuckyBreak = false
+			g.TurnIndex++
+			return true, "click", nil, 0
+		}
 		// Player dies
 		survivors := make([]Player, 0, len(g.Alive)-1)
 		for _, p := range g.Alive {

@@ -1,0 +1,26 @@
+{
+  "betting": {
+    "already_closed": "❌ Ce pari a déjà été fermé.",
+    "closed_house_keeps": "🔒 pari fermé. **{option}** a gagné, mais personne n'a parié dessus. La maison garde ${pool}!",
+    "created": "🎲 Pari #{id} créé: {desc}",
+    "finished": "❌ Le pari est terminé.",
+    "freeze_success": "✅ Le pari {desc} a été gelé, on ne peut plus parier dessus.",
+    "frozen": "❌ Le pari est gelé.",
+    "id_not_found": "❌ ID du pari non trouvé.",
+    "invalid_choice": "❌ Choix invalide. Choisis: A ou B",
+    "no_money": "❌ T'as pas assez d'argent (tu as {balance}).",
+    "not_found": "❌ Paris {id}.",
+    "odds_footer_closed": "Ce pari est terminé. Gagnant: {winner}",
+    "odds_footer_open": "Statut: OUVERT | Les côtes changent selon les paris !",
+    "only_creator": "❌ Seul le créateur peut fermer le pari.",
+    "option_a": "Option A: {name}",
+    "option_b": "Option B: {name}",
+    "placed": "✅ Pari placé sur {choice}!",
+    "result_title": "🏆 pari #{id} Résultat",
+    "status_title": "📊 Statut: pari #{id}",
+    "total_bet": "💰 Total parié",
+    "total_pool": "Valeur total",
+    "winners": "Gagnants",
+    "won_msg": "{user} a gagné ${amount}"
+  }
+}

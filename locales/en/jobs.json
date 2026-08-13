@@ -1,0 +1,17 @@
+{
+  "jobs": {
+    "archeologist": "Archeologist",
+    "btn_show": "Show Jobs",
+    "crafter": "Crafter",
+    "farmer": "Farmer",
+    "fisher": "Fisherman",
+    "footer": "Global Level: {total} | Keep working!",
+    "gambler": "Gambler",
+    "hunter": "Hunter",
+    "menu_desc": "View your job levels and progress.",
+    "menu_title": "⚒️ Jobs \u0026 Skills",
+    "miner": "Miner",
+    "title": "📊 Skills",
+    "xp_line": "Lvl. {level} | XP: {xp}/{next}\n{bar}"
+  }
+}

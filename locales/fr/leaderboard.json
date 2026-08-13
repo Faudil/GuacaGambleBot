@@ -1,0 +1,24 @@
+{
+  "leaderboard": {
+    "btn_refresh": "Actualiser",
+    "empty": "Aucun joueur pour l'instant.",
+    "entry": "#{rank} {user} , ${balance}",
+    "glory_pts": "pts de Gloire",
+    "glory_title": "🌟 Classement de Gloire",
+    "menu_desc": "Top 10 des joueurs les plus riches par solde du portefeuille.",
+    "menu_title": "Classement",
+    "new_top_pet_desc": "Le familier **{pet_name}** {pet_emoji} de **{owner_name}** vient de prendre la première place du classement du serveur avec **{elo} ELO**!",
+    "new_top_pet_title": "🌟 NOUVEAU #1 AU CLASSEMENT ELO ! 🌟",
+    "no_glory": "Personne n'a de points de gloire pour l'instant !",
+    "no_money": "Personne n'a d'argent pour l'instant !",
+    "no_pets": "Personne n'a de familier classé pour l'instant !",
+    "pets_title": "🐾 Classement des Familiers (ELO)",
+    "role_added": "Le joueur est entré dans le Top 5 des familiers",
+    "role_name": "🌟 Maître des Familiers",
+    "role_reason": "Création automatique du rôle Top 5",
+    "role_removed": "Le joueur n'est plus dans le Top 5 des familiers",
+    "title": "Classement",
+    "unknown": "Inconnu",
+    "wealth_title": "🏆 Classement des plus riches"
+  }
+}

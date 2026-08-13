@@ -1,0 +1,19 @@
+{
+  "lore": {
+    "button_back": "← Retour",
+    "category_header": "{emoji} **{name}** , {found}/{total}",
+    "category_placeholder": "Choisis une catégorie à explorer...",
+    "codex_desc": "**Codex des Strates** , {found}/{total} fragments découverts",
+    "codex_title": "📖 Codex des Strates",
+    "footer": "Utilise !lore pour parcourir ta collection | {pct}% complété",
+    "fragment_found": "✅ **{title}** , {emoji}",
+    "fragment_locked": "❓ **???** , *{hint}*",
+    "select_hint_aether_log": "Trouvé en minant les strates profondes",
+    "select_hint_bonus": "Découvertes spéciales",
+    "select_hint_echo_shard": "Trouvé lors d'expéditions de familiers",
+    "select_hint_field_obs": "Trouvé en chassant",
+    "select_hint_root_whisper": "Trouvé en cultivant",
+    "select_hint_rust_memory": "Trouvé en excavant des fossiles",
+    "select_hint_tide_scroll": "Trouvé en pêchant"
+  }
+}

@@ -51,6 +51,9 @@ func (c *Cog) embed() *discordgo.MessageEmbed {
 				true),
 			components.Field("\U0001f4b0 Economy",
 				"`"+prefix+"economy` / `/economy` — Balance, daily, give\n"+
+					"`"+prefix+"daily` / `/daily` — Claim your daily reward\n"+
+					"`"+prefix+"bal` / `/bal` — Check your balance\n"+
+					"`"+prefix+"give @user 100` / `/give` — Send money\n"+
 					"`"+prefix+"bank` / `/bank` — Deposit / withdraw\n"+
 					"`"+prefix+"loan` / `/loan` — Borrow & repay\n"+
 					"`"+prefix+"jobs` / `/jobs` — Job levels & XP\n"+

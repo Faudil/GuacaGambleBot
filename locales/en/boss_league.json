@@ -1,0 +1,22 @@
+{
+  "boss_league": {
+    "achievement_unlocked": "🎖️ **Achievement Unlocked**: {name}!",
+    "already_champion": "🏆 You are already the Boss League Champion! There are no more opponents to fight.",
+    "challenge_footer": "Prepare your pet and fight!",
+    "champion": "🏆 **Boss League Champion** 🏆\nYou have defeated all the bosses and conquered the league! You are a master trainer!",
+    "defeat": "💀 **Defeat!** Your pet **{pet_name}** was defeated by **{boss_name}**.",
+    "fight_button": "Fight!",
+    "fight_hint": "💡 Press the button to challenge this boss!",
+    "fight_intro": "⚔️ **Challenge Accepted!** {pet_emoji} **{pet_name}** is challenging **{boss_name}** ({boss_emoji})!",
+    "locked": "🔒 You don't have any boss battle available yet. Raise a pet to level 20 to unlock the Boss League, or progress through the tutorial quest.",
+    "no_battle_step": "❌ No boss battle step is available here.",
+    "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
+    "pet_ko": "❌ Your active pet **{name}** is K.O.! Heal it first using `!heal`.",
+    "rewards_title": "🎁 Rewards Earned:",
+    "stage_info": "Stage {stage}/5 - **{name}**",
+    "stats_label": "Level: {level}\nSpecies: {species}\nHP: {hp} | Atk: {atk} | Def: {defense} | Speed: {speed}",
+    "title": "🏆 Boss League 🏆",
+    "try_again": "Train your pet and try again!",
+    "victory": "🎉 **Victory!** **{boss_name}** has been defeated!"
+  }
+}

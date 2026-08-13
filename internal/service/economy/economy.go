@@ -153,7 +153,7 @@ var (
 	ErrNoMoney  = errors.New("sender has insufficient funds")
 )
 
-// Give transfers amount from sender to recipient.
+// Give transfers amount from sender to recipient atomically.
 func (s *Service) Give(sender, recipient int64, amount int) (senderBal, recipientBal int, err error) {
 	if sender == recipient {
 		return 0, 0, ErrSelf
@@ -161,25 +161,9 @@ func (s *Service) Give(sender, recipient int64, amount int) (senderBal, recipien
 	if amount <= 0 {
 		return 0, 0, ErrAmount
 	}
-	bal, err := s.store.GetBalance(sender)
-	if err != nil {
-		return 0, 0, err
-	}
-	if bal < amount {
+	senderBal, recipientBal, err = s.store.Transfer(sender, recipient, amount)
+	if errors.Is(err, store.ErrInsufficientFunds) {
 		return 0, 0, ErrNoMoney
 	}
-	if _, err = s.store.UpdateBalance(sender, -amount); err != nil {
-		return 0, 0, err
-	}
-	rb, err := s.store.UpdateBalance(recipient, amount)
-	if err != nil {
-		// best-effort rollback of the sender's debit
-		_, _ = s.store.UpdateBalance(sender, amount)
-		return 0, 0, err
-	}
-	sb, err := s.store.GetBalance(sender)
-	if err != nil {
-		return 0, 0, err
-	}
-	return sb, rb, nil
+	return senderBal, recipientBal, err
 }

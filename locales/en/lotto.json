@@ -1,0 +1,17 @@
+{
+  "lotto": {
+    "announcement_alert": "🚨 **LOTTO ALERT**: {user} just won the JACKPOT of ${jackpot} !",
+    "daily_hausse_desc": "🌞 A new day rises!\nThe bank adds **${amount}** to the server pot.\n\n💰 **NEW JACKPOT: ${jackpot}**\nTo try your luck: `!lotto \u003cnumber between 1 and 100\u003e` (ticket price is {price})",
+    "daily_hausse_title": "📈 LOTTO: Daily Increase",
+    "invalid_number": "❌ Choose a number between 1 and 100.",
+    "jackpot_title": "🎰 JACKPOT !!! 🎰",
+    "jackpot_win_desc": "🎉 **INCREDIBLE!** {user} found the number **{number}** !\n\n💰 You win the server lotto pot of **${jackpot}** !\nThe lotto is reset. New jackpot: ${new_pot}.",
+    "no_money": "❌ Ticket costs ${price}. You're broke.",
+    "show_jackpot_desc": "The server jackpot is currently **${jackpot}** !\nTicket cost: ${price}",
+    "show_jackpot_footer": "Type !lotto \u003cnumber\u003e to play",
+    "show_jackpot_title": "💰 Lotto Pot",
+    "ticket_valid_desc": "You played **{number}**.\nToo bad, it's not the right number.\n\n📈 The Jackpot increases by **${added}** !\n💰 **Current Pot: {total}**",
+    "ticket_valid_footer": "Come back tomorrow for another try!",
+    "ticket_valid_title": "🎫 Ticket Validated"
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "items": {
+    "arc": {
+      "description": "Helps with hunting! Resets the !hunt cooldown.",
+      "name": "Bow"
+    },
+    "avoine": {
+      "description": "Perfect for breakfast.",
+      "name": "Oat"
+    },
+    "baleine": {
+      "description": "INCREDIBLE! Worth a fortune!",
+      "name": "Whale"
+    },
+    "base_use_msg": "This item ({item_name}) does nothing for now.",
+    "bière": {
+      "description": "The miner's drink! Resets the !mine cooldown.",
+      "name": "Beer"
+    },
+    "blé": {
+      "description": "Essential for making bread.",
+      "name": "Wheat"
+    },
+    "café": {
+      "description": "Wakes up your senses. Resets the !daily cooldown.",
+      "name": "Coffee"
+    },
+    "caillou": {
+      "description": "A useless pebble. Does nothing.",
+      "name": "Pebble"
+    },
+    "carpe": {
+      "description": "The best freshwater fish.",
+      "name": "Carp"
+    },
+    "cave_egg": {
+      "description": "A cavern-dark egg. Type !hatch to open it!",
+      "name": "Cave Egg"
+    },
+    "charbon": {
+      "description": "Not bad for keeping warm.",
+      "name": "Coal"
+    },
+    "citrouille": {
+      "description": "Perfect for Halloween.",
+      "name": "Pumpkin"
+    },
+    "data disk": {
+      "description": "A corrupted Zenith memory drive. Contains old logs from the Strata.",
+      "name": "Data Disk"
+    },
+    "desert_egg": {
+      "description": "A sun-scorched egg. Type !hatch to open it!",
+      "name": "Desert Egg"
+    },
+    "diamant brut": {
+      "description": "INCREDIBLE! Worth a fortune!",
+      "name": "Rough Diamond"
+    },
+    "emeraude": {
+      "description": "INCREDIBLE! Worth a fortune!",
+      "name": "Emerald"
+    },
+    "espadon": {
+      "description": "A majestic fighting fish.",
+      "name": "Swordfish"
+    },
+    "forest_egg": {
+      "description": "A forest-embraced egg. Type !hatch to open it!",
+      "name": "Forest Egg"
+    },
+    "fortune cookie": {
+      "description": "A delicious cookie with a predictive message.",
+      "name": "Fortune Cookie"
+    },
+    "fraise": {
+      "description": "Red, sweet, and juicy.",
+      "name": "Strawberry"
+    },
+    "fruit étoile": {
+      "description": "A cosmic fruit from another dimension.",
+      "name": "Starfruit"
+    },
+    "fève de cacao": {
+      "description": "The main ingredient of happiness (chocolate).",
+      "name": "Cocoa Bean"
+    },
+    "grain de café": {
+      "description": "Morning black gold.",
+      "name": "Coffee Bean"
+    },
+    "graine d'avoine": {
+      "description": "Needs to be planted to get oats (10 min).",
+      "name": "Oat Seed"
+    },
+    "graine de blé": {
+      "description": "Needs to be planted to get wheat (5 min).",
+      "name": "Wheat Seed"
+    },
+    "graine de cacao": {
+      "description": "Needs to be planted to get cocoa beans (12h).",
+      "name": "Cocoa Seed"
+    },
+    "graine de café": {
+      "description": "Needs to be planted to get coffee beans (8h).",
+      "name": "Coffee Seed"
+    },
+    "graine de citrouille": {
+      "description": "Needs to be planted to get pumpkins (4h).",
+      "name": "Pumpkin Seed"
+    },
+    "graine de fraise": {
+      "description": "Needs to be planted to get strawberries (18h).",
+      "name": "Strawberry Seed"
+    },
+    "graine de maïs": {
+      "description": "Needs to be planted to get corn (30 min).",
+      "name": "Corn Seed"
+    },
+    "graine de patate": {
+      "description": "Needs to be planted to get potatoes (1h).",
+      "name": "Potato Seed"
+    },
+    "graine de tomate": {
+      "description": "Needs to be planted to get tomatoes (2h).",
+      "name": "Tomato Seed"
+    },
+    "hameçon": {
+      "description": "Attracts fish! Resets the !fish cooldown.",
+      "name": "Hook"
+    },
+    "jeton de casino": {
+      "description": "Gives you a new chance, resets your !casino limit.",
+      "name": "Casino Token"
+    },
+    "maïs": {
+      "description": "Also makes popcorn!",
+      "name": "Corn"
+    },
+    "minerai d'argent": {
+      "description": "Useful for crafting solid things.",
+      "name": "Silver Ore"
+    },
+    "minerai de cuivre": {
+      "description": "Useful for crafting solid things.",
+      "name": "Copper Ore"
+    },
+    "minerai de fer": {
+      "description": "Useful for crafting solid things.",
+      "name": "Iron Ore"
+    },
+    "mountain_egg": {
+      "description": "A peak-born egg. Type !hatch to open it!",
+      "name": "Mountain Egg"
+    },
+    "ocean_egg": {
+      "description": "A deep-sea egg. Type !hatch to open it!",
+      "name": "Ocean Egg"
+    },
+    "old journal": {
+      "description": "A dusty notebook, handwritten by a survivor. The pages are covered in soot.",
+      "name": "Old Journal"
+    },
+    "parchemin d'identité": {
+      "description": "Randomly changes your nickname on the server.",
+      "name": "Identity Scroll"
+    },
+    "patate": {
+      "description": "You can make vodka out of it...",
+      "name": "Potato"
+    },
+    "pièce truquée": {
+      "description": "Increases your luck. Boosts your coinflip win chance to 75%.",
+      "name": "Rigged Coin"
+    },
+    "plante pourrie": {
+      "description": "You poorly managed your farm...",
+      "name": "Rotten Plant"
+    },
+    "platine": {
+      "description": "Shiny! Merchants love this.",
+      "name": "Platinum"
+    },
+    "poisson-globe": {
+      "description": "Watch out, it pricks!",
+      "name": "Pufferfish"
+    },
+    "pomme dorée": {
+      "description": "It glows with a magical aura.",
+      "name": "Golden Apple"
+    },
+    "potion d'oubli": {
+      "description": "Resets your pet. Resets its stomach and puts it back to level 10.",
+      "name": "Forget Potion"
+    },
+    "pépin de fruit étoile": {
+      "description": "Needs to be planted to get starfruits (48h).",
+      "name": "Starfruit Seed"
+    },
+    "pépin de pomme dorée": {
+      "description": "Needs to be planted to get golden apples (24h).",
+      "name": "Golden Apple Seed"
+    },
+    "pépite d'or": {
+      "description": "Shiny! Merchants love this.",
+      "name": "Gold Nugget"
+    },
+    "requin": {
+      "description": "INCREDIBLE! Worth a fortune!",
+      "name": "Shark"
+    },
+    "sardine": {
+      "description": "A small saltwater fish.",
+      "name": "Sardine"
+    },
+    "saumon": {
+      "description": "Perfect for making sushi.",
+      "name": "Salmon"
+    },
+    "tentacule de kraken": {
+      "description": "YOU FISHED A MONSTER?!",
+      "name": "Kraken Tentacle"
+    },
+    "terrain : potager": {
+      "description": "Allows you to work on your private vegetable patch.",
+      "name": "Vegetable Patch Deed"
+    },
+    "terrain : serre tropicale": {
+      "description": "Allows you to work in your tropical greenhouse.",
+      "name": "Greenhouse Deed"
+    },
+    "terrain : verger enchanté": {
+      "description": "Allows you to work in your celestial orchard.",
+      "name": "Orchard Deed"
+    },
+    "tomate": {
+      "description": "A fruit or a vegetable? The debate continues.",
+      "name": "Tomato"
+    },
+    "trophée de boss": {
+      "description": "A legendary trophy awarded to the first player to defeat the server's end-game boss.",
+      "name": "Boss Trophy"
+    },
+    "truite": {
+      "description": "A freshwater fish.",
+      "name": "Trout"
+    },
+    "tundra_egg": {
+      "description": "An ice-wrapped egg. Type !hatch to open it!",
+      "name": "Tundra Egg"
+    },
+    "vieille botte": {
+      "description": "A useless pebble. Does nothing.",
+      "name": "Old Boot"
+    },
+    "volcano_egg": {
+      "description": "A magma-infused egg. Type !hatch to open it!",
+      "name": "Volcano Egg"
+    }
+  }
+}

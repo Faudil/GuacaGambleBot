@@ -1,0 +1,20 @@
+{
+  "coinflip": {
+    "cheat_info": "💳 Bet: **${amount}** on **{choice}**.\n🕵️ You have a **Rigged Coin** in your pocket...",
+    "cheat_label": "🕵️ Use Rigged Coin (75%)",
+    "cheat_swap": "🕵️ *You discreetly swap the coin...*",
+    "choice_error": "❌ Choose **heads** or **tails**.",
+    "invalid_bet": "❌ Invalid bet.",
+    "legit_choice": "🎲 You decide to play fair.",
+    "legit_label": "🎲 Play Fair (50%)",
+    "lose_cheat": " (Even while cheating?! Shameful...)",
+    "lose_msg": "❌ **YOU LOST...** The coin lands on **{result}**.",
+    "max_bet": "❌ You cannot bet more than $2000.",
+    "no_money": "❌ Not enough money.",
+    "spinning": "🪙 The coin is spinning in the air...",
+    "start_msg": "🎲 Here we go! **{choice}** for **${amount}**...",
+    "win_cheat": " (Thanks to cheating 😉)",
+    "win_msg": "✨ **YOU WIN!** The coin lands on **{result}**.",
+    "xp_gain": " You gained {xp} xp"
+  }
+}

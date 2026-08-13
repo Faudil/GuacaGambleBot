@@ -1,7 +1,6 @@
 package store
 
 import (
-	"encoding/json"
 	"time"
 
 	"gorm.io/gorm"
@@ -102,11 +101,6 @@ func (s *Store) GetFallenPlayersOnFloor(guildID, floor int64, limit int) ([]mode
 	err := s.DB.Where("guild_id = ? AND floor = ? AND status = 'fallen'", guildID, floor).
 		Order("RANDOM()").Limit(limit).Find(&sessions).Error
 	return sessions, err
-}
-
-func MarshalJSON(v any) string {
-	b, _ := json.Marshal(v)
-	return string(b)
 }
 
 func (s *Store) AddItemRaw(db *gorm.DB, userID int64, itemID string, quantity int) error {

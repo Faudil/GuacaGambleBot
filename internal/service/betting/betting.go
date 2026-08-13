@@ -114,14 +114,10 @@ func (s *Service) PlaceBet(userID, betID int64, choice string, amount int) error
 	if bet.Status == "FROZEN" {
 		return ErrFrozen
 	}
-	bal, err := s.store.GetBalance(userID)
-	if err != nil {
-		return err
-	}
-	if bal < amount {
-		return ErrNoMoney
-	}
-	if _, err := s.store.UpdateBalance(userID, -amount); err != nil {
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return ErrNoMoney
+		}
 		return err
 	}
 	if err := s.store.DB.Create(&model.Wager{

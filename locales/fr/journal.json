@@ -1,0 +1,126 @@
+{
+  "journal": {
+    "btn_back": "Retour au journal",
+    "btn_leaderboard": "Classement",
+    "completed": "🎉 Récemment accompli :",
+    "desc": "Ton histoire, ton rythme. Accomplis des jalons pour progresser dans chaque voie. Rien ici n'est obligatoire — suis ce qui te plaît.",
+    "error": "❌ Impossible de charger ton journal. Réessaie.",
+    "lb_desc": "Meilleure progression de chaque voie :",
+    "lb_entry": "**{rank}.** {user} — {name} ({step} étapes)",
+    "mastery": {
+      "announce_desc": "Toutes les voies accomplies. Tous les jalons conquis. Une nouvelle légende s'est écrite dans les chroniques de ce monde !",
+      "announce_title": "🏆 **{user} a maîtrisé le Journal !**",
+      "desc": "Tu as maîtrisé toutes les voies du journal. Une légende murmurée uniquement à ceux qui accomplissent tout — porte-la fièrement.",
+      "title": "🏆 La Légende de la Maîtrise"
+    },
+    "path_complete": "— voie maîtrisée !",
+    "paths": {
+      "builder": {
+        "desc": "Maison, meubles, soin des familiers, communauté.",
+        "step1": "Posséder une maison",
+        "step2": "Améliorer ta maison au niveau 2",
+        "step3": "Placer 3 meubles",
+        "step4": "Construire un sanctuaire",
+        "step5": "Nourrir tes familiers 20 fois",
+        "step6": "Contribuer 100 aux projets communautaires",
+        "step7": "Terminer un projet de recherche",
+        "step8": "Contribuer 1 000 aux projets communautaires",
+        "title": "Bâtisseur"
+      },
+      "champion": {
+        "desc": "Duels, chasses, familiers, boss, donjon.",
+        "step1": "Gagner 5 duels PvP",
+        "step2": "Gagner 15 chasses",
+        "step3": "Élever un familier au niveau 10",
+        "step4": "Vaincre 2 étages de la Ligue des Boss",
+        "step5": "Vaincre un boss de zone de chasse",
+        "step6": "Terminer une run de donjon",
+        "step7": "Atteindre le niveau de personnage 25",
+        "step8": "Devenir Champion de la Ligue des Boss",
+        "title": "Champion"
+      },
+      "highroller": {
+        "desc": "Coinflip, machines, blackjack, roulette, loto.",
+        "step1": "Jouer 15 coinflips",
+        "step2": "Gagner 5 parties de machines à sous",
+        "step3": "Gagner 3 parties de blackjack",
+        "step4": "Participer à 3 tirages de loto",
+        "step5": "Jouer 10 parties de roulette russe",
+        "step6": "Gagner un pari que tu as créé",
+        "step7": "Gagner 2 wagers",
+        "step8": "Gagner 10 000 au total au casino",
+        "title": "Gros Parieur"
+      },
+      "historian": {
+        "desc": "Fragments de lore, fossiles, recherches et secrets.",
+        "step1": "Découvrir 5 fragments de lore",
+        "step2": "Déterrer 10 fossiles",
+        "step3": "Terminer un projet de recherche",
+        "step4": "Découvrir 20 fragments de lore",
+        "step5": "Obtenir 25 succès",
+        "step6": "Découvrir 3 secrets de PNJ",
+        "step7": "Atteindre le niveau de réputation 5 avec un PNJ",
+        "step8": "Découvrir 45 fragments de lore",
+        "title": "Historien"
+      },
+      "hunter": {
+        "desc": "Zones de chasse, bosses de zone et trophées.",
+        "step1": "Gagner 5 chasses",
+        "step2": "Débloquer 3 zones de chasse",
+        "step3": "Vaincre 3 bosses de zone",
+        "step4": "Gagner 25 chasses",
+        "step5": "Vaincre 10 bosses de zone",
+        "step6": "Vaincre le Dragon de la Volcan",
+        "step7": "Vaincre le boss de chaque zone de chasse",
+        "step8": "Vaincre 100 bosses de zone",
+        "title": "Chasseur"
+      },
+      "merchant": {
+        "desc": "Gagne, échange, banque et investis.",
+        "step1": "Gagner 1 000 au total",
+        "step2": "Vendre 20 objets au marché",
+        "step3": "Acheter 20 objets au marché",
+        "step4": "Déposer 2 000 à la banque",
+        "step5": "Posséder une maison",
+        "step6": "Contribuer 500 aux projets communautaires",
+        "step7": "Gagner 10 000 au total",
+        "step8": "Détenir 100 000 en bourse",
+        "title": "Prince Marchand"
+      },
+      "prospector": {
+        "desc": "Mine, pêche, culture, chasse et fouille.",
+        "step1": "Miner 25 minerais",
+        "step2": "Pêcher 25 poissons",
+        "step3": "Récolter 25 cultures",
+        "step4": "Gagner 10 chasses",
+        "step5": "Miner 150 minerais, ou pêcher 100 poissons, ou récolter 100 cultures",
+        "step6": "Déterrer 15 fossiles",
+        "step7": "Miner 300 minerais, pêcher 200 poissons ET récolter 200 cultures",
+        "title": "Prospecteur"
+      },
+      "shadow": {
+        "desc": "Vol, notoriété et infamie.",
+        "step1": "Commettre ton premier vol réussi",
+        "step2": "Réussir 5 vols",
+        "step3": "Atteindre 50 de notoriété",
+        "step4": "Réussir 15 vols",
+        "step5": "Atteindre 50 d'infamie de voleur",
+        "step6": "Réussir 30 vols",
+        "step7": "Porter le Masque de Malveillance",
+        "title": "Ombre"
+      }
+    },
+    "ranks": {
+      "0": "Non classé",
+      "1": "Apprenti",
+      "2": "Compagnon",
+      "3": "Expert",
+      "4": "Maître"
+    },
+    "reward": {
+      "crowns": "{amount}👑",
+      "money": "{amount}💰"
+    },
+    "title": "📖 Journal"
+  }
+}

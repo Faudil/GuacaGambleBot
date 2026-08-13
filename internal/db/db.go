@@ -85,6 +85,7 @@ func Migrate(db *gorm.DB) error {
 		&model.UserFarming{},
 		&model.UserQuest{},
 		&model.UserQuestData{},
+		&model.QuestNotification{},
 		&model.UserNPCReputation{},
 		&model.UserNPCDailyRep{},
 		&model.UserNPCSecret{},

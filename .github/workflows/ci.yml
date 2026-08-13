@@ -1,58 +1,78 @@
-name: Deploy to server
+name: CI
 
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
-  test-and-deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@40f1582b2485089dde7abd97c1529aa768e1baff
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
         with:
           go-version: '1.26'
 
+      - name: Format check
+        run: |
+          unformatted=$(gofmt -l cmd internal tools)
+          if [ -n "$unformatted" ]; then
+            echo "Files need gofmt:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
       - name: Test
-        run: go test ./... -count=1
+        run: go test ./... -count=1 -race
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@40f1582b2485089dde7abd97c1529aa768e1baff
+
+      # Build the .env on the runner and transfer it as a file, so the token is
+      # never interpolated into a shell command line on the production host.
+      - name: Prepare .env bundle
+        run: |
+          printf 'DISCORD_TOKEN=%s\nTZ=Europe/Paris\n' "$DISCORD_TOKEN" > .env
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
 
       - name: Copy files via SCP
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.OVH_HOST }}
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
-          # We only copy the necessary files
-          source: "cmd,internal,go.mod,go.sum,Dockerfile,docker-compose.yml,locales"
+          # Only the files needed to build and run are transferred.
+          source: "cmd,internal,go.mod,go.sum,Dockerfile,docker-compose.yml,locales,.env"
           target: "~/guacabot"
 
-      # Step 2: Connect to build and run
       - name: Deploy on Server via SSH
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           host: ${{ secrets.OVH_HOST }}
           username: ${{ secrets.OVH_USERNAME }}
           key: ${{ secrets.OVH_SSH_KEY }}
           script: |
-            # Go to the folder
+            set -euo pipefail
             cd ~/guacabot
-            
-            # Backup the database before redeploy
+
+            # Backup the database before redeploy.
             mkdir -p ./data/backups
             cp ./data/guacabot_go.db ./data/backups/guacabot_go.db.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
-            
-            # Create the .env file dynamically using the GitHub Secret
-            # This ensures your token is never exposed in the repo
-            echo "DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}" > .env
-            echo "TZ=Europe/Paris" >> .env
 
-            # Build and Start the container
-            # -d = Detached (background)
-            # --build = Rebuild the image with new code
-            sudo docker-compose up -d --build
-
-            sudo docker image prune -f
+            # Build and start the container.
+            docker compose up -d --build
+            docker image prune -f

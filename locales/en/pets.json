@@ -1,0 +1,388 @@
+{
+  "pets": {
+    "battle": {
+      "accept_label": "Accept Duel",
+      "accepted_msg": "🔥 **Challenge accepted!** Preparing the arena...",
+      "arena_intro": "🔥 *The crowd holds its breath...*",
+      "arena_log_title": "📜 **Combat in progress:**\n\n",
+      "arena_title": "⚔️ PET ARENA ⚔️",
+      "bet_msg": "\n💰 **Bet: {bet} $** (Winner takes all!)",
+      "challenge_msg": "⚔️ {opponent}, **{challenger}** challenges you to a duel with their **{pet}**!",
+      "pick_opponent": "⚔️ **{challenger}** wants to duel with **{pet}**! Choose your opponent:",
+      "decline_label": "Refuse",
+      "draw_footer": "🤝 DRAW! Turn limit reached.",
+      "draw_msg": "\n\n💨 *Both pets collapse from exhaustion...*\n",
+      "elo_update_line": "\n{emoji} {name} : **{elo}** ({diff})",
+      "elo_update_title": "\n📊 **Ranking Update (ELO):**",
+      "master_label": "Master: {name}",
+      "money_spent_cancel": "❌ One of the players spent their money before the fight started. Canceled!",
+      "no_money_challenger": "❌ You don't have enough money to bet **{bet} $**.",
+      "no_money_opponent": "❌ {name} doesn't have the necessary funds to follow this bet.",
+      "opponent_no_pet": "❌ {name} has no active pet!",
+      "opponent_pet_ko": "❌ {name}'s pet is K.O.!",
+      "pet_ko": "❌ Your pet **{name}** is K.O.! Use `!feed`.",
+      "pet_ko_msg": "\n\n💀 **{name} is K.O.!**\n",
+      "refund_msg": "\n💰 Bets ({bet} $) have been refunded.",
+      "refused_msg": "🏃 **{name}** refused the fight.",
+      "timeout_msg": "⏳ **The challenge has expired.**",
+      "victory_footer": "🏆 {name} WINS!",
+      "vs": "VS",
+      "win_pot_msg": "\n💰 **{name} wins the pot of {pot} $!**",
+      "wrong_opponent": "❌ This challenge is not for you!"
+    },
+    "bond": {
+      "milestone_100": "✨ **{name}** is part of your soul. No words are needed , you understand each other completely.",
+      "milestone_25": "💕 **{name}** starts to trust you. A quiet understanding forms between you.",
+      "milestone_50": "❤️ **{name}** has become more than a pet , you're partners now. It responds to your mood.",
+      "milestone_75": "💖 The bond with **{name}** is unbreakable. It would follow you anywhere.",
+      "personality_changed": "🌀 **{name}** underwent a mysterious transformation... It's now **{new}**! (was **{old}**)"
+    },
+    "delete": {
+      "cancel_btn": "Cancel",
+      "confirm_btn": "🕊️ Set Free",
+      "confirm_desc": "{emoji} **{name}** ({rarity} · Lvl {level}) will be set free forever.\n\nThis **cannot be undone**!",
+      "confirm_title": "🕊️ Release your pet?",
+      "error": "❌ Something went wrong while releasing your pet. Please try again.",
+      "success_desc": "{emoji} **{name}** has been set free. It trots happily into the wilderness...\n\nGoodbye, friend.",
+      "success_title": "🕊️ {name} is free!"
+    },
+    "detail": {
+      "back": "← Back",
+      "btn_activate": "⭐ Activate",
+      "btn_active": "✅ Active",
+      "btn_battle": "⚔️ Battle",
+      "btn_feed": "🍖 Feed",
+      "btn_heal": "🏥 Heal",
+      "btn_name": "Name",
+      "btn_rename": "Rename",
+      "btn_skills": "⚡ Skills",
+      "combat": "🛡️ Combat",
+      "history": "📜 Recent History",
+      "precision": "🎯 Precision",
+      "progression": "📈 Progression",
+      "skills": "💡 Skills"
+    },
+    "equip": {
+      "fail": "❌ Unable to equip this pet. Are you sure you own it?",
+      "success": "✅ Pet equipped successfully!"
+    },
+    "feed": {
+      "error": "❌ Something went wrong while feeding your pet. Please try again.",
+      "forget_fail": "❌ Your pet must be level 20 to drink this potion!",
+      "forget_success": "🍶 You gave the forgetting potion, it is now level 10 and stats are reset.",
+      "full": "🛑 **{name}** is full! It has reached its maximum food potential ({current}/{max}).",
+      "item_not_found": "❌ Item **{name}** does not exist.",
+      "menu_desc": "Each meal permanently strengthens your pet.\n🍽️ Fed: **{current}/{max}**",
+      "menu_placeholder": "Choose a food or ingredient...",
+      "menu_title": "🍖 What will you feed {name}?",
+      "miam_desc": "You gave **1x {item}** to {emoji} **{name}**.\n\n✨ **EFFECT:** {stat} {sign}{amount}\n\n📊 *Stomach: {food} / {max_food}*",
+      "miam_title": "🍖 Yummy!",
+      "no_food": "❌ You have nothing to feed **{name}**!\n\nGather ingredients (**fish, crops, ores**) to feed it directly, or craft proper meals with `!craft`.",
+      "no_inventory": "❌ You don't have **{name}** in your inventory!",
+      "no_item": "❌ You must specify what to give. Example: `!feed Salmon`",
+      "refuse": "🤢 **{name}** sniffs the **{item}** and refuses to eat it. It's not nourishing.",
+      "stats": {
+        "acc": "ACC",
+        "atk": "ATK",
+        "crit_c": "Crit Chance",
+        "crit_d": "Crit Damage",
+        "defense": "DEF",
+        "dge": "DGE",
+        "max_hp": "Max HP",
+        "speed": "SPD"
+      },
+      "success": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat} · 💕 +{bond} bond)\n🍽️ Fed: **{current}/{max}**",
+      "success_bond": "🍬 **{name}** savored the **{item}**! 💕 +{bond} bond",
+      "success_raw": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat})\n🍽️ Fed: **{current}/{max}**"
+    },
+    "hatch": {
+      "error": "❌ Something went wrong while hatching! Please try again.",
+      "hatching_title": "🥚 Hatching in progress...",
+      "no_egg": "❌ You don't have a biome egg in your inventory! Hunt for one or buy at the `!shop`.",
+      "no_slots": "❌ You don't have enough pet slots! You can only have {max} pets at once.",
+      "step1": "The **{egg}** trembles...\n*Crack...*",
+      "step1_footer": "✨ Rarity: {rarity}",
+      "step2": "The shell breaks!\n*CRACK CRACK...*",
+      "step2_personality": "A **{personality}** presence stirs inside...",
+      "success_desc": "{emoji} A **{egg}** hatches!\n**{emoji} {pet}** emerges!\n{biome} | {type} | Lvl 1 | {personality}\n\n🌟 **Rarity:** {rarity}\n\nUse `/pets` to see your new companion!",
+      "success_title": "{emoji} A NEW COMPANION!"
+    },
+    "heal": {
+      "error": "❌ Something went wrong while healing your pet. Please try again.",
+      "full_hp": "✨ **{name}** is already in top shape!",
+      "no_money": "❌ You don't have enough money to pay for healing! Price: {price}$",
+      "on_expedition": "❌ **{name}** is on an expedition! Wait for it to return before healing.",
+      "success": "🏥 **{name}** rested well and recovered **{hp} HP**! HP is now at maximum. (you paid {price}$)"
+    },
+    "interact": {
+      "default_detail": "💕 You spend quality time with **{name}**. The bond grows stronger.",
+      "explore_together": {
+        "choices": {
+          "explore": {
+            "detail": "You explore the unknown with **{name}** by your side. Nothing can stop this team!",
+            "label": "Explore together"
+          },
+          "follow": {
+            "detail": "You let **{name}** take the lead. It puffs with pride and guides you somewhere new.",
+            "label": "Let it lead the way"
+          },
+          "rest": {
+            "detail": "You take a break with **{name}** and enjoy a quiet moment together.",
+            "label": "Take a break"
+          }
+        },
+        "intro": "**{name}** looks at you with an adventurous glint in its eyes.",
+        "intro.brave": "**{name}** puffs out its chest and gestures toward the unknown with unmatched courage.",
+        "intro.curious": "**{name}** stares intently at a distant hill, then looks at you, then back at the hill. The message is clear.",
+        "intro.fierce": "**{name}** snarls at the wilderness, ready to conquer whatever lies beyond.",
+        "intro.gentle": "**{name}** gently nudges you toward a flower-filled meadow it discovered.",
+        "intro.grumpy": "**{name}** mutters something under its breath but starts walking, checking you're following.",
+        "intro.loyal": "**{name}** stays by your side but keeps glancing at a path it wants to explore together.",
+        "intro.mischievous": "**{name}** pretends to run away, then circles back behind you and scares you playfully.",
+        "intro.playful": "**{name}** dashes toward the horizon, stops, looks back, dashes further , a clear invitation!",
+        "intro.sleepy": "**{name}** yawns, stretches, and points a paw at a nearby cave before yawning again.",
+        "intro.timid": "**{name}** peeks around a corner, ears perked, then hides behind your legs."
+      },
+      "grooming": {
+        "choices": {
+          "bath": {
+            "detail": "Bath time! **{name}** splashes everywhere but emerges clean and fluffy.",
+            "label": "Give a bath"
+          },
+          "brush": {
+            "detail": "You brush **{name}**'s coat until it shines. It practically purrs with happiness.",
+            "label": "Brush its fur"
+          },
+          "massage": {
+            "detail": "You massage **{name}**'s tired muscles. It melts into a puddle of relaxation.",
+            "label": "Give a massage"
+          }
+        },
+        "intro": "**{name}** seems to be asking for some grooming attention.",
+        "intro.brave": "**{name}** returns from battle covered in scars and dirt, standing proudly , but could use a clean.",
+        "intro.curious": "**{name}** examines its own reflection in a puddle and tries to fix its messy fur.",
+        "intro.fierce": "**{name}** growls at a brush, then reluctantly allows a single stroke.",
+        "intro.gentle": "**{name}** sits down and looks at you, then at its fur, then back at you with hopeful eyes.",
+        "intro.grumpy": "**{name}** has leaves stuck in its fur. It pretends not to care, but keeps glancing at them.",
+        "intro.loyal": "**{name}** brings you a brush and sits perfectly still, trusting you completely.",
+        "intro.mischievous": "**{name}** shakes vigorously right next to you, spraying water everywhere, then grins.",
+        "intro.playful": "**{name}** rolls in the mud, then proudly presents its filthy self to you.",
+        "intro.sleepy": "**{name}** has bedhead and doesn't seem to notice. Or care.",
+        "intro.timid": "**{name}** approaches with a tangled coat, looking embarrassed."
+      },
+      "invalid": "❌ Invalid choice!",
+      "placeholder": "What do you do?",
+      "play_time": {
+        "choices": {
+          "fetch": {
+            "detail": "You throw the stick. **{name}** zooms after it, returning with tail wagging furiously!",
+            "label": "Play fetch"
+          },
+          "ignore": {
+            "detail": "You gently pet **{name}**, and it leans into your hand, perfectly content.",
+            "label": "Pet it gently"
+          },
+          "tug": {
+            "detail": "You engage in an epic tug of war. **{name}** pulls with all its might, and you let it win.",
+            "label": "Tug of war"
+          }
+        },
+        "intro": "**{name}** drops a stick at your feet and looks up at you expectantly!",
+        "intro.brave": "**{name}** stands tall and presents a stick like a warrior offering a sacred sword!",
+        "intro.curious": "**{name}** tilts its head and presents a strange object it found, waiting for your reaction.",
+        "intro.fierce": "**{name}** drops a chewed-up stick and growls playfully, challenging you to a game!",
+        "intro.gentle": "**{name}** gently places its favorite toy in your lap and looks at you with trusting eyes.",
+        "intro.grumpy": "**{name}** sighs dramatically and nudges a toy toward you with a reluctant paw.",
+        "intro.loyal": "**{name}** brings you its most prized possession , a shiny rock it's been saving.",
+        "intro.mischievous": "**{name}** darts around you in circles, then pretends to hide something behind its back.",
+        "intro.playful": "**{name}** drops a stick at your feet and wags excitedly, eyes sparkling with anticipation!",
+        "intro.sleepy": "**{name}** half-opens one eye, weakly wagging a toy while clearly half-asleep.",
+        "intro.timid": "**{name}** places a small leaf at your feet, then hides behind a bush, peeking out nervously."
+      },
+      "rescue": {
+        "choices": {
+          "investigate": {
+            "detail": "You and **{name}** carefully investigate. It turns out to be a false alarm, but you're glad you checked.",
+            "label": "Investigate together"
+          },
+          "retreat": {
+            "detail": "You wisely retreat with **{name}**. Safety first , there will be other battles.",
+            "label": "Retreat to safety"
+          },
+          "stand_together": {
+            "detail": "You stand shoulder to shoulder with **{name}** against the unknown. United, you're unstoppable.",
+            "label": "Stand together"
+          }
+        },
+        "intro": "**{name}** senses danger and takes a protective stance.",
+        "intro.brave": "**{name}** runs to you, then turns and growls at something in the bushes. Something is out there.",
+        "intro.curious": "**{name}** discovered a trapped animal and is trying to free it, looking at you for help.",
+        "intro.fierce": "**{name}** bares its teeth at a shady figure lurking nearby. It won't back down.",
+        "intro.gentle": "**{name}** found a wounded little creature and gently nudges it toward you for help.",
+        "intro.grumpy": "**{name}** sighs and deals with the threat efficiently, then gives you a 'you owe me' look.",
+        "intro.loyal": "**{name}** blocks your path, refusing to let you proceed. Danger ahead.",
+        "intro.mischievous": "**{name}** pranks the threat so thoroughly it runs away confused and embarrassed.",
+        "intro.playful": "**{name}** thinks the dangerous situation is a game. You need to handle this carefully.",
+        "intro.sleepy": "**{name}** yawns, lazily scares off the threat with a single look, then goes back to napping.",
+        "intro.timid": "**{name}** tremblingly stands between you and a strange creature, protecting you despite its fear."
+      },
+      "snack_time": {
+        "choices": {
+          "cook": {
+            "detail": "You whip up something delicious. **{name}** watches every step, drooling slightly.",
+            "label": "Cook something special"
+          },
+          "feed_treat": {
+            "detail": "You give **{name}** a special treat. It savors every bite, looking at you with pure gratitude.",
+            "label": "Give a treat"
+          },
+          "share_meal": {
+            "detail": "You share your meal with **{name}**. It wags happily , sharing is caring!",
+            "label": "Share your meal"
+          }
+        },
+        "intro": "**{name}** looks at you with big, hopeful eyes near the food bowl.",
+        "intro.brave": "**{name}** bravely faces the empty bowl, determined to wait for its next meal without complaint.",
+        "intro.curious": "**{name}** sniffs the air and follows an invisible scent trail, eventually ending up at its food bowl.",
+        "intro.fierce": "**{name}** attacks its food bowl with relentless fury, winning the battle bite by bite.",
+        "intro.gentle": "**{name}** waits politely by its bowl, never rushing, always grateful.",
+        "intro.grumpy": "**{name}** glares at its food bowl, then at you, clearly unimpressed with today's menu.",
+        "intro.loyal": "**{name}** saves half its food and pushes the bowl toward you, offering to share.",
+        "intro.mischievous": "**{name}** tips its bowl over, then acts surprised, as if it magically emptied itself.",
+        "intro.playful": "**{name}** pats its empty food bowl and gives you the most dramatic hungry eyes you've ever seen!",
+        "intro.sleepy": "**{name}** sleepwalks to the food bowl, eats while napping, then wanders back.",
+        "intro.timid": "**{name}** approaches its bowl hesitantly, looking back at you for reassurance before eating."
+      },
+      "title": "💬 {name} wants your attention!",
+      "training": {
+        "choices": {
+          "praise": {
+            "detail": "You heap praise on **{name}**. It puffs up with pride, happier than any treat could make it.",
+            "label": "Praise its effort"
+          },
+          "spar": {
+            "detail": "You spar with **{name}**. It's getting faster, stronger , your training is paying off!",
+            "label": "Spar with it"
+          },
+          "teach": {
+            "detail": "You teach **{name}** a new trick. It concentrates hard and eventually nails it!",
+            "label": "Teach a new move"
+          }
+        },
+        "intro": "**{name}** wants to train and is looking at you expectantly.",
+        "intro.brave": "**{name}** strikes a fighting pose and challenges you to a sparring match!",
+        "intro.curious": "**{name}** watches your movements carefully, trying to learn new techniques.",
+        "intro.fierce": "**{name}** is panting heavily, but its eyes burn with the desire to keep training.",
+        "intro.gentle": "**{name}** spars gently, pulling its punches to avoid hurting you.",
+        "intro.grumpy": "**{name}** grumbles but gets into position. Fine. ONE more round.",
+        "intro.loyal": "**{name}** mimics your every move perfectly, wanting to make you proud.",
+        "intro.mischievous": "**{name}** keeps trying to trip you during training, giggling each time.",
+        "intro.playful": "**{name}** turns training into a game, bouncing around you with endless energy.",
+        "intro.sleepy": "**{name}** falls asleep mid-training session, snoring cutely.",
+        "intro.timid": "**{name}** is shaking but stands its ground, determined to improve."
+      }
+    },
+    "list": {
+      "active": "✅ Active",
+      "footer": "Select a pet below to view its details, feed it, or send it to battle.",
+      "hatch_btn": "🥚 Hatch an Egg",
+      "inactive": "🔄 Inactive",
+      "no_pets": "🐾 You have no pets yet!\n\n**Getting started:**\n1️⃣ `/start` — begin the tutorial (grants a starter egg)\n2️⃣ `/hatch` — hatch an egg from your inventory\n3️⃣ `/pets` — select your new companion\n\nOr buy biome eggs at the `!shop`!",
+      "select_placeholder": "Select a pet to manage...",
+      "title": "🐾 {name}'s Menagerie"
+    },
+    "personality": {
+      "brave": "⚔️ Brave",
+      "curious": "🔍 Curious",
+      "desc_brave": "Bold and fearless in battle.",
+      "desc_curious": "Always exploring and finding new things.",
+      "desc_fierce": "Aggressive and relentless in combat.",
+      "desc_gentle": "Soft-hearted and caring.",
+      "desc_grumpy": "Easily annoyed but deeply loyal.",
+      "desc_loyal": "Devoted companion that never wavers.",
+      "desc_mischievous": "Loves pranks and causing harmless trouble.",
+      "desc_playful": "Full of energy and always up for fun.",
+      "desc_sleepy": "Always napping, but surprisingly resilient.",
+      "desc_timid": "Skittish but quick on its feet.",
+      "fierce": "🔥 Fierce",
+      "gentle": "🤲 Gentle",
+      "grumpy": "😤 Grumpy",
+      "loyal": "❤️ Loyal",
+      "mischievous": "😈 Mischievous",
+      "playful": "🎾 Playful",
+      "sleepy": "💤 Sleepy",
+      "timid": "😰 Timid"
+    },
+    "play": {
+      "level_up": "🎉 **LEVEL UP!** {name} is now level {level} and gains stats!",
+      "no_pet": "❌ You have no active pet!",
+      "success": "🎾 You played with **{name}**. It gains +{xp} XP."
+    },
+    "rename": {
+      "input_label": "Pet name",
+      "input_placeholder": "Enter a name (max 20 characters)",
+      "modal_title": "Name your pet",
+      "success": "🏷️ Your active pet is now named **{name}**!",
+      "too_long": "❌ This name is too long (Max 20 characters)."
+    },
+    "sell": {
+      "accepted_msg": "🎉 **Transaction accepted!** Transferring pet...",
+      "buy_label": "Buy",
+      "buyer_no_money": "❌ {name} doesn't have enough money to buy this pet ({price} $).",
+      "buyer_no_money_ephemeral": "❌ You don't have enough money to buy this pet!",
+      "fail_no_money": "❌ Transaction failed: {name} no longer has enough money.",
+      "invalid_price": "❌ Price must be positive!",
+      "not_owned": "❌ This pet doesn't belong to you or doesn't exist!",
+      "offer_desc": "**{seller}** offers to sell their pet to {buyer}:\n\n{emoji} **{nickname}** (ID: `{id}`)\n**Species:** {type}\n**Rarity:** {rarity}\n**Level:** {level}\n**Bonus:** {bonus}\n**ELO:** {elo}\n\n💰 **Asking Price: {price} $**",
+      "offer_received": "{buyer}, you received an offer from {seller}!",
+      "offer_title": "📜 Pet Sale Offer",
+      "refuse_label": "Refuse",
+      "refused_msg": "✖️ **{name}** refused the offer.",
+      "self_sell": "❌ You cannot sell a pet to yourself!",
+      "success_desc": "**{buyer}** bought {emoji} **{nickname}** from **{seller}** for **{price} $**.\nTake good care of it!",
+      "success_title": "🤝 Transaction Successful!",
+      "timeout_msg": "⏳ **The offer has expired.**",
+      "wrong_buyer": "❌ This offer is not for you!"
+    },
+    "skills": {
+      "choose_desc": "Pick a skill for your pet! You can reset them later with a Skill Scroll.",
+      "choose_title": "⚡ Choose a Skill , Level {level}",
+      "error": "❌ Failed to learn that skill.",
+      "learned": "⭐ Your pet learned **{name}**!",
+      "maxed": "❌ Your pet already knows all 5 skills!",
+      "no_points": "❌ Your pet has no skill points available! It needs to level up.",
+      "none_available": "❌ No skills are available for your pet's rarity.",
+      "select": "Select a skill..."
+    },
+    "stats": {
+      "attr_title": "Combat Attributes",
+      "attr_val": "**{hp_label} :** `{hp} / {max_hp}`\n**{atk_label} :** `{atk}`\n**{def_label} :** `{def}`\n**{spd_label} :** `{spd}`\n**{dge_label} :** `{dge}%`\n**{acc_label} :** `{acc}%`\n**{crit_c_label} :** `{crit_c}%`\n**{crit_d_label} :** `{crit_d}x`\n**{spc_c_label} :** `{spc_c}x`\n**{trs_lvl_label} :** `{trs_lvl}x`\n",
+      "desc": "**Type:** {type} | **Level:** {level} | **XP:** {xp}\n**Bonus:** {bonus} ({bonus_val}%)\n{elo}",
+      "elo_locked": "You unlock elo ranking starting from level 5",
+      "elo_rank": "**ELO:** {elo} 🏆 | **Rank:** {rank} (Progress: {progress}%)",
+      "elo_top": "**ELO:** {elo} 🏆 | **Rank:** {rank}",
+      "footer": "Stomach: {food} / {max_food} | Rarity: {rarity}",
+      "title": "📊 {name}'s Stats {emoji}"
+    },
+    "tradeup": {
+      "different_rarity": "❌ All exchanged pets must be of the same rarity!",
+      "duplicate_ids": "❌ You cannot use the same pet multiple times in the exchange!",
+      "legendary_max": "❌ Legendary pets cannot be exchanged for a higher rarity!",
+      "no_ids": "❌ You must specify the IDs of the pets to exchange. Example: `!tradeup 12 15 18 20 22`",
+      "not_owned": "❌ Pet with ID `{id}` doesn't belong to you.",
+      "pet_active": "❌ Pet with ID `{id}` is your active pet! Unequip it before exchanging.",
+      "pet_not_found": "❌ Pet with ID `{id}` does not exist.",
+      "success_desc": "Your pets merged in a dazzling light!\n\nCongratulations! You obtained a {emoji} **{name}**!\n\n🌟 **Rarity:** {rarity}\n⚡ **Passive Bonus:** {bonus}\n\nType `!pets` to see your collection and equip it.",
+      "success_title": "✨ TRADE-UP SUCCESSFUL!",
+      "wrong_count": "❌ Need **{req}** {rarity} pets to obtain an {target}. You selected {count}."
+    },
+    "transcend": {
+      "level_low": "❌ Your pet **{name}** must be level 20 to transcend.",
+      "no_pet": "❌ You don't have an active pet!",
+      "same_pet": "❌ You can't consume the pet you are trying to transcend!",
+      "success": "✨ **TRANSCENDENCE COMPLETED!** ✨\nYour pet **{name}** is now TRS Level **{level}**!",
+      "target_not_found": "❌ Consumed pet (ID: {id}) not found in your collection.",
+      "wrong_type": "❌ The consumed pet must be a **{type}** (the same as your active pet)."
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "lore": {
+    "button_back": "← Back",
+    "category_header": "{emoji} **{name}** , {found}/{total}",
+    "category_placeholder": "Choose a category to explore...",
+    "codex_desc": "**Codex of the Strata** , {found}/{total} fragments discovered",
+    "codex_title": "📖 Lore Codex",
+    "footer": "Use !lore to browse your collection | {pct}% complete",
+    "fragment_found": "✅ **{title}** , {emoji}",
+    "fragment_locked": "❓ **???** , *{hint}*",
+    "select_hint_aether_log": "Found while mining deep strata",
+    "select_hint_bonus": "Special discoveries",
+    "select_hint_echo_shard": "Found during pet expeditions",
+    "select_hint_field_obs": "Found while hunting",
+    "select_hint_root_whisper": "Found while farming",
+    "select_hint_rust_memory": "Found while excavating fossils",
+    "select_hint_tide_scroll": "Found while fishing"
+  }
+}

@@ -7,6 +7,8 @@ type UserCharacter struct {
 	Level       int   `gorm:"column:level;default:1"`
 	XP          int   `gorm:"column:xp;default:0"`
 	SkillPoints int   `gorm:"column:skill_points;default:0"`
+	PerkPoints  int   `gorm:"column:perk_points;default:0"`
+	Passives    string `gorm:"column:passives;type:text;default:'[]'"`
 	STR         int   `gorm:"column:str;default:5"`
 	DEX         int   `gorm:"column:dex;default:5"`
 	INT         int   `gorm:"column:int;default:5"`

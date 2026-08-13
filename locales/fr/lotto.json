@@ -1,0 +1,17 @@
+{
+  "lotto": {
+    "announcement_alert": "🚨 **ALERTE LOTO** : {user} vient de gagner le JACKPOT de ${jackpot} !",
+    "daily_hausse_desc": "🌞 Un nouveau jour se lève !\nLa banque ajoute **${amount}** à la cagnotte du serveur.\n\n💰 **NOUVEAU JACKPOT : ${jackpot}**\nPour tenter sa chance: `!lotto \u003cnombre entre 1 et 100\u003e` (le prix du billet est de {price})",
+    "daily_hausse_title": "📈 LOTO : Hausse Quotidienne",
+    "invalid_number": "❌ Choisis un nombre entre 1 et 100.",
+    "jackpot_title": "🎰 JACKPOT !!! 🎰",
+    "jackpot_win_desc": "🎉 **INCROYABLE !** {user} a trouvé le numéro **{number}** !\n\n💰 Tu remportes la cagnotte du loto du serveur de **${jackpot}** !\nLe loto est réinitialisé. Nouveau jackpot : ${new_pot}.",
+    "no_money": "❌ Le ticket coûte ${price}. T'es fauché.",
+    "show_jackpot_desc": "Le jackpot du serveur est actuellement de **${jackpot}** !\nCoût du ticket : ${price}",
+    "show_jackpot_footer": "Tape !loto \u003cnombre\u003e pour jouer",
+    "show_jackpot_title": "💰 Cagnotte du Loto",
+    "ticket_valid_desc": "Tu as joué le **{number}**.\nDommage, ce n'est pas le bon numéro.\n\n📈 Le Jackpot augmente de **${added}** !\n💰 **Cagnotte actuelle : ${total}**",
+    "ticket_valid_footer": "Reviens demain pour un nouvel essai !",
+    "ticket_valid_title": "🎫 Ticket validé"
+  }
+}

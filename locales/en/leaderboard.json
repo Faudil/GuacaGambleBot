@@ -1,0 +1,24 @@
+{
+  "leaderboard": {
+    "btn_refresh": "Refresh",
+    "empty": "No players yet.",
+    "entry": "#{rank} {user} , ${balance}",
+    "glory_pts": "Glory pts",
+    "glory_title": "🌟 Glory Leaderboard",
+    "menu_desc": "Top 10 richest players by wallet balance.",
+    "menu_title": "Leaderboard",
+    "new_top_pet_desc": "The pet **{pet_name}** {pet_emoji} from **{owner_name}** just took the first place in the server rankings with **{elo} ELO**!",
+    "new_top_pet_title": "🌟 NEW #1 ELO RANKING! 🌟",
+    "no_glory": "No one has glory points yet!",
+    "no_money": "No one has money yet!",
+    "no_pets": "No one has a ranked pet yet!",
+    "pets_title": "🐾 Pet Leaderboard (ELO)",
+    "role_added": "The player has entered the Top 5 pets",
+    "role_name": "🌟 Master of Pets",
+    "role_reason": "Automatic creation of Top 5 role",
+    "role_removed": "The player is no longer in the Top 5 pets",
+    "title": "Leaderboard",
+    "unknown": "Unknown",
+    "wealth_title": "🏆 Richest Leaderboard"
+  }
+}

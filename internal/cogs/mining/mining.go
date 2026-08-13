@@ -55,6 +55,12 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("mine", "leave", c.onLeave)
 }
 
+func (c *Cog) respond(b *interaction.Bot, i *discordgo.InteractionCreate, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
+	if err := b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps)); err != nil {
+		slog.Warn("mining interaction respond failed", "user", interaction.ToInt64(interaction.UserID(i)), "error", err)
+	}
+}
+
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -139,8 +145,7 @@ func (c *Cog) onToolSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	sessions[userID] = &userSession{depth: 1, toolID: toolID}
 	embed, comps := c.mineEmbed(lang, userID, "")
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	c.respond(b, i, embed, comps)
 }
 
 func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -163,10 +168,6 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 		riskNext = 0
 	}
 
-	barMax := 50
-	if depth > barMax {
-		barMax = depth + 5
-	}
 	color := miningsvc.DepthColor(depth)
 	flavorKey := miningsvc.DepthFlavorKey(depth)
 
@@ -175,18 +176,22 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 		desc = eventMsg + "\n\n" + desc
 	}
 
-	embed := components.Embed(
-		fmt.Sprintf("⛏️ %s — %s %dm", i18n.T("mining.title", lang), i18n.T("mining.status_field_depth", lang), depth),
-		desc, color,
-	)
-
 	lootText := i18n.T("mining.found_nothing", lang)
 	if len(sess.bag) > 0 {
 		last := sess.bag[len(sess.bag)-1]
 		lootText = i18n.T("mining.found_item", lang, map[string]any{"item": localizedItemName(last.Name, lang)})
 	}
+	desc += "\n\n" + lootText
 
-	depthBar := progressBar(depth, barMax, 10)
+	if effects := c.effectsLine(sess, lang); effects != "" {
+		desc += "\n" + effects
+	}
+
+	embed := components.Embed(
+		fmt.Sprintf("⛏️ %s — %dm", i18n.T("mining.title", lang), depth),
+		desc, color,
+	)
+
 	riskBar := progressBar(riskNext, 100, 10)
 	riskColor := ""
 	switch {
@@ -199,57 +204,56 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 	}
 
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("mining.status_field_depth", lang),
-			i18n.T("mining.depth_bar", lang, map[string]any{"bar": depthBar, "depth": depth}), true),
 		components.Field(riskColor+" "+i18n.T("mining.status_field_risk", lang),
 			i18n.T("mining.risk_bar", lang, map[string]any{"bar": riskBar, "pct": riskNext}), true),
-		components.Field(i18n.T("mining.status_field_loot", lang), lootText, true),
 		components.Field(i18n.T("mining.status_field_bag", lang), bagStr, false),
-		components.Field(i18n.T("mining.status_field_tool", lang),
-			fmt.Sprintf("%s %s", ti.Emoji(), i18n.T(ti.LocaleNameKey(), lang)), true),
 	}
-
-	if sess.ghostVeilTurns > 0 {
-		embed.Fields = append(embed.Fields, components.Field("👻 Ghostly Veil",
-			i18n.T("mining.ghost_veil_active", lang, map[string]any{"turns": sess.ghostVeilTurns}), true))
-	}
-	if sess.riskTurns > 0 {
-		modSign := ""
-		if sess.riskMod > 0 {
-			modSign = "+"
-		}
-		embed.Fields = append(embed.Fields, components.Field("🌀 Effect Active",
-			fmt.Sprintf("%s%d%% risk for %d more digs", modSign, sess.riskMod, sess.riskTurns), true))
-	}
-	if riskNext >= 70 {
-		embed.Fields = append(embed.Fields, components.Field("⚠️ DANGER ZONE",
-			i18n.T("mining.danger_zone", lang), false))
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: fmt.Sprintf("%s %s · %s %d",
+			ti.Emoji(), i18n.T(ti.LocaleNameKey(), lang),
+			i18n.T("mining.miner_level_label", lang), ml),
 	}
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			discordgo.Button{
-				Label:    "⛏️ " + i18n.T("mining.dig_standard", lang),
-				CustomID: components.Encode("mine", "descend", string(miningsvc.BranchStandard)),
-				Style:    discordgo.SecondaryButton,
-			},
-			discordgo.Button{
-				Label:    "⚡ " + i18n.T("mining.dig_reckless", lang),
-				CustomID: components.Encode("mine", "descend", string(miningsvc.BranchReckless)),
-				Style:    discordgo.DangerButton,
+				Label:    "⛏️ " + i18n.T("mining.dig_label", lang),
+				CustomID: components.Encode("mine", "descend"),
+				Style:    discordgo.PrimaryButton,
 			},
 			discordgo.Button{
 				Label:    i18n.T("mining.leave_label", lang),
 				CustomID: components.Encode("mine", "leave"),
 				Style:    discordgo.SuccessButton,
-				Emoji:    &discordgo.ComponentEmoji{Name: "🏃"},
 			},
 		),
 	}
 	return embed, comps
 }
 
+func (c *Cog) effectsLine(sess *userSession, lang string) string {
+	var parts []string
+	if sess.ghostVeilTurns > 0 {
+		parts = append(parts, "👻 "+i18n.T("mining.ghost_veil_active", lang, map[string]any{"turns": sess.ghostVeilTurns}))
+	}
+	if sess.riskTurns > 0 {
+		sign := ""
+		if sess.riskMod > 0 {
+			sign = "+"
+		}
+		parts = append(parts, i18n.T("mining.effect_risk", lang,
+			map[string]any{"sign": sign, "pct": sess.riskMod, "turns": sess.riskTurns}))
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return i18n.T("mining.effects_label", lang, map[string]any{"list": strings.Join(parts, " · ")})
+}
+
 func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	if ev == nil || len(ev.Options) == 0 {
+		return c.mineEmbed(lang, userID, "")
+	}
 	sess := sessions[userID]
 	depthStr := ""
 	if sess != nil {
@@ -276,8 +280,8 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 		rarityLabel = "Common"
 	}
 
-	titleKey := "mining.ev_" + ev.ID + "_title"
-	descKey := "mining.ev_" + ev.ID + "_desc"
+	titleKey := "mining.ev_" + eventKeyID(ev.ID) + "_title"
+	descKey := "mining.ev_" + eventKeyID(ev.ID) + "_desc"
 
 	color := 0x9B59B6
 	switch ev.Rarity {
@@ -310,15 +314,13 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 	return embed, comps
 }
 
+func eventKeyID(id string) string {
+	return strings.ReplaceAll(id, "_legendary", "_leg")
+}
+
 func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
-
-	choice := miningsvc.BranchStandard
-	if len(rest) > 0 && rest[0] == string(miningsvc.BranchReckless) {
-		choice = miningsvc.BranchReckless
-	}
 
 	sess, ok := sessions[userID]
 	if !ok {
@@ -327,7 +329,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	gvt := sess.ghostVeilTurns
-	res, err := c.svc.Descend(userID, sess.depth, sess.bag, choice, sess.toolID, gvt)
+	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.toolID, gvt)
 	if err != nil {
 		if errors.Is(err, miningsvc.ErrMineLimit) {
 			interaction.RespondError(b, i, lang, "mining.limit_reached")
@@ -345,9 +347,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if len(res.Bag) == 0 {
 			msg = i18n.T("mining.collapse_empty", lang)
 		}
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("💥 COLLAPSE!", msg, 0xFF0000), nil))
+		c.respond(b, i, components.Embed("💥 COLLAPSE!", msg, 0xFF0000), nil)
 		return
 	}
 
@@ -379,8 +379,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		comps = eComps
 	}
 
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	c.respond(b, i, embed, comps)
 }
 
 func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -388,6 +387,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) < 2 {
+		interaction.RespondError(b, i, lang, "mining.error")
 		return
 	}
 	eventID := rest[0]
@@ -465,9 +465,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		if msg != "" {
 			resultMsg = msg + "\n\n" + resultMsg
 		}
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("✅ Expedition Complete!", resultMsg, 0x00FF00), nil))
+		c.respond(b, i, components.Embed("✅ Expedition Complete!", resultMsg, 0x00FF00), nil)
 		if n, ok := c.store.PopQuestNotification(userID); ok {
 			interaction.SendQuestNotification(b, i, n, lang)
 		}
@@ -478,8 +476,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	embed, comps := c.mineEmbed(lang, userID, msg)
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+	c.respond(b, i, embed, comps)
 }
 
 func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -510,9 +507,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
 
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("✅ Expedition Complete!", title, color), nil))
+	c.respond(b, i, components.Embed("✅ Expedition Complete!", title, color), nil)
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)

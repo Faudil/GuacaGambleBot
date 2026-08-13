@@ -1,0 +1,33 @@
+{
+  "admin": {
+    "airdrop_all_desc": "Je donne **${amount}** à **{rows}** joueurs !",
+    "airdrop_all_title": "💸 PLUIE DE BILLETS POUR TOUT LE MONDE ! 💸",
+    "airdrop_desc": "Je donne **${amount}** à mon préféré {user} !",
+    "airdrop_item_all_desc": "Je donne **{quantity}x {item_name}** à **{rows}** joueurs !",
+    "airdrop_item_all_title": "💸 PLUIE D'OBJETS POUR TOUT LE MONDE ! 💸",
+    "airdrop_item_desc": "Je donne **{item_name}** à mon préféré {user} !",
+    "airdrop_item_title": "💸 PLUIE D'OBJETS ! 💸",
+    "airdrop_modal_title": "Airdrop Argent",
+    "airdrop_title": "💸 PLUIE DE BILLETS ! 💸",
+    "amount_label": "Montant",
+    "amount_positive": "❌ Le montant doit être positif.",
+    "announcements_disabled": "❌ Les annonces automatiques du bot (Ventes flash, Loto, etc.) ont été désactivées pour ce serveur.",
+    "btn_airdrop": "💸 Airdrop",
+    "btn_givecrowns": "👑 Donner Crowns",
+    "btn_reseteconomy": "🔄 Réinitialiser",
+    "btn_setlang": "🌐 Langue",
+    "channel_set": "✅ Le salon d'annonces du bot a été défini sur {channel}.",
+    "gifted_by": "Offert par {author}",
+    "givecrowns_modal_title": "Donner Crowns",
+    "item_not_found": "❌ Cet objet n'existe pas ou il n'y a aucun joueur en base.",
+    "lang_label": "Langue (en/fr)",
+    "lang_not_supported": "❌ Langue non supportée. Utilisez `fr` ou `en`.",
+    "lang_set": "🌐 La langue du bot pour ce serveur a été changée en **Français**.",
+    "menu_desc": "Outils d'administration du serveur.",
+    "menu_title": "🛠️ Panneau d'Admin",
+    "no_permission_money": "⛔ Tu n'as pas la permission de faire pleuvoir l'argent !",
+    "quantity_positive": "❌ La quantité doit être positive.",
+    "setlang_modal_title": "Changer la Langue",
+    "user_id_label": "ID ou Mention"
+  }
+}

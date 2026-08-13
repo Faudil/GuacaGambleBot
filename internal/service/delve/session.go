@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -55,10 +56,11 @@ type DelveItem struct {
 }
 
 type CombatState struct {
-	Enemy           *Enemy
-	Turn            int
-	Active          bool
+	Enemy            *Enemy
+	Turn             int
+	Active           bool
 	EnemyFirstStrike bool
+	PetBonded        bool
 }
 
 type Service struct {
@@ -279,9 +281,10 @@ func (svc *Service) StartCombat(session *model.DelveSession, enemy *Enemy) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 	svc.combats[session.UserID] = &CombatState{
-		Enemy:  enemy,
-		Turn:   0,
-		Active: true,
+		Enemy:     enemy,
+		Turn:      0,
+		Active:    true,
+		PetBonded: charsvc.ConsumeBuff(svc.store, session.UserID, "pet_bond"),
 	}
 }
 

@@ -1,0 +1,10 @@
+{
+  "artifact": {
+    "error": "❌ Could not modify your artifact.",
+    "level_up": "🔮 **Your artifact leveled up!**",
+    "level_up_desc": "Your artifact reached level {level}! Choose a stat to improve:",
+    "level_up_title": "🎉 Artifact Level Up!",
+    "no_money": "❌ You don't have enough coins to reset your artifact.",
+    "no_shard": "❌ You need an **Artifact Shard** to reset your artifact. Buy one from the shop!"
+  }
+}

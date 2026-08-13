@@ -229,7 +229,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("⚔️ "+i18n.T("start.boss_fight_btn", lang), components.Encode("start", "continue", questID), discordgo.DangerButton),
+				components.Button("⚔️ "+i18n.T("start.boss_fight_btn", lang), components.Encode("boss", "fight"), discordgo.DangerButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,

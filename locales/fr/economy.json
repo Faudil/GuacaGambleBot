@@ -1,0 +1,33 @@
+{
+  "economy": {
+    "balance_footer": "Commandes : !dep \u003cmontant\u003e, !withdraw \u003cmontant\u003e",
+    "balance_title": "🏦 Ma Banque",
+    "btn_balance": "💰 Solde",
+    "btn_daily": "📅 Daily",
+    "btn_give": "💸 Donner",
+    "daily_cooldown": "⏳ Tu as déjà réclamé ton daily aujourd'hui. Reviens demain !",
+    "daily_footer": "Reviens demain !",
+    "daily_interest": "📈 Intérêts Daily",
+    "daily_title": "💸 Voilà ta thune",
+    "give_amount_label": "Montant",
+    "give_done": "Argent envoyé !",
+    "give_invalid": "❌ Transaction invalide.",
+    "give_modal_title": "Offrir de l'argent",
+    "give_no_money": "❌ T'as pas assez d'argent.",
+    "give_recipient_label": "Destinataire (mention ou ID)",
+    "give_title": "💸 Transaction complète",
+    "menu_desc": "Gère ton argent. Choisis une action ci-dessous :",
+    "menu_footer": "Utilise les boutons pour interagir.",
+    "menu_title": "🏦 Économie",
+    "quantity": "Quantité",
+    "receiver": "Receveur",
+    "repaid_lender": "\n🤵 Tu as remboursé {lender} de ",
+    "rsa_desc": "Le Guacamolistan vient en aide à un joueur fauché !\n**{user}** vient de recevoir **${amount}** du glorieux régime.",
+    "rsa_title": "🍀 LE RSA 🍀",
+    "safe": "🔒 Coffre-fort",
+    "sender": "Donneur",
+    "tax_repayment": "\n📉 **Saisie sur salaire (remboursement des dettes)**",
+    "wallet": "👛 Portefeuille",
+    "your_balance": "Ta balance"
+  }
+}

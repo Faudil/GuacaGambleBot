@@ -1,0 +1,388 @@
+{
+  "pets": {
+    "battle": {
+      "accept_label": "Accepter le Duel",
+      "accepted_msg": "🔥 **Le défi est accepté !** Préparation de l'arène...",
+      "arena_intro": "🔥 *Le public retient son souffle...*",
+      "arena_log_title": "📜 **Combat en cours :**\n\n",
+      "arena_title": "⚔️ ARÈNE DES FAMILIERS ⚔️",
+      "bet_msg": "\n💰 **Mise en jeu : {bet} $** (Le gagnant remporte tout !)",
+      "challenge_msg": "⚔️ {opponent}, **{challenger}** te défie en duel avec son **{pet}** !",
+      "pick_opponent": "⚔️ **{challenger}** veut se battre avec **{pet}** ! Choisis ton adversaire :",
+      "decline_label": "Refuser",
+      "draw_footer": "🤝 MATCH NUL ! Limite de tours atteinte.",
+      "draw_msg": "\n\n💨 *Les deux familiers s'effondrent de fatigue...*\n",
+      "elo_update_line": "\n{emoji} {name} : **{elo}** ({diff})",
+      "elo_update_title": "\n📊 **Mise à jour du Classement (ELO) :**",
+      "master_label": "Maître : {name}",
+      "money_spent_cancel": "❌ L'un des joueurs a dépensé son argent avant le début du combat. Annulation !",
+      "no_money_challenger": "❌ Tu n'as pas assez d'argent pour miser **{bet} $**.",
+      "no_money_opponent": "❌ {name} n'a pas les fonds nécessaires pour suivre cette mise.",
+      "opponent_no_pet": "❌ {name} n'a pas de familier actif !",
+      "opponent_pet_ko": "❌ Le familier de {name} est K.O. !",
+      "pet_ko": "❌ Ton familier **{name}** est K.O. ! Utilise `!feed`.",
+      "pet_ko_msg": "\n\n💀 **{name} est K.O. !**\n",
+      "refund_msg": "\n💰 Les mises ({bet} $) ont été remboursées.",
+      "refused_msg": "跑 **{name}** a refusé le combat.",
+      "timeout_msg": "⏳ **Le défi a expiré.**",
+      "victory_footer": "🏆 VICTOIRE DE {name} !",
+      "vs": "VS",
+      "win_pot_msg": "\n💰 **{name} remporte le pot de {pot} $ !**",
+      "wrong_opponent": "❌ Ce défi ne t'est pas destiné !"
+    },
+    "bond": {
+      "milestone_100": "✨ **{name}** fait partie de ton âme. Aucun mot n'est nécessaire , vous vous comprenez parfaitement.",
+      "milestone_25": "💕 **{name}** commence à te faire confiance. Une complicité silencieuse s'installe entre vous.",
+      "milestone_50": "❤️ **{name}** est devenu plus qu'un animal de compagnie , vous êtes partenaires maintenant. Il ressent ton humeur.",
+      "milestone_75": "💖 Le lien avec **{name}** est incassable. Il te suivrait n'importe où.",
+      "personality_changed": "🌀 **{name}** a subi une mystérieuse transformation... Il est maintenant **{new}** ! (était **{old}**)"
+    },
+    "delete": {
+      "cancel_btn": "Annuler",
+      "confirm_btn": "🕊️ Libérer",
+      "confirm_desc": "{emoji} **{name}** ({rarity} · Niveau {level}) sera libéré pour toujours.\n\nCette action est **irréversible** !",
+      "confirm_title": "🕊️ Libérer ton familier ?",
+      "error": "❌ Quelque chose a mal tourné pendant la libération de ton familier. Réessaie.",
+      "success_desc": "{emoji} **{name}** a été libéré. Il trottine joyeusement vers la nature...\n\nAdieu, mon ami.",
+      "success_title": "🕊️ {name} est libre !"
+    },
+    "detail": {
+      "back": "← Retour",
+      "btn_activate": "⭐ Activer",
+      "btn_active": "✅ Actif",
+      "btn_battle": "⚔️ Combat",
+      "btn_feed": "🍖 Nourrir",
+      "btn_heal": "🏥 Soigner",
+      "btn_name": "Donner un prénom",
+      "btn_rename": "Renommer",
+      "btn_skills": "⚡ Compétences",
+      "combat": "🛡️ Combat",
+      "history": "📜 Historique récent",
+      "precision": "🎯 Précision",
+      "progression": "📈 Progression",
+      "skills": "💡 Compétences"
+    },
+    "equip": {
+      "fail": "❌ Impossible d'équiper ce familier. Es-tu sûr de le posséder ?",
+      "success": "✅ Familier équipé avec succès !"
+    },
+    "feed": {
+      "error": "❌ Une erreur est survenue en nourrissant ton familier. Réessaie.",
+      "forget_fail": "❌ Ton animal doit être niveau 20 pour pouvoir boire cette potion !",
+      "forget_success": "🍶 Tu as donné la potion d'oubli à ton animal, il est maintenant niveau 10 et ses stats ont été reset.",
+      "full": "🛑 **{name}** est gavé ! Il a atteint son potentiel maximum de nourriture ({current}/{max}).",
+      "item_not_found": "❌ L'objet **{name}** n'existe pas.",
+      "menu_desc": "Chaque repas renforce durablement ton familier.\n🍽️ Nourri : **{current}/{max}**",
+      "menu_placeholder": "Choisis une nourriture ou un ingrédient...",
+      "menu_title": "🍖 Que vas-tu donner à {name} ?",
+      "miam_desc": "Tu as donné **1x {item}** à {emoji} **{name}**.\n\n✨ **EFFET :** {stat} {sign}{amount}\n\n📊 *Estomac : {food} / {max_food}*",
+      "miam_title": "🍖 Miam !",
+      "no_food": "❌ Tu n'as rien à donner à **{name}** !\n\nRécolte des ingrédients (**poissons, récoltes, minerais**) pour le nourrir directement, ou fabrique de vrais repas avec `!craft`.",
+      "no_inventory": "❌ Tu n'as pas de **{name}** dans ton inventaire !",
+      "no_item": "❌ Tu dois préciser ce que tu veux lui donner. Exemple : `!feed Saumon`",
+      "refuse": "🤢 **{name}** renifle le **{item}** et refuse de le manger. Ce n'est pas nourrissant.",
+      "stats": {
+        "acc": "PRÉC",
+        "atk": "ATQ",
+        "crit_c": "Chance Crit",
+        "crit_d": "Dégâts Crit",
+        "defense": "DÉF",
+        "dge": "ESQ",
+        "max_hp": "PV Max",
+        "speed": "VIT"
+      },
+      "success": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat} · 💕 +{bond} lien)\n🍽️ Nourri : **{current}/{max}**",
+      "success_bond": "🍬 **{name}** a savouré le **{item}** ! 💕 +{bond} lien",
+      "success_raw": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat})\n🍽️ Nourri : **{current}/{max}**"
+    },
+    "hatch": {
+      "error": "❌ Quelque chose s'est mal passé lors de l'éclosion ! Réessaie plus tard.",
+      "hatching_title": "🥚 Éclosion en cours...",
+      "no_egg": "❌ Tu n'as pas d'œuf de biome dans ton inventaire ! Chasse pour en trouver ou achètes-en au `!shop`.",
+      "no_slots": "❌ Tu n'as pas assez de places pour un nouveau familier ! Tu ne peux en avoir que {max} à la fois.",
+      "step1": "Le **{egg}** tremble...\n*Crac...*",
+      "step1_footer": "✨ Rareté : {rarity}",
+      "step2": "La coquille se brise !\n*CRAC CRAC...*",
+      "step2_personality": "Une présence **{personality}** s'agite à l'intérieur...",
+      "success_desc": "{emoji} Un **{egg}** éclot !\n**{emoji} {pet}** émerge !\n{biome} | {type} | Niveau 1 | {personality}\n\n🌟 **Rareté :** {rarity}\n\nUtilise `/pets` pour voir ton nouveau compagnon !",
+      "success_title": "{emoji} UN NOUVEAU COMPAGNON !"
+    },
+    "heal": {
+      "error": "❌ Quelque chose s'est mal passé pendant les soins de ton familier. Réessaie.",
+      "full_hp": "✨ **{name}** est déjà en pleine forme !",
+      "no_money": "❌ Tu n'as pas assez d'argent pour payer les soins ! Prix : {price}$",
+      "on_expedition": "❌ **{name}** est en expédition ! Attends son retour pour le soigner.",
+      "success": "🏥 **{name}** s'est bien reposé et a récupéré **{hp} PV** ! Ses PV sont maintenant au maximum. (tu as payé {price}$)"
+    },
+    "interact": {
+      "default_detail": "💕 Tu passes un bon moment avec **{name}**. Le lien se renforce.",
+      "explore_together": {
+        "choices": {
+          "explore": {
+            "detail": "Tu explores l'inconnu avec **{name}** à tes côtés. Rien ne peut arrêter cette équipe !",
+            "label": "Explorer ensemble"
+          },
+          "follow": {
+            "detail": "Tu laisses **{name}** prendre la tête. Il se gonfle de fierté et te guide vers un endroit nouveau.",
+            "label": "Le laisser guider"
+          },
+          "rest": {
+            "detail": "Tu fais une pause avec **{name}** et profitez d'un moment calme ensemble.",
+            "label": "Faire une pause"
+          }
+        },
+        "intro": "**{name}** te regarde avec une étincelle d'aventure dans les yeux.",
+        "intro.brave": "**{name}** gonfle son poitrail et désigne l'inconnu avec un courage inégalé.",
+        "intro.curious": "**{name}** fixe intensément une colline lointaine, puis te regarde, puis la colline à nouveau. Le message est clair.",
+        "intro.fierce": "**{name}** grogne face à la nature sauvage, prêt à conquérir tout ce qui se trouve au-delà.",
+        "intro.gentle": "**{name}** te pousse doucement vers un pré fleuri qu'il a découvert.",
+        "intro.grumpy": "**{name}** marmonne quelque chose dans son souffle mais commence à marcher, vérifiant que tu suis.",
+        "intro.loyal": "**{name}** reste à tes côtés mais jette des coups d'œil vers un sentier qu'il veut explorer avec toi.",
+        "intro.mischievous": "**{name}** fait semblant de s'enfuir, puis revient derrière toi et te fait peur pour rire.",
+        "intro.playful": "**{name}** fonce vers l'horizon, s'arrête, se retourne, fonce plus loin , une invitation claire !",
+        "intro.sleepy": "**{name}** bâille, s'étire, et pointe une patte vers une grotte proche avant de bâiller à nouveau.",
+        "intro.timid": "**{name}** jette un coup d'œil derrière un coin, oreilles dressées, puis se cache derrière tes jambes."
+      },
+      "grooming": {
+        "choices": {
+          "bath": {
+            "detail": "Heure du bain ! **{name}** éclabousse partout mais en sort propre et tout doux.",
+            "label": "Donner un bain"
+          },
+          "brush": {
+            "detail": "Tu brosses le pelage de **{name} jusqu'à ce qu'il brille. Il ronronne presque de bonheur.",
+            "label": "Brosser son pelage"
+          },
+          "massage": {
+            "detail": "Tu masses les muscles fatigués de **{name}**. Il fond dans une flaque de relaxation.",
+            "label": "Faire un massage"
+          }
+        },
+        "intro": "**{name}** semble demander un peu de toilettage.",
+        "intro.brave": "**{name}** revient du combat couvert de cicatrices et de saleté, se tenant fièrement , mais aurait besoin d'un bon nettoyage.",
+        "intro.curious": "**{name}** examine son propre reflet dans une flaque et essaie d'arranger sa fourrure en désordre.",
+        "intro.fierce": "**{name}** grogne contre une brosse, puis accepte à contrecœur un seul coup de brosse.",
+        "intro.gentle": "**{name}** s'assoit et te regarde, puis regarde sa fourrure, puis te regarde à nouveau avec des yeux pleins d'espoir.",
+        "intro.grumpy": "**{name}** a des feuilles collées dans sa fourrure. Il fait semblant de ne pas s'en soucier, mais n'arrête pas de les regarder.",
+        "intro.loyal": "**{name}** t'apporte une brosse et s'assoit parfaitement immobile, te faisant entièrement confiance.",
+        "intro.mischievous": "**{name}** se secoue vigoureusement à côté de toi, aspergeant tout le monde d'eau, puis sourit.",
+        "intro.playful": "**{name}** se roule dans la boue, puis te présente fièrement son corps tout sale.",
+        "intro.sleepy": "**{name}** a les cheveux en pétard et ne semble pas le remarquer. Ou s'en soucier.",
+        "intro.timid": "**{name}** s'approche avec un pelage emmêlé, l'air embarrassé."
+      },
+      "invalid": "❌ Choix invalide !",
+      "placeholder": "Que fais-tu ?",
+      "play_time": {
+        "choices": {
+          "fetch": {
+            "detail": "Tu lances le bâton. **{name}** fonce après lui et revient la queue frétillante !",
+            "label": "Jouer à rapporter"
+          },
+          "ignore": {
+            "detail": "Tu caresses doucement **{name}**, et il se blottit contre ta main, parfaitement heureux.",
+            "label": "Câliner"
+          },
+          "tug": {
+            "detail": "Vous faites un tir à la corde épique. **{name}** tire de toutes ses forces, et tu le laisses gagner.",
+            "label": "Tir à la corde"
+          }
+        },
+        "intro": "**{name}** dépose un bâton à tes pieds et te regarde d'un air plein d'espoir !",
+        "intro.brave": "**{name}** se tient droit et te présente un bâton comme un guerrier offrant une épée sacrée !",
+        "intro.curious": "**{name}** penche la tête et te présente un objet étrange qu'il a trouvé, attendant ta réaction.",
+        "intro.fierce": "**{name}** laisse tomber un bâton mâchouillé et grogne enjouément, te défiant à un jeu !",
+        "intro.gentle": "**{name}** dépose doucement son jouet préféré sur tes genoux et te regarde avec des yeux confiants.",
+        "intro.grumpy": "**{name}** soupire dramatiquement et pousse un jouet vers toi d'une patte réticente.",
+        "intro.loyal": "**{name}** t'apporte sa possession la plus précieuse , un caillou brillant qu'il gardait précieusement.",
+        "intro.mischievous": "**{name}** tourne autour de toi en cercle, puis fait semblant de cacher quelque chose derrière son dos.",
+        "intro.playful": "**{name}** dépose un bâton à tes pieds et remue la queue avec excitation, les yeux pétillants d'anticipation !",
+        "intro.sleepy": "**{name}** entrouvre un œil, agitant faiblement un jouet tout en dormant à moitié.",
+        "intro.timid": "**{name}** pose une petite feuille à tes pieds, puis se cache derrière un buisson en jetant des coups d'œil nerveux."
+      },
+      "rescue": {
+        "choices": {
+          "investigate": {
+            "detail": "Tu enquêtes prudemment avec **{name}. C'était une fausse alerte, mais vous êtes contents d'avoir vérifié.",
+            "label": "Enquêter ensemble"
+          },
+          "retreat": {
+            "detail": "Tu bats en retraite sagement avec **{name}**. La prudence d'abord , il y aura d'autres batailles.",
+            "label": "Battre en retraite"
+          },
+          "stand_together": {
+            "detail": "Tu fais front avec **{name}** face à l'inconnu. Unis, vous êtes imbattables.",
+            "label": "Rester ensemble"
+          }
+        },
+        "intro": "**{name}** sent un danger et prend une position protectrice.",
+        "intro.brave": "**{name}** court vers toi, puis se retourne et grogne contre quelque chose dans les buissons. Quelque chose est là.",
+        "intro.curious": "**{name}** a découvert un animal piégé et essaie de le libérer, te regardant pour obtenir de l'aide.",
+        "intro.fierce": "**{name}** montre les dents à une silhouette menaçante qui rôde à proximité. Il ne reculera pas.",
+        "intro.gentle": "**{name}** a trouvé une petite créature blessée et la pousse doucement vers toi pour l'aider.",
+        "intro.grumpy": "**{name}** soupire et gère la menace efficacement, puis te lance un regard 'tu me dois une fière chandelle'.",
+        "intro.loyal": "**{name}** bloque ton chemin, refusant de te laisser passer. Danger devant.",
+        "intro.mischievous": "**{name}** fait une farce à la menace si bien qu'elle s'enfuit confuse et embarrassée.",
+        "intro.playful": "**{name}** pense que la situation dangereuse est un jeu. Tu dois gérer ça avec précaution.",
+        "intro.sleepy": "**{name}** bâille, effraie paresseusement la menace d'un seul regard, puis retourne faire la sieste.",
+        "intro.timid": "**{name}** se tient en tremblant entre toi et une étrange créature, te protégeant malgré sa peur."
+      },
+      "snack_time": {
+        "choices": {
+          "cook": {
+            "detail": "Tu prépares quelque chose de délicieux. **{name}** regarde chaque étape, en bavant un peu.",
+            "label": "Cuisiner quelque chose"
+          },
+          "feed_treat": {
+            "detail": "Tu donnes une friandise spéciale à **{name}**. Il savoure chaque bouchée, te regardant avec une gratitude pure.",
+            "label": "Donner une friandise"
+          },
+          "share_meal": {
+            "detail": "Tu partages ton repas avec **{name}**. Il remue la queue joyeusement , partager, c'est aimer !",
+            "label": "Partager ton repas"
+          }
+        },
+        "intro": "**{name}** te regarde avec de grands yeux pleins d'espoir près de sa gamelle.",
+        "intro.brave": "**{name}** fait face courageusement à la gamelle vide, déterminé à attendre son prochain repas sans se plaindre.",
+        "intro.curious": "**{name}** renifle l'air et suit une piste d'odeur invisible, finissant par arriver à sa gamelle.",
+        "intro.fierce": "**{name}** attaque sa gamelle avec une furie implacable, gagnant la bataille bouchée par bouchée.",
+        "intro.gentle": "**{name}** attend poliment près de sa gamelle, sans se presser, toujours reconnaissant.",
+        "intro.grumpy": "**{name}** fusille sa gamelle du regard, puis toi, clairement pas impressionné par le menu d'aujourd'hui.",
+        "intro.loyal": "**{name}** garde la moitié de sa nourriture et pousse la gamelle vers toi, offrant de partager.",
+        "intro.mischievous": "**{name}** renverse sa gamelle, puis fait semblant d'être surpris, comme si elle s'était vidée toute seule.",
+        "intro.playful": "**{name}** tapote sa gamelle vide et te fait les yeux les plus dramatiquement affamés que tu aies jamais vus !",
+        "intro.sleepy": "**{name}** marche en dormant jusqu'à sa gamelle, mange en somnolant, puis repart.",
+        "intro.timid": "**{name}** s'approche de sa gamelle avec hésitation, se retournant vers toi pour se rassurer avant de manger."
+      },
+      "title": "💬 {name} veut ton attention !",
+      "training": {
+        "choices": {
+          "praise": {
+            "detail": "Tu couvres **{name}** d'éloges. Il se gonfle de fierté, plus heureux que n'importe quelle friandise ne pourrait le rendre.",
+            "label": "Le féliciter"
+          },
+          "spar": {
+            "detail": "Tu t'entraînes avec **{name}**. Il devient plus rapide, plus fort , ton entraînement porte ses fruits !",
+            "label": "S'entraîner avec lui"
+          },
+          "teach": {
+            "detail": "Tu enseignes une nouvelle technique à **{name}**. Il se concentre dur et finit par réussir !",
+            "label": "Enseigner un nouveau geste"
+          }
+        },
+        "intro": "**{name}** veut s'entraîner et te regarde avec attente.",
+        "intro.brave": "**{name}** prend une pose de combat et te défie à un combat d'entraînement !",
+        "intro.curious": "**{name}** observe attentivement tes mouvements, essayant d'apprendre de nouvelles techniques.",
+        "intro.fierce": "**{name}** halète lourdement, mais ses yeux brûlent du désir de continuer l'entraînement.",
+        "intro.gentle": "**{name}** s'entraîne doucement, retenant ses coups pour ne pas te faire mal.",
+        "intro.grumpy": "**{name}** râle mais se met en position. D'accord. UN dernier round.",
+        "intro.loyal": "**{name}** imite parfaitement chacun de tes gestes, voulant te rendre fier.",
+        "intro.mischievous": "**{name}** n'arrête pas d'essayer de te faire trébucher pendant l'entraînement, gloussant à chaque fois.",
+        "intro.playful": "**{name}** transforme l'entraînement en jeu, sautillant autour de toi avec une énergie débordante.",
+        "intro.sleepy": "**{name}** s'endort en plein milieu de l'entraînement, ronflant mignonnement.",
+        "intro.timid": "**{name}** tremble mais tient bon, déterminé à s'améliorer."
+      }
+    },
+    "list": {
+      "active": "✅ Actif",
+      "footer": "Sélectionne un familier ci-dessous pour voir ses détails, le nourrir ou l'envoyer au combat.",
+      "hatch_btn": "🥚 Faire éclore un œuf",
+      "inactive": "🔄 Inactif",
+      "no_pets": "🐾 Tu n'as pas encore de familier !\n\n**Pour commencer :**\n1️⃣ `/start` — commence le tutoriel (offre un œuf de départ)\n2️⃣ `/hatch` — fais éclore un œuf de ton inventaire\n3️⃣ `/pets` — choisis ton nouveau compagnon\n\nOu achète des œufs de biome au `!shop` !",
+      "select_placeholder": "Sélectionne un familier à gérer...",
+      "title": "🐾 La Ménagerie de {name}"
+    },
+    "personality": {
+      "brave": "⚔️ Brave",
+      "curious": "🔍 Curieux",
+      "desc_brave": "Courageux et sans peur au combat.",
+      "desc_curious": "Toujours en exploration et à la découverte de nouvelles choses.",
+      "desc_fierce": "Agressif et implacable en combat.",
+      "desc_gentle": "Tendre et attentionné.",
+      "desc_grumpy": "Facilement agacé mais profondément loyal.",
+      "desc_loyal": "Compagnon dévoué qui ne vacille jamais.",
+      "desc_mischievous": "Aime les farces et causer des ennuis inoffensifs.",
+      "desc_playful": "Plein d'énergie et toujours partant pour s'amuser.",
+      "desc_sleepy": "Toujours en train de faire la sieste, mais étonnamment résilient.",
+      "desc_timid": "Craintif mais rapide sur ses pattes.",
+      "fierce": "🔥 Féroce",
+      "gentle": "🤲 Doux",
+      "grumpy": "😤 Ronchon",
+      "loyal": "❤️ Loyal",
+      "mischievous": "😈 Espiègle",
+      "playful": "🎾 Enjoué",
+      "sleepy": "💤 Somnolent",
+      "timid": "😰 Timide"
+    },
+    "play": {
+      "level_up": "🎉 **NIVEAU SUPÉRIEUR !** {name} passe au niveau {level} et gagne des stats !",
+      "no_pet": "❌ Tu n'as pas de familier actif !",
+      "success": "🎾 Tu as joué avec **{name}**. Il gagne +{xp} XP."
+    },
+    "rename": {
+      "input_label": "Nom du familier",
+      "input_placeholder": "Entre un nom (max 20 caractères)",
+      "modal_title": "Nomme ton familier",
+      "success": "🏷️ Ton familier actif s'appelle désormais **{name}** !",
+      "too_long": "❌ Ce nom est trop long (Max 20 caractères)."
+    },
+    "sell": {
+      "accepted_msg": "🎉 **Transaction acceptée !** Transfert du familier en cours...",
+      "buy_label": "Acheter",
+      "buyer_no_money": "❌ {name} n'a pas assez d'argent pour acheter ce familier ({price} $).",
+      "buyer_no_money_ephemeral": "❌ Tu n'as pas assez d'argent pour acheter ce familier !",
+      "fail_no_money": "❌ La transaction a échoué : {name} n'a plus assez d'argent.",
+      "invalid_price": "❌ Le prix doit être positif !",
+      "not_owned": "❌ Ce familier ne t'appartient pas ou n'existe pas !",
+      "offer_desc": "**{seller}** propose de vendre son familier à {buyer} :\n\n{emoji} **{nickname}** (ID: `{id}`)\n**Espèce :** {type}\n**Rareté :** {rarity}\n**Niveau :** {level}\n**Bonus :** {bonus}\n**ELO :** {elo}\n\n💰 **Prix demandé : {price} $**",
+      "offer_received": "{buyer}, tu as reçu une offre de {seller} !",
+      "offer_title": "📜 Offre de Vente de Familier",
+      "refuse_label": "Refuser",
+      "refused_msg": "✖️ **{name}** a refusé l'offre.",
+      "self_sell": "❌ Tu ne peux pas te vendre un familier à toi-même !",
+      "success_desc": "**{buyer}** a acheté {emoji} **{nickname}** à **{seller}** pour **{price} $**.\nPrends en bien soin !",
+      "success_title": "🤝 Transaction Réussie !",
+      "timeout_msg": "⏳ **L'offre a expiré.**",
+      "wrong_buyer": "❌ Cette offre ne t'est pas destinée !"
+    },
+    "skills": {
+      "choose_desc": "Choisis une compétence pour ton familier ! Tu pourras les réinitialiser avec un Parchemin de Compétence.",
+      "choose_title": "⚡ Choisis une Compétence , Niveau {level}",
+      "error": "❌ Échec de l'apprentissage de cette compétence.",
+      "learned": "⭐ Ton familier a appris **{name}** !",
+      "maxed": "❌ Ton familier connaît déjà toutes ses 5 compétences !",
+      "no_points": "❌ Ton familier n'a pas de points de compétence disponibles ! Il doit monter de niveau.",
+      "none_available": "❌ Aucune compétence disponible pour la rareté de ton familier.",
+      "select": "Sélectionne une compétence..."
+    },
+    "stats": {
+      "attr_title": "Attributs de Combat",
+      "attr_val": "**{hp_label} :** `{hp} / {max_hp}`\n**{atk_label} :** `{atk}`\n**{def_label} :** `{def}`\n**{spd_label} :** `{spd}`\n**{dge_label} :** `{dge}%`\n**{acc_label} :** `{acc}%`\n**{crit_c_label} :** `{crit_c}%`\n**{crit_d_label} :** `{crit_d}x`\n**{spc_c_label} :** `{spc_c}x`\n**{trs_lvl_label} :** `{trs_lvl}x`\n",
+      "desc": "**Type :** {type} | **Niveau :** {level} | **XP :** {xp}\n**Bonus :** {bonus} ({bonus_val}%)\n{elo}",
+      "elo_locked": "Tu débloques le classement elo à partir du niveau 5",
+      "elo_rank": "**ELO:** {elo} 🏆 | **Rang:** {rank} (Progression: {progress}%)",
+      "elo_top": "**ELO:** {elo} 🏆 | **Rang:** {rank}",
+      "footer": "Estomac : {food} / {max_food} | Rareté : {rarity}",
+      "title": "📊 Stats de {name} {emoji}"
+    },
+    "tradeup": {
+      "different_rarity": "❌ Tous les familiers échangés doivent être de la même rareté !",
+      "duplicate_ids": "❌ Tu ne peux pas utiliser le même familier plusieurs fois dans l'échange !",
+      "legendary_max": "❌ Les familiers Légendaires ne peuvent pas être échangés contre une rareté supérieure !",
+      "no_ids": "❌ Tu dois spécifier les IDs des familiers à échanger. Exemple : `!tradeup 12 15 18 20 22`",
+      "not_owned": "❌ Le familier avec l'ID `{id}` ne t'appartient pas.",
+      "pet_active": "❌ Le familier avec l'ID `{id}` est ton familier actif ! Déséquipe-le avant de l'échanger.",
+      "pet_not_found": "❌ Le familier avec l'ID `{id}` n'existe pas.",
+      "success_desc": "Tes familiers ont fusionné dans une lumière éblouissante !\n\nFélicitations ! Tu as obtenu un {emoji} **{name}** !\n\n🌟 **Rareté :** {rarity}\n⚡ **Bonus Passif :** {bonus}\n\nTape `!pets` pour voir ta collection et l'équiper.",
+      "success_title": "✨ FUSION RÉUSSIE !",
+      "wrong_count": "❌ Il faut **{req}** familiers {rarity} pour obtenir un {target}. Tu en as sélectionné {count}."
+    },
+    "transcend": {
+      "level_low": "❌ Ton familier **{name}** doit être niveau 20 pour transcender.",
+      "no_pet": "❌ Tu n'as pas de familier actif !",
+      "same_pet": "❌ Tu ne peux pas consommer le familier que tu essaies de transcender !",
+      "success": "✨ **TRANSCENDANCE RÉUSSIE !** ✨\nTon familier **{name}** est maintenant TRS Niveau **{level}** !",
+      "target_not_found": "❌ Familier consommé (ID: {id}) non trouvé dans ta collection.",
+      "wrong_type": "❌ Le familier consommé doit être un **{type}** (le même que ton familier actif)."
+    }
+  }
+}

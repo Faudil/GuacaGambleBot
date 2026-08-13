@@ -1,0 +1,17 @@
+{
+  "weekly": {
+    "announcement_footer": "Une nouvelle semaine commence ! Gagnez des points via les combats PVP.",
+    "announcement_title": "🏆 Réinitialisation Hebdomadaire , Récompenses Distribuées !",
+    "empty": "Aucun participant cette semaine ! Jouez au PVP pour gagner des points hebdomadaires.",
+    "history_empty": "Aucun historique trouvé. Participez aux combats pour apparaître ici !",
+    "history_title": "📜 Historique des Rangs , {user}",
+    "tier_bronze": "Bronze",
+    "tier_diamond": "Diamant",
+    "tier_gold": "Or",
+    "tier_grandmaster": "Grand Maître",
+    "tier_master": "Maître",
+    "tier_platinum": "Platine",
+    "tier_silver": "Argent",
+    "title": "📊 Classement Hebdomadaire des Familiers"
+  }
+}

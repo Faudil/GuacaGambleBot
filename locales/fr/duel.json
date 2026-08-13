@@ -1,0 +1,19 @@
+{
+  "duel": {
+    "challenge_desc": "{challenger} défie {opponent} pour **${amount}** !\n**{user}**, tape `!accept` pour te battre ou `!deny` pour fuir.",
+    "challenge_title": "⚔️ DÉFI LANCÉ !",
+    "deny_msg": "🛡️ {user} a refusé le duel (le fragile !).",
+    "draw_msg": "🤝 **Égalité !** Personne ne perd d'argent.",
+    "invalid_bet": "❌ La mise doit être positive.",
+    "money_spent_cancel": "❌ L'un de vous n'a plus assez d'argent. Défi annulé.",
+    "no_bot": "🤖 Tu ne peux pas défier un bot (ils trichent).",
+    "no_challenge": "❌ Personne ne t'a défié.",
+    "no_deny": "❌ Aucun défi à refuser.",
+    "no_money_opponent": "❌ {user} n'a pas assez d'argent (${balance}).",
+    "no_money_self": "❌ Tu n'as pas assez d'argent (${balance}).",
+    "result_title": "🎲 RÉSULTAT DU DUEL",
+    "roll_msg": "🎲 **{user}** lance : {die1} + {die2} = **{total}**\n",
+    "self_duel": "❌ Tu ne peux pas te défier toi-même.",
+    "win_msg": "🏆 **{user}** gagne **${amount}** !"
+  }
+}

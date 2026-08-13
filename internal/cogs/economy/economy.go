@@ -40,6 +40,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("bal", c.onPrefixBalance)
 	r.Prefix("balance", c.onPrefixBalance)
 	r.Prefix("d", c.onPrefixDaily)
+	r.Prefix("daily", c.onPrefixDaily)
+	r.Prefix("give", c.onPrefixGive)
+	r.Prefix("pay", c.onPrefixGive)
 	r.SlashWithOptions("give", "Donner de l'argent à un autre utilisateur.",
 		[]*discordgo.ApplicationCommandOption{
 			{
@@ -190,6 +193,43 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 	}
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		embed.Description += "\n\n" + questssvc.QuestNotificationMsg(n, lang)
+	}
+	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
+}
+
+func (c *Cog) onPrefixGive(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	sender := interaction.ToInt64(m.Author.ID)
+	parts := strings.Fields(m.Content)
+	if len(parts) < 3 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
+		return
+	}
+	recipient, ok := interaction.ParseUserID(parts[1])
+	if !ok {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
+		return
+	}
+	amount, err := strconv.Atoi(parts[2])
+	if err != nil || amount <= 0 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
+		return
+	}
+	_, _, gerr := c.svc.Give(sender, recipient, amount)
+	if gerr != nil {
+		switch gerr {
+		case economysvc.ErrNoMoney:
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_no_money", lang))
+		default:
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
+		}
+		return
+	}
+	embed := components.Embed(i18n.T("economy.give_title", lang), "", 0x2ecc71)
+	embed.Fields = []*discordgo.MessageEmbedField{
+		components.Field(i18n.T("economy.sender", lang), interaction.Mention(sender), true),
+		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
+		components.Field(i18n.T("economy.quantity", lang), "**$"+strconv.Itoa(amount)+"**", false),
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }

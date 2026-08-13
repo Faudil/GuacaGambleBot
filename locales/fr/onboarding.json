@@ -1,0 +1,27 @@
+{
+  "onboarding": {
+    "advanced_title": "Paramètres avancés",
+    "btn_advanced": "Avancé",
+    "btn_disable": "Désactiver le bot",
+    "btn_enable": "Activer le bot",
+    "btn_finish": "Terminer",
+    "btn_reconfigure": "Reconfigurer",
+    "channel_placeholder": "Sélectionnez un salon…",
+    "configured_desc": "Le bot est prêt ! J'utiliserai {channel} comme salon principal. Tapez /economy pour commencer.",
+    "configured_title": "Configuration terminée ✅",
+    "field_channel": "Salon",
+    "field_language": "Langue",
+    "field_prefix": "Préfixe",
+    "field_status": "Statut",
+    "field_universe": "Histoire",
+    "language_placeholder": "Sélectionnez une langue",
+    "menu_desc": "Configurons le bot pour votre serveur. Choisissez le salon où je peux parler, une langue et ajustez quelques options.",
+    "menu_title": "Bienvenue sur GuacaGambleBot ! 🎰",
+    "need_channel": "Veuillez choisir un salon avant de terminer.",
+    "prefix_label": "Préfixe des commandes",
+    "setup_desc": "Configure le bot pour ce serveur.",
+    "status_disabled": "Désactivé",
+    "status_enabled": "Activé",
+    "universe_placeholder": "Choisissez une histoire…"
+  }
+}

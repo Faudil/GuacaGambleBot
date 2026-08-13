@@ -1,0 +1,22 @@
+{
+  "boss_league": {
+    "achievement_unlocked": "🎖️ **Succès Débloqué** : {name} !",
+    "already_champion": "🏆 Tu es déjà le Champion de la Ligue ! Il n'y a plus d'adversaires à combattre.",
+    "challenge_footer": "Prépare ton familier et combats !",
+    "champion": "🏆 **Champion de la Ligue** 🏆\nTu as vaincu tous les boss et conquis la ligue ! Tu es un dresseur légendaire !",
+    "defeat": "💀 **Défaite !** Ton familier **{pet_name}** a été vaincu par **{boss_name}**.",
+    "fight_button": "Combattre !",
+    "fight_hint": "💡 Appuie sur le bouton pour affronter ce boss !",
+    "fight_intro": "⚔️ **Défi Accepté !** {pet_emoji} **{pet_name}** défie **{boss_name}** ({boss_emoji}) !",
+    "locked": "🔒 Tu n'as aucun combat de boss disponible pour le moment. Élève un familier au niveau 20 pour débloquer la Ligue des Boss, ou progresse dans la quête tutoriel.",
+    "no_battle_step": "❌ Aucun combat de boss disponible ici.",
+    "no_pet": "❌ Tu n'as pas de familier actif ! Obtiens un œuf avec `/start`, fais-le éclore avec `/hatch`, puis choisis ton compagnon avec `/pets`.",
+    "pet_ko": "❌ Ton familier actif **{name}** est K.O. ! Soigne-le d'abord via `!heal`.",
+    "rewards_title": "🎁 Récompenses obtenues :",
+    "stage_info": "Étape {stage}/5 - **{name}**",
+    "stats_label": "Niveau : {level}\nEspèce : {species}\nPV : {hp} | Atk : {atk} | Déf : {defense} | Vitesse : {speed}",
+    "title": "🏆 Ligue des Boss 🏆",
+    "try_again": "Entraîne ton familier et réessaie !",
+    "victory": "🎉 **Victoire !** **{boss_name}** a été vaincu !"
+  }
+}

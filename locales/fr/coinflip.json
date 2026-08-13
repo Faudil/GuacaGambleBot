@@ -1,0 +1,20 @@
+{
+  "coinflip": {
+    "cheat_info": "💳 Mise: **${amount}** sur **{choice}**.\n🕵️ Tu as une **Pièce Truquée** dans ta poche...",
+    "cheat_label": "🕵️ Utiliser la Pièce Truquée (75%)",
+    "cheat_swap": "🕵️ *Tu échanges discrètement la pièce...*",
+    "choice_error": "❌ Choisis **pile** ou **face**.",
+    "invalid_bet": "❌ Mise invalide.",
+    "legit_choice": "🎲 Tu décides de jouer à la loyal.",
+    "legit_label": "🎲 Jouer loyal (50%)",
+    "lose_cheat": " (Même en trichant ?! La honte...)",
+    "lose_msg": "❌ **PERDU...** La pièce tombe sur **{result}**.",
+    "max_bet": "❌ Tu ne peux pas miser plus de 2000$.",
+    "no_money": "❌ Pas assez d'argent.",
+    "spinning": "🪙 La pièce tourne dans les airs...",
+    "start_msg": "🎲 C'est parti ! **{choice}** pour **${amount}**...",
+    "win_cheat": " (Merci la triche 😉)",
+    "win_msg": "✨ **GAGNÉ !** La pièce tombe sur **{result}**.",
+    "xp_gain": " Tu as gagné {xp} xp"
+  }
+}

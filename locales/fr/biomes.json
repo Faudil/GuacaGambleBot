@@ -1,0 +1,11 @@
+{
+  "biomes": {
+    "cave": "Grotte",
+    "desert": "Désert",
+    "forest": "Forêt",
+    "mountain": "Montagne",
+    "ocean": "Océan",
+    "tundra": "Toundra",
+    "volcano": "Volcan"
+  }
+}

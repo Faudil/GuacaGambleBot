@@ -1,0 +1,22 @@
+{
+  "slots": {
+    "bet_info": "Mise: **${amount}**",
+    "gain": "💰 **Gain : ${amount}**",
+    "jackpot_bell": "🔔 **DING DING DING !** Le gros lot est pour toi !",
+    "jackpot_diamond": "💎 **OMEGA JACKPOT !!!** TU ES RICHE !!! 💎",
+    "jackpot_generic": "🎉 **INCROYABLE !** Trois {symbol} alignés !",
+    "lose_generic": "❌ Pas de chance... Retente ta chance !",
+    "loss": "💸 -${amount}",
+    "no_money": "❌ Pas assez d'argent (${balance}).",
+    "pair_bell": "🔔 **Joli !** Ces cloches sonnent la victoire.",
+    "pair_cherry": "🍒 **Mince !** Ca aurait pu être pire.",
+    "pair_diamond": "😲 **Si proche !** Une paire de diamants, ça rapporte gros !",
+    "pair_grape": "🍇 **Ouf !** Au moins t'es remboursé (ou presque).",
+    "pair_lemon": "🍋 **Pas mal !** Un petit jus de citron pour fêter ça ?",
+    "rolling": "🌀",
+    "state_rolling": "...",
+    "state_start": "Faites vos jeux...",
+    "state_suspense": "Suspense...",
+    "title": "🎰 Machine à Sous"
+  }
+}

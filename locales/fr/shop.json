@@ -1,0 +1,19 @@
+{
+  "shop": {
+    "balance_footer": "💰 Solde : ${balance}",
+    "bought_footer": "Acheté : {item}",
+    "bought_msg": "✅ **{user}** a saisi l'offre ! Il obtient **{item}**.",
+    "buy_now_label": "🛒 ACHETER MAINTENANT !",
+    "buy_success": "✅ Tu as acheté **{item}** pour **${price}** !",
+    "error": "❌ Une erreur est survenue.",
+    "flash_sale_desc": "Un marchand itinérant propose : **{item}**\n{desc}\nPrix normal : ~~${price}~~\n**Prix Flash : ${flash_price}** (-{discount}%)",
+    "flash_sale_title": "⚡ VENTE FLASH !",
+    "not_your_shop": "❌ Ce n'est pas ta boutique !",
+    "personal_desc": "Choisis un article à acheter ! Attention, **tu ne peux acheter qu'un seul article** parmi les 4.\n\n",
+    "personal_title": "🛒 Boutique de {user}",
+    "price_label": "Prix",
+    "sold_label": "VENDU !",
+    "too_broke": "❌ Tu es trop pauvre !",
+    "too_broke_item": "❌ Tu es trop pauvre pour cet article !"
+  }
+}

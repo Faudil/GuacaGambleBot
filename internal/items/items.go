@@ -13,6 +13,11 @@ const (
 )
 
 func rarityForPrice(price int) Rarity {
+	return RarityForPrice(price)
+}
+
+// RarityForPrice maps a price to the rarity tier the catalog assigns to items.
+func RarityForPrice(price int) Rarity {
 	switch {
 	case price >= 5000:
 		return RarityLegendary
@@ -53,6 +58,7 @@ type Item struct {
 	Category    Category
 	Rarity      Rarity
 	EquipSlot   string // "weapon", "armor", "accessory", "trinket", or ""
+	MinLevel    int    // minimum character level to equip; 0 = derived from rarity
 	StatSTR     int
 	StatDEX     int
 	StatINT     int
@@ -60,6 +66,23 @@ type Item struct {
 	StatLUK     int
 	SetID       string // set identifier for set items, empty if none
 	SetName     string // human-readable set name
+}
+
+// MinLevelForRarity maps a rarity tier to the minimum character level required
+// to equip gear of that tier.
+func MinLevelForRarity(r Rarity) int {
+	switch r {
+	case RarityLegendary:
+		return 20
+	case RarityEpic:
+		return 15
+	case RarityRare:
+		return 10
+	case RarityUncommon:
+		return 5
+	default:
+		return 1
+	}
 }
 
 var all = []Item{
@@ -156,7 +179,7 @@ var all = []Item{
 	{ID: "beer",            Name: "Beer",              Emoji: "🍺", Price: 50,   Description: "The miner's drink! Resets !mine cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "coffee",          Name: "Coffee",            Emoji: "☕", Price: 50,   Description: "Wakes you up. Resets !daily cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "bow",             Name: "Bow",               Emoji: "🏹", Price: 300,  Description: "Helps with hunting! Resets !hunt cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
-	{ID: "fertilizer",      Name: "Fertilizer",        Emoji: "🧪", Price: 200,  Description: "Accelerates crop growth! Resets !farm cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "fertilizer",      Name: "Fertilizer",        Emoji: "🧪", Price: 200,  Description: "Accelerates crop growth! Reduces remaining grow time by 30%.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "hook",            Name: "Hook",              Emoji: "🪝", Price: 200,  Description: "Attracts fish! Resets !fish cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "forget_potion",   Name: "Forget Potion",     Emoji: "🧪", Price: 2500, Description: "Resets your pet to level 10.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "skill_scroll",    Name: "Skill Scroll",      Emoji: "📜", Price: 5000, Description: "Resets all your active pet's learned skills.", EffectType: "consumable", Droppable: false, Category: Tools},
@@ -216,63 +239,87 @@ var all = []Item{
 	{ID: "enchanted_orchard",   Name: "Enchanted Orchard",   Emoji: "🌿", Price: 10000, Description: "A magical floating island. Only legendary fruits grow here.", EffectType: "permanent", Droppable: false, Category: Special},
 	{ID: "scarecrow_charm",     Name: "Scarecrow Charm",     Emoji: "🧿", Price: 0,    Description: "A small charm shaped like a winking scarecrow.", EffectType: "collectible", Droppable: false, Category: Special},
 
-	// --- Equipment ---
-	{ID: "stick",          Name: "Wooden Stick",     Emoji: "🪵", Price: 50,   Description: "A sturdy branch. Decent for a start. (+1 STR)",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 1},
-	{ID: "iron_pickaxe",   Name: "Iron Pickaxe",     Emoji: "⛏️", Price: 500,  Description: "A miner's best friend. (+3 STR)",                               EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 3},
-	{ID: "leather_armor",  Name: "Leather Armor",    Emoji: "🦺", Price: 300,  Description: "Basic protection. (+2 VIT)",                                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 2},
-	{ID: "lucky_charm",    Name: "Lucky Charm",      Emoji: "🍀", Price: 400,  Description: "A four-leaf clover. (+3 LUK)",                                  EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 3},
-	{ID: "miner_helmet",   Name: "Miner's Helmet",   Emoji: "⛑️", Price: 800,  Description: "Thick steel helmet. (+2 STR, +1 VIT)",                          EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatSTR: 2, StatVIT: 1},
-	{ID: "fishing_rod",    Name: "Fishing Rod",      Emoji: "🎣", Price: 500,  Description: "A quality rod. (+3 DEX)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatDEX: 3},
-	{ID: "hunters_bow",    Name: "Hunter's Bow",     Emoji: "🏹", Price: 1200, Description: "A precise bow. (+5 STR)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 5},
-	{ID: "hunter_cloak",   Name: "Hunter's Cloak",   Emoji: "🧥", Price: 1500, Description: "Warm and agile. (+3 DEX, +2 VIT)",                              EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatDEX: 3, StatVIT: 2},
-	{ID: "golden_ring",    Name: "Golden Ring",      Emoji: "💍", Price: 2000, Description: "Glows with fortune. (+5 LUK)",                                 EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 5},
-	{ID: "ancient_amulet", Name: "Ancient Amulet",   Emoji: "📿", Price: 3000, Description: "Humming with ancient magic. (+2 INT, +2 LUK)",                   EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatINT: 2, StatLUK: 2},
-	{ID: "crystal_staff",  Name: "Crystal Staff",    Emoji: "🔮", Price: 2500, Description: "Pulsing with arcane energy. (+4 INT)",                           EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatINT: 4},
-	{ID: "enchanted_robe", Name: "Enchanted Robe",   Emoji: "👘", Price: 3000, Description: "Woven with wisdom. (+4 INT, +2 DEX)",                            EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatINT: 4, StatDEX: 2},
+	// --- Equipment: Tier 1 (Lv 1, Common) ---
+	{ID: "stick",          Name: "Wooden Stick",     Emoji: "🪵", Price: 50,   Description: "A sturdy branch. Decent for a start. (+2 STR)",                    EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityCommon, MinLevel: 1, EquipSlot: "weapon",    StatSTR: 2},
+	{ID: "leather_armor",  Name: "Leather Armor",    Emoji: "🦺", Price: 300,  Description: "Basic protection. (+2 VIT)",                                    EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityCommon, MinLevel: 1, EquipSlot: "armor",     StatVIT: 2},
 
-	// --- Dragon Slayer Set ---
-	{ID: "dragon_slayer_sword",    Name: "Dragon Slayer Sword",    Emoji: "🗡️", Price: 0, Description: "A blade forged from a dragon's fang. Part of the Dragon Slayer set.",      EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 8, StatVIT: 3, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
-	{ID: "dragon_slayer_armor",    Name: "Dragon Slayer Armor",    Emoji: "🛡️", Price: 0, Description: "Scale mail of an ancient wyrm. Part of the Dragon Slayer set.",         EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 6, StatSTR: 3, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
-	{ID: "dragon_slayer_ring",     Name: "Dragon Slayer Ring",     Emoji: "💍", Price: 0, Description: "A band of dragon bone and gold. Part of the Dragon Slayer set.",         EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 4, StatSTR: 2, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
-	{ID: "dragon_slayer_talisman", Name: "Dragon Slayer Talisman", Emoji: "📿", Price: 0, Description: "A tooth of the first dragon ever slain. Part of the Dragon Slayer set.", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatSTR: 3, StatVIT: 3, StatLUK: 2, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
+	// --- Equipment: Tier 2 (Lv 5, Uncommon) ---
+	{ID: "iron_pickaxe",   Name: "Iron Pickaxe",     Emoji: "⛏️", Price: 500,  Description: "A miner's best friend. (+4 STR)",                               EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon",    StatSTR: 4},
+	{ID: "fishing_rod",    Name: "Fishing Rod",      Emoji: "🎣", Price: 500,  Description: "A quality rod. (+4 DEX)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon",    StatDEX: 4},
+	{ID: "lucky_charm",    Name: "Lucky Charm",      Emoji: "🍀", Price: 400,  Description: "A four-leaf clover. (+3 LUK)",                                  EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "accessory", StatLUK: 3},
+	{ID: "miner_helmet",   Name: "Miner's Helmet",   Emoji: "⛑️", Price: 800,  Description: "Thick steel helmet. (+3 VIT, +1 STR)",                          EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "armor",     StatVIT: 3, StatSTR: 1},
 
-	// --- Shadow Stalker Set ---
-	{ID: "shadow_stalker_blade",   Name: "Shadow Stalker Blade",   Emoji: "🗡️", Price: 0, Description: "A dagger that drinks the light. Part of the Shadow Stalker set.",        EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatDEX: 7, StatLUK: 3, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
-	{ID: "shadow_stalker_cloak",   Name: "Shadow Stalker Cloak",   Emoji: "🧥", Price: 0, Description: "Woven from midnight silk. Part of the Shadow Stalker set.",                EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatDEX: 5, StatVIT: 3, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
-	{ID: "shadow_stalker_amulet",  Name: "Shadow Stalker Amulet",  Emoji: "📿", Price: 0, Description: "A dark gem that whispers secrets. Part of the Shadow Stalker set.",       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 5, StatDEX: 2, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
-	{ID: "shadow_stalker_charm",   Name: "Shadow Stalker Charm",   Emoji: "🍀", Price: 0, Description: "Luck woven from shadow itself. Part of the Shadow Stalker set.",          EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 3, StatLUK: 4, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
+	// --- Equipment: Tier 3 (Lv 10, Rare) ---
+	{ID: "hunters_bow",    Name: "Hunter's Bow",     Emoji: "🏹", Price: 1200, Description: "A precise bow. (+6 STR)",                                       EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "weapon",    StatSTR: 6},
+	{ID: "crystal_staff",  Name: "Crystal Staff",    Emoji: "🔮", Price: 2500, Description: "Pulsing with arcane energy. (+6 INT)",                           EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "weapon",    StatINT: 6},
+	{ID: "hunter_cloak",   Name: "Hunter's Cloak",   Emoji: "🧥", Price: 1500, Description: "Warm and agile. (+4 VIT, +3 DEX)",                              EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "armor",     StatVIT: 4, StatDEX: 3},
+	{ID: "golden_ring",    Name: "Golden Ring",      Emoji: "💍", Price: 2000, Description: "Glows with fortune. (+4 LUK, +1 STR)",                          EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "accessory", StatLUK: 4, StatSTR: 1},
 
-	// --- Arcane Weaver Set ---
-	{ID: "arcane_weaver_staff",    Name: "Arcane Weaver Staff",    Emoji: "🪄", Price: 0, Description: "A conduit of raw magic. Part of the Arcane Weaver set.",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatINT: 8, StatDEX: 3, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
-	{ID: "arcane_weaver_robe",     Name: "Arcane Weaver Robe",     Emoji: "👘", Price: 0, Description: "Ethereal fabric humming with power. Part of the Arcane Weaver set.",         EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatINT: 6, StatVIT: 3, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
-	{ID: "arcane_weaver_crown",    Name: "Arcane Weaver Crown",    Emoji: "👑", Price: 0, Description: "A circlet of crystallized thought. Part of the Arcane Weaver set.",          EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatINT: 4, StatLUK: 3, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
-	{ID: "arcane_weaver_orb",      Name: "Arcane Weaver Orb",      Emoji: "🔮", Price: 0, Description: "A sphere of pure arcane energy. Part of the Arcane Weaver set.",           EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatINT: 4, StatDEX: 3, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
+	// --- Equipment: Tier 4 (Lv 15, Epic) ---
+	{ID: "enchanted_robe", Name: "Enchanted Robe",   Emoji: "👘", Price: 3000, Description: "Woven with wisdom. (+6 INT, +3 VIT)",                           EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "armor",     StatINT: 6, StatVIT: 3},
+	{ID: "ancient_amulet", Name: "Ancient Amulet",   Emoji: "📿", Price: 3000, Description: "Humming with ancient magic. (+4 INT, +4 LUK)",                   EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "accessory", StatINT: 4, StatLUK: 4},
+
+	// --- Dragon Slayer Set (Lv 20, Legendary) ---
+	{ID: "dragon_slayer_sword",    Name: "Dragon Slayer Sword",    Emoji: "🗡️", Price: 0, Description: "A blade forged from a dragon's fang. Part of the Dragon Slayer set.",      EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "weapon",    StatSTR: 12, StatVIT: 4, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
+	{ID: "dragon_slayer_armor",    Name: "Dragon Slayer Armor",    Emoji: "🛡️", Price: 0, Description: "Scale mail of an ancient wyrm. Part of the Dragon Slayer set.",         EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "armor",     StatVIT: 8, StatSTR: 4, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
+	{ID: "dragon_slayer_ring",     Name: "Dragon Slayer Ring",     Emoji: "💍", Price: 0, Description: "A band of dragon bone and gold. Part of the Dragon Slayer set.",         EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "accessory", StatLUK: 4, StatSTR: 6, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
+	{ID: "dragon_slayer_talisman", Name: "Dragon Slayer Talisman", Emoji: "📿", Price: 0, Description: "A tooth of the first dragon ever slain. Part of the Dragon Slayer set.", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "trinket",   StatSTR: 6, StatVIT: 5, StatLUK: 3, SetID: "dragon_slayer", SetName: "Dragon Slayer"},
+
+	// --- Shadow Stalker Set (Lv 20, Legendary) ---
+	{ID: "shadow_stalker_blade",   Name: "Shadow Stalker Blade",   Emoji: "🗡️", Price: 0, Description: "A dagger that drinks the light. Part of the Shadow Stalker set.",        EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "weapon",    StatDEX: 12, StatLUK: 4, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
+	{ID: "shadow_stalker_cloak",   Name: "Shadow Stalker Cloak",   Emoji: "🧥", Price: 0, Description: "Woven from midnight silk. Part of the Shadow Stalker set.",                EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "armor",     StatDEX: 6, StatVIT: 6, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
+	{ID: "shadow_stalker_amulet",  Name: "Shadow Stalker Amulet",  Emoji: "📿", Price: 0, Description: "A dark gem that whispers secrets. Part of the Shadow Stalker set.",       EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "accessory", StatLUK: 8, StatDEX: 4, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
+	{ID: "shadow_stalker_charm",   Name: "Shadow Stalker Charm",   Emoji: "🍀", Price: 0, Description: "Luck woven from shadow itself. Part of the Shadow Stalker set.",          EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "trinket",   StatDEX: 5, StatLUK: 6, SetID: "shadow_stalker", SetName: "Shadow Stalker"},
+
+	// --- Arcane Weaver Set (Lv 20, Legendary) ---
+	{ID: "arcane_weaver_staff",    Name: "Arcane Weaver Staff",    Emoji: "🪄", Price: 0, Description: "A conduit of raw magic. Part of the Arcane Weaver set.",                    EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "weapon",    StatINT: 12, StatDEX: 4, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
+	{ID: "arcane_weaver_robe",     Name: "Arcane Weaver Robe",     Emoji: "👘", Price: 0, Description: "Ethereal fabric humming with power. Part of the Arcane Weaver set.",         EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "armor",     StatINT: 8, StatVIT: 4, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
+	{ID: "arcane_weaver_crown",    Name: "Arcane Weaver Crown",    Emoji: "👑", Price: 0, Description: "A circlet of crystallized thought. Part of the Arcane Weaver set.",          EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "accessory", StatINT: 8, StatLUK: 4, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
+	{ID: "arcane_weaver_orb",      Name: "Arcane Weaver Orb",      Emoji: "🔮", Price: 0, Description: "A sphere of pure arcane energy. Part of the Arcane Weaver set.",           EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "trinket",   StatINT: 8, StatDEX: 4, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
 
 	// --- Criminality items ---
-	{ID: "mask_of_malveillance", Name: "Mask of Malveillance", Emoji: "🎭", Price: 50000, Description: "An ancient mask that awakens the underworld. Those who wear it gain access to the shadows.", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 3, StatLUK: 3},
-	{ID: "hounds_cloak",        Name: "Hound's Cloak",        Emoji: "🧥", Price: 1,    Description: "The ceremonial cloak of the Iron Lodge. A symbol of the hunt.", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor", StatVIT: 1},
-	{ID: "shadow_cowl",         Name: "Shadow Cowl",          Emoji: "🕶️", Price: 1,    Description: "A dark hood worn by those who walk the Silent Path.", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor", StatDEX: 1},
+	{ID: "mask_of_malveillance", Name: "Mask of Malveillance", Emoji: "🎭", Price: 50000, Description: "An ancient mask that awakens the underworld. Those who wear it gain access to the shadows.", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 25, EquipSlot: "trinket", StatDEX: 5, StatLUK: 5},
+	{ID: "hounds_cloak",        Name: "Hound's Cloak",        Emoji: "🧥", Price: 1,    Description: "The ceremonial cloak of the Iron Lodge. A symbol of the hunt. (+6 VIT, +2 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "armor", StatVIT: 6, StatSTR: 2},
+	{ID: "shadow_cowl",         Name: "Shadow Cowl",          Emoji: "🕶️", Price: 1,    Description: "A dark hood worn by those who walk the Silent Path. (+4 DEX, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "armor", StatDEX: 4, StatVIT: 2},
 
-	// --- Trinkets (Boss League rewards) ---
-	{ID: "spark_shard",    Name: "Spark Shard",      Emoji: "⚡", Price: 0,    Description: "A crackling fragment of Vezir's lightning. (+3 STR, +1 VIT)",     EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatSTR: 3, StatVIT: 1},
-	{ID: "stone_heart",    Name: "Stone Heart",      Emoji: "🪨", Price: 0,    Description: "Tal'Rok's core, dense with resolve. (+3 DEX, +3 VIT)",            EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 3, StatVIT: 3},
-	{ID: "storm_core",     Name: "Storm Core",       Emoji: "🌪️", Price: 0,   Description: "Kael's fury, captured in crystal. (+4 DEX, +3 LUK)",               EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 4, StatLUK: 3},
-	{ID: "abyss_pearl",    Name: "Abyss Pearl",      Emoji: "🫧", Price: 0,    Description: "Vorgath's gift from the deep. (+5 INT, +3 LUK)",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatINT: 5, StatLUK: 3},
-	{ID: "phoenix_crest",  Name: "Phoenix Crest",    Emoji: "🔥", Price: 0,    Description: "Solaris' flame, now yours. (+4 STR, +4 INT, +2 VIT, +3 LUK)",       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatSTR: 4, StatINT: 4, StatVIT: 2, StatLUK: 3},
+	// --- Bounty Hunter gear (Sheriff Vance) ---
+	{ID: "iron_shackles",      Name: "Iron Shackles",        Emoji: "⛓️", Price: 100,   Description: "Rusty but reliable manacles. (+3 VIT, +1 STR)",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatVIT: 3, StatSTR: 1},
+	{ID: "wanted_poster",      Name: "Wanted Poster",        Emoji: "📜", Price: 500,   Description: "Every outlaw's face eventually ends up here. (+4 LUK)",             EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatLUK: 4},
+	{ID: "reinforced_badge",   Name: "Reinforced Badge",     Emoji: "⭐", Price: 3000,  Description: "A badge that has stopped a knife or two. (+6 VIT, +2 STR)",        EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatVIT: 6, StatSTR: 2},
+	{ID: "bounty_scope",       Name: "Bounty Scope",         Emoji: "🔭", Price: 12000, Description: "It never loses a trail. (+6 DEX, +4 LUK)",                        EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 6, StatLUK: 4},
+	{ID: "lawbringer_seal",    Name: "Lawbringer's Seal",    Emoji: "📯", Price: 40000, Description: "The authority of the Iron Lodge itself. (+8 VIT, +4 STR, +2 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatVIT: 8, StatSTR: 4, StatLUK: 2},
 
-	// --- Veil Rift Legendary Set ---
-	{ID: "rift_blade",          Name: "Rift-Tempered Blade",        Emoji: "⚔️", Price: 8000,  Description: "A blade forged in the space between worlds. Part of the Rift Walker set.",  EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 15, StatDEX: 10, SetID: "rift_walker", SetName: "Rift Walker"},
-	{ID: "déchirure_scythe",    Name: "Scythe of the Sundered Veil", Emoji: "🜁", Price: 8500,  Description: "Forged from a shard of Déchirure's own form. Part of the Rift Walker set.", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "weapon",    StatSTR: 12, StatINT: 12, SetID: "rift_walker", SetName: "Rift Walker"},
-	{ID: "rift_cowl",           Name: "Cowl of the Veil Walker",    Emoji: "👑", Price: 7500,  Description: "Woven from threads of fractured reality. Part of the Rift Walker set.",     EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 12, StatDEX: 8, SetID: "rift_walker", SetName: "Rift Walker"},
-	{ID: "rift_warden_aegis",   Name: "Aegis of the Rift Warden",   Emoji: "🛡️", Price: 7800,  Description: "Forged from crystallized dimensional tears. Part of the Rift Walker set.",  EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 15, StatSTR: 8, SetID: "rift_walker", SetName: "Rift Walker"},
-	{ID: "rift_band",           Name: "Band of Dimensional Passage", Emoji: "💍", Price: 7000,  Description: "A ring that hums with a thousand planes. Part of the Rift Walker set.",     EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatLUK: 10, StatSTR: 3, StatDEX: 3, StatINT: 3, StatVIT: 3, SetID: "rift_walker", SetName: "Rift Walker"},
-	{ID: "rift_eye",            Name: "Eye of the Rift",            Emoji: "👁️", Price: 7200,  Description: "It sees what should not be seen. Part of the Rift Walker set.",              EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatINT: 12, StatVIT: 8, SetID: "rift_walker", SetName: "Rift Walker"},
+	// --- Thieves' Guild tools (The Whisper) ---
+	{ID: "lockpick_set",       Name: "Lockpick Set",         Emoji: "🔓", Price: 100,   Description: "Every lock has a secret. This finds it. (+3 DEX, +1 LUK)",        EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 3, StatLUK: 1},
+	{ID: "smoke_pellet",       Name: "Smoke Pellet",         Emoji: "💨", Price: 500,   Description: "A quick getaway in a tiny ball. (+4 DEX)",                         EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatDEX: 4},
+	{ID: "shadow_cloak",       Name: "Shadow Cloak",         Emoji: "🌑", Price: 3000,  Description: "Woven from the night itself. (+6 VIT, +4 DEX)",                    EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor",     StatVIT: 6, StatDEX: 4},
+	{ID: "silent_steps",       Name: "Silenced Footsteps",   Emoji: "👣", Price: 12000, Description: "Boots that never make a sound. (+6 DEX, +4 VIT)",                 EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatDEX: 6, StatVIT: 4},
+	{ID: "master_key",         Name: "Master Key",           Emoji: "🗝️", Price: 40000, Description: "It opens doors that don't exist. (+8 LUK, +4 DEX, +2 INT)",       EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket",   StatLUK: 8, StatDEX: 4, StatINT: 2},
+
+	// --- Trinkets (Boss League rewards, Lv 15 Epic) ---
+	{ID: "spark_shard",    Name: "Spark Shard",      Emoji: "⚡", Price: 0,    Description: "A crackling fragment of Vezir's lightning. (+5 STR, +2 VIT)",     EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket",   StatSTR: 5, StatVIT: 2},
+	{ID: "stone_heart",    Name: "Stone Heart",      Emoji: "🪨", Price: 0,    Description: "Tal'Rok's core, dense with resolve. (+4 DEX, +4 VIT)",            EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket",   StatDEX: 4, StatVIT: 4},
+	{ID: "storm_core",     Name: "Storm Core",       Emoji: "🌪️", Price: 0,   Description: "Kael's fury, captured in crystal. (+5 DEX, +3 LUK)",               EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket",   StatDEX: 5, StatLUK: 3},
+	{ID: "abyss_pearl",    Name: "Abyss Pearl",      Emoji: "🫧", Price: 0,    Description: "Vorgath's gift from the deep. (+6 INT, +3 LUK)",                    EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket",   StatINT: 6, StatLUK: 3},
+	{ID: "phoenix_crest",  Name: "Phoenix Crest",    Emoji: "🔥", Price: 0,    Description: "Solaris' flame, now yours. (+5 STR, +4 INT, +3 VIT, +3 LUK)",       EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket",   StatSTR: 5, StatINT: 4, StatVIT: 3, StatLUK: 3},
+
+	// --- Veil Rift Legendary Set (Lv 25) ---
+	{ID: "rift_blade",          Name: "Rift-Tempered Blade",        Emoji: "⚔️", Price: 8000,  Description: "A blade forged in the space between worlds. Part of the Rift Walker set.",  EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "weapon",    StatSTR: 16, StatDEX: 10, SetID: "rift_walker", SetName: "Rift Walker"},
+	{ID: "dechirure_scythe",   Name: "Scythe of the Sundered Veil", Emoji: "🜁", Price: 8500,  Description: "Forged from a shard of Déchirure's own form. Part of the Rift Walker set.", EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "weapon",    StatSTR: 14, StatINT: 14, SetID: "rift_walker", SetName: "Rift Walker"},
+	{ID: "rift_cowl",           Name: "Cowl of the Veil Walker",    Emoji: "👑", Price: 7500,  Description: "Woven from threads of fractured reality. Part of the Rift Walker set.",     EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "armor",     StatVIT: 14, StatDEX: 6, SetID: "rift_walker", SetName: "Rift Walker"},
+	{ID: "rift_warden_aegis",   Name: "Aegis of the Rift Warden",   Emoji: "🛡️", Price: 7800,  Description: "Forged from crystallized dimensional tears. Part of the Rift Walker set.",  EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "armor",     StatVIT: 14, StatSTR: 8, SetID: "rift_walker", SetName: "Rift Walker"},
+	{ID: "rift_band",           Name: "Band of Dimensional Passage", Emoji: "💍", Price: 7000,  Description: "A ring that hums with a thousand planes. Part of the Rift Walker set.",     EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "accessory", StatLUK: 10, StatSTR: 3, StatDEX: 3, StatINT: 3, StatVIT: 3, SetID: "rift_walker", SetName: "Rift Walker"},
+	{ID: "rift_eye",            Name: "Eye of the Rift",            Emoji: "👁️", Price: 7200,  Description: "It sees what should not be seen. Part of the Rift Walker set.",              EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "trinket",   StatINT: 10, StatVIT: 8, SetID: "rift_walker", SetName: "Rift Walker"},
 }
 
 var byID = func() map[string]*Item {
 	m := make(map[string]*Item, len(all))
 	for i := range all {
 		m[all[i].ID] = &all[i]
+	}
+	// Legacy alias for the pre-ASCII item ID.
+	if it, ok := m["dechirure_scythe"]; ok {
+		m["déchirure_scythe"] = it
 	}
 	return m
 }()
@@ -295,7 +342,12 @@ var byCategory = func() map[Category][]Item {
 
 func init() {
 	for i := range all {
-		all[i].Rarity = rarityForPrice(all[i].Price)
+		if all[i].Rarity == "" {
+			all[i].Rarity = rarityForPrice(all[i].Price)
+		}
+		if all[i].EquipSlot != "" && all[i].MinLevel == 0 {
+			all[i].MinLevel = MinLevelForRarity(all[i].Rarity)
+		}
 	}
 }
 
@@ -311,6 +363,9 @@ func RegisterDynamic(item Item) {
 	defer mu.Unlock()
 	item.Droppable = false
 	item.Category = Delve
+	if item.Rarity == "" {
+		item.Rarity = RarityForPrice(item.Price)
+	}
 	dynamicItems = append(dynamicItems, item)
 }
 
@@ -337,7 +392,9 @@ func Get(nameOrID string) *Item {
 }
 
 func AllItems() []Item {
-	return all
+	out := make([]Item, len(all))
+	copy(out, all)
+	return out
 }
 
 // DisplayName resolves a name or ID to the canonical English display name.

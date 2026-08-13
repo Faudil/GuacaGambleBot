@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
@@ -126,6 +127,7 @@ func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*m
 		ACC:         pt.ACC,
 		CritC:       pt.CritC,
 		CritD:       pt.CritD,
+		SpcC:        0, // special effect chance starts at 0, grows every 5 levels
 		Bonus:       pt.Bonus,
 		Elo:         1000,
 		Personality: RandomPersonality(),
@@ -266,6 +268,10 @@ func (s *Service) AddXP(pet *model.UserPet, amount int) *LevelResult {
 			pet.Speed += 1
 			pet.DGE += 1
 			pet.ACC += 1
+			pet.SpcC += 5
+			if pet.SpcC > 50 {
+				pet.SpcC = 50
+			}
 		}
 		if pet.Level%SkillInterval == 0 {
 			pet.SkillPoints++
@@ -446,7 +452,11 @@ func (s *Service) FeedPet(pet *model.UserPet, def *FeedItemDef) (bool, error) {
 		pet.FoodEaten++
 	}
 	if def.Bond > 0 {
-		s.AddBond(pet, def.Bond)
+		bond := def.Bond
+		if charsvc.HasPassive(s.store, pet.UserID, "perk_pet_whisperer") {
+			bond += 3
+		}
+		s.AddBond(pet, bond)
 	}
 	if def.Bond >= 5 {
 		if s.npcSvc != nil {
@@ -481,6 +491,7 @@ func (s *Service) ForgetXP(pet *model.UserPet) bool {
 	pet.Speed = pt.Speed
 	pet.FoodEaten = 0
 	pet.SkillPoints = 0
+	pet.SpcC = 10 // back to level 10 -> 10% special effect chance
 	_ = s.ResetSkills(pet.ID)
 	s.RecordHistory(pet, "forgot", "🌀 **"+pet.Nickname+"** went through a mysterious transformation, losing its memories but keeping its bond.")
 	return true

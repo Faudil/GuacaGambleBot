@@ -1,0 +1,19 @@
+{
+  "shop": {
+    "balance_footer": "💰 Balance: ${balance}",
+    "bought_footer": "Bought: {item}",
+    "bought_msg": "✅ **{user}** grabbed the offer! They got **{item}**.",
+    "buy_now_label": "🛒 BUY NOW!",
+    "buy_success": "✅ You bought **{item}** for **${price}**!",
+    "error": "❌ An error occurred.",
+    "flash_sale_desc": "A traveling merchant offers: **{item}**\n{desc}\nNormal price: ~~${price}~~\n**Flash Price: ${flash_price}** (-{discount}%)",
+    "flash_sale_title": "⚡ FLASH SALE!",
+    "not_your_shop": "❌ This is not your shop!",
+    "personal_desc": "Pick an item to buy! Note: **you can only buy one item** out of the 4.\n\n",
+    "personal_title": "🛒 {user}'s Shop",
+    "price_label": "Price",
+    "sold_label": "SOLD!",
+    "too_broke": "❌ You're too broke!",
+    "too_broke_item": "❌ You're too broke for this item!"
+  }
+}

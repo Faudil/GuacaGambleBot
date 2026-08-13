@@ -3,7 +3,6 @@ package pets
 import (
 	"math/rand"
 	"sort"
-	"time"
 
 	"gorm.io/gorm/clause"
 
@@ -259,8 +258,4 @@ func (s *Service) ArtifactSortedStatSlots(a *model.UserPetArtifact) []int {
 		result[i] = s.idx
 	}
 	return result
-}
-
-func init() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
 }

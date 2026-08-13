@@ -1,0 +1,15 @@
+{
+  "start": {
+    "activity_prompt": "📋 **{quest}**\n\nUtilise la commande indiquée ci-dessous pour accomplir l'objectif. La quête avancera automatiquement.",
+    "already_completed": "🎉 Tu as déjà terminé ton aventure ! Le village est restauré et prospère. Utilise `/quest` pour revoir tes quêtes terminées.",
+    "already_started": "Tu as déjà commencé ton aventure ! Utilise `/quest` pour continuer où tu t'es arrêté.",
+    "begin_title": "🚀 Ton Aventure Commence !",
+    "boss_fight_btn": "Combattre !",
+    "boss_prompt": "⚔️ **Combat de Boss !**\n\nUn puissant Gardien bloque ton chemin ! Utilise `!boss` pour le combattre avec ton familier actif. Reviens après la victoire !",
+    "complete_activity_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, etc.), puis reviens !",
+    "completed_desc": "Félicitations ! Tu as terminé la quête tutoriel et restauré le village ! Utilise `/help` pour voir toutes les commandes disponibles et continuer ton aventure.",
+    "completed_title": "🎉 Aventure Terminée !",
+    "continue_btn": "Continuer ▶️",
+    "error": "❌ Quelque chose a mal tourné. Veuillez réessayer."
+  }
+}

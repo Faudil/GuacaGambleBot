@@ -40,6 +40,7 @@ type BossStage struct {
 	DescEN      string
 	RewardMoney int
 	RewardItems map[string]int
+	XP          int
 	Achievement string
 }
 
@@ -51,7 +52,7 @@ var BossLeague = []BossStage{
 		DescFR: "Un éclaireur vif comme l'éclair. Ses attaques surviennent sans prévenir. Ne sous-estime pas sa petite taille.",
 		DescEN: "A scout quick as lightning. His attacks come without warning. Don't underestimate his size.",
 		RewardMoney: 200, RewardItems: map[string]int{"coffee": 1},
-		Achievement: "boss_league_1",
+		XP: 50, Achievement: "boss_league_1",
 	},
 	{
 		Stage: 2, NameFR: "Tal'Rok, le Gardien de Pierre", NameEN: "Tal'Rok, the Stone Sentinel",
@@ -60,7 +61,7 @@ var BossLeague = []BossStage{
 		DescFR: "Une muraille vivante. Perce sa défense ou il t'épuisera. Pas de pitié.",
 		DescEN: "A living wall. Break his defense or he'll wear you down. No mercy.",
 		RewardMoney: 500, RewardItems: map[string]int{"vip_ticket": 1},
-		Achievement: "boss_league_2",
+		XP: 100, Achievement: "boss_league_2",
 	},
 	{
 		Stage: 3, NameFR: "Kael, le Foudroyeur", NameEN: "Kael, the Storm Striker",
@@ -69,7 +70,7 @@ var BossLeague = []BossStage{
 		DescFR: "Il frappe comme la tempête. Un coup critique et c'est fini. Vitesse et précision — riposte ou meurs.",
 		DescEN: "He strikes like the storm. One crit and it's over. Speed and precision — counter or fall.",
 		RewardMoney: 1000, RewardItems: map[string]int{"fortune_cookie": 2},
-		Achievement: "boss_league_3",
+		XP: 150, Achievement: "boss_league_3",
 	},
 	{
 		Stage: 4, NameFR: "Vorgath, l'Abyssal", NameEN: "Vorgath, the Abyssal",
@@ -78,7 +79,7 @@ var BossLeague = []BossStage{
 		DescFR: "Des profondeurs il t'observe. Son poison te ronge à chaque tour. Un combat d'endurance.",
 		DescEN: "From the deep he watches. His poison eats at you each turn. A battle of endurance.",
 		RewardMoney: 2500, RewardItems: map[string]int{"forget_potion": 1},
-		Achievement: "boss_league_4",
+		XP: 200, Achievement: "boss_league_4",
 	},
 	{
 		Stage: 5, NameFR: "Solaris, le Phénix Éternel", NameEN: "Solaris, the Eternal Phoenix",
@@ -87,12 +88,12 @@ var BossLeague = []BossStage{
 		DescFR: "L'ultime gardien de la Ligue. Il renaît de ses cendres. Pour le vaincre, il faut tout donner.",
 		DescEN: "The League's final guardian. He rises from his ashes. To win, you must give everything.",
 		RewardMoney: 5000, RewardItems: map[string]int{},
-		Achievement: "boss_league_5",
+		XP: 250, Achievement: "boss_league_5",
 	},
 	{
 		Stage: 6, NameFR: "Le Gardien du Coffre", NameEN: "The Vault Guardian",
-		Species: "Robot", Level: 30, HP: 400, Atk: 50, Defense: 35, Speed: 20,
-		DGE: 15, ACC: 10, CritC: 10, CritD: 1.5, SpcC: 5,
+		Species: "Robot", Level: 15, HP: 150, Atk: 25, Defense: 15, Speed: 15,
+		DGE: 10, ACC: 10, CritC: 8, CritD: 1.5, SpcC: 5,
 		DescFR: "Un mécha de combat ancestral émerge du Coffre. Ses plaques d'acier noir brillent d'une lueur bleue. Il ne reconnaît plus ami ou ennemi — seulement les ordres gravés dans son noyau.",
 		DescEN: "An ancient combat mech rises from the Vault. Its black steel plates glow with blue light. It no longer knows friend from foe — only the orders etched into its core.",
 		RewardMoney: 0, RewardItems: map[string]int{},
@@ -118,7 +119,7 @@ func (s *Service) SetStage(userID int64, stage int) error {
 func (s *Service) CreateBossPet(stage BossStage) *battle.BattlePet {
 	pt := petEmoji(stage.Species)
 	return &battle.BattlePet{
-		ID: -1, Nickname: stage.NameFR, Emoji: pt,
+		ID: -1, Nickname: stage.NameFR, Emoji: pt, PetType: stage.Species,
 		Level: stage.Level, HP: stage.HP, MaxHP: stage.HP,
 		Atk: stage.Atk, Defense: stage.Defense, Speed: stage.Speed,
 		DGE: stage.DGE, ACC: stage.ACC, CritC: stage.CritC, CritD: stage.CritD, SpcC: stage.SpcC,

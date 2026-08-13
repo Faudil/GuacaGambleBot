@@ -30,7 +30,7 @@ var legendaryPool = []struct {
 	StatLUK int
 }{
 	{ID: "rift_blade", Name: "Rift-Tempered Blade", Emoji: "⚔️", Slot: "weapon", StatSTR: 15, StatDEX: 10},
-	{ID: "déchirure_scythe", Name: "Scythe of the Sundered Veil", Emoji: "🜁", Slot: "weapon", StatSTR: 12, StatINT: 12},
+	{ID: "dechirure_scythe", Name: "Scythe of the Sundered Veil", Emoji: "🜁", Slot: "weapon", StatSTR: 12, StatINT: 12},
 	{ID: "rift_cowl", Name: "Cowl of the Veil Walker", Emoji: "👑", Slot: "armor", StatVIT: 12, StatDEX: 8},
 	{ID: "rift_warden_aegis", Name: "Aegis of the Rift Warden", Emoji: "🛡️", Slot: "armor", StatVIT: 15, StatSTR: 8},
 	{ID: "rift_band", Name: "Band of Dimensional Passage", Emoji: "💍", Slot: "accessory", StatLUK: 10, StatSTR: 3, StatDEX: 3, StatINT: 3, StatVIT: 3},

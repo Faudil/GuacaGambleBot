@@ -28,7 +28,6 @@ func init() {
 		}
 		return 0
 	}
-	has := func(s map[string]any, k string) bool { return num(s, k) >= 1 }
 
 	register("pvp_rookie", "⚔️", 10, func(s map[string]any) bool { return num(s, "pvp_wins") >= 1 })
 	register("pvp_gladiator", "🏟️", 50, func(s map[string]any) bool { return num(s, "pvp_wins") >= 50 })
@@ -66,8 +65,10 @@ func init() {
 	register("pet_feeder", "🍖", 20, func(s map[string]any) bool { return num(s, "pets_fed") >= 50 })
 	register("pet_level_10", "🥚", 20, func(s map[string]any) bool { return num(s, "max_pet_level") >= 10 })
 	register("pet_level_20", "🐾", 50, func(s map[string]any) bool { return num(s, "max_pet_level") >= 20 })
-	register("pet_level_50", "🐉", 100, func(s map[string]any) bool { return num(s, "max_pet_level") >= 35 })
-	register("pet_level_100", "✨", 300, func(s map[string]any) bool { return num(s, "max_pet_level") >= 50 })
+	register("pet_level_50", "🐉", 100, func(s map[string]any) bool { return num(s, "max_pet_level") >= 50 })
+	register("pet_master", "👑", 300, func(s map[string]any) bool {
+		return num(s, "max_pet_level") >= 50 && num(s, "pet_bond_max") >= 75
+	})
 
 	register("coinflip_won_1k", "🪙", 10, func(s map[string]any) bool { return num(s, "coinflip_money_won") >= 1000 })
 	register("coinflip_won_5k", "🪙", 20, func(s map[string]any) bool { return num(s, "coinflip_money_won") >= 5000 })
@@ -149,8 +150,6 @@ func init() {
 		func(s map[string]any) bool { return num(s, "lore_count") >= 25 })
 	register("lore_all", "👁️", 200,
 		func(s map[string]any) bool { return num(s, "lore_count") >= 48 })
-
-	_ = has
 }
 
 // registerHidden registers an achievement that is never auto-unlocked by
@@ -302,15 +301,20 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 	collectedTypes := make(map[string]bool)
 	collectedRarity := map[string]int{"common": 0, "rare": 0, "epic": 0, "legendary": 0}
 	maxPetLvl := 0
+	maxBond := 0
 	for _, p := range userPets {
 		collectedTypes[p.PetType] = true
 		if p.Level > maxPetLvl {
 			maxPetLvl = p.Level
 		}
+		if p.BondLevel > maxBond {
+			maxBond = p.BondLevel
+		}
 		r := localPetRarity(p.PetType)
 		collectedRarity[r]++
 	}
 	stats["max_pet_level"] = maxPetLvl
+	stats["pet_bond_max"] = maxBond
 	stats["collected_common_pets"] = collectedRarity["common"]
 	stats["collected_rare_pets"] = collectedRarity["rare"]
 	stats["collected_epic_pets"] = collectedRarity["epic"]

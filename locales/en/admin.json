@@ -1,0 +1,33 @@
+{
+  "admin": {
+    "airdrop_all_desc": "I'm giving **${amount}** to **{rows}** players !",
+    "airdrop_all_title": "💸 MONEY RAIN FOR EVERYONE ! 💸",
+    "airdrop_desc": "I'm giving **${amount}** to my favorite {user} !",
+    "airdrop_item_all_desc": "I'm giving **{quantity}x {item_name}** to **{rows}** players !",
+    "airdrop_item_all_title": "💸 ITEM RAIN FOR EVERYONE ! 💸",
+    "airdrop_item_desc": "I'm giving **{item_name}** to my favorite {user} !",
+    "airdrop_item_title": "💸 ITEM RAIN ! 💸",
+    "airdrop_modal_title": "Airdrop Money",
+    "airdrop_title": "💸 MONEY RAIN ! 💸",
+    "amount_label": "Amount",
+    "amount_positive": "❌ Amount must be positive.",
+    "announcements_disabled": "❌ Automatic bot announcements (Flash sales, Lotto, etc.) have been disabled for this server.",
+    "btn_airdrop": "💸 Airdrop",
+    "btn_givecrowns": "👑 Give Crowns",
+    "btn_reseteconomy": "🔄 Reset Economy",
+    "btn_setlang": "🌐 Set Language",
+    "channel_set": "✅ the bot's announcement channel has been set to {channel}.",
+    "gifted_by": "Gifted by {author}",
+    "givecrowns_modal_title": "Give Crowns",
+    "item_not_found": "❌ This item does not exist or there are no players in the database.",
+    "lang_label": "Language (en/fr)",
+    "lang_not_supported": "❌ Language not supported. Use `fr` or `en`.",
+    "lang_set": "🌐 The bot's language for this server has been set to **English**.",
+    "menu_desc": "Server administration tools.",
+    "menu_title": "🛠️ Admin Panel",
+    "no_permission_money": "⛔ You don't have permission to make it rain money!",
+    "quantity_positive": "❌ Quantity must be positive.",
+    "setlang_modal_title": "Set Server Language",
+    "user_id_label": "User ID or Mention"
+  }
+}

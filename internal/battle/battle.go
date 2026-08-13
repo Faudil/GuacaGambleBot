@@ -20,6 +20,7 @@ type BattlePet struct {
 	ID       int64
 	Nickname string
 	Emoji    string
+	PetType  string
 	Level    int
 	HP       int
 	MaxHP    int
@@ -95,6 +96,12 @@ func (p *BattlePet) thornsDmg() float64 {
 
 func (p *BattlePet) healFull() {
 	p.HP = p.MaxHP
+	p.resetBattleState()
+}
+
+// resetBattleState clears all transient battle state (status effects, maluses
+// and perk procs) without touching HP.
+func (p *BattlePet) resetBattleState() {
 	p.defenseMalus = 0
 	p.accMalus = 0
 	p.dgeMalus = 0
@@ -104,7 +111,7 @@ func (p *BattlePet) healFull() {
 	p.poisonedTurns = 0
 	p.burningTurns = 0
 	p.bleedingTurns = 0
-	p.thornMult = 1
+	p.thornMult = 0
 	p.PerkInt = make(map[string]int)
 }
 
@@ -115,12 +122,36 @@ type BattleResult struct {
 	Pet2HP   int
 	Pet1     *BattlePet
 	Pet2     *BattlePet
+	// Turns records every action with the HP snapshots right after it, so the
+	// fight can be replayed with live HP bars.
+	Turns []BattleTurn
+}
+
+// BattleTurn is a single battle action with the HP of both pets right after it.
+type BattleTurn struct {
+	Pet1HP int
+	Pet2HP int
+	Msg    string
 }
 
 func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 	p1.healFull()
 	p2.healFull()
+	return simulate(p1, p2, modID...)
+}
 
+// SimulatePreserveHP runs a battle without restoring the pets to full HP first:
+// each pet starts with its current HP (clamped to MaxHP). Transient battle
+// state (status effects, maluses, perk procs) is still reset between battles.
+func SimulatePreserveHP(p1, p2 *BattlePet, modID ...string) *BattleResult {
+	p1.resetBattleState()
+	p2.resetBattleState()
+	p1.HP = max(0, min(p1.MaxHP, p1.HP))
+	p2.HP = max(0, min(p2.MaxHP, p2.HP))
+	return simulate(p1, p2, modID...)
+}
+
+func simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 	applyBattleStartSkills(p1.Skills, p1, p2)
 	applyBattleStartSkills(p2.Skills, p2, p1)
 
@@ -129,6 +160,7 @@ func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 	}
 
 	log := make([]string, 0, 10)
+	turns := make([]BattleTurn, 0, 10)
 	actions := 0
 	atb1 := 0.0
 	atb2 := 0.0
@@ -185,7 +217,7 @@ func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 
 			fatigueMult := 1.0
 			if actions > 25 {
-				fatigueMult = max(0.2, 1.0-float64(actions-50)*0.05)
+				fatigueMult = max(0.2, 1.0-float64(actions-25)*0.05)
 			}
 
 			msg := resolveAttack(attacker, defender, aEmoji, dEmoji, an, dn, fatigueMult)
@@ -193,6 +225,7 @@ func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 			if len(log) > 10 {
 				log = log[1:]
 			}
+			turns = append(turns, BattleTurn{Pet1HP: p1.HP, Pet2HP: p2.HP, Msg: msg})
 			actions++
 		}
 	}
@@ -203,6 +236,7 @@ func Simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 		Pet1:   p1,
 		Pet2:   p2,
 		Log:    log,
+		Turns:  turns,
 	}
 	// Phoenix Rebirth check
 	if !p1.IsAlive() && p1.PerkInt["rebirth"] > 0 {
@@ -326,7 +360,7 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 		finalDmg = 1
 	}
 
-	if attacker.PerkInt["mod_burning_sun"] > 0 && getDamageType(attacker.Nickname) != nil && *getDamageType(attacker.Nickname) == DamageFire {
+	if attacker.PerkInt["mod_burning_sun"] > 0 && getDamageType(attacker.PetType) != nil && *getDamageType(attacker.PetType) == DamageFire {
 		finalDmg = int(math.Round(float64(finalDmg) * 1.40))
 	}
 	if defender.PerkInt["mod_thunderstorm"] > 0 && defender.realSpeed() < 15 {
@@ -338,7 +372,7 @@ func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string,
 
 	defender.HP = max(0, defender.HP-finalDmg)
 
-	dmgType := getDamageType(attacker.Nickname)
+	dmgType := getDamageType(attacker.PetType)
 	spcC := attacker.SpcC
 	if attacker.PerkInt["mod_starlight"] > 0 && dmgType != nil {
 		spcC = 100
@@ -578,6 +612,8 @@ func ApplyModifierBeforeBattle(p1, p2 *BattlePet, modID string) {
 		p2.PerkInt["mod_iron_will"] = 1
 		p1.Defense = int(float64(p1.Defense) * 1.30)
 		p2.Defense = int(float64(p2.Defense) * 1.30)
+		p1.Atk = int(float64(p1.Atk) * 0.85)
+		p2.Atk = int(float64(p2.Atk) * 0.85)
 	case "blood_moon":
 		p1.PerkInt["mod_blood_moon"] = 1
 		p2.PerkInt["mod_blood_moon"] = 1

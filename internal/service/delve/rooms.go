@@ -122,6 +122,8 @@ var forgeDescs = []string{
 	"The clang of hammer on metal echoes from somewhere deep within. Workbenches hold half-finished weapons, still warm.",
 	"Massive gears line the walls, some still turning slowly. The floor trembles with the pulse of hidden machinery.",
 	"Rusted chains hang from the ceiling, and the air shimmers with heat. A conveyor belt of cooled slag leads deeper.",
+	"A seam of shimmering light runs down the far wall, humming softly. You press a hand to it — the stone feels thin, like something breathes behind a curtain.",
+	"Dust lies in strange patterns across the floor: a key shape, a doorway, a line of marks repeated by something patient. A whisper follows you that sounds almost like a name.",
 }
 
 var abyssDescs = []string{
@@ -520,7 +522,7 @@ func CombatRoomButtons(lang string, abilities []AbilityStatus, weaponEmoji, weap
 		label := a.Name
 		customID := components.Encode("delve", "combat_"+a.ID)
 
-		if a.ID == "strike" {
+		if a.ID == "slash" {
 			emoji = weaponEmoji
 			label = weaponName
 		}
@@ -531,8 +533,8 @@ func CombatRoomButtons(lang string, abilities []AbilityStatus, weaponEmoji, weap
 			style = discordgo.DangerButton
 		case "mend":
 			style = discordgo.SuccessButton
-		case "power_blow":
-			style = discordgo.PrimaryButton
+		case "defend":
+			style = discordgo.SecondaryButton
 		}
 
 		var btn discordgo.MessageComponent

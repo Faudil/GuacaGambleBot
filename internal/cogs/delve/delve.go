@@ -311,11 +311,18 @@ func (c *Cog) startDelve(b *interaction.Bot, userID, guildID, channelID int64) (
 	return embed, comps, s, nil
 }
 
+const staleSessionTimeout = 2 * time.Hour
+
 func (c *Cog) canStartDelve(userID int64) (bool, string) {
 	raw := c.loadSessionRaw(userID)
 	if raw != nil {
 		if raw.Status == "active" {
-			return false, "You already have an active delve! Use the flee button to escape."
+			if time.Since(raw.UpdatedAt) >= staleSessionTimeout {
+				c.svc.EndSession(raw, "abandoned")
+				c.deleteSession(userID)
+			} else {
+				return false, "You already have an active delve! Use the flee button to escape."
+			}
 		}
 		if raw.Status == "fallen" {
 			if raw.AutoRescued && raw.DiedAt != nil {

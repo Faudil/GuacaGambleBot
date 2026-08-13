@@ -1,0 +1,33 @@
+{
+  "tournament": {
+    "already_joined": "❌ Tu es déjà inscrit !",
+    "already_prep": "❌ Un tournoi est déjà en cours de préparation sur ce serveur !",
+    "cancel_error": "❌ Seul le créateur peut annuler.",
+    "cancel_too_late": "❌ Trop tard, les combats ont commencé !",
+    "cancelled_msg": "🛑 **Le tournoi a été annulé.** Tous les participants ont été remboursés.",
+    "champion_desc": "👑 **{user}** remporte le tournoi avec {emoji} **{pet}** !\n\n💰 **Gain total : {prize} $**",
+    "champion_title": "🏆 CHAMPION DU TOURNOI ! 🏆",
+    "desc": "**Commandes disponibles :**\n`!tournoi create \u003cmise\u003e` : Crée un tournoi.\n`!tournoi join` : Rejoins le tournoi en payant la mise.\n`!tournoi start` : Lance le tournoi (Créateur uniquement).\n`!tournoi cancel` : Annule et rembourse tout le monde.",
+    "final_tie_desc": "👑 Après {count} matchs nuls consécutifs, **{p1}** et **{p2}** sont déclarés Co-Champions !\n\n💰 **Le Cash Prize est partagé : {prize} $ chacun !**",
+    "final_tie_title": "🤝 ÉGALITÉ EN FINALE ! 🏆",
+    "invalid_fee": "❌ La mise ne peut pas être négative.",
+    "join_no_money": "❌ Il te faut {fee} $ pour t'inscrire.",
+    "join_no_pet": "❌ Tu dois équiper un familier d'abord (`!equip`).",
+    "joined_msg": "✅ **{user}** rejoint le tournoi avec **{pet}** ! (Cash Prize: {prize} $)",
+    "lucky_pass": "🍀 *{user} passe automatiquement au tour suivant !*",
+    "master_label": "Maître : {name}",
+    "min_players": "❌ Il faut au moins 2 joueurs pour lancer le tournoi !",
+    "new_desc": "**{user}** organise un Grand Tournoi de Familiers !\n\n💰 **Frais d'inscription :** {fee} $\n🎁 **Cash Prize Actuel :** {fee} $\n\nTapez `!tournoi join` pour vous inscrire !",
+    "new_title": "🏆 NOUVEAU TOURNOI !",
+    "no_money": "❌ Tu n'as pas les {fee}$ nécessaires pour créer ce tournoi.",
+    "no_pet": "❌ Tu dois avoir un familier actif pour créer un tournoi.",
+    "no_tournament": "❌ Aucun tournoi actif.",
+    "not_found": "❌ Aucun tournoi en préparation. Utilise `!tournoi create \u003cmise\u003e`.",
+    "only_creator_start": "❌ Seul le créateur du tournoi peut le lancer.",
+    "round_title": "🛡️ **--- ROUND {num} ---** 🛡️",
+    "started_desc": "**{count} Dresseurs** s'affrontent pour le Cash Prize de **{prize} $** !\nPréparez-vous...",
+    "started_error": "❌ Le tournoi a déjà commencé !",
+    "started_title": "⚔️ LE TOURNOI COMMENCE ! ⚔️",
+    "title": "🏆 Tournois de Familiers"
+  }
+}

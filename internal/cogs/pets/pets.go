@@ -235,7 +235,7 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 	// Precision
 	embed.Fields = append(embed.Fields, components.Field(
 		i18n.T("pets.detail.precision", lang),
-		fmt.Sprintf("DGE %d%% · ACC %d%%\nCRIT %d%% / %.1fx", pet.DGE, pet.ACC, pet.CritC, pet.CritD),
+		fmt.Sprintf("DGE %d%% · ACC %d%%\nCRIT %d%% / %.1fx · ✨ SPC %d%%", pet.DGE, pet.ACC, pet.CritC, pet.CritD, pet.SpcC),
 		false,
 	))
 
@@ -509,6 +509,16 @@ func buildHPBar(hp, maxHP int) string {
 		percent = 10
 	}
 	return strings.Repeat("█", percent) + strings.Repeat("░", 10-percent)
+}
+
+// pvpRetroFrame renders one retro RPG battle frame for a PvP duel.
+func (c *Cog) pvpRetroFrame(p1d, p2d components.DisplayPet, journal []string, lang string) *discordgo.MessageEmbed {
+	return components.FightFrameEmbed(
+		i18n.T("pets.battle.arena_title", lang),
+		p1d, p2d,
+		components.FightLabelsFor(lang, i18n.T("pets.battle.vs", lang)),
+		journal,
+	)
 }
 
 func (c *Cog) onRenameOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -862,6 +872,12 @@ func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
 
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+
 	members, err := b.Session.GuildMembers(i.GuildID, "", 100)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "pets.battle.wrong_opponent")
@@ -885,7 +901,18 @@ func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 		interaction.RespondError(b, i, lang, "pets.battle.wrong_opponent")
 		return
 	}
-	embed := components.Embed(i18n.T("pets.battle.arena_title", lang), i18n.T("pets.battle.challenge_msg", lang, map[string]any{"challenger": MentionUser(userID), "pet": petID}), 0xe74c3c)
+	emoji := "🐾"
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+		emoji = pt.Emoji
+	}
+	embed := components.Embed(
+		i18n.T("pets.battle.arena_title", lang),
+		i18n.T("pets.battle.pick_opponent", lang, map[string]any{
+			"challenger": MentionUser(userID),
+			"pet":        emoji + " " + pet.Nickname,
+		}),
+		0xe74c3c,
+	)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
 			components.ActionRow(
@@ -898,35 +925,80 @@ func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}))
 }
 
-type battleChallenge struct {
-	ChallengerID int64
-	OpponentID   int64
-	PetID        int64
-	Lang         string
-}
-
+// onBattleAccept handles both steps of a duel challenge:
+//   - select variant: the challenger picks an opponent from the guild list,
+//     which turns the picker into a challenge message with Accept/Decline buttons.
+//   - button variant: the challenged opponent accepts the duel and the battle runs.
 func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	data := i.MessageComponentData()
-	opponentIDStr := ""
-	if len(data.Values) > 0 {
-		opponentIDStr = data.Values[0]
-	} else {
-		return
-	}
-	opponentID := interaction.ToInt64(opponentIDStr)
-	if opponentID == userID {
-		return
-	}
+
 	_, _, rest := components.Decode(data.CustomID)
 	if len(rest) == 0 {
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
 
+	// Select variant: the challenger picks an opponent from the guild list.
+	if len(data.Values) > 0 {
+		opponentID := interaction.ToInt64(data.Values[0])
+		if opponentID == userID {
+			return
+		}
+		pet1, err := c.svc.GetPetByID(petID)
+		if err != nil || pet1 == nil || pet1.UserID != userID {
+			interaction.RespondError(b, i, lang, "pets.equip.fail")
+			return
+		}
+		emoji := "🐾"
+		if pt := petsvc.PetTypes[pet1.PetType]; pt != nil {
+			emoji = pt.Emoji
+		}
+		embed := components.Embed(
+			i18n.T("pets.battle.arena_title", lang),
+			i18n.T("pets.battle.challenge_msg", lang, map[string]any{
+				"opponent":   MentionUser(opponentID),
+				"challenger": MentionUser(userID),
+				"pet":        emoji + " " + pet1.Nickname,
+			}),
+			0xe74c3c,
+		)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
+				components.ActionRow(
+					components.Button(i18n.T("pets.battle.accept_label", lang), components.Encode("pets", "battle_accept", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.SuccessButton),
+					components.Button(i18n.T("pets.battle.decline_label", lang), components.Encode("pets", "battle_decline", rest[0], strconv.FormatInt(userID, 10), data.Values[0]), discordgo.DangerButton),
+				),
+			}))
+		return
+	}
+
+	// Button variant: the challenged opponent accepts the duel.
+	if len(rest) < 3 {
+		return
+	}
+	challengerID, err := strconv.ParseInt(rest[1], 10, 64)
+	if err != nil {
+		return
+	}
+	opponentID, err := strconv.ParseInt(rest[2], 10, 64)
+	if err != nil {
+		return
+	}
+	if userID != opponentID {
+		interaction.RespondError(b, i, lang, "pets.battle.wrong_opponent")
+		return
+	}
+	c.runBattle(b, i, lang, petID, challengerID, opponentID)
+}
+
+// runBattle executes the duel between the challenger's selected pet and the
+// opponent's active pet, then updates ELO, weekly scores, artifact XP, bonds
+// and battle history.
+func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, petID, challengerID, opponentID int64) {
 	pet1, err := c.svc.GetPetByID(petID)
-	if err != nil || pet1 == nil || pet1.UserID != userID {
+	if err != nil || pet1 == nil || pet1.UserID != challengerID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
@@ -947,7 +1019,7 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 	bp2 := c.petToBattlePet(pet2)
 
 	modID, _ := c.getActiveModID(interaction.ToInt64(i.GuildID))
-	c.applyArtifacts(bp1, bp2, userID, opponentID, modID)
+	c.applyArtifacts(bp1, bp2, challengerID, opponentID, modID)
 
 	result := battle.Simulate(bp1, bp2, modID)
 
@@ -974,10 +1046,10 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 		weeklyScoreB = 5
 		artXP1, artXP2 = petsvc.ArtifactPVPLossXP, petsvc.ArtifactPVPLossXP
 	}
-	c.svc.AddWeeklyScore(userID, serverID, weeklyScoreA, map[bool]int{true: 1, false: 0}[result.WinnerID == pet1.ID])
+	c.svc.AddWeeklyScore(challengerID, serverID, weeklyScoreA, map[bool]int{true: 1, false: 0}[result.WinnerID == pet1.ID])
 	c.svc.AddWeeklyScore(opponentID, serverID, weeklyScoreB, map[bool]int{true: 1, false: 0}[result.WinnerID == pet2.ID])
 
-	_, art1Leveled, _ := c.svc.AddArtifactXP(userID, artXP1)
+	_, art1Leveled, _ := c.svc.AddArtifactXP(challengerID, artXP1)
 	_, art2Leveled, _ := c.svc.AddArtifactXP(opponentID, artXP2)
 
 	// Bond + history for battle
@@ -1013,7 +1085,7 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 	if result.WinnerID == pet1.ID {
 		embed.Color = 0x2ecc71
 		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
-			MentionUser(userID), strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
+			MentionUser(challengerID), strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	} else if result.WinnerID == pet2.ID {
 		embed.Color = 0xe74c3c
 		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
@@ -1037,26 +1109,74 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 		_ = c.svc.UpdateServerElo(pet2.ID, sid, pet2.Elo)
 	}
 
-	unlocks, _ := c.svc.CheckAndUnlock(userID)
-	if len(unlocks) > 0 {
-		interaction.SendAchievements(b, i, lang, unlocks)
-	}
+	unlocks, _ := c.svc.CheckAndUnlock(challengerID)
 
+	// Spawn frame: retro layout with full HP bars.
+	p1d := components.DisplayPet{
+		Name: pet1.Nickname, Emoji: bp1.Emoji, Level: pet1.Level,
+		HP: bp1.MaxHP, MaxHP: bp1.MaxHP, Owner: interaction.DisplayName(b.Session, i.GuildID, i.Member, challengerID),
+	}
+	p2d := components.DisplayPet{
+		Name: pet2.Nickname, Emoji: bp2.Emoji, Level: pet2.Level,
+		HP: bp2.MaxHP, MaxHP: bp2.MaxHP, Owner: interaction.DisplayName(b.Session, i.GuildID, i.Member, opponentID),
+	}
+	spawn := c.pvpRetroFrame(p1d, p2d, []string{i18n.T("pets.battle.arena_intro", lang)}, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, spawn, nil))
 
-	// Interaction trigger after battle
-	if result.WinnerID == pet1.ID {
-		c.tryInteraction(b, i, pet1, "battle")
-	} else if result.WinnerID == pet2.ID {
-		c.tryInteraction(b, i, pet2, "battle")
-	}
+	go interaction.AnimateFight(
+		result.Turns,
+		func(journal []string, t battle.BattleTurn) *discordgo.MessageEmbed {
+			p1d.HP = t.Pet1HP
+			p2d.HP = t.Pet2HP
+			p1d.IsKO = t.Pet1HP <= 0
+			p2d.IsKO = t.Pet2HP <= 0
+			return c.pvpRetroFrame(p1d, p2d, journal, lang)
+		},
+		func(frame *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, comps))
+		},
+		func(_ []string) {
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, nil))
+
+			if len(unlocks) > 0 {
+				interaction.SendAchievements(b, i, lang, unlocks)
+			}
+
+			// Interaction trigger after battle
+			if result.WinnerID == pet1.ID {
+				c.tryInteraction(b, i, pet1, "battle")
+			} else if result.WinnerID == pet2.ID {
+				c.tryInteraction(b, i, pet2, "battle")
+			}
+		},
+	)
 }
 
 func (c *Cog) onBattleDecline(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 3 {
+		return
+	}
+	challengerID, _ := strconv.ParseInt(rest[1], 10, 64)
+	if challengerID == 0 {
+		return
+	}
+	opponentID, err := strconv.ParseInt(rest[2], 10, 64)
+	if err != nil {
+		return
+	}
+	if userID != opponentID {
+		interaction.RespondError(b, i, lang, "pets.battle.wrong_opponent")
+		return
+	}
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{Content: "🏃 Battle declined.", Flags: discordgo.MessageFlagsEphemeral},
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Content: i18n.T("pets.battle.refused_msg", lang, map[string]any{"name": MentionUser(opponentID)}),
+		},
 	})
 }
 
@@ -1520,7 +1640,7 @@ func (c *Cog) petToBattlePet(pet *model.UserPet) *battle.BattlePet {
 		skillIDs[i] = s.SkillID
 	}
 	return &battle.BattlePet{
-		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji,
+		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji, PetType: pet.PetType,
 		Level: pet.Level, HP: pet.HP, MaxHP: pet.MaxHP,
 		Atk: pet.Atk, Defense: pet.Defense, Speed: pet.Speed,
 		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,

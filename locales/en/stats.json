@@ -1,0 +1,15 @@
+{
+  "stats": {
+    "acc": "🎯 Accuracy (%)",
+    "atk": "⚔️ Attack",
+    "crit_c": "💥 Crit Chance (%)",
+    "crit_d": "💥 Crit Damage",
+    "defense": "🛡️ Defense",
+    "dge": "💨 Dodge (%)",
+    "hp": "❤️ Health Points",
+    "max_hp": "❤️ Max HP",
+    "spc_c": "⭐ Effects Chance (%)",
+    "speed": "⚡ Speed",
+    "trs_lvl": "👑 Transcendence Level"
+  }
+}

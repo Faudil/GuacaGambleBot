@@ -123,7 +123,7 @@ func (c *Cog) start(userID int64, durationStr string, lang string) (*discordgo.M
 		return components.Embed("❌", i18n.T("expedition.already_active", lang), 0xe74c3c), nil
 	}
 
-	res := c.svc.Generate(pet.Nickname, pet.Level, dur, lang)
+	res := c.svc.Generate(pet, dur)
 	_, err = c.svc.Start(userID, pet.ID, dur, res)
 	if err != nil {
 		return components.Embed("❌", i18n.T("expedition.invalid_duration", lang), 0xe74c3c), nil

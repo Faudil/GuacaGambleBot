@@ -1,0 +1,20 @@
+{
+  "crafting": {
+    "desc_intro": "Use `!craft \u003cquantity\u003e \u003citem\u003e` to craft an item.\n\n",
+    "invalid_qty": "❌ Quantity must be greater than 0.",
+    "level_up": "\n🎉 **Level Up!** You are now a Level {level} Artisan!",
+    "lock_line": "**{item}** (Lvl. {level}) - {ingredients}",
+    "locked_title": "**🔒 Locked Recipes**\n",
+    "no_args": "❌ You must specify an item to craft. Ex: `!craft 2 coffee`",
+    "no_ingredients": "❌ You are missing ingredients: {missing}",
+    "no_level": "❌ You do not have the required level (Lvl. {level}) to craft this item.",
+    "no_recipe": "❌ The recipe for **{item}** does not exist.",
+    "no_research": "🔬 You need to complete the **{research}** research first!",
+    "no_unlocked": "*No recipes unlocked.*\n\n",
+    "requires_research": "🔬{research}",
+    "success_msg": "🛠️ **Great!** You crafted **{amount}x {item}** and gained **{xp} XP**!",
+    "title": "🛠️ Crafting Recipes (Level {level})",
+    "unlock_line": "**{item}** - {ingredients}",
+    "unlocked_title": "**🔓 Unlocked Recipes**\n"
+  }
+}

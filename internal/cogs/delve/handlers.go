@@ -337,7 +337,25 @@ func (c *Cog) onFight(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) onDefendStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	c.onFight(b, i)
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, "No active delve.")
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	var effects []string
+	json.Unmarshal([]byte(s.StatusEffects), &effects)
+	effects = append(effects, "guarded")
+	jb, _ := json.Marshal(effects)
+	s.StatusEffects = string(jb)
+	c.svc.AddFlag(s, "defended_room")
+	c.saveSession(s)
+
+	desc := i18n.T("delve.handler.defend_room", lang)
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
 }
 
 func (c *Cog) applyFallenPenalties(b *interaction.Bot, i *discordgo.InteractionCreate, s *model.DelveSession, userID int64, lang string) {

@@ -76,12 +76,11 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	if amount <= 0 {
 		return nil, ErrMaxBet
 	}
-	bal, err := s.store.GetBalance(userID)
-	if err != nil {
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
 		return nil, err
-	}
-	if bal < amount {
-		return nil, ErrNoMoney
 	}
 	ok, _, err := s.store.CheckGameLimit(userID, "slots", 10)
 	if err != nil {
@@ -89,9 +88,6 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	}
 	if !ok {
 		return nil, ErrLimit
-	}
-	if _, err := s.store.UpdateBalance(userID, -amount); err != nil {
-		return nil, err
 	}
 	if err := s.store.IncrementGameLimit(userID, "slots"); err != nil {
 		return nil, err
@@ -142,6 +138,19 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	} else {
 		res.WinType = "LOSE"
 		res.XpGain = 10
+		if charsvc.HasPassive(s.store, userID, "perk_casino_edge") && rand.Float64() < 0.01 {
+			// Card Sharp passive: small chance to turn a loss into a pair.
+			res.IsWin = true
+			res.WinType = "PAIRE"
+			res.WinSym = r1
+			res.Symbol2 = r1
+			fullMult := SLOT_SYMBOLS[res.WinSym].Mult
+			res.Payout = int(float64(amount) * float64(fullMult) * 0.18)
+			if res.Payout < amount {
+				res.Payout = amount
+			}
+			res.XpGain = 30
+		}
 	}
 
 	if res.IsWin {
@@ -194,12 +203,11 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	if amount > 2000 {
 		return nil, ErrMaxBet
 	}
-	bal, err := s.store.GetBalance(userID)
-	if err != nil {
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
 		return nil, err
-	}
-	if bal < amount {
-		return nil, ErrNoMoney
 	}
 	ok, _, err := s.store.CheckGameLimit(userID, "coinflip", 10)
 	if err != nil {
@@ -213,6 +221,11 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	}
 	if err := achievement.IncrementStat(s.store.DB, userID, "coinflip_spent", amount); err != nil {
 		return nil, err
+	}
+
+	// A rigged coin used via /use boosts the next flip to 75% odds.
+	if !useRigged && charsvc.ConsumeBuff(s.store, userID, "rigged_coin") {
+		useRigged = true
 	}
 
 	var result string
@@ -260,8 +273,18 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		charsvc.ConsumeBuff(s.store, userID, "lucky_break")
 	}
 
+	if !win && charsvc.HasPassive(s.store, userID, "perk_casino_edge") && rand.Float64() < 0.01 {
+		win = true
+		if choice == "pile" {
+			result = "pile"
+		} else {
+			result = "face"
+		}
+	}
+
 	res := &CoinflipResult{Result: result, Win: win}
 	if win {
+		// The wager was debited upfront, so a win credits it back.
 		s.npcSvc.AddActivityReputation(userID, "gambling", 1)
 		if _, err := s.store.UpdateBalance(userID, amount); err != nil {
 			return nil, err
@@ -270,9 +293,6 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_money_won", amount)
 		res.XpGain = 10
 	} else {
-		if _, err := s.store.UpdateBalance(userID, -amount); err != nil {
-			return nil, err
-		}
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_lost", 1)
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_money_lost", amount)
 		res.XpGain = 30

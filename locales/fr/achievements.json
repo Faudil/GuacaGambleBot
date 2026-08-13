@@ -1,0 +1,397 @@
+{
+  "achievements": {
+    "bet_pro": {
+      "desc": "Gagne 25 paris.",
+      "name": "Visionnaire"
+    },
+    "bet_rookie": {
+      "desc": "Gagne un pari.",
+      "name": "Parieur du Dimanche"
+    },
+    "blackjack_lost_100k": {
+      "desc": "Perds 100 000 $ au Blackjack.",
+      "name": "Dépression sur table (100k$)"
+    },
+    "blackjack_lost_1k": {
+      "desc": "Perds 1 000 $ au Blackjack.",
+      "name": "Trop Gourmand (1k$)"
+    },
+    "blackjack_lost_1m": {
+      "desc": "Perds 1 000 000 $ au Blackjack.",
+      "name": "Tu as donné ta maison (1M$)"
+    },
+    "blackjack_lost_5k": {
+      "desc": "Perds 5 000 $ au Blackjack.",
+      "name": "Bust Constant (5k$)"
+    },
+    "blackjack_won_100k": {
+      "desc": "Gagne 100 000 $ au Blackjack.",
+      "name": "Le Croupier Pleure (100k$)"
+    },
+    "blackjack_won_1k": {
+      "desc": "Gagne 1 000 $ au Blackjack.",
+      "name": "21 ! (1k$)"
+    },
+    "blackjack_won_1m": {
+      "desc": "Gagne 1 000 000 $ au Blackjack.",
+      "name": "As de Pique des As (1M$)"
+    },
+    "blackjack_won_5k": {
+      "desc": "Gagne 5 000 $ au Blackjack.",
+      "name": "Compteur de cartes (5k$)"
+    },
+    "boss_league_1": {
+      "desc": "Bat le premier adversaire de la Ligue des Boss.",
+      "name": "Badge Novice"
+    },
+    "boss_league_2": {
+      "desc": "Bat le deuxième adversaire de la Ligue des Boss.",
+      "name": "Badge de Roche"
+    },
+    "boss_league_3": {
+      "desc": "Bat le troisième adversaire de la Ligue des Boss.",
+      "name": "Badge Céleste"
+    },
+    "boss_league_4": {
+      "desc": "Bat le quatrième adversaire de la Ligue des Boss.",
+      "name": "Badge Abyssal"
+    },
+    "boss_league_5": {
+      "desc": "Devient Champion de la Ligue des Boss en battant le boss final !",
+      "name": "Champion de la Ligue"
+    },
+    "btn_show": "Afficher",
+    "coinflip_lost_100k": {
+      "desc": "Perds 100 000 $ au Coinflip.",
+      "name": "Ruiné par une pièce"
+    },
+    "coinflip_lost_1k": {
+      "desc": "Perds 1 000 $ au Coinflip.",
+      "name": "Mauvaise passe"
+    },
+    "coinflip_lost_1m": {
+      "desc": "Perds 1 000 000 $ au Coinflip.",
+      "name": "Le Dindon de la Farce"
+    },
+    "coinflip_lost_5k": {
+      "desc": "Perds 5 000 $ au Coinflip.",
+      "name": "Poissard"
+    },
+    "coinflip_won_100k": {
+      "desc": "Gagne 100 000 $ au Coinflip.",
+      "name": "Double ou Rien"
+    },
+    "coinflip_won_1k": {
+      "desc": "Gagne 1 000 $ au Coinflip.",
+      "name": "Chance du débutant"
+    },
+    "coinflip_won_1m": {
+      "desc": "Gagne 1 000 000 $ au Coinflip.",
+      "name": "Maître Pile ou Face"
+    },
+    "coinflip_won_5k": {
+      "desc": "Gagne 5 000 $ au Coinflip.",
+      "name": "Habitué de la pièce"
+    },
+    "community_initiate": {
+      "desc": "Investis 10 000 $ ou 200 objets dans la communauté.",
+      "name": "Devoir Civique"
+    },
+    "community_pillar": {
+      "desc": "Investis 5 000 000 $ ou 50 000 objets dans la communauté.",
+      "name": "Le Grand Mécène"
+    },
+    "community_supporter": {
+      "desc": "Investis 500 000 $ ou 5 000 objets dans la communauté.",
+      "name": "Pilier de Comptoir"
+    },
+    "daily_1": {
+      "desc": "Réclame ta paye journalière pour la 1ère fois.",
+      "name": "Travailleur Engagé"
+    },
+    "daily_10": {
+      "desc": "Réclame ta paye journalière 10 fois.",
+      "name": "Employé du Mois"
+    },
+    "daily_100": {
+      "desc": "Réclame ta paye journalière 100 fois.",
+      "name": "L'Habitude fait le Moine"
+    },
+    "daily_365": {
+      "desc": "Réclame ta paye journalière 365 fois (Soit 1 an complet !).",
+      "name": "Vétéran d'un An"
+    },
+    "daily_50": {
+      "desc": "Réclame ta paye journalière 50 fois.",
+      "name": "Routine Matinale"
+    },
+    "eco_100k": {
+      "desc": "Atteins 100 000 $ sur ton compte.",
+      "name": "Millionnaire en Devenir"
+    },
+    "eco_10k": {
+      "desc": "Atteins 10 000 $ sur ton compte.",
+      "name": "Rentier"
+    },
+    "eco_1k": {
+      "desc": "Atteins 1 000 $ sur ton compte.",
+      "name": "Nouveau Riche"
+    },
+    "eco_1m": {
+      "desc": "Atteins 1 000 000 $ sur ton compte.",
+      "name": "Billionaire"
+    },
+    "eco_50k": {
+      "desc": "Atteins 50 000 $ sur ton compte.",
+      "name": "Loup de Wall Street"
+    },
+    "eco_rich": {
+      "desc": "Gagne un total cumulé de 10 000 $.",
+      "name": "Capitaliste"
+    },
+    "empty": "Vous n'avez débloqué aucun succès pour l'instant.",
+    "entry": "{emoji} **{name}** (+{glory} Gloire) , {status}",
+    "hunt_boss_10": {
+      "desc": "Vaincs 10 boss de zone.",
+      "name": "Chasseur de Boss"
+    },
+    "hunt_boss_100": {
+      "desc": "Vaincs 100 boss de zone.",
+      "name": "Chasseur Légendaire"
+    },
+    "hunt_boss_50": {
+      "desc": "Vaincs 50 boss de zone.",
+      "name": "Tueur de Boss"
+    },
+    "hunt_boss_cave": {
+      "desc": "Vaincs le Roi des Gobelins.",
+      "name": "Terreur des Cavernes"
+    },
+    "hunt_boss_desert": {
+      "desc": "Vaincs le Roi Scorpion.",
+      "name": "Cauchemar du Désert"
+    },
+    "hunt_boss_forest": {
+      "desc": "Vaincs le Seigneur de la Forêt.",
+      "name": "Fléau de la Forêt"
+    },
+    "hunt_boss_mountain": {
+      "desc": "Vaincs le Titan de Pierre.",
+      "name": "Fracasseur de Montagnes"
+    },
+    "hunt_boss_ocean": {
+      "desc": "Vaincs le Kraken des Abysses.",
+      "name": "Maître des Mers"
+    },
+    "hunt_boss_tundra": {
+      "desc": "Vaincs le Grand Loup Blanc.",
+      "name": "Briseur de Glaces"
+    },
+    "hunt_boss_volcano": {
+      "desc": "Vaincs le Dragon Primordial.",
+      "name": "Tueur de Dragons"
+    },
+    "hunt_unlock_mountain": {
+      "desc": "Débloque la zone Montagne.",
+      "name": "Explorateur des Montagnes"
+    },
+    "hunt_unlock_ocean": {
+      "desc": "Débloque la zone Océan.",
+      "name": "Explorateur des Océans"
+    },
+    "hunt_unlock_tundra": {
+      "desc": "Débloque la zone Toundra.",
+      "name": "Explorateur de la Toundra"
+    },
+    "hunt_unlock_volcano": {
+      "desc": "Débloque la zone Volcan.",
+      "name": "Roi du Volcan"
+    },
+    "job_miner": {
+      "desc": "Mine 100 minerais.",
+      "name": "Nain de Moria"
+    },
+    "journal_mastery": {
+      "desc": "Termine toutes les voies du journal pour devenir une légende vivante.",
+      "name": "La Légende de la Maîtrise"
+    },
+    "list_title": "Succès",
+    "locked": "Verrouillé",
+    "lore_10": {
+      "desc": "Découvre 10 fragments d'histoire.",
+      "name": " Archiviste"
+    },
+    "lore_25": {
+      "desc": "Découvre 25 fragments d'histoire.",
+      "name": "Historien des Strates"
+    },
+    "lore_5": {
+      "desc": "Découvre 5 fragments d'histoire.",
+      "name": "Esprit Curieux"
+    },
+    "lore_all": {
+      "desc": "Découvre les 48 fragments d'histoire.",
+      "name": "Voyant"
+    },
+    "lotto_rookie": {
+      "desc": "Joue 10 tickets de Loto.",
+      "name": "Joueur Régulier"
+    },
+    "lotto_winner": {
+      "desc": "Remporte le Jackpot du Loto !",
+      "name": "Le Grand Gagnant"
+    },
+    "menu_desc": "Voir les trophées que vous avez débloqués.",
+    "pet_collector_all": {
+      "desc": "Possède absolument toutes les espèces de familiers (19).",
+      "name": "Maître du Monde Animal"
+    },
+    "pet_collector_common": {
+      "desc": "Possède tous les familiers Communs (8).",
+      "name": "Zoologiste Amateur"
+    },
+    "pet_collector_epic": {
+      "desc": "Possède tous les familiers Épiques (4).",
+      "name": "Expert Animalier"
+    },
+    "pet_collector_legendary": {
+      "desc": "Possède un familier Légendaire.",
+      "name": "Dresseur de Légendes"
+    },
+    "pet_collector_rare": {
+      "desc": "Possède tous les familiers Rares (6).",
+      "name": "Zoologiste Confirmé"
+    },
+    "pet_feeder": {
+      "desc": "Donne 50 objets à manger à tes familiers.",
+      "name": "Chef Étoilé"
+    },
+    "pet_level_10": {
+      "desc": "Fais monter un familier au niveau 10.",
+      "name": "Éleveur Novice"
+    },
+    "pet_level_20": {
+      "desc": "Fais monter un familier au niveau 20.",
+      "name": "Dresseur"
+    },
+    "pet_level_50": {
+      "desc": "Fais monter un familier au niveau 50.",
+      "name": "Maître des Monstres"
+    },
+    "pet_master": {
+      "desc": "Atteins le niveau 50 et 75+ de lien avec un familier.",
+      "name": "Légende Vivante"
+    },
+    "pve_hunter": {
+      "desc": "Gagne 25 combats en expédition (PvE).",
+      "name": "Chasseur de monstres"
+    },
+    "pvp_gladiator": {
+      "desc": "Remporte 50 combats PvP.",
+      "name": "Gladiateur"
+    },
+    "pvp_punching_bag": {
+      "desc": "Perds 10 combats PvP. Courage...",
+      "name": "Sac de frappe"
+    },
+    "pvp_rookie": {
+      "desc": "Remporte ton premier combat PvP.",
+      "name": "Combattant en herbe"
+    },
+    "rank_bronze": {
+      "desc": "Place un familier au rang Bronze.",
+      "name": "Compétiteur Né"
+    },
+    "rank_diamond": {
+      "desc": "Place un familier au rang Diamant.",
+      "name": "L'Élite"
+    },
+    "rank_gold": {
+      "desc": "Place un familier au rang Or.",
+      "name": "Gladiateur Doré"
+    },
+    "rank_silver": {
+      "desc": "Place un familier au rang Argent.",
+      "name": "Challenger"
+    },
+    "rank_top5": {
+      "desc": "Hisse un familier dans le Top 5 Mondial.",
+      "name": "Maître de l'Olympe"
+    },
+    "roulette_lost_100k": {
+      "desc": "Perds 100 000 $ à la Roulette.",
+      "name": "Suicidaire (100k$)"
+    },
+    "roulette_lost_1k": {
+      "desc": "Perds 1 000 $ à la Roulette.",
+      "name": "Première blessure (1k$)"
+    },
+    "roulette_lost_1m": {
+      "desc": "Perds 1 000 000 $ à la Roulette.",
+      "name": "Cimetière Personnel (1M$)"
+    },
+    "roulette_lost_5k": {
+      "desc": "Perds 5 000 $ à la Roulette.",
+      "name": "Abonné à l'hôpital (5k$)"
+    },
+    "roulette_won_100k": {
+      "desc": "Gagne 100 000 $ à la Roulette.",
+      "name": "Immortalité (100k$)"
+    },
+    "roulette_won_1k": {
+      "desc": "Gagne 1 000 $ à la Roulette.",
+      "name": "Miraculé (1k$)"
+    },
+    "roulette_won_1m": {
+      "desc": "Gagne 1 000 000 $ à la Roulette.",
+      "name": "Survivant Légendaire (1M$)"
+    },
+    "roulette_won_5k": {
+      "desc": "Gagne 5 000 $ à la Roulette.",
+      "name": "Trompe la Mort (5k$)"
+    },
+    "slots_lost_100k": {
+      "desc": "Perds 100 000 $ aux Slots.",
+      "name": "Accro au levier"
+    },
+    "slots_lost_1k": {
+      "desc": "Perds 1 000 $ aux Slots.",
+      "name": "La machine est truquée"
+    },
+    "slots_lost_1m": {
+      "desc": "Perds 1 000 000 $ aux Slots.",
+      "name": "Gros Donateur du Casino"
+    },
+    "slots_lost_5k": {
+      "desc": "Perds 5 000 $ aux Slots.",
+      "name": "Bandit Manchot"
+    },
+    "slots_won_100k": {
+      "desc": "Gagne 100 000 $ aux Slots.",
+      "name": "L'Alignement Parfait"
+    },
+    "slots_won_1k": {
+      "desc": "Gagne 1 000 $ aux Slots.",
+      "name": "Tireur chanceux"
+    },
+    "slots_won_1m": {
+      "desc": "Gagne 1 000 000 $ aux Slots.",
+      "name": "Jackpot Ambulant"
+    },
+    "slots_won_5k": {
+      "desc": "Gagne 5 000 $ aux Slots.",
+      "name": "Poche pleine de jetons"
+    },
+    "ui": {
+      "ach_line": "{emoji} **{name}** (+{glory} Gloire)\n*{desc}*",
+      "glory_total": "**Points de Gloire Totaux : {total}** 🌟",
+      "new_achievement_glory": "*+{glory} pts de Gloire*",
+      "new_achievement_title": "🎉 Nouveau Succès Débloqué !",
+      "no_achievements": "Vous n'avez débloqué aucun succès pour le moment.",
+      "pet_glory_info": "*(dont {glory} attribués par le rang de vos familiers)*",
+      "succes_title": "🏆 Succès de {user}",
+      "unknown_user": "Inconnu"
+    },
+    "unlocked": "Débloqué"
+  }
+}

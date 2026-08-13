@@ -1,0 +1,28 @@
+# Build context hygiene: never send secrets, runtime data, or local artifacts
+# into the Docker builder image.
+.env
+.env.*
+data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.log
+/bot
+/guacabot
+/guacabot_go
+debug_market.db
+.git/
+.gitignore
+.idea/
+.opencode/
+.github/
+cleanup-root.sh
+Dockerfile
+docker-compose.yml
+INSTALL.md
+README.md
+LICENSE
+Makefile
+tools/
+cmd/localehelper/

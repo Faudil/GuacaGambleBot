@@ -285,5 +285,3 @@ func AnchorComponents() []discordgo.MessageComponent {
 		),
 	}
 }
-
-var _ = store.UnmarshalJSON

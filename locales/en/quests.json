@@ -1,0 +1,134 @@
+{
+  "quests": {
+    "active_list": "**Your Active Quests:**\n\nSelect one with `!quest \u003cid\u003e`:\n",
+    "activity_intro": "📋 **{quest}**\n\n**{label}** , complete this activity, then come back to continue.",
+    "activity_view_btn": "View Progress",
+    "boss_fight_btn": "⚔️ Fight Boss",
+    "boss_ko": "❌ Your pet is K.O.! Feed it first.",
+    "boss_league": {
+      "description": "Challenge the Boss League and prove your pet's strength!",
+      "step0_intro": "🏟️ The Boss League awaits! Five powerful bosses stand between you and the title of Champion. Your pet must be strong , each victory earns rare rewards. Step into the arena!",
+      "step10_victory": "🔥🎉 **The Phoenix bows!** You are crowned the **Boss League Champion!** The **Phoenix Crest** and the legendary **Boss Trophy** are yours! Your name will be remembered forever!",
+      "step1_battle": "⚔️ **Boss 1/5. The Boulder**\nA massive stone golem blocks your path. Its rocky hide deflects weak attacks. Strike hard and fast!",
+      "step2_victory": "🎉 The Boulder crumbles! You earned a **Spark Shard** , a fragment of pure lightning energy. One down, four to go!",
+      "step3_battle": "⚔️ **Boss 2/5 , Stoneheart**\nA living statue wielding a crystallized heart of solid rock. It drains the life force of anything that gets too close.",
+      "step4_victory": "🎉 Stoneheart shatters! You claim the **Stone Heart** , a dense core pulsing with ancient power. The crowd roars!",
+      "step5_battle": "⚔️ **Boss 3/5 , Stormbringer**\nA winged beast crackling with Tempest energy. It commands lightning and moves faster than the eye can track.",
+      "step6_victory": "🎉 The storm clears! You seize the **Storm Core**, a swirling sphere of captured gale-force winds. Halfway there!",
+      "step7_battle": "⚔️ **Boss 4/5 , Abyssal Kraken**\nA colossal tentacled horror from the deep ocean trenches. Its grip is crushing, its reach immense.",
+      "step8_victory": "🎉 The Kraken retreats to the depths! You salvage the **Abyss Pearl** , a dark orb containing the light of a drowned star.",
+      "step9_battle": "⚔️ **Boss 5/5. The Phoenix Emperor**\nThe final challenge. A majestic, burning phoenix whose flames can reduce steel to ash. Only the strongest may face it.",
+      "title": "Boss League"
+    },
+    "boss_lose_taunt": "💀 The boss laughs at you: 'Is that all you got? Train your pet and come back!'",
+    "boss_no_pet": "❌ You must have an active pet to fight the boss.",
+    "boss_win": "🏆 Your pet defeated the boss!",
+    "btn_show": "Show Quests",
+    "complete_objective_first": "⚡ Complete the current objective first (mine, farm, hunt, etc.), then use the Refresh button to check your progress!",
+    "completed_activity_msg": "✅ **{title}** complete! Type `/quest` to check your progress.",
+    "completed_msg": "✅ **{title}** , Quest completed!",
+    "continue_label": "Continue",
+    "daily_challenge": {
+      "active_quest": "📅 **Active Daily Quest:**\n{objective} ({current}/{target})",
+      "betting": "Win {n} wagers",
+      "blackjack": "Win {n} games of Blackjack",
+      "completed": "✅ **Daily Quest Completed!**\nYou received a **Seasonal Egg** (Œuf Saison).",
+      "description": "A random task given by the village to earn rewards.",
+      "fishing": "Fish {n} times",
+      "mining": "Mine {n} resources",
+      "new_quest": "✨ **New Daily Quest!**\n{objective}",
+      "slots": "Win {n} times in Slot Machine",
+      "title": "Daily Challenge"
+    },
+    "day0_welcome": {
+      "description": "Arrival and the first clue.",
+      "step0_dialogue": "A distress signal from a forgotten colony led you to HoakHaven and its dying Zenith Generator.\n\nGambleBot meets you at the gate. The signal was sent decades ago. You're the first to answer it. He hands you a worn journal referencing the **Strata Blueprints**, the Generator's lost schematics. The journal mentions a blacksmith named **Thorek** who knows the old mines.\n\n\"Use `!daily` to claim your stipend. Welcome.\"",
+      "title": "The Signal"
+    },
+    "day1_strata": {
+      "description": "Mining and the depths below.",
+      "step0_dialogue": "Thorek studies the journal in silence. His expression hardens.\n\n\"Merrik's handwriting. Council engineer. The blueprints are in a vault on Level 7 of the old mine. Nobody's been down there in decades. Tunnels are probably half collapsed.\"\n\nHe pulls a pickaxe off the wall and holds it out.\n\n\"Hit some rock. `!mine` a couple of times. See if the old lift shafts still hold. If they don't, we're wasting our time.\"",
+      "step1_activity": "Goal: Mine 2 times using `!mine`.",
+      "step2_transition": "You step out of the mine covered in dust. A woman at the docks waves you over.\n\n\"Long day underground? Come try the water. Clears the head.\"\n\nShe tosses you a fishing rod and a tin of worms. \"`!fish` to cast a line. Pick a spot, pick your bait, wait for a bite. Nothing to it.\"",
+      "step3_activity": "Goal: Fish 2 times using `!fish`.",
+      "step4_dialogue": "You pull in your second catch. The woman nods.\n\n\"Not bad. You should talk to Elara next. Village gardener, spends her time near the old gardens. She found something strange out there.\"\n\nShe presses a small pouch into your hand. **Wheat seeds**. \"You'll need these. Go see what Elara's found.\"",
+      "title": "Day 1: The Forge"
+    },
+    "day2_alchemy": {
+      "description": "Farming and digging for answers.",
+      "step0_dialogue": "Elara kneels beside a circular mechanism in the garden soil. Its surface glows with faint grooves shaped like roots.\n\n\"An Alchemical Lock. Old world biotech that reads plant DNA like a key. **Wheat** is common, stable, pure. The Ancients would have used it as a baseline. Plant a couple crops with `!farm`. Let's see if the lock still listens.\"",
+      "step1_activity": "Goal: Plant 2 crops using `!farm`.",
+      "step2_transition": "The mechanism hums. The grooves pulse with pale light. Elara studies a readout on her tablet.\n\n\"It's responding. But the data is incomplete. There's another layer buried underneath the village. Try `!dig` in the excavation pits. The Ancients buried something down there.\"",
+      "step3_activity": "Goal: Dig 2 times using `!dig`.",
+      "step4_dialogue": "Your shovel strikes metal. You pull a small capsule from the dirt, sealed tight against time. Inside: old seeds, perfectly preserved, and a fragment of a holographic map.\n\nElara stares at it. \"They weren't just storing power. They were storing life itself. Seeds that don't exist anywhere else.\"\n\nShe hands you the **Wheat** you grew. \"Keep it. And get yourself a place in town. `!house shop` has starter cabins. You'll need somewhere to work from.\"",
+      "title": "Day 2: The Lock"
+    },
+    "day3_base": {
+      "description": "Setting up and getting settled.",
+      "step0_req": "GambleBot runs the capsule data through the terminal. A partial schematic flickers onto the screen.\n\n\"Strata Blueprints, section one. Need a stationary terminal to decode the rest. Buy a Starter Shack via `!house shop`. Cost: 500 credits and 2 Iron Ore.\"",
+      "step1_transition": "The shack terminal powers on. GambleBot's voice crackles through the speaker.\n\n\"Good. Now protect your coins. `!deposit` one time. If you lose it all gambling, at least your savings stay safe.\"",
+      "step2_activity": "Goal: Make 1 deposit using `!deposit`.",
+      "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\"\n\nIrian meets you at the edge of town with a gift: a **Forest Egg** cradled in moss, warm to the touch. \"A wild seed of the woods. Use `!hatch` to open it. Could be anything inside.\"",
+      "title": "Day 3: Home Base"
+    },
+    "day4_will": {
+      "description": "Hunting and the mystery egg.",
+      "step0_dialogue": "Irian waits at the treeline. She gets straight to it.\n\n\"The woods aren't safe. Old experiments still run loose. But the Vault needs a DNA sample from local wildlife. So we hunt. Use `!hunt` a couple times. Your pet does the fighting.\"",
+      "step1_activity": "Goal: Hunt 2 times using `!hunt`.",
+      "step2_dialogue": "Your pet drags the DNA sample out of the brush. Irian examines it and nods. \"That's what we needed.\"\n\nShe glances at the egg you carry. \"When it hatches, feed the new one with `!pets`. A hungry pet is a dead pet.\"",
+      "step3_activity": "Goal: Feed your pet 1 time using `!pets`.",
+      "step4_dialogue": "Your companion settles down after feeding. Irian watches for a moment.\n\n\"Take care of it. Whatever's ahead, you'll need something at your side.\"\n\nShe looks toward the Casino. \"GambleBot found something under his floorboards. Go see for yourself.\"",
+      "title": "Day 4: The Wilds"
+    },
+    "day5_odds": {
+      "description": "Energy and the market.",
+      "step0_dialogue": "GambleBot paces when you walk in.\n\n\"The Vault isn't under the Casino by accident. This building runs on risk. Every spin, every flip, every hand feeds the system.\"\n\nHe gestures at the machines. \"Play a couple rounds. Any game. I'll watch the readings.\"",
+      "step1_activity": "Goal: Play 2 Casino games.",
+      "step2_transition": "The room hums. A hologram flickers to life. Its voice is flat, synthetic.\n\n\"Power levels: adequate. Market assessment: insufficient. Trade required.\"\n\nGambleBot shrugs. \"The system wants to see commerce. Use `!market sell` to put something up for sale. One transaction should cover it.\"",
+      "step3_activity": "Goal: Sell 1 item using `!market sell`.",
+      "step4_dialogue": "The transaction registers. The hologram flickers.\n\n\"Market activity verified. Community investment threshold not met. Vault access denied.\"\n\nGambleBot's lights dim. \"It wants us to invest in the village itself. Get everyone together. We've got one more thing to do.\"",
+      "title": "Day 5: The Casino"
+    },
+    "day6_contribution": {
+      "description": "Investing in the village.",
+      "step0_dialogue": "The four of you gather around the hologram projector. Thorek, Elara, Irian, and GambleBot. The projection lists its demands.\n\n\"Assessment: community cohesion required. The Ancients didn't just want someone strong enough to reach the Vault. They wanted someone who could hold a community together.\"\n\nThorek grunts. \"That's what the village projects are for. Check `/community` to see them. Banks, hospitals, markets. Everyone pitches in, everyone gets the bonuses.\"\n\nElara nods at you. \"For the Vault, we need your contribution: **5 Iron Ore** and **3 Wheat**. Mine and farm it. Come back here when you're ready.\"",
+      "step1_req": "Goal: Contribute **5 Iron Ore** and **3 Wheat** to the community fund (gather them with `!mine` and `!farm`, then confirm here).",
+      "step2_dialogue": "The resources are logged. The hologram steadies. You can hear some mechanical noise, an old engine is starting.",
+      "title": "Day 6: Community"
+    },
+    "day7_delve": {
+      "description": "Find the key to the Vault.",
+      "step0_dialogue": "The party gathers before the Vault. Where the door should stand: a wall of black steel, seamless, sealed. A single slot glows in its center.\n\n\"Gate lock: detected. Key: absent.\"\n\nThorek grunts. \"Of course there's a key. The old builders never did anything simple.\"\n\nGambleBot's voice hums. \"The tunnels beneath the village. The Undercroft. The Ancients stored their secrets down there. Use `/delve` to descend. Find the key.\"",
+      "step1_activity": "Goal: Complete 1 delve using `/delve`.",
+      "step2_dialogue": "Deep in the Undercroft, in a sealed chamber older than the village, you find it: a **Vault Key**, black steel inlaid with blue light. It hums against your palm.\n\nYou climb back to the surface. The key slides into the gate's slot. Somewhere beyond, something shifts.",
+      "title": "Day 7: The Undercroft"
+    },
+    "day8_sprout": {
+      "description": "The Guardian beneath.",
+      "step0_event": "The key turns. Mechanisms grind to life. The Vault door groans open.\n\nDarkness beyond. Then a single blue eye ignites in the shadows.\n\nAn ancient combat unit stirs from centuries of sleep. Armored plating. Hydraulic limbs. It rises to its full height, its eye fixed on you.\n\nThe hologram speaks one last time:\n\n\"Guardian unit: activated. Identification: hostile. Authorization: revoked.\"\n\nThe machine moves forward.",
+      "step1_boss": "Goal: Defeat the Guardian using `!boss fight` with your active pet.",
+      "step2_transition": "The Guardian hits the ground and powers down. Its blue eye fades. Across the village, lights flicker on for the first time in decades. The Generator's hum deepens, steady, alive.\n\nBehind the Guardian's platform, the passage to the Undercroft stands open. The tunnels you descended stretch into the dark, waiting.",
+      "step4_dialogue": "The hologram reappears, clearer than ever.\n\n\"Generator network: continental scale. Twelve installations detected. Active: one.\"\n\nA map materializes above the Casino floor. Twelve markers. Eleven of them dark.\n\n**--- Tutorial Complete ---**\n\nMines, farms, markets, fishing, dungeons are all open. The rest of the network is out there. Waiting.",
+      "title": "Day 8: The Vault"
+    },
+    "menu_desc": "Track your active quests and progress.",
+    "no_active": "❌ You have no active quests.",
+    "notification_title": "📜 Quest Update",
+    "progress": "Progress",
+    "req_button": "Fulfill Requirement",
+    "req_done": "✅ Requirements fulfilled!",
+    "req_farm_hint": "🛠️ Earn money and gather resources with `/daily`, `/farm`, `/fish`, `/mine`, `/hunt`!",
+    "req_item_status": "🎒 {item}: {current} / {required}",
+    "req_missing": "❌ You do not have the required money or items!",
+    "req_missing_house": "🏠 You don't own a house yet — buy one with `/house`!",
+    "req_missing_item": "🎒 {item}: {have} / {needed}",
+    "req_missing_money": "💰 You need **${needed}** (you have ${have}).",
+    "req_money_status": "💰 Money: ${current} / ${required}",
+    "step_activity_progress": "{current} / {target} , {activity}",
+    "step_advanced": "✅ **{title}** — objective complete!\n🎯 **Next:** {next}\n\nType `/quest` to see your progress.",
+    "step_progress": "Step {current} / {total}",
+    "title": "Active Quests",
+    "tutorial_egg_granted": "🎁 You found a **Forest Egg**! Irian must have dropped it earlier. Hatch it with `/hatch`, then select it with `/pets`.",
+    "tutorial_egg_hint": "🎁 You're holding a **Forest Egg**! Hatch it with `/hatch`, then select it with `/pets` so you can continue your journey."
+  }
+}

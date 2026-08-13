@@ -1,0 +1,17 @@
+{
+  "weekly": {
+    "announcement_footer": "New week starts now! Earn points through PVP battles.",
+    "announcement_title": "🏆 Weekly Reset , Rewards Distributed!",
+    "empty": "No participants this week yet! Play PVP to earn weekly score.",
+    "history_empty": "No rank history found. Start battling to appear here!",
+    "history_title": "📜 Weekly Rank History , {user}",
+    "tier_bronze": "Bronze",
+    "tier_diamond": "Diamond",
+    "tier_gold": "Gold",
+    "tier_grandmaster": "Grandmaster",
+    "tier_master": "Master",
+    "tier_platinum": "Platinum",
+    "tier_silver": "Silver",
+    "title": "📊 Weekly Pet Leaderboard"
+  }
+}

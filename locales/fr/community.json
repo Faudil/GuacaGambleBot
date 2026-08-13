@@ -1,0 +1,33 @@
+{
+  "community": {
+    "bonus_glory_bonus": "+{val} de Gloire globale",
+    "bonus_heal_discount": "-{val}% Coût de Soin",
+    "bonus_job_payout": "+{val}% de paie aux métiers",
+    "bonus_shop_discount": "{val}% de réduction en boutique",
+    "btn_inspect": "Inspecter",
+    "btn_list": "Liste",
+    "btn_stats": "Mes Stats",
+    "building_bank_desc": "Augmente la paie des métiers.",
+    "building_bank_name": "La Banque de Guilde",
+    "building_hospital_desc": "Soigne tes familiers à moindre coût. Chaque niveau réduit les coûts de soins de 10 % — gratuit au niveau maximum.",
+    "building_hospital_name": "Hôpital pour Animaux",
+    "building_market_desc": "Réduit les prix de la boutique.",
+    "building_market_name": "Le Grand Marché",
+    "building_statue_desc": "Un hommage à la richesse du serveur. Apporte de la gloire.",
+    "building_statue_name": "La Grande Statue",
+    "inspect_title": "🔍 {name} (Prochain : Niv {level})",
+    "invest_success": "✅ Tu as investi avec succès **{amount} {res}** dans {building} !",
+    "level_up_desc": "La communauté a réussi à améliorer **{name}** au Niveau **{level}** !\nFélicitations à tous les contributeurs !",
+    "level_up_title": "🎉 BÂTIMENT AMÉLIORÉ ! 🎉",
+    "list_title": "🏛️ Projets Communautaires",
+    "max_level": "❌ {name} a atteint son niveau maximum !",
+    "menu_desc": "Gérer les projets de construction communautaires.",
+    "no_bonus_yet": "Aucun bonus actif.",
+    "not_found": "❌ Bâtiment '{name}' introuvable.",
+    "res_already_full": "❌ Le quota pour {res} est déjà atteint !",
+    "res_items": "Objets",
+    "res_money": "Argent",
+    "res_not_needed": "❌ Ce bâtiment ne nécessite pas de {res}.",
+    "stats_title": "📈 Stats Communautaires de {user}"
+  }
+}

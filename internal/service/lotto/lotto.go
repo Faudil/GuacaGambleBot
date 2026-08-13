@@ -80,12 +80,11 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 	if number < 1 || number > 100 {
 		return nil, ErrInvalidNum
 	}
-	bal, err := s.store.GetBalance(userID)
-	if err != nil {
+	if _, err := s.store.Debit(userID, s.TicketPrice); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
 		return nil, err
-	}
-	if bal < s.TicketPrice {
-		return nil, ErrNoMoney
 	}
 	ok, _, err := s.store.CheckGameLimit(userID, "lotto", 3)
 	if err != nil {
@@ -93,10 +92,6 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 	}
 	if !ok {
 		return nil, ErrLimit
-	}
-
-	if _, err := s.store.UpdateBalance(userID, -s.TicketPrice); err != nil {
-		return nil, err
 	}
 	if err := s.store.IncrementGameLimit(userID, "lotto"); err != nil {
 		return nil, err

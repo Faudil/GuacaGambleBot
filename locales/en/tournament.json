@@ -1,0 +1,33 @@
+{
+  "tournament": {
+    "already_joined": "❌ You are already registered!",
+    "already_prep": "❌ A tournament is already being prepared on this server!",
+    "cancel_error": "❌ Only the creator can cancel.",
+    "cancel_too_late": "❌ Too late, the fights have started!",
+    "cancelled_msg": "🛑 **The tournament has been cancelled.** All participants have been refunded.",
+    "champion_desc": "👑 **{user}** wins the tournament with {emoji} **{pet}**!\n\n💰 **Total Gain: {prize} $**",
+    "champion_title": "🏆 TOURNAMENT CHAMPION ! 🏆",
+    "desc": "**Available commands:**\n`!tournoi create \u003cfee\u003e` : Creates a tournament.\n`!tournoi join` : Joins the tournament by paying the fee.\n`!tournoi start` : Launches the tournament (Creator only).\n`!tournoi cancel` : Cancels and refunds everyone.",
+    "final_tie_desc": "👑 After {count} consecutive draws, **{p1}** and **{p2}** are declared Co-Champions!\n\n💰 **The Cash Prize is shared: {prize} $ each!**",
+    "final_tie_title": "🤝 DRAW IN THE FINAL ! 🏆",
+    "invalid_fee": "❌ The fee cannot be negative.",
+    "join_no_money": "❌ You need {fee} $ to register.",
+    "join_no_pet": "❌ You must equip a pet first (`!equip`).",
+    "joined_msg": "✅ **{user}** joins the tournament with **{pet}**! (Cash Prize: {prize} $)",
+    "lucky_pass": "🍀 *{user} passes automatically to the next round!*",
+    "master_label": "Master: {name}",
+    "min_players": "❌ At least 2 players are needed to start the tournament!",
+    "new_desc": "**{user}** is organizing a Grand Pet Tournament!\n\n💰 **Entry Fee:** {fee} $\n🎁 **Current Cash Prize:** {fee} $\n\nType `!tournoi join` to register!",
+    "new_title": "🏆 NEW TOURNAMENT !",
+    "no_money": "❌ You don't have the {fee}$ needed to create this tournament.",
+    "no_pet": "❌ You must have an active pet to create a tournament.",
+    "no_tournament": "❌ No active tournament.",
+    "not_found": "❌ No tournament in preparation. Use `!tournoi create \u003cfee\u003e`.",
+    "only_creator_start": "❌ Only the tournament creator can start it.",
+    "round_title": "🛡️ **--- ROUND {num} ---** 🛡️",
+    "started_desc": "**{count} Trainers** compete for the Cash Prize of **{prize} $** !\nGet ready...",
+    "started_error": "❌ The tournament has already started!",
+    "started_title": "⚔️ THE TOURNAMENT BEGINS ! ⚔️",
+    "title": "🏆 Pet Tournaments"
+  }
+}

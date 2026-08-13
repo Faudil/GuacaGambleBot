@@ -1,0 +1,134 @@
+{
+  "quests": {
+    "active_list": "**Tes quêtes actives :**\n\nSélectionnes-en une avec `!quest \u003cid\u003e` :\n",
+    "activity_intro": "📋 **{quest}**\n\n**{label}** , accomplis cette activité, puis reviens pour continuer.",
+    "activity_view_btn": "Continue",
+    "boss_fight_btn": "⚔️ Combattre le Boss",
+    "boss_ko": "❌ Ton familier est K.O. ! Nourris-le d'abord.",
+    "boss_league": {
+      "description": "Défie la Ligue des Boss et prouve la force de ton familier !",
+      "step0_intro": "🏟️ La Ligue des Boss t'attend ! Cinq puissants boss se dressent entre toi et le titre de Champion. Ton familier doit être fort , chaque victoire rapporte des récompenses rares. Entre dans l'arène !",
+      "step10_victory": "🔥🎉 **Le Phénix s'incline !** Tu es couronné **Champion de la Ligue des Boss !** La **Plume de Phénix** et le légendaire **Trophée des Boss** sont à toi ! Ton nom sera gravé dans l'histoire !",
+      "step1_battle": "⚔️ **Boss 1/5 , Le Rocher**\nUn golem de pierre massif bloque ton chemin. Sa peau rocheuse dévie les faibles attaques. Frappe fort et vite !",
+      "step2_victory": "🎉 Le Rocher s'effondre ! Tu as gagné un **Éclat d'Étincelle** , un fragment d'énergie de foudre pure. Plus que quatre !",
+      "step3_battle": "⚔️ **Boss 2/5 , Cœur de Pierre**\nUne statue vivante brandissant un cœur cristallisé de roche solide. Elle aspire la force vitale de quiconque s'approche trop près.",
+      "step4_victory": "🎉 Cœur de Pierre se brise ! Tu récupères le **Cœur de Pierre** , un noyau dense palpitant d'un pouvoir ancien. La foule rugit !",
+      "step5_battle": "⚔️ **Boss 3/5 , Porte-Tempête**\nUne bête ailée crépitant d'énergie de Tempête. Elle commande la foudre et se déplace plus vite que l'œil ne peut suivre.",
+      "step6_victory": "🎉 La tempête se dissipe ! Tu saisis le **Cœur de Tempête**, une sphère tourbillonnante de vents capturés. À mi-chemin !",
+      "step7_battle": "⚔️ **Boss 4/5 , Kraken Abyssal**\nUne horreur tentaculaire colossale des profondeurs océaniques. Son étreinte est écrasante, sa portée immense.",
+      "step8_victory": "🎉 Le Kraken retourne dans les abysses ! Tu récupères la **Perle des Abysses** , un orbe sombre contenant la lumière d'une étoile noyée.",
+      "step9_battle": "⚔️ **Boss 5/5 , L'Empereur Phénix**\nLe défi final. Un phénix majestueux et brûlant dont les flammes réduisent l'acier en cendres. Seul le plus fort peut l'affronter.",
+      "title": "Ligue des Boss"
+    },
+    "boss_lose_taunt": "💀 Le boss se moque de toi : 'C'est tout ce que tu as ? Entraîne ton familier et reviens !'",
+    "boss_no_pet": "❌ Tu dois avoir un familier actif pour combattre ce boss.",
+    "boss_win": "🏆 Ton familier a vaincu le boss !",
+    "btn_show": "Voir Quêtes",
+    "complete_objective_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, chasse, etc.), puis utilise le bouton Rafraîchir pour vérifier ta progression !",
+    "completed_activity_msg": "✅ **{title}** terminée ! Tapez `/quest` pour voir votre progression.",
+    "completed_msg": "✅ **{title}** , Quête terminée !",
+    "continue_label": "Continuer",
+    "daily_challenge": {
+      "active_quest": "📅 **Quête Quotidienne Active :**\n{objective} ({current}/{target})",
+      "betting": "Gagne {n} paris",
+      "blackjack": "Gagne {n} parties de Blackjack",
+      "completed": "✅ **Quête Quotidienne Terminée !**\nTu as reçu un **Œuf Saison**.",
+      "description": "Une tâche aléatoire donnée par le village pour gagner des récompenses.",
+      "fishing": "Pêche {n} fois",
+      "mining": "Mine {n} ressources",
+      "new_quest": "✨ **Nouvelle Quête Quotidienne !**\n{objective}",
+      "slots": "Gagne {n} fois à la Machine à Sous",
+      "title": "Défi Quotidien"
+    },
+    "day0_welcome": {
+      "description": "Arrivée et premier indice.",
+      "step0_dialogue": "Un signal de détresse d'une colonie oubliée t'a mené à HoakHaven et son Générateur Zenith mourant.\n\nGambleBot t'accueille aux portes. Le signal a été émis il y a des décennies. Tu es le premier à répondre. Il te tend un vieux journal mentionnant les **Plans Strata**, les schémas perdus du Générateur. Le journal nomme un forgeron, **Thorek**, qui connaît les vieilles mines.\n\n\"Utilise `!daily` pour ton allocation. Bienvenue.\"",
+      "title": "Le Signal"
+    },
+    "day1_strata": {
+      "description": "Le minage et les profondeurs.",
+      "step0_dialogue": "Thorek étudie le journal en silence. Son visage se durcit.\n\n\"L'écriture de Merrik. L'ingénieur du Conseil. Les plans sont dans un coffre au Niveau 7 de la vieille mine. Personne n'y est descendu depuis des décennies. Les tunnels sont sûrement à moitié effondrés.\"\n\nIl attrape une pioche au mur et la tend vers toi.\n\n\"Va taper du caillou. `!mine` deux ou trois fois. On verra si les vieux ascenseurs tiennent encore. Sinon, on perd notre temps.\"",
+      "step1_activity": "Objectif : Mine 2 fois avec `!mine`.",
+      "step2_transition": "Tu sors de la mine couvert de poussière. Une femme sur les quais te fait signe.\n\n\"Longue journée sous terre ? Viens essayer l'eau. Ça nettoie la tête.\"\n\nElle te lance une canne et une boîte de vers. \"`!fish` pour lancer ta ligne. Choisis un coin, un appât, et attends la touche. Rien de compliqué.\"",
+      "step3_activity": "Objectif : Pêche 2 fois avec `!fish`.",
+      "step4_dialogue": "Tu remontes ton deuxième poisson. La femme hoche la tête.\n\n\"Pas mal. Tu devrais parler à Elara. La jardinière du village. Elle traîne près des vieux jardins. Elle a trouvé quelque chose de bizarre là-bas.\"\n\nElle glisse une petite pochette dans ta main. **Graines de blé**. \"Tu en auras besoin. Va voir ce qu'Elara a trouvé.\"",
+      "title": "Jour 1 : La Forge"
+    },
+    "day2_alchemy": {
+      "description": "Cultiver et creuser pour des réponses.",
+      "step0_dialogue": "Elara s'agenouille près d'un mécanisme circulaire dans la terre du jardin. Sa surface luit de rainures en forme de racines.\n\n\"Une Serrure Alchimique. Une biotechnologie qui lit l'ADN des plantes comme une clé. Le **Blé** est commun, stable, pur. Les Anciens l'auraient utilisé comme référence. Plante quelques cultures avec `!farm`. Voyons si la serrure écoute encore.\"",
+      "step1_activity": "Objectif : Plante 2 cultures avec `!farm`.",
+      "step2_transition": "Le mécanisme vibre. Les rainures palpitent d'une lumière pâle. Elara étudie les données qui s'affichent.\n\n\"Ça répond. Mais les données sont incomplètes. Il y a une autre couche enfouie sous le village. Essaie `!dig` dans les fosses de fouille. Les Anciens ont enterré quelque chose là-dessous.\"",
+      "step3_activity": "Objectif : Creuse 2 fois avec `!dig`.",
+      "step4_dialogue": "Ta pelle heurte du métal. Tu dégages une capsule scellée. À l'intérieur : des graines anciennes et un fragment de carte holographique.\n\nElara contemple la capsule. \"Ils stockaient la vie elle-même. Des graines qui n'existent nulle part ailleurs.\"\n\nElle te tend le **Blé** que tu as cultivé. \"Garde-le. Trouve-toi un toit. `!house shop` propose des cabanes de départ.\"",
+      "title": "Jour 2 : La Serrure"
+    },
+    "day3_base": {
+      "description": "S'installer et se préparer.",
+      "step0_req": "GambleBot analyse les données de la capsule. Un schéma partiel apparaît à l'écran.\n\n\"Plans Strata, section une. Besoin d'un terminal fixe pour décoder le reste. Achète une Cabane de Départ avec `!house shop`. Coût : 500 crédits et 2 Minerais de Fer.\"",
+      "step1_transition": "Le terminal de la cabane s'allume. La voix de GambleBot grésille.\n\n\"Bien. Maintenant protège tes pièces. `!deposit` une fois. Si tu perds tout au casino, au moins tes économies sont en sécurité.\"",
+      "step2_activity": "Objectif : Fais 1 dépôt avec `!deposit`.",
+      "step3_dialogue": "Dépôt enregistré.\n\nLes plans révèlent que le Coffre utilise un verrou biologique. Il faut un échantillon ADN de la faune locale.\n\n\"La forêt hors de la ville. Une ranger nommée **Irian** la connaît. Elle campe à la lisière. Ne traîne pas trop.\"\n\nIrian te rejoint à la sortie de la ville avec un cadeau : un **Œuf de Forêt** niché dans de la mousse, chaud au toucher. \"Une graine sauvage des bois. Utilise `!hatch` pour l'ouvrir. Ça peut être n'importe quoi.\"",
+      "title": "Jour 3 : Le Logement"
+    },
+    "day4_will": {
+      "description": "Chasse et œuf mystère.",
+      "step0_dialogue": "Irian t'attend à la lisière. Elle va droit au but.\n\n\"La forêt n'est pas sûre. De vieilles expériences y traînent encore. Mais le Coffre a besoin d'un échantillon ADN de la faune locale. Alors on chasse. Utilise `!hunt` deux ou trois fois. Ton familier se bat.\"",
+      "step1_activity": "Objectif : Chasse 2 fois avec `!hunt`.",
+      "step2_dialogue": "Ton familier ramène l'échantillon ADN de la broussaille. Irian l'examine et hoche la tête. \"C'est exactement ce qu'il nous faut.\"\n\nElle jette un œil à l'œuf que tu portes. \"Quand il éclora, nourris le nouveau avec `!pets`. Un familier affamé est un familier mort.\"",
+      "step3_activity": "Objectif : Nourris ton familier 1 fois avec `!pets`.",
+      "step4_dialogue": "Ton compagnon se calme après le repas. Irian l'observe un instant.\n\n\"Prends-en soin. Peu importe ce qui nous attend, tu auras besoin de quelqu'un à tes côtés.\"\n\nElle regarde le Casino. \"GambleBot a trouvé quelque chose sous son plancher. Va voir par toi-même.\"",
+      "title": "Jour 4 : La Forêt"
+    },
+    "day5_odds": {
+      "description": "L'énergie et le marché.",
+      "step0_dialogue": "GambleBot fait les cent pas quand tu entres.\n\n\"Le Coffre n'est pas sous le Casino par hasard. Ce bâtiment tourne au risque. Chaque tour, chaque lancer, chaque main alimente le système.\"\n\nIl désigne les machines. \"Joue quelques parties. N'importe lesquelles. Je surveille les lectures.\"",
+      "step1_activity": "Objectif : Joue 2 fois à des jeux du Casino.",
+      "step2_transition": "Le sol vibre. Un hologramme apparaît. Sa voix est plate, synthétique.\n\n\"Niveaux d'énergie : adéquats. Évaluation du marché : insuffisante. Commerce requis.\"\n\nGambleBot hausse les épaules. \"Le système veut voir du commerce. Utilise `!market sell` pour vendre un objet. Une transaction devrait suffire.\"",
+      "step3_activity": "Objectif : Vends 1 objet avec `!market sell`.",
+      "step4_dialogue": "La transaction est enregistrée. L'hologramme vacille.\n\n\"Activité du marché vérifiée. Seuil d'investissement communautaire non atteint. Accès au Coffre refusé.\"\n\nLes voyants de GambleBot faiblissent. \"Il veut qu'on investisse dans le village. Rassemble tout le monde. On a encore une chose à faire.\"",
+      "title": "Jour 5 : Le Casino"
+    },
+    "day6_contribution": {
+      "description": "Investir dans le village.",
+      "step0_dialogue": "Vous vous rassemblez tous les quatre autour du projecteur holographique. Thorek, Elara, Irian et GambleBot. La projection liste ses exigences.\n\n\"Évaluation : cohésion communautaire requise. Les Anciens ne voulaient pas seulement quelqu'un d'assez fort pour atteindre le Coffre. Ils voulaient quelqu'un capable de maintenir une communauté unie.\"\n\nThorek grogne. \"C'est à ça que servent les projets du village. Regarde `/community` pour les voir. Banques, hôpitaux, marchés. Tout le monde participe, tout le monde profite des bonus.\"\n\nElara hoche la tête vers toi. \"Pour le Coffre, il nous faut ta contribution : **5 Minerais de Fer** et **3 Blés**. Mine et cultive. Reviens ici quand tu es prêt.\"",
+      "step1_req": "Objectif : Contribue **5 Minerais de Fer** et **3 Blés** au fonds communautaire (récolte-les avec `!mine` et `!farm`, puis confirme ici).",
+      "step2_dialogue": "Les ressources sont enregistrées. L'hologramme se stabilise. Tu entends un bruit mécanique, un vieux moteur qui démarre.",
+      "title": "Jour 6 : Communauté"
+    },
+    "day7_delve": {
+      "description": "Trouve la clé du Coffre.",
+      "step0_dialogue": "Le groupe se rassemble devant le Coffre. Là où devrait se trouver la porte : un mur d'acier noir, sans soudure, scellé. Une seule fente brille en son centre.\n\n\"Verrou de porte : détecté. Clé : absente.\"\n\nThorek grogne. \"Évidemment qu'il y a une clé. Les anciens bâtisseurs ne faisaient jamais rien de simple.\"\n\nLa voix de GambleBot bourdonne. \"Les tunnels sous le village. Les Souterrains. Les Anciens y ont caché leurs secrets. Utilise `/delve` pour descendre. Trouve la clé.\"",
+      "step1_activity": "Objectif : Complète 1 exploration avec `/delve`.",
+      "step2_dialogue": "Au fond des Souterrains, dans une salle scellée plus vieille que le village, tu la trouves : une **Clé du Coffre**, en acier noir incrusté de lumière bleue. Elle bourdonne contre ta paume.\n\nTu remontes à la surface. La clé glisse dans la fente de la porte. Quelque part au-delà, quelque chose bouge.",
+      "title": "Jour 7 : Les Souterrains"
+    },
+    "day8_sprout": {
+      "description": "Le Gardien des profondeurs.",
+      "step0_event": "La clé tourne. Les mécanismes grondent. La porte du Coffre s'ouvre dans un grincement.\n\nL'obscurité. Puis un œil bleu s'allume dans l'ombre.\n\nUne ancienne unité de combat s'éveille après des siècles de sommeil. Plaques blindées. Membres hydrauliques. Elle se redresse de toute sa hauteur, son œil fixé sur toi.\n\nL'hologramme parle une dernière fois :\n\n\"Unité Gardienne : activée. Identification : hostile. Autorisation : révoquée.\"\n\nLa machine avance.",
+      "step1_boss": "Objectif : Vaincs le Gardien avec `!boss fight` et ton familier.",
+      "step2_transition": "Le Gardien s'écroule au sol et s'éteint. Son œil bleu s'évanouit. À travers le village, des lumières s'allument pour la première fois depuis des décennies. Le bourdonnement du Générateur s'approfondit, stable, vivant.\n\nDerrière la plateforme du Gardien, le passage vers les Souterrains est ouvert. Les tunnels que tu as explorés s'enfoncent dans l'obscurité, en attente.",
+      "step4_dialogue": "L'hologramme réapparaît, plus net que jamais.\n\n\"Réseau de Générateurs : échelle continentale. Douze installations détectées. Actives : une.\"\n\nUne carte se matérialise au-dessus du Casino. Douze marqueurs. Onze sont éteints.\n\n**--- Tutoriel Terminé ---**\n\nMines, fermes, marché, pêche, donjons sont ouverts. Le reste du réseau est là-bas. Il attend.",
+      "title": "Jour 8 : Le Coffre"
+    },
+    "menu_desc": "Suivez vos quêtes actives et leur progression.",
+    "no_active": "❌ Vous n'avez aucune quête active.",
+    "notification_title": "📜 Mise à jour de quête",
+    "progress": "Progression",
+    "req_button": "Remplir l'objectif",
+    "req_done": "✅ Objectifs remplis !",
+    "req_farm_hint": "🛠️ Gagne de l'argent et récolte des ressources avec `/daily`, `/farm`, `/fish`, `/mine`, `/hunt` !",
+    "req_item_status": "🎒 {item} : {current} / {required}",
+    "req_missing": "❌ Tu n'as pas l'argent ou les objets requis !",
+    "req_missing_house": "🏠 Tu ne possèdes pas encore de maison — achètes-en une avec `/house` !",
+    "req_missing_item": "🎒 {item} : {have} / {needed}",
+    "req_missing_money": "💰 Il te faut **{needed}$** (tu as {have}$).",
+    "req_money_status": "💰 Argent : ${current} / ${required}",
+    "step_activity_progress": "{current} / {target} , {activity}",
+    "step_advanced": "✅ **{title}** — objectif accompli !\n🎯 **Suite :** {next}\n\nTape `/quest` pour voir ta progression.",
+    "step_progress": "Étape {current} / {total}",
+    "title": "Quêtes Actives",
+    "tutorial_egg_granted": "🎁 Tu as trouvé un **Œuf de Forêt** ! Irian a dû le laisser tomber plus tôt. Fais-le éclore avec `/hatch`, puis choisis-le avec `/pets`.",
+    "tutorial_egg_hint": "🎁 Tu portes un **Œuf de Forêt** ! Fais-le éclore avec `/hatch`, puis choisis-le avec `/pets` pour continuer ton aventure."
+  }
+}

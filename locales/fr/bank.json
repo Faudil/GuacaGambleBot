@@ -1,0 +1,28 @@
+{
+  "bank": {
+    "amount_label": "Montant",
+    "balance_title": "Votre solde",
+    "bank_full": "❌ Ta banque est déjà pleine (Max $500) !",
+    "btn_balance": "Solde",
+    "btn_deposit": "Déposer",
+    "btn_withdraw": "Retirer",
+    "daily_interest": "Intérêts quotidiens",
+    "deposit_done": "Vous avez déposé {amount}.",
+    "deposit_modal_title": "Dépôt dans votre coffre",
+    "deposit_title": "Dépôt effectué",
+    "deposited": "🏦 Tu as déposé **${amount}**. Solde banque : **${total}/500**.",
+    "insufficient": "Fonds insuffisants.",
+    "invalid": "Montant invalide.",
+    "invalid_amount": "❌ Montant invalide.",
+    "menu_desc": "Gérez votre portefeuille et votre coffre.",
+    "menu_title": "Banque",
+    "no_bank_money": "❌ Tu n'as pas assez d'argent en banque.",
+    "no_cash": "❌ Tu n'as pas assez d'argent liquide.",
+    "positive_amount": "❌ Tu ne peux pas déposer 0 ou moins.",
+    "safe": "Coffre",
+    "wallet": "Portefeuille",
+    "withdraw_done": "Vous avez retiré {amount}.",
+    "withdraw_title": "Retrait effectué",
+    "withdrawn": "💸 Tu as retiré **${amount}** de la banque."
+  }
+}

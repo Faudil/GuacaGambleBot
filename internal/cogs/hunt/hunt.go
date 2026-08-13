@@ -1,7 +1,6 @@
 package hunt
 
 import (
-	"fmt"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -11,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
+	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -66,7 +66,13 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 }
 
 func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	desc := i18n.T("hunt.dashboard_desc", lang, nil)
+	desc := ""
+	pet, _ := petsvc.New(c.store, c.cfg).GetActivePet(userID)
+	if pet != nil {
+		desc = i18n.T("hunt.dashboard_desc", lang, map[string]any{"name": pet.Nickname, "lvl": pet.Level})
+	} else {
+		desc = i18n.T("hunt.no_pet", lang)
+	}
 	if maxPerDay := c.cfg.HuntMaxPerDay; maxPerDay > 0 {
 		_, remaining, _ := c.store.CheckGameLimit(userID, "hunt", maxPerDay)
 		desc += "\n\n" + i18n.T("hunt.remaining", lang, map[string]any{"remaining": remaining, "max": maxPerDay})
@@ -258,80 +264,81 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// Spawn frame: replace the zone menu with the encounter.
-	spawn := c.battleFrame(res.PetStartHP, res.EnemyMaxHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
-		petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
-		i18n.T("hunt.enemy_spawn", lang, map[string]any{"name": enemyName}), lang)
+	// Spawn frame: retro layout with full HP bars.
+	petD := components.DisplayPet{
+		Name: petName, Emoji: petEmoji, Level: pet.Level,
+		HP: res.PetStartHP, MaxHP: res.PetMaxHP,
+	}
+	enemyD := components.DisplayPet{
+		Name: enemyName, Emoji: res.EnemyEmoji, Level: res.EnemyLevel,
+		HP: res.EnemyMaxHP, MaxHP: res.EnemyMaxHP,
+	}
+	spawn := c.huntRetroFrame(petD, enemyD,
+		[]string{i18n.T("hunt.enemy_spawn", lang, map[string]any{"name": enemyName})},
+		zone.Emoji, zoneName, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, spawn, nil))
 
 	// Animate the fight, then show the result.
-	go func() {
-		time.Sleep(1200 * time.Millisecond)
-		journal := make([]string, 0, 5)
-		for _, e := range res.Log {
-			journal = append(journal, c.journalLine(e, lang))
-			if len(journal) > 5 {
-				journal = journal[len(journal)-5:]
+	turns := make([]battle.BattleTurn, 0, len(res.Log))
+	for _, e := range res.Log {
+		turns = append(turns, battle.BattleTurn{Pet1HP: e.PetHP, Pet2HP: e.EnemyHP, Msg: c.journalLine(e, lang)})
+	}
+
+	go interaction.AnimateFight(
+		turns,
+		func(journal []string, t battle.BattleTurn) *discordgo.MessageEmbed {
+			petD.HP = t.Pet1HP
+			enemyD.HP = t.Pet2HP
+			petD.IsKO = t.Pet1HP <= 0
+			enemyD.IsKO = t.Pet2HP <= 0
+			return c.huntRetroFrame(petD, enemyD, journal, zone.Emoji, zoneName, lang)
+		},
+		func(frame *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, comps))
+		},
+		func(journal []string) {
+			footerKey := "hunt.end_footer"
+			color := 0xFFA500
+			if res.PlayerWon {
+				color = 0xFFD700
+				footerKey = "hunt.victory_footer"
+			} else if res.EnemyWon {
+				color = 0xFF0000
+				footerKey = "hunt.defeat_footer"
 			}
-			frame := c.battleFrame(e.PetHP, e.EnemyHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
-				petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
-				i18n.T("hunt.battle_journal", lang)+strings.Join(journal, "\n"), lang)
-			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, nil))
-			time.Sleep(1200 * time.Millisecond)
-		}
+			desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
+			petD.HP = res.PetHP
+			enemyD.HP = res.EnemyHP
+			petD.IsKO = res.PetHP <= 0
+			enemyD.IsKO = res.EnemyHP <= 0
+			final := c.huntRetroFrame(petD, enemyD, journal, zone.Emoji, zoneName, lang)
+			final.Color = color
+			final.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T(footerKey, lang)}
+			final.Description = final.Description + "\n\n" + desc
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(final, back))
 
-		footerKey := "hunt.end_footer"
-		color := 0xFFA500
-		if res.PlayerWon {
-			color = 0xFFD700
-			footerKey = "hunt.victory_footer"
-		} else if res.EnemyWon {
-			color = 0xFF0000
-			footerKey = "hunt.defeat_footer"
-		}
-		desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
-		final := c.battleFrame(res.PetHP, res.EnemyHP, res.EnemyEmoji, enemyName, res.EnemyLevel,
-			petEmoji, petName, pet.Level, res.PetMaxHP, res.EnemyMaxHP, zone.Emoji, zoneName,
-			i18n.T("hunt.battle_journal", lang)+strings.Join(journal, "\n")+desc, lang)
-		final.Color = color
-		final.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T(footerKey, lang)}
-		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(final, back))
+			if n, ok := c.store.PopQuestNotification(userID); ok {
+				interaction.SendQuestNotification(b, i, n, lang)
+			}
 
-		if n, ok := c.store.PopQuestNotification(userID); ok {
-			interaction.SendQuestNotification(b, i, n, lang)
-		}
-
-		c.maybePetInteraction(b, i, pet, lang)
-		unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
-		if uerr == nil && len(unlocks) > 0 {
-			interaction.SendAchievements(b, i, lang, unlocks)
-		}
-	}()
+			c.maybePetInteraction(b, i, pet, lang)
+			unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
+			if uerr == nil && len(unlocks) > 0 {
+				interaction.SendAchievements(b, i, lang, unlocks)
+			}
+		},
+	)
 }
 
-// battleFrame renders one fight frame: pet vs enemy with live HP bars.
-func (c *Cog) battleFrame(petHP, enemyHP int, enemyEmoji, enemyName string, enemyLevel int,
-	petEmoji, petName string, petLevel, petMaxHP, enemyMaxHP int, zoneEmoji, zoneName, desc, lang string) *discordgo.MessageEmbed {
-	emb := components.Embed(
+// huntRetroFrame renders one retro RPG battle frame for a hunt encounter.
+func (c *Cog) huntRetroFrame(petD, enemyD components.DisplayPet, journal []string, zoneEmoji, zoneName, lang string) *discordgo.MessageEmbed {
+	return components.FightFrameEmbed(
 		i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zoneEmoji, "name": zoneName}),
-		desc,
-		0x0000FF,
+		petD, enemyD,
+		components.FightLabelsFor(lang, i18n.T("hunt.vs", lang)),
+		journal,
 	)
-	emb.Fields = append(emb.Fields,
-		components.Field(
-			fmt.Sprintf("%s %s (Niv %d)", petEmoji, petName, petLevel),
-			fmt.Sprintf("PV : %s\n`%d / %d`", huntHPBar(petHP, petMaxHP), petHP, petMaxHP),
-			true,
-		),
-		components.Field(i18n.T("hunt.vs", lang), "⚡", true),
-		components.Field(
-			fmt.Sprintf("%s %s (Niv %d)", enemyEmoji, enemyName, enemyLevel),
-			fmt.Sprintf("PV : %s\n`%d / %d`", huntHPBar(enemyHP, enemyMaxHP), enemyHP, enemyMaxHP),
-			true,
-		),
-	)
-	return emb
 }
 
 func (c *Cog) journalLine(e huntsvc.BattleLogEntry, lang string) string {
@@ -462,21 +469,6 @@ func (c *Cog) respondErrorParams(b *interaction.Bot, i *discordgo.InteractionCre
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
-}
-
-// huntHPBar renders a 10-block HP bar like the pets cog (█ filled / ░ empty).
-func huntHPBar(hp, maxHP int) string {
-	if maxHP <= 0 {
-		return strings.Repeat("░", 10)
-	}
-	pct := hp * 10 / maxHP
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 10 {
-		pct = 10
-	}
-	return strings.Repeat("█", pct) + strings.Repeat("░", 10-pct)
 }
 
 func itoa(n int) string {

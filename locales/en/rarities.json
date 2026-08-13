@@ -1,0 +1,9 @@
+{
+  "rarities": {
+    "common": "Common",
+    "epic": "Epic",
+    "legendary": "Legendary",
+    "rare": "Rare",
+    "unique": "Unique"
+  }
+}

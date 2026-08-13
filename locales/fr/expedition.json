@@ -1,0 +1,43 @@
+{
+  "expedition": {
+    "already_active": "❌ Tu as déjà une expédition en cours. Termine-la d'abord.",
+    "claim_ready": "Expédition terminée ! Réclame tes récompenses.",
+    "claim_success": "✨ **{pet}** est de retour ! Il gagne **{xp} XP**.\n\n**Butin trouvé :**{items}",
+    "claim_title": "🎁 Retour d'Expédition",
+    "events": {
+      "combat_loss": "🤕 **{pet}** a croisé un **{enemy}** sauvage et a dû fuir...",
+      "combat_win": "⚔️ **{pet}** a vaincu un **{enemy}** sauvage ! (+{xp} XP)",
+      "exploration": "🐾 **{pet}** explore **{location}** et gagne **{xp} XP**.",
+      "loot": "🎁 **{pet}** a déniché un(e) **{item}** !",
+      "rest": "💤 **{pet}** fait une petite sieste au bord d'un ruisseau."
+    },
+    "help_benefits": "**Bénéfices :**",
+    "help_benefits_list": "✨ XP pour le familier\n🎁 Objets rares\n📜 Un journal détaillé de l'aventure",
+    "help_commands": "**Commandes :**",
+    "help_commands_list": "`!expedition start \u003c1/4/8/24\u003e` : Lancer une expédition\n`!expedition status` : Voir le journal de bord\n`!expedition claim` : Récupérer les récompenses",
+    "help_desc": "Envoyez votre familier explorer le monde !",
+    "help_title": "Détails de l'Expédition",
+    "invalid_duration": "❌ Durée invalide. Choisis : 1, 4, 8 ou 24 heures.",
+    "locations": {
+      "cave": "la Grotte de Cristal",
+      "coral": "la Côte de Corail",
+      "desert": "le Désert Aride",
+      "forest": "la Forêt Mystique",
+      "mountain": "le Sommet Enneigé",
+      "plains": "la Plaine Verdoyante",
+      "swamp": "le Marécage Sombre",
+      "valley": "la Vallée des Échos",
+      "volcano": "le Volcan Actif"
+    },
+    "log_header": "Journal de bord",
+    "no_active": "❌ Tu n'as pas d'expédition en cours.",
+    "no_events": "Rien à signaler pour l'instant...",
+    "no_items": "Aucun objet trouvé.",
+    "no_pet": "❌ Tu n'as pas de familier actif ! Obtiens un œuf avec `/start`, fais-le éclore avec `/hatch`, puis choisis ton compagnon avec `/pets`.",
+    "not_finished": "🕒 Ton familier n'est pas encore revenu ! Il lui reste **{remaining}**.",
+    "start_success": "🚀 **{pet}** part en expédition pour **{duration}h** !",
+    "status_desc": "Progression : **{progress}%** (Retour estimé à **{end_time}**)",
+    "status_title": "🚀 Expédition de {pet}",
+    "time_format": "{hours}h {minutes}m"
+  }
+}

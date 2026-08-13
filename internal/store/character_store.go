@@ -2,6 +2,8 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -11,9 +13,87 @@ import (
 	"guacagamblebot/internal/model"
 )
 
+var (
+	ErrNoSkillPoints = errors.New("no skill points available")
+	ErrInvalidStat   = errors.New("invalid stat")
+	ErrNoPerkPoints  = errors.New("no perk points available")
+)
+
 // XPForCharacterLevel returns the XP required to reach the next level.
+// Levels 1-20 grow linearly; past level 20 requirements grow exponentially so
+// late levels become long-term goals.
 func XPForCharacterLevel(level int) int {
-	return int(float64(level) * 100 * 1.5)
+	if level <= 20 {
+		return 300 * level
+	}
+	return int(6000 * math.Pow(1.06, float64(level-20)))
+}
+
+// hasPassive reports whether the character row's passive list contains id.
+func hasPassive(c *model.UserCharacter, id string) bool {
+	var list []string
+	if err := json.Unmarshal([]byte(c.Passives), &list); err != nil {
+		return false
+	}
+	for _, p := range list {
+		if p == id {
+			return true
+		}
+	}
+	return false
+}
+
+// HasPassive reports whether a user owns the given passive perk.
+func (s *Store) HasPassive(userID int64, id string) bool {
+	c, err := s.GetCharacter(userID)
+	if err != nil {
+		return false
+	}
+	return hasPassive(c, id)
+}
+
+// DecrementPerkPoints consumes one pending perk choice. It returns an error
+// when the user has none left.
+func (s *Store) DecrementPerkPoints(userID int64) error {
+	res := s.DB.Model(&model.UserCharacter{}).
+		Where("user_id = ? AND perk_points > 0", userID).
+		UpdateColumn("perk_points", gorm.Expr("perk_points - 1"))
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrNoPerkPoints
+	}
+	return nil
+}
+
+// AddPassive appends a passive perk ID to the user's passive list.
+func (s *Store) AddPassive(userID int64, id string) error {
+	c, err := s.GetCharacter(userID)
+	if err != nil {
+		return err
+	}
+	var list []string
+	_ = json.Unmarshal([]byte(c.Passives), &list)
+	for _, p := range list {
+		if p == id {
+			return nil
+		}
+	}
+	list = append(list, id)
+	data, _ := json.Marshal(list)
+	return s.DB.Model(&model.UserCharacter{}).
+		Where("user_id = ?", userID).
+		Update("passives", string(data)).Error
+}
+
+// GetPerkPoints returns the user's pending perk choices.
+func (s *Store) GetPerkPoints(userID int64) (int, error) {
+	c, err := s.GetCharacter(userID)
+	if err != nil {
+		return 0, err
+	}
+	return c.PerkPoints, nil
 }
 
 // EnsureCharacter creates a character row with default values if missing.
@@ -31,11 +111,19 @@ func (s *Store) GetCharacter(userID int64) (*model.UserCharacter, error) {
 }
 
 // AddCharacterXP awards XP and handles level-ups. Returns whether the player
-// leveled up and the new level. Crowns are awarded on each level-up.
+// leveled up and the new level. Crowns are awarded on each level-up. An active
+// quick_learner buff doubles the XP amount and is consumed.
 func (s *Store) AddCharacterXP(userID int64, amount int) (leveledUp bool, newLevel int, err error) {
 	c, err := s.EnsureCharacter(userID)
 	if err != nil {
 		return false, 0, err
+	}
+
+	if ok, _ := s.ConsumeActiveBuff(userID, "quick_learner"); ok {
+		amount *= 2
+	}
+	if hasPassive(c, "perk_xp_boost") {
+		amount = amount * 105 / 100
 	}
 
 	c.XP += amount
@@ -44,6 +132,7 @@ func (s *Store) AddCharacterXP(userID int64, amount int) (leveledUp bool, newLev
 		c.XP -= XPForCharacterLevel(c.Level)
 		c.Level++
 		c.SkillPoints += 2
+		c.PerkPoints++
 		leveled = true
 	}
 
@@ -53,6 +142,7 @@ func (s *Store) AddCharacterXP(userID int64, amount int) (leveledUp bool, newLev
 			"level":        c.Level,
 			"xp":           c.XP,
 			"skill_points": c.SkillPoints,
+			"perk_points":  c.PerkPoints,
 		}).Error; err != nil {
 		return false, 0, err
 	}
@@ -71,12 +161,12 @@ func (s *Store) AllocateStat(userID int64, stat string) error {
 		return err
 	}
 	if c.SkillPoints <= 0 {
-		return nil
+		return ErrNoSkillPoints
 	}
 	allowed := map[string]string{"str": "str", "dex": "dex", "int": "int", "vit": "vit", "luk": "luk"}
 	col, ok := allowed[stat]
 	if !ok {
-		return nil
+		return ErrInvalidStat
 	}
 	return s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.UserCharacter{}).
@@ -90,18 +180,17 @@ func (s *Store) AllocateStat(userID int64, stat string) error {
 	})
 }
 
-// GetEquipment returns the player's equipped items as a slot→itemID map.
-// Deprecated: use GetEquipped instead.
-func (s *Store) GetEquipment(userID int64) (map[string]string, error) {
-	var rows []model.UserEquipment
-	if err := s.DB.Where("user_id = ? AND is_equipped = ?", userID, true).Find(&rows).Error; err != nil {
-		return nil, err
+// AddStatPoints directly adds n points to a stat without consuming skill
+// points (used by level-up perks).
+func (s *Store) AddStatPoints(userID int64, stat string, n int) error {
+	allowed := map[string]string{"str": "str", "dex": "dex", "int": "int", "vit": "vit", "luk": "luk"}
+	col, ok := allowed[stat]
+	if !ok {
+		return ErrInvalidStat
 	}
-	out := make(map[string]string, len(rows))
-	for _, r := range rows {
-		out[r.EquipSlot] = r.BaseID
-	}
-	return out, nil
+	return s.DB.Model(&model.UserCharacter{}).
+		Where("user_id = ?", userID).
+		UpdateColumn(col, gorm.Expr(col+" + ?", n)).Error
 }
 
 // GetEquipped returns all currently equipped UserEquipment instances for a user.

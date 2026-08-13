@@ -11,8 +11,8 @@ func TestRecommendedLevel(t *testing.T) {
 		floor int
 		want  int
 	}{
-		{1, 1}, {2, 4}, {3, 7}, {4, 10}, {5, 13},
-		{6, 16}, {7, 19}, {8, 22}, {9, 25}, {10, 28},
+		{1, 12}, {2, 15}, {3, 18}, {4, 21}, {5, 24},
+		{6, 27}, {7, 30}, {8, 33}, {9, 36}, {10, 39},
 	}
 	for _, tt := range tests {
 		got := RecommendedLevel(tt.floor)
@@ -29,16 +29,23 @@ func TestLevelScalingMul(t *testing.T) {
 	if math.Abs(mul-expected) > 0.001 {
 		t.Errorf("LevelScalingMul(5,1) = %f; want %f", mul, expected)
 	}
-	mulEq := LevelScalingMul(5, 20)
+	mulEq := LevelScalingMul(5, rec)
 	if mulEq != 1.0 {
-		t.Errorf("LevelScalingMul(5,20) = %f; want 1.0", mulEq)
+		t.Errorf("LevelScalingMul(5,%d) = %f; want 1.0", rec, mulEq)
 	}
 }
 
 func TestDangerSkulls(t *testing.T) {
+	// Delve is a soft-gated mid-game activity: a level 1 player at floor 1 is
+	// heavily out of depth.
 	d := CalcDanger(1, 1)
-	if d.Skulls != 1 || d.IsPunished {
-		t.Errorf("F1 Lv1: %+v", d)
+	if d.Skulls < 4 || !d.IsPunished {
+		t.Errorf("F1 Lv1 should be punished (soft gate): %+v", d)
+	}
+	// At the recommended level the danger drops to baseline.
+	dRec := CalcDanger(1, RecommendedLevel(1))
+	if dRec.Skulls != 1 || dRec.IsPunished {
+		t.Errorf("F1 rec level should be calm: %+v", dRec)
 	}
 	d2 := CalcDanger(5, 1)
 	if !d2.IsPunished || d2.Skulls < 3 {

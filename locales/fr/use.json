@@ -1,0 +1,7 @@
+{
+  "use": {
+    "not_owned": "❌ Vous ne possédez pas cet objet.",
+    "not_usable": "❌ Cet objet ne peut pas être utilisé. Essayez `/shop` ou `/inventory`.",
+    "title": "🧰 Objet Utilisé"
+  }
+}

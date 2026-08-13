@@ -1,0 +1,261 @@
+{
+  "items": {
+    "arc": {
+      "description": "Aide à la chasse ! Réinitialise le cooldown de !hunt.",
+      "name": "Arc"
+    },
+    "avoine": {
+      "description": "Parfait pour le petit déjeuner.",
+      "name": "Avoine"
+    },
+    "baleine": {
+      "description": "INCROYABLE ! Ça vaut une fortune !",
+      "name": "Baleine"
+    },
+    "base_use_msg": "Cet objet ({item_name}) ne fait rien pour l'instant.",
+    "bière": {
+      "description": "La boisson du mineur ! Réinitialise le cooldown de !mine.",
+      "name": "Bière"
+    },
+    "blé": {
+      "description": "Indispensable pour faire du pain.",
+      "name": "Blé"
+    },
+    "café": {
+      "description": "Réveille tes sens. Réinitialise le cooldown du !daily.",
+      "name": "Café"
+    },
+    "caillou": {
+      "description": "Un caillou tout nul. Sert à rien.",
+      "name": "Caillou"
+    },
+    "carpe": {
+      "description": "Le meilleur poisson d'eau douce.",
+      "name": "Carpe"
+    },
+    "cave_egg": {
+      "description": "Un œuf obscur des cavernes. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf des Cavernes"
+    },
+    "charbon": {
+      "description": "Pas mal pour se réchauffer.",
+      "name": "Charbon"
+    },
+    "citrouille": {
+      "description": "Parfait pour Halloween.",
+      "name": "Citrouille"
+    },
+    "data disk": {
+      "description": "Un disque mémoire Zénith corrompu. Contient d'anciens logs de la Strate.",
+      "name": "Disque de Données"
+    },
+    "desert_egg": {
+      "description": "Un œuf brûlé par le soleil. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf du Désert"
+    },
+    "diamant brut": {
+      "description": "INCROYABLE ! Ça vaut une fortune !",
+      "name": "Diamant Brut"
+    },
+    "emeraude": {
+      "description": "INCROYABLE ! Ça vaut une fortune !",
+      "name": "Émeraude"
+    },
+    "espadon": {
+      "description": "Un poisson combattant majestueux.",
+      "name": "Espadon"
+    },
+    "forest_egg": {
+      "description": "Un œuf embrassé par la forêt. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf de la Forêt"
+    },
+    "fortune cookie": {
+      "description": "Un biscuit délicieux avec un message prémonitoire.",
+      "name": "Fortune Cookie"
+    },
+    "fraise": {
+      "description": "Rouge, sucrée et juteuse.",
+      "name": "Fraise"
+    },
+    "fruit étoile": {
+      "description": "Un fruit cosmique d'une autre dimension.",
+      "name": "Fruit Étoile"
+    },
+    "fève de cacao": {
+      "description": "L'ingrédient principal du bonheur (chocolat).",
+      "name": "Fève de Cacao"
+    },
+    "grain de café": {
+      "description": "L'or noir du matin.",
+      "name": "Grain de Café"
+    },
+    "graine d'avoine": {
+      "description": "À planter pour obtenir de l'avoine (10 min).",
+      "name": "Graine d'Avoine"
+    },
+    "graine de blé": {
+      "description": "À planter pour obtenir du blé (5 min).",
+      "name": "Graine de Blé"
+    },
+    "graine de cacao": {
+      "description": "À planter pour obtenir du cacao (12h).",
+      "name": "Graine de Cacao"
+    },
+    "graine de café": {
+      "description": "À planter pour obtenir du café (8h).",
+      "name": "Graine de Café"
+    },
+    "graine de citrouille": {
+      "description": "À planter pour obtenir des citrouilles (4h).",
+      "name": "Graine de Citrouille"
+    },
+    "graine de fraise": {
+      "description": "À planter pour obtenir des fraises (18h).",
+      "name": "Graine de Fraise"
+    },
+    "graine de maïs": {
+      "description": "À planter pour obtenir du maïs (30 min).",
+      "name": "Graine de Maïs"
+    },
+    "graine de patate": {
+      "description": "À planter pour obtenir des patates (1h).",
+      "name": "Graine de Patate"
+    },
+    "graine de tomate": {
+      "description": "À planter pour obtenir des tomates (2h).",
+      "name": "Graine de Tomate"
+    },
+    "hameçon": {
+      "description": "Attre les poissons ! Réinitialise le cooldown de !fish.",
+      "name": "Hameçon"
+    },
+    "jeton de casino": {
+      "description": "Te donne une nouvelle chance, reset ta limite de `!casino`",
+      "name": "Jeton de Casino"
+    },
+    "maïs": {
+      "description": "Fait aussi du pop-corn !",
+      "name": "Maïs"
+    },
+    "minerai d'argent": {
+      "description": "Utile pour forger des trucs solides.",
+      "name": "Minerai d'Argent"
+    },
+    "minerai de cuivre": {
+      "description": "Utile pour forger des trucs solides.",
+      "name": "Minerai de Cuivre"
+    },
+    "minerai de fer": {
+      "description": "Utile pour forger des trucs solides.",
+      "name": "Minerai de Fer"
+    },
+    "mountain_egg": {
+      "description": "Un œuf né des sommets. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf de la Montagne"
+    },
+    "ocean_egg": {
+      "description": "Un œuf des profondeurs marines. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf de l'Océan"
+    },
+    "old journal": {
+      "description": "Un carnet poussiéreux, écrit à la main par un survivant. Les pages sont couvertes de suie.",
+      "name": "Vieux Journal"
+    },
+    "parchemin d'identité": {
+      "description": "Change ton surnom sur le serveur aléatoirement.",
+      "name": "Parchemin d'Identité"
+    },
+    "patate": {
+      "description": "On peut en faire de la vodka...",
+      "name": "Patate"
+    },
+    "pièce truquée": {
+      "description": "Augmente ta chance. Passe ta probabilité de réussir ton pile ou face à 75%.",
+      "name": "Pièce Truquée"
+    },
+    "plante pourrie": {
+      "description": "Tu as mal géré ta ferme...",
+      "name": "Plante Pourrie"
+    },
+    "platine": {
+      "description": "Brillant ! Les marchands adorent ça.",
+      "name": "Platine"
+    },
+    "poisson-globe": {
+      "description": "Attention, ça pique !",
+      "name": "Poisson-Globe"
+    },
+    "pomme dorée": {
+      "description": "Elle brille d'une lueur magique.",
+      "name": "Pomme Dorée"
+    },
+    "potion d'oubli": {
+      "description": "Réinitialise ton familier. Reset son estomac et le remet niveau 10.",
+      "name": "Potion d'Oubli"
+    },
+    "pépin de fruit étoile": {
+      "description": "À planter pour obtenir des fruits étoiles (48h).",
+      "name": "Pépin de Fruit Étoile"
+    },
+    "pépin de pomme dorée": {
+      "description": "À planter pour obtenir des pommes dorées (24h).",
+      "name": "Pépin de Pomme Dorée"
+    },
+    "pépite d'or": {
+      "description": "Brillant ! Les marchands adorent ça.",
+      "name": "Pépite d'Or"
+    },
+    "requin": {
+      "description": "INCROYABLE ! Ça vaut une fortune !",
+      "name": "Requin"
+    },
+    "sardine": {
+      "description": "Un petit poisson d'eau de mer",
+      "name": "Sardine"
+    },
+    "saumon": {
+      "description": "Parfait pour faire des sushis.",
+      "name": "Saumon"
+    },
+    "tentacule de kraken": {
+      "description": "TU AS PÊCHÉ UN MONSTRE ?!",
+      "name": "Tentacule de Kraken"
+    },
+    "terrain : potager": {
+      "description": "Te permet de travailler sur ton potager privé.",
+      "name": "Acte de Titre (Potager)"
+    },
+    "terrain : serre tropicale": {
+      "description": "Te permet de travailler dans ta serre tropicale.",
+      "name": "Acte de Titre (Serre)"
+    },
+    "terrain : verger enchanté": {
+      "description": "Permet de travailler dans ton verger céleste.",
+      "name": "Acte de Titre (Verger)"
+    },
+    "tomate": {
+      "description": "Un fruit ou un légume ? Le débat continue.",
+      "name": "Tomate"
+    },
+    "trophée de boss": {
+      "description": "Un trophée légendaire récompensant le premier joueur à vaincre le boss de fin du serveur.",
+      "name": "Trophée de Boss"
+    },
+    "truite": {
+      "description": "Un poisson d'eau douce.",
+      "name": "Truite"
+    },
+    "tundra_egg": {
+      "description": "Un œuf enveloppé de glace. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf de la Toundra"
+    },
+    "vieille botte": {
+      "description": "Un caillou tout nul. Sert à rien.",
+      "name": "Vieille botte"
+    },
+    "volcano_egg": {
+      "description": "Un œuf imprégné de magma. Tape !hatch pour l'ouvrir !",
+      "name": "Œuf du Volcan"
+    }
+  }
+}

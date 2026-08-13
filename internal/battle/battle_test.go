@@ -24,6 +24,15 @@ func TestSimulate(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Len(t, result.Log, min(10, len(result.Log)))
 	assert.True(t, result.WinnerID == 1 || result.WinnerID == 2)
+	assert.NotEmpty(t, result.Turns, "every battle must record at least one turn")
+	last := result.Turns[len(result.Turns)-1]
+	if result.WinnerID == 1 {
+		assert.Greater(t, last.Pet1HP, 0)
+		assert.LessOrEqual(t, last.Pet2HP, 0)
+	} else {
+		assert.LessOrEqual(t, last.Pet1HP, 0)
+		assert.Greater(t, last.Pet2HP, 0)
+	}
 }
 
 func TestSimulateKO(t *testing.T) {
@@ -54,4 +63,24 @@ func TestHealFull(t *testing.T) {
 	assert.Equal(t, 100, p.HP)
 	assert.Equal(t, 0, p.defenseMalus)
 	assert.Equal(t, 0, p.stunnedTurns)
+}
+
+func TestSimulatePreserveHP(t *testing.T) {
+	p1 := &BattlePet{
+		ID: 1, Nickname: "Hurt", Emoji: "🐉", PetType: "Dragon",
+		Level: 10, HP: 30, MaxHP: 100,
+		Atk: 30, Defense: 15, Speed: 20,
+		DGE: 10, ACC: 20, CritC: 15, CritD: 1.5, SpcC: 10,
+	}
+	p2 := &BattlePet{
+		ID: 2, Nickname: "Fresh", Emoji: "🐲", PetType: "Phoenix",
+		Level: 10, HP: 100, MaxHP: 100,
+		Atk: 25, Defense: 10, Speed: 25,
+		DGE: 15, ACC: 20, CritC: 10, CritD: 1.5, SpcC: 10,
+	}
+
+	SimulatePreserveHP(p1, p2)
+	assert.GreaterOrEqual(t, p1.HP, 0)
+	assert.LessOrEqual(t, p1.HP, 30, "injured pet must not be healed to full by SimulatePreserveHP")
+	assert.LessOrEqual(t, p2.HP, 100)
 }

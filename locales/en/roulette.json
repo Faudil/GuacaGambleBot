@@ -1,0 +1,20 @@
+{
+  "roulette": {
+    "already_joined": "You are already registered.",
+    "bang_msg": "💥 **BANG!** {user} is dead...",
+    "clic_msg": "😅 **CLICK!** {user} survives...",
+    "finish_title": "🩸 END OF GAME",
+    "join_label": "Join Game",
+    "joined_msg": "✅ {user} joined the table!",
+    "min_players": "At least 2 players are needed!",
+    "next_turn": "It's {user}'s turn to take the weapon.",
+    "no_money": "Not enough money!",
+    "not_your_turn": "It's not your turn!",
+    "only_leader": "Only the game creator can start the game.",
+    "open_msg": "🔫 **Russian Roulette open!** Bet: **${amount}**\nClick to join. {user}, start when everyone is ready.",
+    "start_announcement": "🔫 **The game begins!** There is 1 bullet in the cylinder.\nIt's {user}'s turn to shoot.",
+    "start_label": "Start (Leader)",
+    "survivors_win": "💀 **{user}** lost **${fee}**.\n💰 The {count} survivors each win **${share}**!",
+    "trigger_label": "😱 Pull the Trigger"
+  }
+}

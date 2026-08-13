@@ -1,0 +1,203 @@
+{
+  "criminality": {
+    "awakening": {
+      "first_theft_desc": "A cry rings out in the dark. The first theft in a century has been committed. The old pacts are broken. The shadows now have teeth.\n\nThe victim has received a personal quest: **\"The Masked Shadow Falls.\"**\n\nSpeak to **Sheriff Aldric Vance** or **The Whisper** in town to begin your journey.",
+      "first_theft_footer": "Two paths lie before you. Choose wisely.",
+      "first_theft_title": "🌑 The Underworld Awakens",
+      "mask_desc": "An ancestral chill settles over the land. Somewhere, a long‑forgotten artefact stirs… The Mask of Malveillance has been claimed.",
+      "mask_footer": "The underworld stirs…",
+      "mask_title": "🖤 The Mask of Malveillance Has Been Claimed"
+    },
+    "blessing": {
+      "need_gold": "You need {gold} gold for the blessing",
+      "success": "🕊️ **Pacifist's Blessing**\nYou are protected from theft and hunting for **7 days**.\nCost: {gold} gold"
+    },
+    "bounty": {
+      "anonymous": "Anonymous",
+      "board_empty": "The bounty board is empty. Criminals are quiet today...",
+      "board_list": "**Active Bounties:**\n{entries}\n\nUse `!hunt @player` to claim a bounty.",
+      "board_title": "🔍 Bounty Board",
+      "failed": "Failed to place bounty: {error}",
+      "invalid_target": "Invalid target.",
+      "line": "🔍 **\u003c@{target}\u003e** , **{amount} gold** (by {placer})",
+      "min_amount": "Minimum bounty is 100 gold.",
+      "placed": "🔍 **Bounty Posted!**\n{placer} placed **{amount} gold** on \u003c@{target}\u003e's head!\n\nHunters, use `!hunt @{target}` to collect!",
+      "usage_list": "Use !bounty @player \u003camount\u003e to place a bounty",
+      "usage_place": "Usage: `!bounty @player \u003camount\u003e`"
+    },
+    "burgle": {
+      "cooldown": "You've already burgled this player recently. The heat is too high.",
+      "fail": "You trigger a trap! \u003c@{target}\u003e catches you red-handed! Guards are after you! (+{notoriety} Notoriety)",
+      "fail_title": "🚨 BURGLARY FAILED! ",
+      "item_gone": "That item no longer exists.",
+      "level_too_low": "You must be at least level {level} to burgle.",
+      "need_rank": "You need to be at least a Burglar (Thief Rank 1) to burgle homes.",
+      "nothing_worth": "Your mark has nothing worth taking.",
+      "nothing_worth_alt": "Nothing was worth the risk.",
+      "pacifist_protected": "This player is protected by the Pacifist's Blessing.",
+      "result_item": "📦 Stolen Item",
+      "result_notoriety": "Notoriety +{amount}",
+      "success": "You slip away with **{item}** from \u003c@{target}\u003e's belongings! (+{notoriety} Notoriety)",
+      "target_too_low": "That player cannot be targeted yet.",
+      "usage": "Usage: `!burgle @player`"
+    },
+    "chronicle": {
+      "empty": "No criminal events recorded yet.\nYour journey in the shadows begins when you take your first step.",
+      "event": {
+        "awakening_first_theft": "🌑 Committed the first theft",
+        "awakening_first_victim": "🌑 Was the first victim",
+        "bounty_placed": "💰 Placed a bounty",
+        "bounty_received": "🎯 Bounty placed on you",
+        "burgled": "🏠 Burgled a player's home",
+        "clean_slate": "🧼 Purchased a Clean Slate",
+        "forgave_first_thief": "🌟 Walked the Path of Forgiveness",
+        "forgave_thief": "🕊️ Forgave a thief",
+        "hunt_lost": "💨 Lost a hunt",
+        "hunt_started": "🔍 Began a hunt",
+        "hunt_won": "⚔️ Won a hunt",
+        "hunter_sworn": "⚖️ Swore the Iron Vow",
+        "mask_claimed": "🎭 Claimed the Mask of Malveillance",
+        "pacifist_blessing": "🕊️ Received Pacifist's Blessing",
+        "reported_thief": "📢 Reported a thief",
+        "stole": "🦹 Stole from another player",
+        "thief_sworn": "🗡️ Swore the Silent Oath",
+        "was_stolen_from": "🎯 Was pickpocketed"
+      },
+      "footer": "Your path through the underworld",
+      "title": "📖 Criminal Chronicle"
+    },
+    "cleanse": {
+      "need_gold": "You need {gold} gold for a Clean Slate",
+      "success": "🧼 **Clean Slate**\nYour Notoriety has been reset to 0 for **{gold} gold**. The heat is off , for now."
+    },
+    "clue": {
+      "bootprint": "You find a scuffed bootprint near the old well. They passed through here recently.",
+      "cloth": "You find a torn piece of cloth caught on a fence. Fresh.",
+      "coins": "A local merchant was paid with suspiciously clean coins.",
+      "discarded": "Discarded wrappers and a half-eaten apple , they stopped to rest here.",
+      "dog": "A dog barks at a shadowy alley. Your instincts say go that way.",
+      "hooded_figure": "A witness saw a hooded figure heading toward the market district.",
+      "sewers": "Footprints lead toward the sewers. They might be hiding below.",
+      "tavern": "The trail goes cold near the tavern. Someone inside might know something."
+    },
+    "error": {
+      "already_forgiven": "You've already forgiven this thief for that incident.",
+      "already_forgiven_short": "Already forgiven.",
+      "failed_start_quest": "Failed to start quest: {error}",
+      "invalid_target": "Invalid target.",
+      "no_criminality": "Failed to retrieve your criminal record.",
+      "no_records": "Failed to fetch records.",
+      "no_theft_record": "No theft record found from that player.",
+      "not_awake": "You have no reason to do that… yet.",
+      "not_hunter": "You must swear the Iron Vow to pursue the wicked.",
+      "not_thief": "You must swear the Silent Oath or bear the Mask to walk the shadow's path."
+    },
+    "forgive": {
+      "invalid_target": "Invalid target.",
+      "no_record": "No theft record found from that player.",
+      "not_implemented": "🕊️ Forgiveness isn't implemented yet.",
+      "success": "🕊️ **Forgiveness.** You've forgiven \u003c@{thief}\u003e. The notoriety remains but no bounty can be placed for this theft.",
+      "usage": "Usage: `!forgive @thief`"
+    },
+    "guard": {
+      "caught": "🚨 **Guards spot you!** They give chase and you lose **{gold} gold** in your escape!",
+      "dodge": "⚠️ A guard patrol passes by, but you melt into the shadows just in time."
+    },
+    "hunt": {
+      "cooldown": "You've already hunted this player recently. Let the trail cool down.",
+      "invalid_target": "Invalid target.",
+      "lose": "💨 \u003c@{target}\u003e got the drop on you! You barely escape with your life. The hunt continues...",
+      "notoriety_too_low": "That player's Notoriety ({notoriety}) is below the threshold ({threshold}).",
+      "pacifist_protected": "The Pacifist's Blessing protects this player from being hunted.",
+      "result_captured": "\n🔒 Target imprisoned for 24h",
+      "result_desc": "🏅 Merit +{merit}  💰 Gold +{gold}",
+      "started": "🎯 **Hunt Started!**\nYou're tracking \u003c@{target}\u003e. Use `!track` to follow their trail. You have 3 hours to complete the hunt.",
+      "track_clue": "🔎 **Clue Found:**\n{clue}\n\nKeep tracking with `!track`",
+      "track_engage_hint": "Tracked them down! Use `!hunt {mention} engage` to confront them!",
+      "track_found": "🔍 **Target Located!**\nYou've tracked \u003c@{target}\u003e to their hiding spot! Prepare for the confrontation!\n\n`!hunt engage @{target}` to engage!",
+      "usage": "Usage: `!hunt @player` or `!hunt @player engage`",
+      "usage_engage": "Usage: `!hunt engage @player`",
+      "win_capture": "⚔️ **You subdued \u003c@{target}\u003e and brought them in!**\n+{merit} Merit | +{gold} gold | Bounty: +{bounty} gold\nThey've been sent to prison.",
+      "win_defeat": "⚔️ **You defeated \u003c@{target}\u003e in combat!**\n+{merit} Merit | +{gold} gold | Bounty: +{bounty} gold\nThey escaped capture, but their Notoriety has fallen."
+    },
+    "notoriety": {
+      "alignment_field": "Alignment",
+      "failed": "Failed to retrieve your criminal record.",
+      "hunter_rank_field": "Hunter Rank",
+      "not_implemented": "Notoriety checks aren't implemented yet.",
+      "notoriety_field": "Notoriety",
+      "pacifist_field": "🕊️ Pacifist's Blessing",
+      "pacifist_value": "Until {until}",
+      "prison_field": "🔒 Prison",
+      "prison_value": "Until {until}",
+      "thief_rank_field": "Thief Rank",
+      "title": "⚖️ Criminal Record"
+    },
+    "quest": {
+      "forgive_already": "You've already chosen the path of forgiveness.",
+      "forgive_not_victim": "Only the first victim can walk this path. Speak to the Sheriff or The Whisper instead.",
+      "forgive_success_desc": "You close your eyes and let go of the anger. The theft happened, but it does not define you.\n\nA warm light settles in your chest. You feel lighter.\n\n**Gained:** Title \"The First Mark\", Permanent +3 LUK, Scar cosmetic, Chronicle entry.\n\n*When shadows touched them, they answered with light.*",
+      "forgive_success_title": "🕊️ The Path of Forgiveness",
+      "sheriff_default_desc": "The Sheriff studies you with cold eyes. 'I've seen the shadows move. A theft was committed. The first in a century. I need people who can track 'em down and bring 'em in.'\n\nHe extends a hand. 'Swear the Iron Vow with me. Join the Hunt. What do you say?'\n\nUse `!sheriff join` to begin the Hunter's Path.",
+      "sheriff_error": "The Sheriff eyes you warily.",
+      "sheriff_hunter_desc": "The Sheriff nods in recognition. 'You've already sworn the Iron Vow. The Hunt needs you.'\n\nUse `!bounty` to check the board or `!hunt` to track a target with Notoriety 20+.",
+      "sheriff_hunter_title": "⚖️ Aldric Vance , Iron Lodge",
+      "sheriff_join_already": "You've already begun the Hunter's Path. Use `!quest` to continue.",
+      "sheriff_join_already_hunter": "You've already sworn the Iron Vow, hunter.",
+      "sheriff_join_success_desc": "You kneel before Sheriff Vance. He places a hand on your shoulder.\n\n\"Rise, Initiate of the Iron Lodge. From this day, you are the hound that hunts the shadow. Sheath your cloak, recruit. The bounty board is yours.\"\n\n**Gained:** Hound's Cloak, Initiate Rank, !bounty command unlocked. Report for your first assignment with `!quest`.",
+      "sheriff_join_success_footer": "The Hunt begins.",
+      "sheriff_join_success_title": "🛡️ The Iron Vow",
+      "sheriff_join_thief": "The Sheriff refuses. 'I know your kind. Get out of my sight.'",
+      "sheriff_menu_title": "⚖️ Aldric Vance",
+      "sheriff_not_awake": "The Sheriff's office is empty. He's out on patrol , and has no reason to trust a stranger.",
+      "sheriff_questing_desc": "You've already begun the Hunter's Path. Continue with `!quest` or visit the Sheriff again.\n\n**Active Steps:** Gather evidence from the town. Speak to witnesses.",
+      "sheriff_questing_title": "⚖️ Aldric Vance. The Hunter's Path",
+      "sheriff_thief_desc": "The Sheriff's hand rests on his sidearm. 'I know what you are. Step carefully.'",
+      "whisper_default_desc": "A figure emerges from the alley's gloom. You never see their face, only the glint of something metal beneath their cloak.\n\n'The old world is breaking. The Mask has been claimed. The rich hoard their gold while the faithful starve.'\n\n'Join us. Swear the Silent Oath. Take what is owed.'\n\nUse `!whisper join` to begin the Shadow's Path.",
+      "whisper_error": "The shadows say nothing.",
+      "whisper_hunter_desc": "'A hunter. How quaint.' The figure melts back into the darkness.",
+      "whisper_join_already": "You've already begun the Shadow's Path. Use `!quest` to continue.",
+      "whisper_join_already_thief": "You have already sworn the Silent Oath, shadow-walker.",
+      "whisper_join_hunter": "The Whisper chuckles darkly. 'A hunter seeking me out? How amusing. No.'",
+      "whisper_join_success_desc": "The Whisper draws a blade and makes a small cut on your palm. You don't flinch.\n\n\"Blood seals the oath. Steal from the rich, protect the brotherhood, never betray.\"\n\nTheir voice drops lower. \"Your hands are sworn now. The command is `!steal`. The shadows will guide your first steps with `!quest`.\"\n\n**Gained:** Shadow Cowl, Pickpocket Rank, !steal command unlocked.",
+      "whisper_join_success_footer": "The shadows welcome you.",
+      "whisper_join_success_title": "🗡️ The Silent Oath",
+      "whisper_menu_title": "🕶️ The Whisper",
+      "whisper_not_awake": "You find a dark corner, but no one is there. A faint whisper echoes... 'Not yet.'",
+      "whisper_questing_desc": "Your path is already set. Use `!quest` to continue the initiation.\nThe Silent Oath awaits you.",
+      "whisper_questing_title": "🕶️ The Whisper. The Shadow's Path",
+      "whisper_thief_desc": "The hooded figure inclines their head. 'You've already taken the Silent Oath. The shadows await your deeds.'\n\nUse `!steal` to test your skills or `!heist` for greater scores.",
+      "whisper_thief_title": "🕶️ The Whisper. The Silent Guild"
+    },
+    "report": {
+      "invalid_target": "Invalid target.",
+      "no_record": "No theft record found from that player.",
+      "not_implemented": "📢 Reporting isn't implemented yet.",
+      "success": "📢 **Thief Reported!** \u003c@{thief}\u003e's Notoriety has increased by 5.",
+      "usage": "Usage: `!report @thief`"
+    },
+    "shadow": {
+      "not_awake": "You have no reason to do that… yet.",
+      "not_hunter": "You must swear the Iron Vow to pursue the wicked.",
+      "not_thief": "You must swear the Silent Oath or bear the Mask to walk the shadow's path."
+    },
+    "steal": {
+      "cooldown": "You've already targeted this player recently. Try someone else.",
+      "fail": "Your fingers fumble! \u003c@{target}\u003e catches your hand and shouts for the guards! (+{notoriety} Notoriety)",
+      "level_too_low": "You must be at least level {level} to steal.",
+      "limit_reached": "You've used all {limit} steal attempts today.",
+      "pacifist_protected": "This player is protected by the Pacifist's Blessing. You cannot steal from them.",
+      "result_infamy": "+{amount}",
+      "result_notoriety": "Notoriety +{amount}",
+      "result_stolen": "{gold} gold",
+      "success": "You deftly lift **{gold} gold** from \u003c@{target}\u003e's pocket.",
+      "target_too_low": "That player cannot be targeted yet (below level {level}).",
+      "usage": "Usage: `!steal @player`"
+    },
+    "track": {
+      "invalid_target": "Invalid target.",
+      "not_implemented": "🔍 Tracking isn't implemented yet.",
+      "usage": "Usage: `!track @player`"
+    }
+  }
+}

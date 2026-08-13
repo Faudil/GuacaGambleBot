@@ -117,18 +117,16 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 	gid := i.GuildID
 	start := time.Now()
 
-	if i.Type != discordgo.InteractionMessageComponent && i.Type != discordgo.InteractionModalSubmit {
-		if !r.checkRateLimit(uid) {
-			log.Warn("rate limited user", "user", uid, "guild", gid)
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: "⏳ Please slow down! You're sending commands too fast.",
-					Flags:   discordgo.MessageFlagsEphemeral,
-				},
-			})
-			return
-		}
+	if !r.checkRateLimit(uid) {
+		log.Warn("rate limited user", "user", uid, "guild", gid)
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "⏳ Please slow down! You're sending commands too fast.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
 	}
 
 	switch i.Type {
@@ -185,6 +183,13 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		cid := i.ModalSubmitData().CustomID
 		domain, action, _ := components.Decode(cid)
 		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "❌ This bot is disabled on this server. Use `/setup` to enable it.",
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
 			return
 		}
 		log.Info("modal submit",

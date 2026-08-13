@@ -253,6 +253,9 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 		}
 	}
 	if petDmg > 0 {
+		if cs.PetBonded {
+			petDmg = petDmg * 5 / 4
+		}
 		enemy.HP -= petDmg
 		res.PetDamage = petDmg
 		res.Log = append(res.Log, i18n.T("delve.combat.pets_damage", lang, map[string]any{"damage": petDmg}))
@@ -311,11 +314,25 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 
 	var effects []string
 	json.Unmarshal([]byte(session.StatusEffects), &effects)
+	var keptEffects []string
 	for _, e := range effects {
-		if e == "marked" {
+		switch e {
+		case "marked":
 			enemyDmg = int(float64(enemyDmg) * 1.10)
-			break
+			keptEffects = append(keptEffects, e)
+		case "guarded":
+			enemyDmg = enemyDmg / 2
+			if enemyDmg < 1 {
+				enemyDmg = 1
+			}
+			res.Log = append(res.Log, i18n.T("delve.combat.guarded_absorb", lang))
+		default:
+			keptEffects = append(keptEffects, e)
 		}
+	}
+	if len(keptEffects) != len(effects) {
+		jb, _ := json.Marshal(keptEffects)
+		session.StatusEffects = string(jb)
 	}
 
 	for _, e := range effects {

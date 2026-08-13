@@ -30,6 +30,7 @@ type ProfileResult struct {
 	XP            int
 	XPNext        int
 	SkillPoints   int
+	PerkPoints    int
 	STR           int
 	DEX           int
 	INT           int
@@ -69,7 +70,6 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	eq, _ := s.store.GetEquipment(userID)
 
 	var jobTotal int64
 	s.store.DB.Model(&model.Job{}).Select("COALESCE(SUM(level), 0)").Where("user_id = ?", userID).Scan(&jobTotal)
@@ -92,7 +92,6 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 	var masteryCount int64
 	s.store.DB.Model(&model.UserJournalMastery{}).Where("user_id = ?", userID).Count(&masteryCount)
 
-	_ = eq // silence unused warning
 	return &ProfileResult{
 		Wallet:        wallet,
 		Bank:          bank,
@@ -102,6 +101,7 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 		XP:            c.XP,
 		XPNext:        store.XPForCharacterLevel(c.Level),
 		SkillPoints:   c.SkillPoints,
+		PerkPoints:    c.PerkPoints,
 		STR:           c.STR,
 		DEX:           c.DEX,
 		INT:           c.INT,
@@ -117,21 +117,6 @@ func (s *Service) Profile(userID int64) (*ProfileResult, error) {
 		GloryTotal:    gloryTotal,
 		Mastery:       masteryCount > 0,
 	}, nil
-}
-
-func equipBonuses(eq map[string]string) (str, dex, intt, vit, luk int) {
-	for _, itemID := range eq {
-		it := items.Get(itemID)
-		if it == nil {
-			continue
-		}
-		str += it.StatSTR
-		dex += it.StatDEX
-		intt += it.StatINT
-		vit += it.StatVIT
-		luk += it.StatLUK
-	}
-	return
 }
 
 func equipBonusesFromInstances(equipped []model.UserEquipment) (str, dex, intt, vit, luk int, setInfos []items.EquippedSetInfo) {
@@ -221,7 +206,11 @@ func GetLUKBonus(s *store.Store, userID int64) float64 {
 	if err != nil {
 		return 0
 	}
-	return float64(es.TotalLUK()) * 0.02
+	base := float64(es.TotalLUK()) * 0.02
+	if s.HasPassive(userID, "perk_rare_find") {
+		base *= 1.02
+	}
+	return base
 }
 
 // Buff helpers.
@@ -236,6 +225,11 @@ func HasBuff(s *store.Store, userID int64, skillID string) bool {
 func ConsumeBuff(s *store.Store, userID int64, skillID string) bool {
 	ok, _ := s.ConsumeActiveBuff(userID, skillID)
 	return ok
+}
+
+// HasPassive reports whether the user owns the given passive perk.
+func HasPassive(s *store.Store, userID int64, id string) bool {
+	return s.HasPassive(userID, id)
 }
 
 // AddXP awards character XP and handles level-up crowns. Returns whether the
@@ -256,10 +250,6 @@ func (s *Service) EquipInstance(userID int64, equipID uint) error {
 
 func (s *Service) UnequipSlot(userID int64, slot string) error {
 	return s.store.UnequipSlot(userID, slot)
-}
-
-func (s *Service) GetEquipment(userID int64) (map[string]string, error) {
-	return s.store.GetEquipment(userID)
 }
 
 func (s *Service) GetEquipped(userID int64) ([]model.UserEquipment, error) {

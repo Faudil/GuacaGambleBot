@@ -1,0 +1,33 @@
+{
+  "community": {
+    "bonus_glory_bonus": "+{val} Glory globally",
+    "bonus_heal_discount": "-{val}% Heal Cost",
+    "bonus_job_payout": "+{val}% Job Payout",
+    "bonus_shop_discount": "{val}% Shop Discount",
+    "btn_inspect": "Inspect Building",
+    "btn_list": "List Projects",
+    "btn_stats": "My Stats",
+    "building_bank_desc": "Increases job payouts.",
+    "building_bank_name": "The Guild Bank",
+    "building_hospital_desc": "Heal your pets for less. Each level cuts healing costs by 10% — free at max level.",
+    "building_hospital_name": "Pet Hospital",
+    "building_market_desc": "Reduces shop prices.",
+    "building_market_name": "The Grand Market",
+    "building_statue_desc": "A tribute to the server's wealth. Gives glory.",
+    "building_statue_name": "The Great Statue",
+    "inspect_title": "🔍 {name} (Next: Lvl {level})",
+    "invest_success": "✅ You successfully invested **{amount} {res}** into {building}!",
+    "level_up_desc": "The community has successfully upgraded **{name}** to Level **{level}**!\nCongratulations to all contributors!",
+    "level_up_title": "🎉 BUILDING UPGRADED! 🎉",
+    "list_title": "🏛️ Community Projects",
+    "max_level": "❌ {name} has reached its maximum level!",
+    "menu_desc": "Manage community building projects.",
+    "no_bonus_yet": "No active bonuses.",
+    "not_found": "❌ Building '{name}' not found.",
+    "res_already_full": "❌ The quota for {res} is already met!",
+    "res_items": "Items",
+    "res_money": "Money",
+    "res_not_needed": "❌ This building doesn't need {res}.",
+    "stats_title": "📈 {user}'s Community Stats"
+  }
+}

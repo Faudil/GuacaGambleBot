@@ -1,0 +1,15 @@
+{
+  "start": {
+    "activity_prompt": "📋 **{quest}**\n\nComplete the current activity objective, then click Continue when done.",
+    "already_completed": "🎉 You've already completed your journey! The village is restored and thriving. Use `/quest` to review your completed quests.",
+    "already_started": "You've already begun your journey! Use `/quest` to continue where you left off.",
+    "begin_title": "🚀 Your Journey Begins!",
+    "boss_fight_btn": "Fight!",
+    "boss_prompt": "⚔️ **Boss Battle!**\n\nA powerful Guardian blocks your path! Use `!boss` to fight it with your active pet. Come back after victory!",
+    "complete_activity_first": "⚡ Complete the current objective first (mine, farm, etc.), then come back!",
+    "completed_desc": "Congratulations! You've completed the tutorial quest and restored the village! Use `/help` to see all available commands and continue your adventure.",
+    "completed_title": "🎉 Journey Complete!",
+    "continue_btn": "Continue ▶️",
+    "error": "❌ Something went wrong. Please try again."
+  }
+}

@@ -2,7 +2,6 @@ package pets
 
 import (
 	"math/rand"
-	"time"
 
 	"guacagamblebot/internal/battle"
 )
@@ -58,6 +57,8 @@ var WeeklyModifiers = []WeeklyModifierDef{
 			p2.PerkInt["mod_iron_will"] = 1
 			p1.Defense = int(float64(p1.Defense) * 1.30)
 			p2.Defense = int(float64(p2.Defense) * 1.30)
+			p1.Atk = int(float64(p1.Atk) * 0.85)
+			p2.Atk = int(float64(p2.Atk) * 0.85)
 		},
 		Boosted: []string{"resilience", "warding"},
 		Nerfed:  []string{"impact", "might"},
@@ -174,8 +175,4 @@ func IsNerfedStat(modID, statID string) bool {
 		}
 	}
 	return false
-}
-
-func init() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
 }

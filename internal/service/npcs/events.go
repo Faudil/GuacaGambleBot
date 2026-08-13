@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/universe"
 )
@@ -320,8 +321,29 @@ func (s *Service) ShopBuy(userID int64, npcID string, itemID string) error {
 		return err
 	}
 
-	if err := s.inv.AddItem(s.store.DB, userID, shopItem.ItemID, 1); err != nil {
-		return err
+	it := items.Get(shopItem.ItemID)
+	if it != nil && it.EquipSlot != "" {
+		rar := it.Rarity
+		affixes := items.RollAffixes(rar, it.EquipSlot)
+		var applied []items.AppliedAffix
+		for _, a := range affixes {
+			applied = append(applied, items.AppliedAffix{
+				ID:    a.ID,
+				Name:  a.Name,
+				Stat:  a.Stat,
+				Value: items.RollAffixValue(a),
+			})
+		}
+		if _, err := s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
+			string(rar), it.EquipSlot,
+			it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
+			applied, it.SetID); err != nil {
+			return err
+		}
+	} else {
+		if err := s.inv.AddItem(s.store.DB, userID, shopItem.ItemID, 1); err != nil {
+			return err
+		}
 	}
 
 	s.updateLastInteraction(userID, npcID)

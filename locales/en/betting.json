@@ -1,0 +1,26 @@
+{
+  "betting": {
+    "already_closed": "❌ This bet has already been closed.",
+    "closed_house_keeps": "🔒 Bet closed. **{option}** won, but nobody bet on it. The house keeps ${pool}!",
+    "created": "🎲 Bet #{id} created: {desc}",
+    "finished": "❌ The bet is closed.",
+    "freeze_success": "✅ The bet {desc} has been frozen, you can no longer bet on it.",
+    "frozen": "❌ The bet is frozen.",
+    "id_not_found": "❌ Bet ID not found.",
+    "invalid_choice": "❌ Invalid choice. Choose: A or B",
+    "no_money": "❌ Not enough money (you have {balance}).",
+    "not_found": "❌ Bet {id} not found.",
+    "odds_footer_closed": "This bet is closed. Winner: {winner}",
+    "odds_footer_open": "Status: OPEN | Odds change as people bet!",
+    "only_creator": "❌ Only the creator can close the bet.",
+    "option_a": "Option A: {name}",
+    "option_b": "Option B: {name}",
+    "placed": "✅ Bet placed on {choice}!",
+    "result_title": "🏆 Bet #{id} Result",
+    "status_title": "📊 Status: Bet #{id}",
+    "total_bet": "💰 Total Bet",
+    "total_pool": "Total Value",
+    "winners": "Winners",
+    "won_msg": "{user} won ${amount}"
+  }
+}

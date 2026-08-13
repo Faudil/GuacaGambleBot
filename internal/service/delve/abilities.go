@@ -23,8 +23,13 @@ type AbilityStatus struct {
 
 var combatAbilities = []CombatAbility{
 	{
-		ID: "strike", Name: "Strike", Emoji: "⚔️",
+		ID: "slash", Name: "Slash", Emoji: "⚔️",
 		Description: "A basic attack with your weapon or fists.",
+		UnlockLevel: 1, ManaCost: 0,
+	},
+	{
+		ID: "defend", Name: "Defend", Emoji: "🛡️",
+		Description: "Brace yourself and halve the enemy's next strike.",
 		UnlockLevel: 1, ManaCost: 0,
 	},
 	{

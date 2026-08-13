@@ -1,0 +1,43 @@
+{
+  "expedition": {
+    "already_active": "❌ You already have an active expedition. Finish it first.",
+    "claim_ready": "Expedition finished! Claim your rewards.",
+    "claim_success": "✨ **{pet}** is back! It gained **{xp} XP**.\n\n**Loot found:**{items}",
+    "claim_title": "🎁 Expedition Return",
+    "events": {
+      "combat_loss": "🤕 **{pet}** encountered a wild **{enemy}** and had to flee...",
+      "combat_win": "⚔️ **{pet}** defeated a wild **{enemy}**! (+{xp} XP)",
+      "exploration": "🐾 **{pet}** explores **{location}** and gains **{xp} XP**.",
+      "loot": "🎁 **{pet}** found a **{item}**!",
+      "rest": "💤 **{pet}** takes a short nap by a stream."
+    },
+    "help_benefits": "**Benefits:**",
+    "help_benefits_list": "✨ XP for the pet\n🎁 Rare items\n📜 A detailed adventure log",
+    "help_commands": "**Commands:**",
+    "help_commands_list": "`!expedition start \u003c1/4/8/24\u003e` : Start an expedition\n`!expedition status` : View the logbook\n`!expedition claim` : Collect rewards",
+    "help_desc": "Send your pet to explore the world!",
+    "help_title": "Expedition Details",
+    "invalid_duration": "❌ Invalid duration. Choose: 1, 4, 8, or 24 hours.",
+    "locations": {
+      "cave": "the Crystal Cave",
+      "coral": "the Coral Coast",
+      "desert": "the Arid Desert",
+      "forest": "the Mystic Forest",
+      "mountain": "the Snowy Peak",
+      "plains": "the Verdant Plains",
+      "swamp": "the Dark Swamp",
+      "valley": "the Valley of Echoes",
+      "volcano": "the Active Volcano"
+    },
+    "log_header": "Adventure Log",
+    "no_active": "❌ You don't have an active expedition.",
+    "no_events": "Nothing to report yet...",
+    "no_items": "No items found.",
+    "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
+    "not_finished": "🕒 Your pet hasn't returned yet! **{remaining}** left.",
+    "start_success": "🚀 **{pet}** left on an expedition for **{duration}h**!",
+    "status_desc": "Progress: **{progress}%** (Estimated return at **{end_time}**)",
+    "status_title": "🚀 {pet}'s Expedition",
+    "time_format": "{hours}h {minutes}m"
+  }
+}

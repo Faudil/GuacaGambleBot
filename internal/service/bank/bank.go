@@ -22,26 +22,15 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
-// Deposit moves amount from the wallet into the bank.
+// Deposit moves amount from the wallet into the bank atomically.
 func (s *Service) Deposit(userID, amount int) (wallet, bank int, err error) {
 	if amount <= 0 {
 		return 0, 0, ErrAmount
 	}
-	bal, err := s.store.GetBalance(int64(userID))
-	if err != nil {
-		return 0, 0, err
-	}
-	if bal < amount {
+	wallet, bank, err = s.store.BankDeposit(int64(userID), amount)
+	if errors.Is(err, store.ErrInsufficientFunds) {
 		return 0, 0, ErrNoMoney
 	}
-	if _, err = s.store.UpdateBalance(int64(userID), -amount); err != nil {
-		return 0, 0, err
-	}
-	bank, err = s.store.AdjustColumn(int64(userID), "bank", amount)
-	if err != nil {
-		return 0, 0, err
-	}
-	wallet, err = s.store.GetBalance(int64(userID))
 	if err != nil {
 		return 0, 0, err
 	}
@@ -49,26 +38,15 @@ func (s *Service) Deposit(userID, amount int) (wallet, bank int, err error) {
 	return wallet, bank, nil
 }
 
-// Withdraw moves amount from the bank into the wallet.
+// Withdraw moves amount from the bank into the wallet atomically.
 func (s *Service) Withdraw(userID, amount int) (wallet, bank int, err error) {
 	if amount <= 0 {
 		return 0, 0, ErrAmount
 	}
-	_, bankBal, err := s.store.GetBankData(int64(userID))
-	if err != nil {
-		return 0, 0, err
-	}
-	if bankBal < amount {
+	wallet, bank, err = s.store.BankWithdraw(int64(userID), amount)
+	if errors.Is(err, store.ErrInsufficientFunds) {
 		return 0, 0, ErrNoMoney
 	}
-	if _, err = s.store.AdjustColumn(int64(userID), "bank", -amount); err != nil {
-		return 0, 0, err
-	}
-	wallet, err = s.store.UpdateBalance(int64(userID), amount)
-	if err != nil {
-		return 0, 0, err
-	}
-	_, bank, err = s.store.GetBankData(int64(userID))
 	if err != nil {
 		return 0, 0, err
 	}

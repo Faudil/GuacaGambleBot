@@ -58,11 +58,9 @@ var NPCs = map[string]*universe.NPCData{
 		},
 
 		ShopItems: []universe.ShopItem{
-			{ItemID: "basic_seeds", MinLevel: 1, RepCost: 10, CoinCost: 50, Emoji: "🌱", LabelEN: "Basic Seeds", LabelFR: "Graines de Base"},
 			{ItemID: "forest_egg", MinLevel: 2, RepCost: 50, CoinCost: 500, Emoji: "🥚", LabelEN: "Forest Egg", LabelFR: "Œuf de Forêt"},
 			{ItemID: "star_fruit", MinLevel: 3, RepCost: 100, CoinCost: 2000, Emoji: "⭐", LabelEN: "Star Fruit", LabelFR: "Fruit Étoile"},
 			{ItemID: "golden_apple", MinLevel: 4, RepCost: 200, CoinCost: 5000, Emoji: "🍎", LabelEN: "Golden Apple", LabelFR: "Pomme Dorée"},
-			{ItemID: "phoenix_berry", MinLevel: 5, RepCost: 500, CoinCost: 20000, Emoji: "🔴", LabelEN: "Phoenix Berry", LabelFR: "Baie de Phénix"},
 		},
 	},
 	"thorek": {
@@ -122,9 +120,7 @@ var NPCs = map[string]*universe.NPCData{
 		ShopItems: []universe.ShopItem{
 			{ItemID: "iron_ore", MinLevel: 1, RepCost: 10, CoinCost: 100, Emoji: "🪨", LabelEN: "Iron Ore", LabelFR: "Minerai de Fer"},
 			{ItemID: "gold_nugget", MinLevel: 2, RepCost: 40, CoinCost: 1000, Emoji: "✨", LabelEN: "Gold Nugget", LabelFR: "Pépite d'Or"},
-			{ItemID: "diamond", MinLevel: 3, RepCost: 100, CoinCost: 5000, Emoji: "💎", LabelEN: "Diamond", LabelFR: "Diamant"},
 			{ItemID: "platinum", MinLevel: 4, RepCost: 200, CoinCost: 10000, Emoji: "🔘", LabelEN: "Platinum", LabelFR: "Platine"},
-			{ItemID: "ancient_relic", MinLevel: 5, RepCost: 500, CoinCost: 50000, Emoji: "🏺", LabelEN: "Ancient Relic", LabelFR: "Relique Ancienne"},
 		},
 	},
 	"irian": {
@@ -185,11 +181,7 @@ var NPCs = map[string]*universe.NPCData{
 			{ItemID: "worm", MinLevel: 1, RepCost: 0, CoinCost: 5, Emoji: "🪱", LabelEN: "Worm", LabelFR: "Ver"},
 			{ItemID: "crayfish", MinLevel: 1, RepCost: 0, CoinCost: 25, Emoji: "🦞", LabelEN: "Crayfish", LabelFR: "Écrevisse"},
 			{ItemID: "golden_lure", MinLevel: 2, RepCost: 0, CoinCost: 100, Emoji: "👑", LabelEN: "Golden Lure", LabelFR: "Leurre Doré"},
-			{ItemID: "common_fish", MinLevel: 1, RepCost: 10, CoinCost: 50, Emoji: "🐟", LabelEN: "Common Fish", LabelFR: "Poisson Commun"},
-			{ItemID: "rare_fish", MinLevel: 2, RepCost: 50, CoinCost: 500, Emoji: "🐠", LabelEN: "Rare Fish", LabelFR: "Poisson Rare"},
-			{ItemID: "shark_tooth", MinLevel: 3, RepCost: 100, CoinCost: 3000, Emoji: "🦈", LabelEN: "Shark Tooth", LabelFR: "Dent de Requin"},
 			{ItemID: "kraken_tentacle", MinLevel: 4, RepCost: 250, CoinCost: 10000, Emoji: "🦑", LabelEN: "Kraken Tentacle", LabelFR: "Tentacule de Kraken"},
-			{ItemID: "leviathan_scale", MinLevel: 5, RepCost: 500, CoinCost: 30000, Emoji: "🐉", LabelEN: "Leviathan Scale", LabelFR: "Écaille de Léviathan"},
 		},
 	},
 	"sheriff_vance": {
@@ -371,9 +363,6 @@ var NPCs = map[string]*universe.NPCData{
 		ShopItems: []universe.ShopItem{
 			{ItemID: "rigged_coin", MinLevel: 1, RepCost: 10, CoinCost: 200, Emoji: "🪙", LabelEN: "Rigged Coin", LabelFR: "Pièce Truquée"},
 			{ItemID: "vip_ticket", MinLevel: 2, RepCost: 50, CoinCost: 1000, Emoji: "🎫", LabelEN: "VIP Ticket", LabelFR: "Ticket VIP"},
-			{ItemID: "golden_chip", MinLevel: 3, RepCost: 150, CoinCost: 5000, Emoji: "🟡", LabelEN: "Golden Chip", LabelFR: "Jeton Doré"},
-			{ItemID: "lucky_dice", MinLevel: 4, RepCost: 300, CoinCost: 15000, Emoji: "🎲", LabelEN: "Lucky Dice", LabelFR: "Dés Porte-Bonheur"},
-			{ItemID: "quantum_deck", MinLevel: 5, RepCost: 600, CoinCost: 50000, Emoji: "🃏", LabelEN: "Quantum Card Deck", LabelFR: "Jeu de Cartes Quantique"},
 		},
 	},
 }

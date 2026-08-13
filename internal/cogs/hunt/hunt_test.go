@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	huntsvc "guacagamblebot/internal/service/hunt"
 	npcsvc "guacagamblebot/internal/service/npcs"
@@ -115,4 +116,24 @@ func TestMenuShowsLockedZoneProgress(t *testing.T) {
 	}
 	opt = byZone["mountain"]
 	assert.NotContains(t, opt.Description, "🔒", "unlocked zone must not show a lock marker")
+}
+
+func TestMenuDashboardDescFilled(t *testing.T) {
+	cog := testCog(t)
+	require.NoError(t, cog.store.DB.Create(&model.UserPet{
+		UserID:   1,
+		PetType:  "Chien",
+		Nickname: "Rex",
+		Level:    7,
+		MaxHP:    100,
+		HP:       100,
+		IsActive: true,
+	}).Error)
+
+	embed, _ := cog.menu("fr", 1)
+	assert.NotEmpty(t, embed.Description)
+	assert.NotContains(t, embed.Description, "{name}", "dashboard description must fill the {name} placeholder")
+	assert.NotContains(t, embed.Description, "{lvl}", "dashboard description must fill the {lvl} placeholder")
+	assert.Contains(t, embed.Description, "Rex")
+	assert.Contains(t, embed.Description, "7")
 }

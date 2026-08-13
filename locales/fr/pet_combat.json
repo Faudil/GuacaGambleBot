@@ -1,0 +1,23 @@
+{
+  "pet_combat": {
+    "bite_effect": " et lui inflige **Saignement** 🩸",
+    "bleed_end": "🩹 **{pet}** ne saigne plus !",
+    "bleed_suffers": "🩸 **{pet}** saigne et perd **{dmg}** PV.",
+    "burn_end": "💦 **{pet}** ne brûle plus !",
+    "burn_suffers": "🔥 **{pet}** brûle et perd **{dmg}** PV.",
+    "crit_msg": "💥 **CRITIQUE !** ⚔️ {attacker_emoji} **{attacker}** inflige **{dmg}** dégâts",
+    "dodge_msg": "💨 {target_emoji} **{target}** esquive l'attaque de {attacker} !",
+    "fire_effect": " et le **Brûle** 🔥",
+    "gating": "🛡 Mais {pet} se concentre et bloque les dégâts à {dmg} !!",
+    "hit_msg": "⚔️ {attacker_emoji} **{attacker}** inflige **{dmg}** dégâts",
+    "impact_effect": " et l'**Étourdit** 💫",
+    "journal_title": "Journal de combat",
+    "poison_effect": " et l'**Empoisonne** 🧪",
+    "poison_end": "✨ **{pet}** n'est plus empoisonné !",
+    "poison_suffers": "🧪 **{pet}** souffre du poison et perd **{dmg}** PV.",
+    "scratch_effect": " et l'**affaiblit** (Précision/Esquive réduites) 📉",
+    "scratch_heal": " et se soigne de **{dmg}** PV 🩸",
+    "stunned_log": "💫 {pet_emoji} **{pet}** est assommé, il ne peut pas attaquer (tours restants: {turns})",
+    "thorns": " mais subit **{dmg}** dégâts d'épines 🌵"
+  }
+}

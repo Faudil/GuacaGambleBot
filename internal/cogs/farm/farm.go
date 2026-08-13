@@ -52,7 +52,6 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("farm", "zone", c.onZone)
 	r.Component("farm", "plot", c.onPlot)
 	r.Component("farm", "harvest", c.onHarvest)
-	r.Component("farm", "seed", c.onSeedPick)
 	r.Component("farm", "seed_choose", c.onSeedChoose)
 	r.Component("farm", "seedmaker", c.onSeedMaker)
 	r.Component("farm", "seedmaker_choose", c.onSeedMakerChoose)
@@ -474,16 +473,6 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
 	var growTime int
 	if seedName == "mysterious_seed" {
 		growTime = 1800
@@ -496,13 +485,9 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	err = c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
+	err := c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-
-	if err := c.store.SetCooldown(userID, "farm"); err != nil {
 		return
 	}
 
@@ -694,85 +679,6 @@ func resolveCropName(raw string) string {
 	return ""
 }
 
-func (c *Cog) onSeedPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	cid := i.MessageComponentData().CustomID
-	_, _, rest := components.Decode(cid)
-	if len(rest) < 3 {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	zoneKey := rest[0]
-	plotIdx, _ := strconv.Atoi(rest[1])
-	seedName := rest[2]
-
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
-	var growTime int
-	if seedName == "mysterious_seed" {
-		growTime = 1800
-	} else {
-		for _, s := range farmsvc.Seeds {
-			if s.Name == seedName {
-				growTime = s.GrowTimeSec
-				break
-			}
-		}
-	}
-
-	err = c.svc.Plant(userID, zoneKey, plotIdx, seedName, growTime)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-
-	if err := c.store.SetCooldown(userID, "farm"); err != nil {
-		return
-	}
-
-	if seedName == "mysterious_seed" {
-		embed := components.Embed(
-			i18n.T("farm.planted_mysterious_title", lang),
-			i18n.T("farm.planted_mysterious_desc", lang),
-			0x9B59B6,
-		)
-		back := []discordgo.MessageComponent{
-			components.ActionRow(
-				components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
-			),
-		}
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, back))
-		return
-	}
-
-	mins := growTime / 60
-	embed := components.Embed(
-		i18n.T("farm.planted_title", lang),
-		i18n.T("farm.planted_desc", lang, map[string]any{
-			"item": items.DisplayName(seedName),
-			"time": mins,
-		}),
-		0x00FF00,
-	)
-	back := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button(i18n.T("farm.back", lang), components.Encode("farm", "menu"), discordgo.SecondaryButton),
-		),
-	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, back))
-}
-
 func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -785,16 +691,6 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
 
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
 	var msg string
 	blessed := c.svc.HasBlessing(userID)
 
@@ -803,10 +699,6 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	res, err := c.svc.Harvest(userID, zoneKey, plotIdx)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-
-	if err := c.store.SetCooldown(userID, "farm"); err != nil {
 		return
 	}
 
@@ -907,23 +799,9 @@ func (c *Cog) onWater(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
 
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	err := c.svc.Water(userID, zoneKey, plotIdx)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
-	err = c.svc.Water(userID, zoneKey, plotIdx)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-
-	if err := c.store.SetCooldown(userID, "farm"); err != nil {
 		return
 	}
 
@@ -953,23 +831,9 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	zoneKey := rest[0]
 	plotIdx, _ := strconv.Atoi(rest[1])
 
-	ready, err := c.store.CheckCooldown(userID, "farm", 5*time.Minute)
+	err := c.svc.Fertilize(userID, zoneKey, plotIdx)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-	if !ready {
-		interaction.RespondError(b, i, lang, "farm.cooldown_wait")
-		return
-	}
-
-	err = c.svc.Fertilize(userID, zoneKey, plotIdx)
-	if err != nil {
-		interaction.RespondError(b, i, lang, "farm.error")
-		return
-	}
-
-	if err := c.store.SetCooldown(userID, "farm"); err != nil {
 		return
 	}
 

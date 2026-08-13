@@ -1,0 +1,8 @@
+{
+  "profile": {
+    "footer": "Niveau Global : {total} | Continue de bosser !",
+    "level_label": "Niv. {level}",
+    "title": "📊 Compétences de {user}",
+    "xp_label": "XP : {current} / {needed}"
+  }
+}

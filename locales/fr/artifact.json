@@ -1,0 +1,10 @@
+{
+  "artifact": {
+    "error": "❌ Impossible de modifier votre artéfact.",
+    "level_up": "🔮 **Ton artéfact a gagné un niveau !**",
+    "level_up_desc": "Votre artéfact a atteint le niveau {level} ! Choisissez une statistique à améliorer :",
+    "level_up_title": "🎉 Niveau d'Artéfact Supérieur !",
+    "no_money": "❌ Vous n'avez pas assez de pièces pour réinitialiser votre artéfact.",
+    "no_shard": "❌ Vous avez besoin d'un **Éclat d'Artéfact** pour réinitialiser votre artéfact. Achetez-en un à la boutique !"
+  }
+}

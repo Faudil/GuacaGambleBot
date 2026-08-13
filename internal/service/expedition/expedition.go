@@ -7,9 +7,11 @@ import (
 
 	"gorm.io/gorm"
 
+	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )
 
@@ -36,9 +38,10 @@ type ExpeditionResult struct {
 	Log   []ExpeditionEvent
 	XP    int
 	Items []string
+	PetHP int
 }
 
-func (s *Service) Generate(petType string, petLevel int, durationHours int, lang string) *ExpeditionResult {
+func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionResult {
 	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato", "wheat_seed", "carrot_seed"}
 	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry", "potato_seed", "tomato_seed", "pumpkin_seed"}
 	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed"}
@@ -51,6 +54,13 @@ func (s *Service) Generate(petType string, petLevel int, durationHours int, lang
 	totalXP := durationHours * 25
 	events := make([]ExpeditionEvent, 0, numEvents)
 	items := make([]string, 0)
+	petHP := pet.HP
+
+	petBonded := charsvc.ConsumeBuff(s.store, pet.UserID, "pet_bond")
+	bulwarked := charsvc.ConsumeBuff(s.store, pet.UserID, "bulwark")
+	if bulwarked {
+		petHP = pet.MaxHP
+	}
 
 	for i := 0; i < numEvents; i++ {
 		eventTime := int(float64(i+1) * float64(durationHours*60) / float64(numEvents+1))
@@ -73,23 +83,41 @@ func (s *Service) Generate(petType string, petLevel int, durationHours int, lang
 		switch eType {
 		case "exploration":
 			loc := locations[rand.Intn(len(locations))]
-			xp := (10 + rand.Intn(21)) * petLevel
+			xp := (10 + rand.Intn(21)) * pet.Level
 			totalXP += xp
-			ev.Text = "🐾 **" + petType + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
+			ev.Text = "🐾 **" + pet.Nickname + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
 			ev.XP = xp
 		case "combat":
-			enemySpecies := randomPetSpecies()
-			enemyLvl := max(1, petLevel-2+rand.Intn(5))
-			winChance := 0.6 + float64(petLevel-enemyLvl)*0.05
-			if winChance < 0.2 {
-				winChance = 0.2
-			} else if winChance > 0.95 {
-				winChance = 0.95
+			if petHP <= 0 {
+				ev.Text = "😵 **" + pet.Nickname + "** is K.O. and cannot fight for now."
+				break
 			}
-			if rand.Float64() < winChance {
+			enemySpecies := randomPetSpecies()
+			enemyLvl := max(1, pet.Level-2+rand.Intn(5))
+
+			petBP := s.petBattlePet(pet)
+			petBP.HP = petHP
+			if petBonded {
+				petBP.Atk = petBP.Atk * 5 / 4
+				petBP.Defense = petBP.Defense * 5 / 4
+				petBP.Speed = petBP.Speed * 5 / 4
+				petBP.DGE = petBP.DGE * 5 / 4
+				petBP.ACC = petBP.ACC * 5 / 4
+				petBP.CritC = petBP.CritC * 5 / 4
+			}
+			enemyBP := wildBattlePet(enemySpecies, enemyLvl)
+
+			battle.SimulatePreserveHP(petBP, enemyBP)
+			if bulwarked && petBP.HP < petHP {
+				petBP.HP = petHP - (petHP-petBP.HP)/2
+			}
+			petHP = petBP.HP
+
+			switch {
+			case petBP.IsAlive() && !enemyBP.IsAlive():
 				xp := (40 + rand.Intn(41)) * enemyLvl
 				totalXP += xp
-				ev.Text = "⚔️ **" + petType + "** defeated a wild **" + enemySpecies + "**! (+" + itoa(xp) + " XP)"
+				ev.Text = "⚔️ **" + pet.Nickname + "** defeated a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")! (+" + itoa(xp) + " XP)"
 				ev.XP = xp
 				if rand.Float64() < 0.3 {
 					var item string
@@ -101,8 +129,11 @@ func (s *Service) Generate(petType string, petLevel int, durationHours int, lang
 					items = append(items, item)
 					ev.Loot = item
 				}
-			} else {
-				ev.Text = "🤕 **" + petType + "** encountered a wild **" + enemySpecies + "** and had to flee..."
+			case !petBP.IsAlive():
+				ev.Text = "💀 **" + pet.Nickname + "** was knocked out by a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")!"
+				totalXP += 10
+			default:
+				ev.Text = "🤕 **" + pet.Nickname + "** fought a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ") to a stalemate and withdrew."
 				totalXP += 10
 			}
 		case "loot":
@@ -117,16 +148,62 @@ func (s *Service) Generate(petType string, petLevel int, durationHours int, lang
 				item = commonLoot[rand.Intn(len(commonLoot))]
 			}
 			items = append(items, item)
-			ev.Text = "🎁 **" + petType + "** found a **" + item + "**!"
+			ev.Text = "🎁 **" + pet.Nickname + "** found a **" + item + "**!"
 			ev.Loot = item
 		case "rest":
-			ev.Text = "💤 **" + petType + "** takes a short nap by a stream."
+			ev.Text = "💤 **" + pet.Nickname + "** takes a short nap by a stream."
 		}
 
 		events = append(events, ev)
 	}
 
-	return &ExpeditionResult{Log: events, XP: totalXP, Items: items}
+	return &ExpeditionResult{Log: events, XP: totalXP, Items: items, PetHP: petHP}
+}
+
+// petBattlePet converts a pet into its battle form with its learned skills.
+func (s *Service) petBattlePet(pet *model.UserPet) *battle.BattlePet {
+	emoji := "🐾"
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+		emoji = pt.Emoji
+	}
+	var skills []model.UserPetSkill
+	s.store.DB.Where("pet_id = ?", pet.ID).Find(&skills)
+	skillIDs := make([]string, 0, len(skills))
+	for _, sk := range skills {
+		skillIDs = append(skillIDs, sk.SkillID)
+	}
+	return &battle.BattlePet{
+		ID: pet.ID, Nickname: pet.Nickname, Emoji: emoji, PetType: pet.PetType,
+		Level: pet.Level, HP: pet.HP, MaxHP: pet.MaxHP,
+		Atk: pet.Atk, Defense: pet.Defense, Speed: pet.Speed,
+		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,
+		Skills: skillIDs,
+	}
+}
+
+// wildBattlePet builds a wild opponent of the given species with stats scaled
+// to its level using the same growth curve as player pets.
+func wildBattlePet(species string, level int) *battle.BattlePet {
+	pt := petsvc.PetTypes[species]
+	if pt == nil {
+		pt = petsvc.PetTypes["Escargot"]
+	}
+	lvl := max(1, level)
+	spc := 0
+	if lvl >= 5 {
+		spc = (lvl / 5) * 5
+		if spc > 50 {
+			spc = 50
+		}
+	}
+	maxHP := pt.MaxHP + 2*(lvl-1)
+	return &battle.BattlePet{
+		ID: -1, Nickname: species, Emoji: pt.Emoji, PetType: species,
+		Level: lvl, HP: maxHP, MaxHP: maxHP,
+		Atk: pt.Atk + (lvl - 1), Defense: pt.Defense + (lvl-1)/2,
+		Speed: pt.Speed + (lvl-1)/5, DGE: pt.DGE + (lvl-1)/5,
+		ACC: pt.ACC + (lvl-1)/5, CritC: pt.CritC, CritD: pt.CritD, SpcC: spc,
+	}
 }
 
 func (s *Service) Start(userID, petID int64, durationHours int, result *ExpeditionResult) (*model.PetExpedition, error) {
@@ -150,7 +227,11 @@ func (s *Service) Start(userID, petID int64, durationHours int, result *Expediti
 	if err != nil {
 		return nil, err
 	}
-	s.store.DB.Model(&model.UserPet{}).Where("id = ?", petID).Update("on_expedition", true)
+	updates := map[string]any{"on_expedition": true}
+	if result.PetHP >= 0 {
+		updates["hp"] = result.PetHP
+	}
+	s.store.DB.Model(&model.UserPet{}).Where("id = ?", petID).Updates(updates)
 	return &exp, nil
 }
 
