@@ -47,7 +47,16 @@ func TestGetMarketInitializesRotation(t *testing.T) {
 }
 
 func TestGetMarketCategoryFilter(t *testing.T) {
-	svc, _ := testService(t)
+	svc, st := testService(t)
+
+	// The weekly rotation is random, so seed a known mining item to make this
+	// test deterministic (a mining item may not be selected for a given week).
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
 
 	views, total, err := svc.GetMarket("mining", 1, ItemsPerPage)
 	require.NoError(t, err)
