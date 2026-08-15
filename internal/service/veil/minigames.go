@@ -190,5 +190,3 @@ func ShieldDescription(state *ShieldState, lang string) string {
 		"val":       ShieldValue(state.Intensity),
 	})
 }
-
-

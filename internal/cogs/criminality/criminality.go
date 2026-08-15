@@ -11,8 +11,8 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
-	"guacagamblebot/internal/store"
 	crimsvc "guacagamblebot/internal/service/criminality"
+	"guacagamblebot/internal/store"
 )
 
 // parseUserMention extracts a user ID from a Discord mention string like <@12345> or <@!12345>.
@@ -380,13 +380,13 @@ func (c *Cog) onPrefixNotoriety(b *interaction.Bot, s *discordgo.Session, m *dis
 	}
 	if crim.PrisonUntil != nil && crim.PrisonUntil.After(time.Now()) {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name: i18n.T("criminality.notoriety.prison_field", lang),
+			Name:  i18n.T("criminality.notoriety.prison_field", lang),
 			Value: i18n.T("criminality.notoriety.prison_value", lang, map[string]any{"until": crim.PrisonUntil.Format("Jan 2 15:04")}),
 		})
 	}
 	if crim.PacifistUntil != nil && crim.PacifistUntil.After(time.Now()) {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name: i18n.T("criminality.notoriety.pacifist_field", lang),
+			Name:  i18n.T("criminality.notoriety.pacifist_field", lang),
 			Value: i18n.T("criminality.notoriety.pacifist_value", lang, map[string]any{"until": crim.PacifistUntil.Format("Jan 2 15:04")}),
 		})
 	}
@@ -584,8 +584,8 @@ func (c *Cog) sendStealResult(s *discordgo.Session, channelID string, result *cr
 		color = 0x2ecc71
 	}
 	embed := &discordgo.MessageEmbed{
-		Title:       result.Message,
-		Color:       color,
+		Title: result.Message,
+		Color: color,
 	}
 	if result.NotorietyGain > 0 {
 		embed.Description = i18n.T("criminality.steal.result_notoriety", lang, map[string]any{"amount": result.NotorietyGain})

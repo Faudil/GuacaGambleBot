@@ -3,11 +3,11 @@ package item_manager
 import (
 	"errors"
 
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 type Service struct {

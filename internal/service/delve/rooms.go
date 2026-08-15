@@ -455,9 +455,9 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 
 	potionDisplay := i18n.T("delve.room.potions_line", lang, map[string]any{"potions": fmt.Sprintf("%d", session.Potions)})
 	hpLine := i18n.T("delve.room.hp_line", lang, map[string]any{
-		"hp":      fmt.Sprintf("%d", session.HP),
-		"max_hp":  fmt.Sprintf("%d", session.MaxHP),
-		"mana":    fmt.Sprintf("%d", session.Mana),
+		"hp":       fmt.Sprintf("%d", session.HP),
+		"max_hp":   fmt.Sprintf("%d", session.MaxHP),
+		"mana":     fmt.Sprintf("%d", session.Mana),
 		"max_mana": fmt.Sprintf("%d", session.MaxMana),
 	})
 	itemsLine := i18n.T("delve.room.items_line", lang, map[string]any{

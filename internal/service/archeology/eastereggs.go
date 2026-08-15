@@ -7,9 +7,9 @@ import (
 )
 
 type ToolMasteryTier struct {
-	Uses   int
+	Uses    int
 	TitleID string
-	Bonus  float64
+	Bonus   float64
 }
 
 var ToolMasteryTiers = []ToolMasteryTier{
@@ -19,11 +19,11 @@ var ToolMasteryTiers = []ToolMasteryTier{
 }
 
 func (s *Service) GetToolMastery(userID int64) map[string]struct {
-	Uses int
+	Uses    int
 	TitleID string
-}{
+} {
 	result := make(map[string]struct {
-		Uses int
+		Uses    int
 		TitleID string
 	})
 	for _, toolID := range []string{"dynamite", "hammer", "brush"} {
@@ -37,7 +37,7 @@ func (s *Service) GetToolMastery(userID int64) map[string]struct {
 			}
 		}
 		result[toolID] = struct {
-			Uses int
+			Uses    int
 			TitleID string
 		}{Uses: uses, TitleID: titleID}
 	}

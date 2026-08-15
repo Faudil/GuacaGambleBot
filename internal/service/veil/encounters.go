@@ -114,10 +114,10 @@ func startShiftingFlames(raid *model.VeilRaid, lang string) EncounterResult {
 }
 
 type FlameState struct {
-	AP          int
-	Intensity   int
-	ExitReveal  int
-	EngulfedBy  int64
+	AP         int
+	Intensity  int
+	ExitReveal int
+	EngulfedBy int64
 }
 
 func ProcessFlameTurn(mech string, actions map[int64]string, lang string) (bool, string, string) {

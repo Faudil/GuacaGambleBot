@@ -9,7 +9,7 @@ import (
 type DamageType int
 
 const (
-	DamageImpact  DamageType = iota
+	DamageImpact DamageType = iota
 	DamageBite
 	DamageScratch
 	DamagePoison

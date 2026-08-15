@@ -10,12 +10,12 @@ import (
 )
 
 type HuntResult struct {
-	Success      bool
-	MeritGained  int
-	GoldReward   int
-	Message      string
-	Captured     bool
-	TrackClues   []string
+	Success     bool
+	MeritGained int
+	GoldReward  int
+	Message     string
+	Captured    bool
+	TrackClues  []string
 }
 
 // PlaceBounty places a bounty on a criminal player.

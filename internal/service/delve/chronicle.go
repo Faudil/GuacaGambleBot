@@ -11,10 +11,10 @@ import (
 )
 
 type ChronicleEntry struct {
-	Date     string
+	Date      string
 	RunNumber int
-	Sentence string
-	Loot     string
+	Sentence  string
+	Loot      string
 }
 
 func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.MessageEmbed, error) {

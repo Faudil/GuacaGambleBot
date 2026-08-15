@@ -141,11 +141,11 @@ var Buildings = map[string]*BuildingDef{
 }
 
 type BuildingInfo struct {
-	Key         string
-	Level       int
-	MaxLevel    int
-	Costs       map[string]int
-	Bonuses     map[string]any
+	Key      string
+	Level    int
+	MaxLevel int
+	Costs    map[string]int
+	Bonuses  map[string]any
 }
 
 type Service struct {

@@ -18,9 +18,9 @@ func TestRecordActivityTutorialQuest(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":10,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":10,"target_stat":"items_mined"}`,
 		}).Error)
 
 	// Record one mining activity
@@ -56,9 +56,9 @@ func TestRecordActivityTutorialStaysActiveWithHook(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
 		}).Error)
 
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
@@ -83,9 +83,9 @@ func TestRecordActivityTutorialCompletionDelegatedToHook(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
 		}).Error)
 
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
@@ -107,9 +107,9 @@ func TestRecordActivityOnlyMatchesCorrectStat(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":5,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":5,"target_stat":"items_mined"}`,
 		}).Error)
 
 	// Record farming activity — should NOT match mining quest
@@ -144,9 +144,9 @@ func TestRecordActivityPushesStepAdvanceNotification(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
 		}).Error)
 
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
@@ -171,9 +171,9 @@ func TestRecordActivityPushesCompletionNotification(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "tutorial").
 		Updates(map[string]any{
-			"step_index":    1,
+			"step_index":     1,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
 		}).Error)
 
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
@@ -209,9 +209,9 @@ func TestDailyQuestCompletionGrantsEgg(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "daily_quest").
 		Updates(map[string]any{
-			"step_index":    0,
+			"step_index":     0,
 			"progress_value": 0,
-			"custom_data":   `{"target_count":1,"target_stat":"items_mined"}`,
+			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
 		}).Error)
 
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))

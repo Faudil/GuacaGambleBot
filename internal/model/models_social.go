@@ -89,10 +89,10 @@ type ServerProject struct {
 }
 
 type ServerProjectContribution struct {
-	ServerID         int64  `gorm:"primaryKey;column:server_id"`
-	ProjectID        string `gorm:"primaryKey;column:project_id"`
-	ResourceType     string `gorm:"primaryKey;column:resource_type"`
-	AmountContributed int   `gorm:"default:0"`
+	ServerID          int64  `gorm:"primaryKey;column:server_id"`
+	ProjectID         string `gorm:"primaryKey;column:project_id"`
+	ResourceType      string `gorm:"primaryKey;column:resource_type"`
+	AmountContributed int    `gorm:"default:0"`
 }
 
 type UserCommunityStat struct {
@@ -102,15 +102,15 @@ type UserCommunityStat struct {
 	TotalItemsInvested int   `gorm:"default:0"`
 }
 
-func (ServerSetting) TableName() string              { return "server_settings" }
-func (ServerLottoState) TableName() string           { return "server_lotto_state" }
-func (UserHousing) TableName() string                { return "user_housing" }
-func (UserHousingUpgrade) TableName() string         { return "user_housing_upgrades" }
-func (UserFurniture) TableName() string              { return "user_furniture" }
-func (UserResearch) TableName() string               { return "user_research" }
-func (UserSanctuary) TableName() string              { return "user_sanctuaries" }
-func (UserNPCReputation) TableName() string          { return "user_npc_reputation" }
-func (UserNPCDailyRep) TableName() string            { return "user_npc_daily_rep" }
-func (ServerProject) TableName() string              { return "server_projects" }
-func (ServerProjectContribution) TableName() string  { return "server_project_contributions" }
-func (UserCommunityStat) TableName() string          { return "user_community_stats" }
+func (ServerSetting) TableName() string             { return "server_settings" }
+func (ServerLottoState) TableName() string          { return "server_lotto_state" }
+func (UserHousing) TableName() string               { return "user_housing" }
+func (UserHousingUpgrade) TableName() string        { return "user_housing_upgrades" }
+func (UserFurniture) TableName() string             { return "user_furniture" }
+func (UserResearch) TableName() string              { return "user_research" }
+func (UserSanctuary) TableName() string             { return "user_sanctuaries" }
+func (UserNPCReputation) TableName() string         { return "user_npc_reputation" }
+func (UserNPCDailyRep) TableName() string           { return "user_npc_daily_rep" }
+func (ServerProject) TableName() string             { return "server_projects" }
+func (ServerProjectContribution) TableName() string { return "server_project_contributions" }
+func (UserCommunityStat) TableName() string         { return "user_community_stats" }

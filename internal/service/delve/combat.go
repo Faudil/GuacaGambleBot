@@ -113,14 +113,14 @@ func ApplyEnemyLevelScaling(enemy *Enemy, floor int, playerLevel int, rng *rand.
 }
 
 type CombatResult struct {
-	EnemyName      string
-	PlayerDamage   int
-	EnemyDamage    int
-	PetDamage      int
-	EnemyDefeated  bool
-	PlayerDefeated bool
-	Log            []string
-	Loot           []DelveItem
+	EnemyName        string
+	PlayerDamage     int
+	EnemyDamage      int
+	PetDamage        int
+	EnemyDefeated    bool
+	PlayerDefeated   bool
+	Log              []string
+	Loot             []DelveItem
 	WasCrit          bool
 	PowerBlowBack    bool
 	AppliedPoison    bool

@@ -7,10 +7,10 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	jsvc "guacagamblebot/internal/service/journal"
 	lottosvc "guacagamblebot/internal/service/lotto"
 	"guacagamblebot/internal/store"
 )
@@ -121,10 +121,10 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	var embed *discordgo.MessageEmbed
 	if res.Win {
 		desc := i18n.T("lotto.jackpot_win_desc", lang, map[string]any{
-			"user":     interaction.Mention(userID),
-			"number":   res.Number,
-			"jackpot":  res.Jackpot,
-			"new_pot":  res.NewJackpot,
+			"user":    interaction.Mention(userID),
+			"number":  res.Number,
+			"jackpot": res.Jackpot,
+			"new_pot": res.NewJackpot,
 		})
 		if res.LeveledUp {
 			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
@@ -175,6 +175,3 @@ func (c *Cog) onJackpot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onRefresh(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.onJackpot(b, i)
 }
-
-
-

@@ -72,7 +72,7 @@ type UserStat struct {
 	ToolBrushUses       int   `gorm:"column:tool_brush_uses;default:0"`
 }
 
-func (User) TableName() string         { return "users" }
-func (Cooldown) TableName() string     { return "cooldowns" }
-func (GameLimit) TableName() string    { return "game_limits" }
-func (UserStat) TableName() string     { return "user_stats" }
+func (User) TableName() string      { return "users" }
+func (Cooldown) TableName() string  { return "cooldowns" }
+func (GameLimit) TableName() string { return "game_limits" }
+func (UserStat) TableName() string  { return "user_stats" }

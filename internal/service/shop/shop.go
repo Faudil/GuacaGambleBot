@@ -6,12 +6,12 @@ import (
 	"math/rand"
 	"time"
 
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -122,8 +122,7 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 		}
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
-			)}).Create(&model.Inventory{UserID: userID, ItemID: itemName, Quantity: quantity}).Error
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)})}).Create(&model.Inventory{UserID: userID, ItemID: itemName, Quantity: quantity}).Error
 	})
 }
 

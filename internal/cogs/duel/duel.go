@@ -21,10 +21,10 @@ type pendingDuel struct {
 }
 
 type Cog struct {
-	store         *store.Store
-	cfg           *config.Config
-	svc           *duelsvc.Service
-	pendingDuels  map[int64]pendingDuel
+	store        *store.Store
+	cfg          *config.Config
+	svc          *duelsvc.Service
+	pendingDuels map[int64]pendingDuel
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {

@@ -3,12 +3,12 @@ package inventory
 import (
 	"errors"
 
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 var (
@@ -30,15 +30,15 @@ type InvEntry struct {
 }
 
 type EquipInfo struct {
-	EquipID   uint
-	Rarity    string
-	Emoji     string
-	StatSTR   int
-	StatDEX   int
-	StatINT   int
-	StatVIT   int
-	StatLUK   int
-	SetID     string
+	EquipID    uint
+	Rarity     string
+	Emoji      string
+	StatSTR    int
+	StatDEX    int
+	StatINT    int
+	StatVIT    int
+	StatLUK    int
+	SetID      string
 	IsEquipped bool
 }
 
@@ -130,6 +130,5 @@ func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemID string, quantity 
 func (s *Service) AddItem(db *gorm.DB, userID int64, itemID string, quantity int) error {
 	return db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)},
-		)}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
+		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)})}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
 }

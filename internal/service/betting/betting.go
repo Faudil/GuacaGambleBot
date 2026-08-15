@@ -13,12 +13,12 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("bet not found")
-	ErrClosed      = errors.New("bet is closed")
-	ErrFrozen      = errors.New("bet is frozen")
-	ErrNoMoney     = errors.New("insufficient funds")
-	ErrNotCreator  = errors.New("only the creator can do this")
-	ErrInvalidOpt  = errors.New("invalid option, choose a or b")
+	ErrNotFound   = errors.New("bet not found")
+	ErrClosed     = errors.New("bet is closed")
+	ErrFrozen     = errors.New("bet is frozen")
+	ErrNoMoney    = errors.New("insufficient funds")
+	ErrNotCreator = errors.New("only the creator can do this")
+	ErrInvalidOpt = errors.New("invalid option, choose a or b")
 )
 
 type OddsResult struct {

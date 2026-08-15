@@ -8,11 +8,11 @@ import (
 )
 
 type Mutation struct {
-	BaseCrop    string
-	MutatedID   string
-	Chance      float64
-	Multiplier  int
-	FlavorKey   string
+	BaseCrop   string
+	MutatedID  string
+	Chance     float64
+	Multiplier int
+	FlavorKey  string
 }
 
 var Mutations = []Mutation{

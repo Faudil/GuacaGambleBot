@@ -16,9 +16,9 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	jsvc "guacagamblebot/internal/service/journal"
 	mktsvc "guacagamblebot/internal/service/market"
 	questssvc "guacagamblebot/internal/service/quests"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 )
 
@@ -535,9 +535,3 @@ func currentWeekID() string {
 	y, w := time.Now().ISOWeek()
 	return fmt.Sprintf("%d-W%02d", y, w)
 }
-
-
-
-
-
-

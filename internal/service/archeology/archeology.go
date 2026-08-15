@@ -15,12 +15,12 @@ import (
 const JournalPageCount = 8
 
 var (
-	ErrDigLimit   = errors.New("dig daily limit reached")
-	ErrNoMoney    = errors.New("not enough money")
-	ErrFinished   = errors.New("game already finished")
-	ErrLocked     = errors.New("site locked")
-	ErrNoActions  = errors.New("no actions remaining")
-	ErrNoFossils  = errors.New("not enough fossils")
+	ErrDigLimit  = errors.New("dig daily limit reached")
+	ErrNoMoney   = errors.New("not enough money")
+	ErrFinished  = errors.New("game already finished")
+	ErrLocked    = errors.New("site locked")
+	ErrNoActions = errors.New("no actions remaining")
+	ErrNoFossils = errors.New("not enough fossils")
 )
 
 type LayerType int
@@ -41,24 +41,24 @@ type LayerProfile struct {
 }
 
 type ToolAction struct {
-	ID            string
-	NameID        string
-	DepthRem      int
-	RiskPct       int
-	IntLoss       int
-	Emoji         string
+	ID       string
+	NameID   string
+	DepthRem int
+	RiskPct  int
+	IntLoss  int
+	Emoji    string
 }
 
 type SiteDef struct {
-	Key         string
-	NameID      string
-	DescID      string
-	Depth       int
-	Cost        int
-	MinLevel    int
-	LayerSeqs   [][]LayerType
+	Key            string
+	NameID         string
+	DescID         string
+	Depth          int
+	Cost           int
+	MinLevel       int
+	LayerSeqs      [][]LayerType
 	FossilRarities []string
-	Color       int
+	Color          int
 }
 
 var Tools = map[string]ToolAction{
@@ -126,19 +126,19 @@ type ToolEffect struct {
 }
 
 type GameState struct {
-	UserID      int64
-	PermitType  string
-	Depth       int
-	MaxDepth    int
-	Integrity   int
-	Actions     int
-	Finished    bool
-	CurrentLayer LayerType
-	LayerSeq    []LayerType
-	LayerIdx    int
-	LastTool    string
-	Site        *SiteDef
-	CursedDebuff bool
+	UserID        int64
+	PermitType    string
+	Depth         int
+	MaxDepth      int
+	Integrity     int
+	Actions       int
+	Finished      bool
+	CurrentLayer  LayerType
+	LayerSeq      []LayerType
+	LayerIdx      int
+	LastTool      string
+	Site          *SiteDef
+	CursedDebuff  bool
 	RevealedLayer bool
 }
 
@@ -156,21 +156,21 @@ type DigResult struct {
 }
 
 type ActionOutcome struct {
-	State       GameState
-	DepthRem    int
-	IntLoss     int
-	Damaged     bool
-	Finished    bool
-	LayerShift  bool
-	Event       *DigEvent
+	State      GameState
+	DepthRem   int
+	IntLoss    int
+	Damaged    bool
+	Finished   bool
+	LayerShift bool
+	Event      *DigEvent
 }
 
 type DigEvent struct {
-	Type        EventType
-	TitleID     string
-	DescID      string
-	Choices     []EventChoice
-	Data        map[string]any
+	Type    EventType
+	TitleID string
+	DescID  string
+	Choices []EventChoice
+	Data    map[string]any
 }
 
 type ActionType string
@@ -200,15 +200,15 @@ type EventChoice struct {
 }
 
 type EventResult struct {
-	TitleID      string
-	DescID       string
-	CoinChange   int
-	ActionsLost  int
-	IntLoss      int
-	ItemGiven    string
-	ItemQty      int
-	DepthGain    int
-	BackToDig    bool
+	TitleID     string
+	DescID      string
+	CoinChange  int
+	ActionsLost int
+	IntLoss     int
+	ItemGiven   string
+	ItemQty     int
+	DepthGain   int
+	BackToDig   bool
 }
 
 type Service struct {
@@ -452,11 +452,11 @@ func (s *Service) Resolve(state *GameState) *DigResult {
 	}
 
 	itemMap := map[string]string{
-		"common":   "common_fossil",
-		"rare":     "rare_fossil",
-		"epic":     "epic_fossil",
+		"common":    "common_fossil",
+		"rare":      "rare_fossil",
+		"epic":      "epic_fossil",
 		"legendary": "legendary_fragment",
-		"pure_dna": "pure_dna",
+		"pure_dna":  "pure_dna",
 	}
 	valueMap := map[string]int{
 		"common": 150, "rare": 300, "epic": 500, "legendary": 1000, "pure_dna": 3000,
@@ -751,9 +751,9 @@ var ReanimatePools = map[string]struct {
 	ItemName string
 	Pets     []string
 }{
-	"common":   {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
-	"rare":     {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
-	"epic":     {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
+	"common":    {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
+	"rare":      {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
+	"epic":      {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
 	"legendary": {ItemName: "legendary_fragment", Pets: []string{"Dragon", "Tyrannosaure", "Diplodocus", "Mamouth"}},
-	"pure_dna": {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
+	"pure_dna":  {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
 }

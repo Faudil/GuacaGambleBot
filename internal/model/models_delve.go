@@ -60,7 +60,7 @@ type DelveGauntletScore struct {
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
-func (DelveSession) TableName() string        { return "delve_sessions" }
-func (UserDelveFlag) TableName() string        { return "user_delve_flags" }
-func (DelveRunHistory) TableName() string      { return "delve_run_history" }
-func (DelveGauntletScore) TableName() string   { return "delve_gauntlet_scores" }
+func (DelveSession) TableName() string       { return "delve_sessions" }
+func (UserDelveFlag) TableName() string      { return "user_delve_flags" }
+func (DelveRunHistory) TableName() string    { return "delve_run_history" }
+func (DelveGauntletScore) TableName() string { return "delve_gauntlet_scores" }

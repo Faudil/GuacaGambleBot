@@ -44,7 +44,7 @@ const (
 )
 
 var (
-	ErrPetAlreadyFullHP = errors.New("pet is already at full HP")
+	ErrPetAlreadyFullHP  = errors.New("pet is already at full HP")
 	ErrInsufficientFunds = errors.New("insufficient funds to heal pet")
 )
 
@@ -239,8 +239,8 @@ func (s *Service) GetActiveRosterPets(userID int64) ([]model.UserPet, error) {
 // ─── Leveling ──────────────────────────────────────────────────
 
 type LevelResult struct {
-	Leveled         bool
-	NewLevel        int
+	Leveled          bool
+	NewLevel         int
 	SkillPointGained bool
 }
 

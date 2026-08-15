@@ -17,12 +17,12 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	huntsvc "guacagamblebot/internal/service/hunt"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
-	huntsvc "guacagamblebot/internal/service/hunt"
 	questssvc "guacagamblebot/internal/service/quests"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -103,10 +103,10 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 				prev := huntsvc.Zones[req.Previous]
 				prevName := i18n.T("hunt."+prev.Key, lang)
 				rangeStr = i18n.T("hunt.zone_locked_progress", lang, map[string]any{
-					"current": progress[req.Previous],
-					"required": req.RequiredWins,
+					"current":    progress[req.Previous],
+					"required":   req.RequiredWins,
 					"prev_emoji": prev.Emoji,
-					"prev_name": prevName,
+					"prev_name":  prevName,
 				})
 			}
 		}
@@ -172,9 +172,9 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			prev := huntsvc.Zones[req.Previous]
 			c.respondErrorParams(b, i, lang, "hunt.zone_locked_error", map[string]any{
-				"required": req.RequiredWins,
+				"required":   req.RequiredWins,
 				"prev_emoji": prev.Emoji,
-				"prev_name": i18n.T("hunt."+prev.Key, lang),
+				"prev_name":  i18n.T("hunt."+prev.Key, lang),
 			})
 		default:
 			slog.Error("hunt failed", "user", userID, "zone", zoneKey, "error", err)
@@ -504,7 +504,3 @@ func sortedZoneKeys() []string {
 	})
 	return keys
 }
-
-
-
-

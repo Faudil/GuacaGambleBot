@@ -178,9 +178,9 @@ func (s *Service) resolvePest(userID int64, evt *Event, choice string) *EventRes
 	switch choice {
 	case "fight":
 		return &EventResult{
-			Title:      "farm.event_pest_win_title",
+			Title:       "farm.event_pest_win_title",
 			Description: "farm.event_pest_win_desc",
-			BackToMenu: true,
+			BackToMenu:  true,
 		}
 
 	case "pesticide":
@@ -252,10 +252,10 @@ func (s *Service) resolveMerchant(userID int64, evt *Event, choice string) *Even
 			s.store.UpdateBalance(userID, totalValue)
 		}
 		return &EventResult{
-			Title:      "farm.event_merchant_sell_title",
+			Title:       "farm.event_merchant_sell_title",
 			Description: "farm.event_merchant_sell_desc",
-			CoinChange: totalValue,
-			BackToMenu: true,
+			CoinChange:  totalValue,
+			BackToMenu:  true,
 		}
 
 	case "buy":

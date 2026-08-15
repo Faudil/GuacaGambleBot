@@ -16,20 +16,20 @@ import (
 )
 
 var (
-	ErrNoRecipe          = errors.New("recipe not found")
-	ErrNoLevel           = errors.New("level too low")
-	ErrNoIngredients     = errors.New("missing ingredients")
-	ErrResearchRequired  = errors.New("research required")
+	ErrNoRecipe         = errors.New("recipe not found")
+	ErrNoLevel          = errors.New("level too low")
+	ErrNoIngredients    = errors.New("missing ingredients")
+	ErrResearchRequired = errors.New("research required")
 )
 
 type Recipe struct {
-	Result             string
-	Ingredients        map[string]int
-	LevelRequired      int
-	XP                 int
-	RequiredResearch   string // primary research gate (rarity or set)
-	RequiredResearch2  string // secondary research gate (e.g. set needs both rarity + set research)
-	IsEquipment        bool   // if true, creates UserEquipment instance instead of Inventory entry
+	Result            string
+	Ingredients       map[string]int
+	LevelRequired     int
+	XP                int
+	RequiredResearch  string // primary research gate (rarity or set)
+	RequiredResearch2 string // secondary research gate (e.g. set needs both rarity + set research)
+	IsEquipment       bool   // if true, creates UserEquipment instance instead of Inventory entry
 }
 
 type Service struct {
@@ -75,42 +75,42 @@ var Recipes = map[string]Recipe{
 	"oracles_insight":  {Result: "oracles_insight", Ingredients: map[string]int{"pufferfish": 2, "blood_tomato": 1, "rough_diamond": 1}, LevelRequired: 15, XP: 150, RequiredResearch: "pet_nutrition"},
 
 	// --- Common equipment (equip_common) ---
-	"craft_stick":          {Result: "stick", Ingredients: map[string]int{"wheat": 2, "pebble": 1}, LevelRequired: 1, XP: 15, RequiredResearch: "equip_common", IsEquipment: true},
-	"craft_leather_armor":  {Result: "leather_armor", Ingredients: map[string]int{"iron_ore": 3, "coal": 2}, LevelRequired: 2, XP: 20, RequiredResearch: "equip_common", IsEquipment: true},
+	"craft_stick":         {Result: "stick", Ingredients: map[string]int{"wheat": 2, "pebble": 1}, LevelRequired: 1, XP: 15, RequiredResearch: "equip_common", IsEquipment: true},
+	"craft_leather_armor": {Result: "leather_armor", Ingredients: map[string]int{"iron_ore": 3, "coal": 2}, LevelRequired: 2, XP: 20, RequiredResearch: "equip_common", IsEquipment: true},
 
 	// --- Uncommon equipment (equip_uncommon) ---
-	"craft_iron_pickaxe":   {Result: "iron_pickaxe", Ingredients: map[string]int{"iron_ore": 5, "coal": 3}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
-	"craft_lucky_charm":    {Result: "lucky_charm", Ingredients: map[string]int{"gold_nugget": 1, "emerald": 1}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
-	"craft_fishing_rod":    {Result: "fishing_rod", Ingredients: map[string]int{"wheat": 5, "iron_ore": 3}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
-	"craft_miner_helmet":   {Result: "miner_helmet", Ingredients: map[string]int{"iron_ore": 5, "coal": 5}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_iron_pickaxe": {Result: "iron_pickaxe", Ingredients: map[string]int{"iron_ore": 5, "coal": 3}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_lucky_charm":  {Result: "lucky_charm", Ingredients: map[string]int{"gold_nugget": 1, "emerald": 1}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_fishing_rod":  {Result: "fishing_rod", Ingredients: map[string]int{"wheat": 5, "iron_ore": 3}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_miner_helmet": {Result: "miner_helmet", Ingredients: map[string]int{"iron_ore": 5, "coal": 5}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
 
 	// --- Rare equipment (equip_rare) ---
-	"craft_hunters_bow":    {Result: "hunters_bow", Ingredients: map[string]int{"iron_ore": 8, "silver_ore": 3}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
-	"craft_hunter_cloak":   {Result: "hunter_cloak", Ingredients: map[string]int{"coal": 5, "silver_ore": 5}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
-	"craft_golden_ring":    {Result: "golden_ring", Ingredients: map[string]int{"gold_nugget": 3, "emerald": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
-	"craft_crystal_staff":  {Result: "crystal_staff", Ingredients: map[string]int{"gold_nugget": 3, "rough_diamond": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_hunters_bow":   {Result: "hunters_bow", Ingredients: map[string]int{"iron_ore": 8, "silver_ore": 3}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_hunter_cloak":  {Result: "hunter_cloak", Ingredients: map[string]int{"coal": 5, "silver_ore": 5}, LevelRequired: 5, XP: 50, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_golden_ring":   {Result: "golden_ring", Ingredients: map[string]int{"gold_nugget": 3, "emerald": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
+	"craft_crystal_staff": {Result: "crystal_staff", Ingredients: map[string]int{"gold_nugget": 3, "rough_diamond": 2}, LevelRequired: 6, XP: 60, RequiredResearch: "equip_rare", IsEquipment: true},
 
 	// --- Epic equipment (equip_epic) ---
 	"craft_enchanted_robe": {Result: "enchanted_robe", Ingredients: map[string]int{"platinum": 3, "rough_diamond": 2}, LevelRequired: 7, XP: 80, RequiredResearch: "equip_epic", IsEquipment: true},
 	"craft_ancient_amulet": {Result: "ancient_amulet", Ingredients: map[string]int{"platinum": 5, "emerald": 3}, LevelRequired: 8, XP: 90, RequiredResearch: "equip_epic", IsEquipment: true},
 
 	// --- Dragon Slayer Set 🐉 (forge, equip_rare) — mining + boss resources ---
-	"craft_dragon_slayer_sword":    {Result: "dragon_slayer_sword",    Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
-	"craft_dragon_slayer_armor":    {Result: "dragon_slayer_armor",    Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
-	"craft_dragon_slayer_ring":     {Result: "dragon_slayer_ring",     Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_sword":    {Result: "dragon_slayer_sword", Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_armor":    {Result: "dragon_slayer_armor", Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_dragon_slayer_ring":     {Result: "dragon_slayer_ring", Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
 	"craft_dragon_slayer_talisman": {Result: "dragon_slayer_talisman", Ingredients: map[string]int{"rough_diamond": 5, "ancient_alloy": 5, "platinum": 10, "boss_trophy": 1}, LevelRequired: 8, XP: 200, RequiredResearch: "set_dragon_slayer", RequiredResearch2: "equip_rare", IsEquipment: true},
 
 	// --- Shadow Stalker Set 🌑 (forge, equip_rare) — archeology resources ---
-	"craft_shadow_stalker_blade":  {Result: "shadow_stalker_blade",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
-	"craft_shadow_stalker_cloak":  {Result: "shadow_stalker_cloak",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_blade":  {Result: "shadow_stalker_blade", Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_cloak":  {Result: "shadow_stalker_cloak", Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
 	"craft_shadow_stalker_amulet": {Result: "shadow_stalker_amulet", Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
-	"craft_shadow_stalker_charm":  {Result: "shadow_stalker_charm",  Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
+	"craft_shadow_stalker_charm":  {Result: "shadow_stalker_charm", Ingredients: map[string]int{"shadow_fossil": 3, "cursed_artifact": 5, "purified_relic": 3, "legendary_fragment": 3}, LevelRequired: 8, XP: 200, RequiredResearch: "set_shadow_stalker", RequiredResearch2: "equip_rare", IsEquipment: true},
 
 	// --- Arcane Weaver Set 🔮 (arcane_forge, equip_epic) — dimensional + exotic resources ---
-	"craft_arcane_weaver_staff":  {Result: "arcane_weaver_staff",  Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
-	"craft_arcane_weaver_robe":   {Result: "arcane_weaver_robe",   Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
-	"craft_arcane_weaver_crown":  {Result: "arcane_weaver_crown",  Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
-	"craft_arcane_weaver_orb":    {Result: "arcane_weaver_orb",    Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_staff": {Result: "arcane_weaver_staff", Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_robe":  {Result: "arcane_weaver_robe", Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_crown": {Result: "arcane_weaver_crown", Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
+	"craft_arcane_weaver_orb":   {Result: "arcane_weaver_orb", Ingredients: map[string]int{"dimensional_shard": 5, "pure_dna": 3, "nova_fruit": 3, "lava_serpent": 5}, LevelRequired: 9, XP: 300, RequiredResearch: "set_arcane_weaver", RequiredResearch2: "equip_epic", IsEquipment: true},
 }
 
 func (s *Service) GetCrafterLevel(userID int64) int {

@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	ErrNoMoney   = errors.New("insufficient funds")
-	ErrNotLeader = errors.New("only the leader can start")
-	ErrMinPlayers = errors.New("need at least 2 players")
-	ErrNotYourTurn = errors.New("not your turn")
+	ErrNoMoney       = errors.New("insufficient funds")
+	ErrNotLeader     = errors.New("only the leader can start")
+	ErrMinPlayers    = errors.New("need at least 2 players")
+	ErrNotYourTurn   = errors.New("not your turn")
 	ErrAlreadyJoined = errors.New("already joined")
 )
 
@@ -18,15 +18,15 @@ type Player struct {
 }
 
 type Game struct {
-	Players      []Player
-	Alive        []Player
-	EntryFee     int
-	Pot          int
-	Cylinder     []bool
-	TurnIndex    int
-	IsActive     bool
-	LeaderID     int64
-	LuckyBreak   bool
+	Players    []Player
+	Alive      []Player
+	EntryFee   int
+	Pot        int
+	Cylinder   []bool
+	TurnIndex  int
+	IsActive   bool
+	LeaderID   int64
+	LuckyBreak bool
 }
 
 func NewGame(leaderID int64, entryFee int) *Game {
@@ -34,10 +34,10 @@ func NewGame(leaderID int64, entryFee int) *Game {
 	cyl[rand.Intn(6)] = true
 	return &Game{
 		Players:  []Player{{UserID: leaderID}},
-		EntryFee:  entryFee,
-		Cylinder:  cyl,
-		LeaderID:  leaderID,
-		IsActive:  false,
+		EntryFee: entryFee,
+		Cylinder: cyl,
+		LeaderID: leaderID,
+		IsActive: false,
 	}
 }
 

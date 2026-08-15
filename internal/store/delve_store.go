@@ -11,7 +11,7 @@ import (
 
 func (s *Store) SaveDelveSession(session *model.DelveSession) error {
 	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},
+		Columns: []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"guild_id", "channel_id", "floor", "zone", "hp", "max_hp", "mana", "max_mana",
 			"torches", "keys", "gold", "inventory", "deployed_pets", "flags",
@@ -36,7 +36,7 @@ func (s *Store) DeleteDelveSession(userID int64) error {
 
 func (s *Store) AddDelveFlag(userID int64, flagID string, metadata string) error {
 	return s.DB.Clauses(clause.OnConflict{
-		Columns: []clause.Column{{Name: "user_id"}, {Name: "flag_id"}},
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "flag_id"}},
 		DoNothing: true,
 	}).Create(&model.UserDelveFlag{
 		UserID:   userID,
@@ -72,7 +72,7 @@ func (s *Store) GetDelveRunHistory(userID int64) ([]model.DelveRunHistory, error
 
 func (s *Store) SaveDelveGauntletScore(score *model.DelveGauntletScore) error {
 	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "week_start"}},
+		Columns: []clause.Column{{Name: "user_id"}, {Name: "week_start"}},
 		DoUpdates: clause.Assignments(map[string]any{
 			"floor": gorm.Expr("GREATEST(floor, ?)", score.Floor),
 			"score": gorm.Expr("GREATEST(score, ?)", score.Score),

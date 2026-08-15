@@ -76,7 +76,7 @@ func (s *Store) GetWorldState(serverID int64) (*model.WorldCriminalityState, err
 
 func (s *Store) SaveWorldState(ws *model.WorldCriminalityState) error {
 	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "server_id"}},
+		Columns: []clause.Column{{Name: "server_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"awakened", "first_thief_id", "first_victim_id",
 			"awakened_at", "mask_claimed_by", "mask_claimed_at",

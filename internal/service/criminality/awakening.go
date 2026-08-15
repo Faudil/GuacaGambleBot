@@ -27,28 +27,28 @@ const (
 
 // GravewardenMorvain is the special boss that drops the Mask.
 var GravewardenMorvain = &EnemyModel{
-	Name:     "Gravewarden Morvain",
-	Emoji:    "💀",
-	HP:       150,
-	MaxHP:    150,
-	Atk:      25,
-	Def:      12,
-	Zone:     "forge_district",
-	IsBoss:   true,
+	Name:         "Gravewarden Morvain",
+	Emoji:        "💀",
+	HP:           150,
+	MaxHP:        150,
+	Atk:          25,
+	Def:          12,
+	Zone:         "forge_district",
+	IsBoss:       true,
 	IsMaskBearer: true,
 }
 
 // EnemyModel is a lightweight definition for special enemies.
 type EnemyModel struct {
-	Name          string
-	Emoji         string
-	HP            int
-	MaxHP         int
-	Atk           int
-	Def           int
-	Zone          string
-	IsBoss        bool
-	IsMaskBearer  bool
+	Name         string
+	Emoji        string
+	HP           int
+	MaxHP        int
+	Atk          int
+	Def          int
+	Zone         string
+	IsBoss       bool
+	IsMaskBearer bool
 }
 
 // CheckAndGrantTouchedByShadow checks if a player qualifies for the

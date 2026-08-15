@@ -8,15 +8,15 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	archsvc "guacagamblebot/internal/service/archeology"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
-	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -109,16 +109,16 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 	tipKey := dailyDigTip()
 
 	desc := i18n.T("arch.bureau_desc", lang, map[string]any{
-		"level":    level,
-		"xpbar":    xpBar,
-		"xp":       xp,
-		"xpnext":   xpNext,
-		"time":     timeFlavor,
-		"mastery":  masteryLines,
-		"journal":  journal,
-		"jmax":     journalMax,
+		"level":        level,
+		"xpbar":        xpBar,
+		"xp":           xp,
+		"xpnext":       xpNext,
+		"time":         timeFlavor,
+		"mastery":      masteryLines,
+		"journal":      journal,
+		"jmax":         journalMax,
 		"totalfossils": totalFossils,
-		"tip":      i18n.T(tipKey, lang),
+		"tip":          i18n.T(tipKey, lang),
 	})
 
 	_, remaining, _ := c.store.CheckGameLimit(userID, "dig", 10)
@@ -724,7 +724,3 @@ func userID(id string) int64 {
 	n, _ := strconv.ParseInt(id, 10, 64)
 	return n
 }
-
-
-
-

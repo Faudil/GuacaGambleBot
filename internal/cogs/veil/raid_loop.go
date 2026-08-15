@@ -203,5 +203,3 @@ func (c *Cog) handleBreachAction(b *interaction.Bot, i *discordgo.InteractionCre
 		c.errorEphemeral(b, i, i18n.T("veil.encounter.vote_waiting", lang, map[string]any{"choice": vote, "cast": cast, "total": total}))
 	}
 }
-
-

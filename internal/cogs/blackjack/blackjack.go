@@ -22,10 +22,10 @@ type pendingChallenge struct {
 }
 
 type activeGame struct {
-	State    *bjsvc.GameState
-	MsgID    string
-	Player1  int64
-	Player2  int64
+	State   *bjsvc.GameState
+	MsgID   string
+	Player1 int64
+	Player2 int64
 }
 
 type Cog struct {

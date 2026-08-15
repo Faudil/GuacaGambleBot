@@ -32,13 +32,13 @@ type UserPet struct {
 	Elo          int     `gorm:"column:elo;default:1000"`
 	IsActive     bool    `gorm:"column:is_active;default:false"`
 	OnExpedition bool    `gorm:"column:on_expedition;default:false"`
-	BondLevel     int    `gorm:"column:bond_level;default:0"`
-	History       string `gorm:"column:history;default:'[]'"`
-	Title         string `gorm:"column:title;default:''"`
-	SkillPoints   int    `gorm:"column:skill_points;default:0"`
-	Personality   string `gorm:"column:personality;default:brave"`
-	InSanctuary   bool   `gorm:"column:in_sanctuary;default:false"`
-	ShowcaseSlot  int    `gorm:"column:showcase_slot;default:0"`
+	BondLevel    int     `gorm:"column:bond_level;default:0"`
+	History      string  `gorm:"column:history;default:'[]'"`
+	Title        string  `gorm:"column:title;default:''"`
+	SkillPoints  int     `gorm:"column:skill_points;default:0"`
+	Personality  string  `gorm:"column:personality;default:brave"`
+	InSanctuary  bool    `gorm:"column:in_sanctuary;default:false"`
+	ShowcaseSlot int     `gorm:"column:showcase_slot;default:0"`
 }
 
 type UserPetSkill struct {
@@ -78,7 +78,7 @@ type UserPetArtifact struct {
 	Stat3Lvl      int    `gorm:"column:stat3_lvl;default:1"`
 }
 
-func (UserPetSkill) TableName() string     { return "user_pet_skills" }
-func (ServerPetElo) TableName() string     { return "server_pet_elo" }
-func (PetExpedition) TableName() string     { return "pet_expeditions" }
-func (UserPetArtifact) TableName() string  { return "user_pet_artifacts" }
+func (UserPetSkill) TableName() string    { return "user_pet_skills" }
+func (ServerPetElo) TableName() string    { return "server_pet_elo" }
+func (PetExpedition) TableName() string   { return "pet_expeditions" }
+func (UserPetArtifact) TableName() string { return "user_pet_artifacts" }

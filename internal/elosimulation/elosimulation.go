@@ -226,7 +226,7 @@ func rollWeeklyModifier(st *store.Store, serverID int64) (modID, boosted, nerfed
 	}
 
 	_ = st.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "server_id"}, {Name: "week_id"}},
+		Columns: []clause.Column{{Name: "server_id"}, {Name: "week_id"}},
 		DoUpdates: clause.Assignments(map[string]any{
 			"modifier": modID, "boosted": boosted, "nerfed": nerfed, "created_at": time.Now().UTC(),
 		}),

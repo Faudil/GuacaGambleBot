@@ -60,7 +60,7 @@ var FlagManifest = map[string]FlagDef{
 		Epithet:  "the Cautious",
 	},
 	"spared_mimic": {
-		Sentence: "You sensed the deception and chose to spare the mimic. A strange friendship may yet bloom.",
+		Sentence:   "You sensed the deception and chose to spare the mimic. A strange friendship may yet bloom.",
 		HiddenFrom: []string{"betrayed_npc"},
 		Unlocks:    []string{"mimic_ally"},
 	},

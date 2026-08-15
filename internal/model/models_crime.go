@@ -71,9 +71,9 @@ type HunterContract struct {
 	ClaimedBy   *int64 `gorm:"column:claimed_by"`
 }
 
-func (UserCriminality) TableName() string      { return "user_criminality" }
+func (UserCriminality) TableName() string       { return "user_criminality" }
 func (WorldCriminalityState) TableName() string { return "world_criminality_state" }
-func (Bounty) TableName() string               { return "bounties" }
-func (TheftRecord) TableName() string          { return "theft_records" }
-func (CrimeRecord) TableName() string          { return "crime_records" }
-func (HunterContract) TableName() string       { return "hunter_contracts" }
+func (Bounty) TableName() string                { return "bounties" }
+func (TheftRecord) TableName() string           { return "theft_records" }
+func (CrimeRecord) TableName() string           { return "crime_records" }
+func (HunterContract) TableName() string        { return "hunter_contracts" }

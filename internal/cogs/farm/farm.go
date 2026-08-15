@@ -9,14 +9,14 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
-	farmsvc "guacagamblebot/internal/service/farm"
 	"guacagamblebot/internal/items"
+	farmsvc "guacagamblebot/internal/service/farm"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
@@ -1204,7 +1204,3 @@ func dailyTip() string {
 	day := time.Now().UTC().YearDay()
 	return tips[day%len(tips)]
 }
-
-
-
-

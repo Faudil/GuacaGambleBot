@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	ErrNoMoney      = errors.New("insufficient funds")
-	ErrInvalidNum   = errors.New("number must be between 1 and 100")
-	ErrLimit        = errors.New("daily limit reached")
+	ErrNoMoney    = errors.New("insufficient funds")
+	ErrInvalidNum = errors.New("number must be between 1 and 100")
+	ErrLimit      = errors.New("daily limit reached")
 )
 
 type TicketResult struct {
@@ -39,9 +39,9 @@ type JackpotInfo struct {
 }
 
 type Service struct {
-	store        *store.Store
-	cfg          *config.Config
-	TicketPrice  int
+	store         *store.Store
+	cfg           *config.Config
+	TicketPrice   int
 	DailyIncrease int
 }
 
@@ -104,11 +104,11 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 	}
 
 	res := &TicketResult{
-		Number:      number,
-		WinningNum:  state.WinningNumber,
-		Jackpot:     state.Jackpot,
-		AddedValue:  s.TicketPrice,
-		NewJackpot:  state.Jackpot + s.TicketPrice,
+		Number:     number,
+		WinningNum: state.WinningNumber,
+		Jackpot:    state.Jackpot,
+		AddedValue: s.TicketPrice,
+		NewJackpot: state.Jackpot + s.TicketPrice,
 	}
 
 	if err := s.store.DB.Model(&model.ServerLottoState{}).
@@ -165,7 +165,7 @@ func (s *Service) TryDailyBonus(serverID int64) (bool, error) {
 	if err := s.store.DB.Model(&model.ServerLottoState{}).
 		Where("server_id = ?", serverID).
 		Updates(map[string]any{
-			"jackpot":        gorm.Expr("jackpot + ?", s.DailyIncrease),
+			"jackpot":         gorm.Expr("jackpot + ?", s.DailyIncrease),
 			"last_bonus_date": today,
 		}).Error; err != nil {
 		return false, err

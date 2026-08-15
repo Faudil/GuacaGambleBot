@@ -56,10 +56,10 @@ type MarketState struct {
 	IsActive     bool   `gorm:"column:is_active;default:false"`
 }
 
-func (Bet) TableName() string          { return "bets" }
-func (Wager) TableName() string        { return "wagers" }
-func (Inventory) TableName() string    { return "inventory" }
-func (LottoState) TableName() string   { return "lotto_state" }
-func (Job) TableName() string          { return "jobs" }
-func (Loan) TableName() string         { return "loans" }
-func (MarketState) TableName() string  { return "market_state" }
+func (Bet) TableName() string         { return "bets" }
+func (Wager) TableName() string       { return "wagers" }
+func (Inventory) TableName() string   { return "inventory" }
+func (LottoState) TableName() string  { return "lotto_state" }
+func (Job) TableName() string         { return "jobs" }
+func (Loan) TableName() string        { return "loans" }
+func (MarketState) TableName() string { return "market_state" }

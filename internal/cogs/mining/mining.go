@@ -9,12 +9,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	miningsvc "guacagamblebot/internal/service/mining"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
@@ -579,7 +579,3 @@ func progressBar(value, max, segments int) string {
 	}
 	return strings.Repeat("█", filled) + strings.Repeat("░", segments-filled)
 }
-
-
-
-

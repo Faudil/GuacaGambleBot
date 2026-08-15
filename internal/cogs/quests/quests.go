@@ -65,16 +65,16 @@ func (c *Cog) requirementErrorDesc(reqErr *questssvc.RequirementError, lang stri
 }
 
 var activityLabels = map[string]string{
-	"items_mined":          "⛏️ Mining",
-	"items_farmed":         "🌾 Farming",
-	"items_fished":         "🎣 Fishing",
-	"items_hunted":         "⚔️ Hunting",
-	"items_digged":         "🦴 Digging",
-	"casino_games_played":  "🎰 Casino",
-	"bank_deposits":        "🏦 Bank",
-	"items_sold_market":    "🏪 Market",
-	"delve_completions":    "🏰 Delve",
-	"pets_fed":             "🐾 Pet Care",
+	"items_mined":         "⛏️ Mining",
+	"items_farmed":        "🌾 Farming",
+	"items_fished":        "🎣 Fishing",
+	"items_hunted":        "⚔️ Hunting",
+	"items_digged":        "🦴 Digging",
+	"casino_games_played": "🎰 Casino",
+	"bank_deposits":       "🏦 Bank",
+	"items_sold_market":   "🏪 Market",
+	"delve_completions":   "🏰 Delve",
+	"pets_fed":            "🐾 Pet Care",
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
@@ -207,7 +207,7 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 			btnLabel = i18n.T("quests.continue_label", lang)
 		}
 
-			btnLabel = title + " — " + btnLabel
+		btnLabel = title + " — " + btnLabel
 		btns = append(btns, components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", q.QuestID), discordgo.SuccessButton))
 		desc += "\n"
 	}
@@ -317,20 +317,20 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				"current": nextIdx + 1,
 				"total":   len(def.Steps),
 			})
-		btnLabel := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.continue_label", lang)
-		comps := []discordgo.MessageComponent{
-			components.ActionRow(
-				components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", questID), discordgo.SuccessButton),
-			),
-			components.ActionRow(
-				components.Button("🔄", components.EncodeOwner(userID, "quest", "show"), discordgo.SecondaryButton),
-			),
-		}
-		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(title, text, 0x2ecc71), comps))
-		return
-	} else {
+			btnLabel := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.continue_label", lang)
+			comps := []discordgo.MessageComponent{
+				components.ActionRow(
+					components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", questID), discordgo.SuccessButton),
+				),
+				components.ActionRow(
+					components.Button("🔄", components.EncodeOwner(userID, "quest", "show"), discordgo.SecondaryButton),
+				),
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+					components.Embed(title, text, 0x2ecc71), comps))
+			return
+		} else {
 			embed, comps := c.buildQuestEmbed(lang, userID)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -429,5 +429,3 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
 			components.Embed(title, text, 0x2ecc71), comps))
 }
-
-

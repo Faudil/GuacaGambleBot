@@ -312,7 +312,7 @@ func (c *Cog) onFinish(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	embed := components.Embed(
 		i18n.T("onboarding.configured_title", lang),
-		i18n.T("onboarding.configured_desc", lang, map[string]any{"channel": "<#"+strconv.FormatInt(ss.ChannelID, 10)+">"}),
+		i18n.T("onboarding.configured_desc", lang, map[string]any{"channel": "<#" + strconv.FormatInt(ss.ChannelID, 10) + ">"}),
 		0x57f287,
 	)
 	comps := []discordgo.MessageComponent{

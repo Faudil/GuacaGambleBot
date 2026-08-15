@@ -15,9 +15,9 @@ import (
 	"guacagamblebot/internal/interaction"
 	casinosvc "guacagamblebot/internal/service/casino"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	questssvc "guacagamblebot/internal/service/quests"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -632,6 +632,3 @@ func (c *Cog) getSlotsFlavor(winType, symbol, lang string) string {
 	}
 	return i18n.T("slots.lose_generic", lang)
 }
-
-
-

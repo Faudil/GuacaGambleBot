@@ -21,7 +21,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"iron_shell": {
 		ID: "iron_shell", Name: "Iron Shell",
 		Description: "+20% Defense in battle.",
-		Emoji: "🛡️", MinRarity: RarityCommon, Category: "battle",
+		Emoji:       "🛡️", MinRarity: RarityCommon, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.Defense = int(float64(owner.Defense) * 1.20)
 		},
@@ -29,7 +29,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"keen_edge": {
 		ID: "keen_edge", Name: "Keen Edge",
 		Description: "+15% Attack in battle.",
-		Emoji: "⚔️", MinRarity: RarityCommon, Category: "battle",
+		Emoji:       "⚔️", MinRarity: RarityCommon, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.Atk = int(float64(owner.Atk) * 1.15)
 		},
@@ -37,7 +37,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"evasive": {
 		ID: "evasive", Name: "Evasive",
 		Description: "+20% Dodge in battle.",
-		Emoji: "💨", MinRarity: RarityCommon, Category: "battle",
+		Emoji:       "💨", MinRarity: RarityCommon, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.DGE = int(float64(owner.DGE) * 1.20)
 		},
@@ -47,7 +47,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"last_stand": {
 		ID: "last_stand", Name: "Last Stand",
 		Description: "Deals 2x damage when below 25% HP.",
-		Emoji: "🔥", MinRarity: RarityRare, Category: "battle",
+		Emoji:       "🔥", MinRarity: RarityRare, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["last_stand"] = 1
 		},
@@ -55,7 +55,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"regeneration": {
 		ID: "regeneration", Name: "Regeneration",
 		Description: "Heals 5% Max HP every 3 turns.",
-		Emoji: "💚", MinRarity: RarityRare, Category: "battle",
+		Emoji:       "💚", MinRarity: RarityRare, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["regeneration"] = 0 // turn counter
 		},
@@ -63,7 +63,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"counter": {
 		ID: "counter", Name: "Counter",
 		Description: "30% chance to reflect 50% of incoming damage.",
-		Emoji: "🔄", MinRarity: RarityRare, Category: "battle",
+		Emoji:       "🔄", MinRarity: RarityRare, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["counter"] = 1
 		},
@@ -73,7 +73,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"piercing_strike": {
 		ID: "piercing_strike", Name: "Piercing Strike",
 		Description: "Attacks ignore 40% of target's Defense.",
-		Emoji: "🗡️", MinRarity: RarityEpic, Category: "battle",
+		Emoji:       "🗡️", MinRarity: RarityEpic, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["piercing"] = 1
 		},
@@ -81,7 +81,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"berserker": {
 		ID: "berserker", Name: "Berserker",
 		Description: "+3% crit chance per 10% HP lost.",
-		Emoji: "😤", MinRarity: RarityEpic, Category: "battle",
+		Emoji:       "😤", MinRarity: RarityEpic, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["berserker"] = 1
 		},
@@ -89,7 +89,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"thornmail": {
 		ID: "thornmail", Name: "Thornmail",
 		Description: "Always reflects thorn damage (no probability check).",
-		Emoji: "🌵", MinRarity: RarityEpic, Category: "battle",
+		Emoji:       "🌵", MinRarity: RarityEpic, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["thornmail"] = 1
 		},
@@ -99,7 +99,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"phoenix_rebirth": {
 		ID: "phoenix_rebirth", Name: "Phoenix Rebirth",
 		Description: "Once per battle, revive with 30% HP when KO'd.",
-		Emoji: "🦅", MinRarity: RarityLegendary, Category: "battle",
+		Emoji:       "🦅", MinRarity: RarityLegendary, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["rebirth"] = 1
 		},
@@ -107,7 +107,7 @@ var AllPetSkills = map[string]*PetSkill{
 	"dragon_fury": {
 		ID: "dragon_fury", Name: "Dragon's Fury",
 		Description: "First attack deals 2x damage.",
-		Emoji: "🐉", MinRarity: RarityLegendary, Category: "battle",
+		Emoji:       "🐉", MinRarity: RarityLegendary, Category: "battle",
 		BattleApply: func(owner, _ *battle.BattlePet) {
 			owner.PerkInt["dragon_fury"] = 1
 		},
@@ -117,37 +117,37 @@ var AllPetSkills = map[string]*PetSkill{
 	"keen_senses": {
 		ID: "keen_senses", Name: "Keen Senses",
 		Description: "+25% loot from hunting.",
-		Emoji: "👁️", MinRarity: RarityCommon, Category: "utility",
+		Emoji:       "👁️", MinRarity: RarityCommon, Category: "utility",
 	},
 	"prospector": {
 		ID: "prospector", Name: "Prospector",
 		Description: "+25% yield from mining.",
-		Emoji: "⛏️", MinRarity: RarityCommon, Category: "utility",
+		Emoji:       "⛏️", MinRarity: RarityCommon, Category: "utility",
 	},
 	"green_thumb": {
 		ID: "green_thumb", Name: "Green Thumb",
 		Description: "Farming grows 20% faster.",
-		Emoji: "🌱", MinRarity: RarityCommon, Category: "utility",
+		Emoji:       "🌱", MinRarity: RarityCommon, Category: "utility",
 	},
 	"angler": {
 		ID: "angler", Name: "Angler",
 		Description: "+25% fish quality/quantity.",
-		Emoji: "🎣", MinRarity: RarityCommon, Category: "utility",
+		Emoji:       "🎣", MinRarity: RarityCommon, Category: "utility",
 	},
 	"scavenger": {
 		ID: "scavenger", Name: "Scavenger",
 		Description: "+25% expedition rewards.",
-		Emoji: "🎒", MinRarity: RarityRare, Category: "utility",
+		Emoji:       "🎒", MinRarity: RarityRare, Category: "utility",
 	},
 	"treasure_hunter": {
 		ID: "treasure_hunter", Name: "Treasure Hunter",
 		Description: "+5% rare discovery chance.",
-		Emoji: "💎", MinRarity: RarityEpic, Category: "utility",
+		Emoji:       "💎", MinRarity: RarityEpic, Category: "utility",
 	},
 	"mentor": {
 		ID: "mentor", Name: "Mentor",
 		Description: "Active pet gains +10% XP from all sources.",
-		Emoji: "📚", MinRarity: RarityRare, Category: "utility",
+		Emoji:       "📚", MinRarity: RarityRare, Category: "utility",
 	},
 }
 

@@ -3,9 +3,9 @@ package pets
 import "math/rand"
 
 const (
-	RarityCommon   = "common"
-	RarityRare     = "rare"
-	RarityEpic     = "epic"
+	RarityCommon    = "common"
+	RarityRare      = "rare"
+	RarityEpic      = "epic"
 	RarityLegendary = "legendary"
 )
 
@@ -29,42 +29,42 @@ const (
 )
 
 type PetType struct {
-	Name     string
-	Emoji    string
-	Rarity   string
-	Biome    string
-	Bonus    int
-	MaxHP    int
-	Atk      int
-	Defense  int
-	Speed    int
-	DGE      int
-	ACC      int
-	CritC    int
-	CritD    float64
-	SpcC     int
+	Name      string
+	Emoji     string
+	Rarity    string
+	Biome     string
+	Bonus     int
+	MaxHP     int
+	Atk       int
+	Defense   int
+	Speed     int
+	DGE       int
+	ACC       int
+	CritC     int
+	CritD     float64
+	SpcC      int
 	Hatchable bool
 }
 
 var PetTypes = map[string]*PetType{
 	// ── Forest 🌲 ──
-	"Escargot":  {Name: "Escargot", Emoji: "🐌", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 60, Atk: 5, Defense: 15, Speed: 2, DGE: 0, ACC: 10, CritC: 5, CritD: 1.2, Hatchable: true},
-	"Cochon":    {Name: "Cochon", Emoji: "🐷", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 60, Atk: 12, Defense: 8, Speed: 8, DGE: 2, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Abeille":   {Name: "Abeille", Emoji: "🐝", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 25, Atk: 24, Defense: 3, Speed: 25, DGE: 25, ACC: 5, CritC: 10, CritD: 1.5, Hatchable: true},
-	"Hérisson":  {Name: "Hérisson", Emoji: "🦔", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusMINE, MaxHP: 28, Atk: 5, Defense: 26, Speed: 18, DGE: 5, ACC: 5, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Chouette":  {Name: "Chouette", Emoji: "🦉", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusHUNT, MaxHP: 35, Atk: 15, Defense: 5, Speed: 25, DGE: 8, ACC: 20, CritC: 10, CritD: 1.5, Hatchable: true},
-	"Chien":     {Name: "Chien", Emoji: "🐶", Rarity: RarityRare, Biome: BiomeForest, Bonus: BonusHUNT, MaxHP: 65, Atk: 22, Defense: 10, Speed: 18, DGE: 8, ACC: 15, CritC: 10, CritD: 1.5, Hatchable: true},
-	"Renard":    {Name: "Renard", Emoji: "🦊", Rarity: RarityRare, Biome: BiomeForest, Bonus: BonusMINE, MaxHP: 50, Atk: 20, Defense: 6, Speed: 25, DGE: 18, ACC: 20, CritC: 15, CritD: 1.6, Hatchable: true},
-	"Licorne":   {Name: "Licorne", Emoji: "🦄", Rarity: RarityLegendary, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 100, Atk: 28, Defense: 20, Speed: 32, DGE: 20, ACC: 27, CritC: 12, CritD: 1.2, Hatchable: true},
+	"Escargot": {Name: "Escargot", Emoji: "🐌", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 60, Atk: 5, Defense: 15, Speed: 2, DGE: 0, ACC: 10, CritC: 5, CritD: 1.2, Hatchable: true},
+	"Cochon":   {Name: "Cochon", Emoji: "🐷", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 60, Atk: 12, Defense: 8, Speed: 8, DGE: 2, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Abeille":  {Name: "Abeille", Emoji: "🐝", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 25, Atk: 24, Defense: 3, Speed: 25, DGE: 25, ACC: 5, CritC: 10, CritD: 1.5, Hatchable: true},
+	"Hérisson": {Name: "Hérisson", Emoji: "🦔", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusMINE, MaxHP: 28, Atk: 5, Defense: 26, Speed: 18, DGE: 5, ACC: 5, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Chouette": {Name: "Chouette", Emoji: "🦉", Rarity: RarityCommon, Biome: BiomeForest, Bonus: BonusHUNT, MaxHP: 35, Atk: 15, Defense: 5, Speed: 25, DGE: 8, ACC: 20, CritC: 10, CritD: 1.5, Hatchable: true},
+	"Chien":    {Name: "Chien", Emoji: "🐶", Rarity: RarityRare, Biome: BiomeForest, Bonus: BonusHUNT, MaxHP: 65, Atk: 22, Defense: 10, Speed: 18, DGE: 8, ACC: 15, CritC: 10, CritD: 1.5, Hatchable: true},
+	"Renard":   {Name: "Renard", Emoji: "🦊", Rarity: RarityRare, Biome: BiomeForest, Bonus: BonusMINE, MaxHP: 50, Atk: 20, Defense: 6, Speed: 25, DGE: 18, ACC: 20, CritC: 15, CritD: 1.6, Hatchable: true},
+	"Licorne":  {Name: "Licorne", Emoji: "🦄", Rarity: RarityLegendary, Biome: BiomeForest, Bonus: BonusFARM, MaxHP: 100, Atk: 28, Defense: 20, Speed: 32, DGE: 20, ACC: 27, CritC: 12, CritD: 1.2, Hatchable: true},
 
 	// ── Cave 🦇 ──
-	"Souris":    {Name: "Souris", Emoji: "🐀", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 25, Atk: 12, Defense: 3, Speed: 25, DGE: 25, ACC: 5, CritC: 10, CritD: 1.5, Hatchable: true},
-	"Taupe":     {Name: "Taupe", Emoji: "🦡", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 45, Atk: 14, Defense: 8, Speed: 8, DGE: 5, ACC: 25, CritC: 10, CritD: 2.0, Hatchable: true},
-	"Putois":    {Name: "Putois", Emoji: "🦨", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusFARM, MaxHP: 90, Atk: 15, Defense: 26, Speed: 12, DGE: 24, ACC: 20, CritC: 15, CritD: 1.7, Hatchable: true},
-	"Ours":      {Name: "Ours", Emoji: "🐻", Rarity: RarityRare, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 90, Atk: 28, Defense: 18, Speed: 8, DGE: 2, ACC: 10, CritC: 5, CritD: 2.0, Hatchable: true},
-	"Scorpion":  {Name: "Scorpion", Emoji: "🦂", Rarity: RarityRare, Biome: BiomeCave, Bonus: BonusHUNT, MaxHP: 40, Atk: 22, Defense: 10, Speed: 25, DGE: 15, ACC: 15, CritC: 25, CritD: 1.8, Hatchable: true},
-	"Cerbère":   {Name: "Cerbère", Emoji: "🐺🐺🐺", Rarity: RarityLegendary, Biome: BiomeCave, Bonus: BonusHUNT, MaxHP: 90, Atk: 35, Defense: 20, Speed: 28, DGE: 15, ACC: 25, CritC: 25, CritD: 1.5, Hatchable: true},
-	"Nidhögg":   {Name: "Nidhögg", Emoji: "🐍⚡", Rarity: RarityLegendary, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 110, Atk: 32, Defense: 18, Speed: 20, DGE: 20, ACC: 50, CritC: 18, CritD: 1.7, Hatchable: true},
+	"Souris":   {Name: "Souris", Emoji: "🐀", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 25, Atk: 12, Defense: 3, Speed: 25, DGE: 25, ACC: 5, CritC: 10, CritD: 1.5, Hatchable: true},
+	"Taupe":    {Name: "Taupe", Emoji: "🦡", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 45, Atk: 14, Defense: 8, Speed: 8, DGE: 5, ACC: 25, CritC: 10, CritD: 2.0, Hatchable: true},
+	"Putois":   {Name: "Putois", Emoji: "🦨", Rarity: RarityCommon, Biome: BiomeCave, Bonus: BonusFARM, MaxHP: 90, Atk: 15, Defense: 26, Speed: 12, DGE: 24, ACC: 20, CritC: 15, CritD: 1.7, Hatchable: true},
+	"Ours":     {Name: "Ours", Emoji: "🐻", Rarity: RarityRare, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 90, Atk: 28, Defense: 18, Speed: 8, DGE: 2, ACC: 10, CritC: 5, CritD: 2.0, Hatchable: true},
+	"Scorpion": {Name: "Scorpion", Emoji: "🦂", Rarity: RarityRare, Biome: BiomeCave, Bonus: BonusHUNT, MaxHP: 40, Atk: 22, Defense: 10, Speed: 25, DGE: 15, ACC: 15, CritC: 25, CritD: 1.8, Hatchable: true},
+	"Cerbère":  {Name: "Cerbère", Emoji: "🐺🐺🐺", Rarity: RarityLegendary, Biome: BiomeCave, Bonus: BonusHUNT, MaxHP: 90, Atk: 35, Defense: 20, Speed: 28, DGE: 15, ACC: 25, CritC: 25, CritD: 1.5, Hatchable: true},
+	"Nidhögg":  {Name: "Nidhögg", Emoji: "🐍⚡", Rarity: RarityLegendary, Biome: BiomeCave, Bonus: BonusMINE, MaxHP: 110, Atk: 32, Defense: 18, Speed: 20, DGE: 20, ACC: 50, CritC: 18, CritD: 1.7, Hatchable: true},
 
 	// ── Desert 🏜️ ──
 	"Hamster":   {Name: "Hamster", Emoji: "🐹", Rarity: RarityCommon, Biome: BiomeDesert, Bonus: BonusFARM, MaxHP: 25, Atk: 5, Defense: 10, Speed: 25, DGE: 22, ACC: 5, CritC: 10, CritD: 1.5, Hatchable: true},
@@ -76,32 +76,32 @@ var PetTypes = map[string]*PetType{
 	"Kangourou": {Name: "Kangourou", Emoji: "🦘", Rarity: RarityEpic, Biome: BiomeDesert, Bonus: BonusFARM, MaxHP: 65, Atk: 25, Defense: 15, Speed: 27, DGE: 18, ACC: 15, CritC: 15, CritD: 2.0, Hatchable: true},
 
 	// ── Mountain 🏔️ ──
-	"Mouton":    {Name: "Mouton", Emoji: "🐑", Rarity: RarityCommon, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 55, Atk: 8, Defense: 12, Speed: 10, DGE: 5, ACC: 5, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Cheval":    {Name: "Cheval", Emoji: "🐴", Rarity: RarityRare, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 80, Atk: 18, Defense: 10, Speed: 30, DGE: 10, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Gorille":   {Name: "Gorille", Emoji: "🦍", Rarity: RarityRare, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 70, Atk: 22, Defense: 22, Speed: 12, DGE: 7, ACC: 12, CritC: 10, CritD: 1.6, Hatchable: true},
-	"Aigle":     {Name: "Aigle", Emoji: "🦅", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusHUNT, MaxHP: 80, Atk: 30, Defense: 10, Speed: 35, DGE: 22, ACC: 25, CritC: 20, CritD: 2.0, Hatchable: true},
-	"Panda":     {Name: "Panda", Emoji: "🐼", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 110, Atk: 22, Defense: 15, Speed: 10, DGE: 8, ACC: 15, CritC: 10, CritD: 1.5, Hatchable: true},
-	"Léopard":   {Name: "Léopard", Emoji: "🐆", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusHUNT, MaxHP: 75, Atk: 35, Defense: 12, Speed: 46, DGE: 16, ACC: 18, CritC: 20, CritD: 1.7, Hatchable: true},
+	"Mouton":     {Name: "Mouton", Emoji: "🐑", Rarity: RarityCommon, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 55, Atk: 8, Defense: 12, Speed: 10, DGE: 5, ACC: 5, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Cheval":     {Name: "Cheval", Emoji: "🐴", Rarity: RarityRare, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 80, Atk: 18, Defense: 10, Speed: 30, DGE: 10, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Gorille":    {Name: "Gorille", Emoji: "🦍", Rarity: RarityRare, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 70, Atk: 22, Defense: 22, Speed: 12, DGE: 7, ACC: 12, CritC: 10, CritD: 1.6, Hatchable: true},
+	"Aigle":      {Name: "Aigle", Emoji: "🦅", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusHUNT, MaxHP: 80, Atk: 30, Defense: 10, Speed: 35, DGE: 22, ACC: 25, CritC: 20, CritD: 2.0, Hatchable: true},
+	"Panda":      {Name: "Panda", Emoji: "🐼", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusFARM, MaxHP: 110, Atk: 22, Defense: 15, Speed: 10, DGE: 8, ACC: 15, CritC: 10, CritD: 1.5, Hatchable: true},
+	"Léopard":    {Name: "Léopard", Emoji: "🐆", Rarity: RarityEpic, Biome: BiomeMountain, Bonus: BonusHUNT, MaxHP: 75, Atk: 35, Defense: 12, Speed: 46, DGE: 16, ACC: 18, CritC: 20, CritD: 1.7, Hatchable: true},
 	"Diplodocus": {Name: "Diplodocus", Emoji: "🦕", Rarity: RarityLegendary, Biome: BiomeMountain, Bonus: BonusFISH, MaxHP: 140, Atk: 20, Defense: 40, Speed: 15, DGE: 10, ACC: 20, CritC: 10, CritD: 1.2, Hatchable: true},
 
 	// ── Ocean 🌊 ──
 	"Grenouille": {Name: "Grenouille", Emoji: "🐸", Rarity: RarityCommon, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 30, Atk: 15, Defense: 4, Speed: 20, DGE: 10, ACC: 10, CritC: 8, CritD: 1.5, Hatchable: true},
-	"Pélican":   {Name: "Pélican", Emoji: "🦤", Rarity: RarityCommon, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 45, Atk: 12, Defense: 5, Speed: 18, DGE: 8, ACC: 15, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Canard":    {Name: "Canard", Emoji: "🦆", Rarity: RarityCommon, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 30, Atk: 10, Defense: 8, Speed: 21, DGE: 9, ACC: 17, CritC: 5, CritD: 1.7, Hatchable: true},
-	"Pieuvre":   {Name: "Pieuvre", Emoji: "🐙", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 100, Atk: 25, Defense: 15, Speed: 20, DGE: 25, ACC: 30, CritC: 15, CritD: 1.5, Hatchable: true},
-	"Crocodile": {Name: "Crocodile", Emoji: "🐊", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 80, Atk: 30, Defense: 20, Speed: 18, DGE: 17, ACC: 25, CritC: 20, CritD: 2.0, Hatchable: true},
-	"Dauphin":   {Name: "Dauphin", Emoji: "🐬", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 100, Atk: 18, Defense: 15, Speed: 32, DGE: 22, ACC: 30, CritC: 20, CritD: 2.0, Hatchable: true},
-	"Mégalodon": {Name: "Mégalodon", Emoji: "🦈", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 130, Atk: 35, Defense: 25, Speed: 18, DGE: 10, ACC: 20, CritC: 15, CritD: 1.5, Hatchable: true},
-	"Kraken":    {Name: "Kraken", Emoji: "🦑", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 130, Atk: 25, Defense: 35, Speed: 18, DGE: 20, ACC: 10, CritC: 15, CritD: 1.5, Hatchable: true},
-	"Bedawang":  {Name: "Bedawang", Emoji: "🐢🌳", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFARM, MaxHP: 200, Atk: 25, Defense: 40, Speed: 1, DGE: 0, ACC: 25, CritC: 10, CritD: 1.2, Hatchable: true},
+	"Pélican":    {Name: "Pélican", Emoji: "🦤", Rarity: RarityCommon, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 45, Atk: 12, Defense: 5, Speed: 18, DGE: 8, ACC: 15, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Canard":     {Name: "Canard", Emoji: "🦆", Rarity: RarityCommon, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 30, Atk: 10, Defense: 8, Speed: 21, DGE: 9, ACC: 17, CritC: 5, CritD: 1.7, Hatchable: true},
+	"Pieuvre":    {Name: "Pieuvre", Emoji: "🐙", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 100, Atk: 25, Defense: 15, Speed: 20, DGE: 25, ACC: 30, CritC: 15, CritD: 1.5, Hatchable: true},
+	"Crocodile":  {Name: "Crocodile", Emoji: "🐊", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 80, Atk: 30, Defense: 20, Speed: 18, DGE: 17, ACC: 25, CritC: 20, CritD: 2.0, Hatchable: true},
+	"Dauphin":    {Name: "Dauphin", Emoji: "🐬", Rarity: RarityEpic, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 100, Atk: 18, Defense: 15, Speed: 32, DGE: 22, ACC: 30, CritC: 20, CritD: 2.0, Hatchable: true},
+	"Mégalodon":  {Name: "Mégalodon", Emoji: "🦈", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 130, Atk: 35, Defense: 25, Speed: 18, DGE: 10, ACC: 20, CritC: 15, CritD: 1.5, Hatchable: true},
+	"Kraken":     {Name: "Kraken", Emoji: "🦑", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFISH, MaxHP: 130, Atk: 25, Defense: 35, Speed: 18, DGE: 20, ACC: 10, CritC: 15, CritD: 1.5, Hatchable: true},
+	"Bedawang":   {Name: "Bedawang", Emoji: "🐢🌳", Rarity: RarityLegendary, Biome: BiomeOcean, Bonus: BonusFARM, MaxHP: 200, Atk: 25, Defense: 40, Speed: 1, DGE: 0, ACC: 25, CritC: 10, CritD: 1.2, Hatchable: true},
 
 	// ── Tundra ❄️ ──
-	"Paresseux":   {Name: "Paresseux", Emoji: "🦥", Rarity: RarityCommon, Biome: BiomeTundra, Bonus: BonusFISH, MaxHP: 50, Atk: 15, Defense: 15, Speed: 2, DGE: 0, ACC: 10, CritC: 5, CritD: 1.2, Hatchable: true},
-	"Singe":       {Name: "Singe", Emoji: "🐵", Rarity: RarityRare, Biome: BiomeTundra, Bonus: BonusFARM, MaxHP: 55, Atk: 22, Defense: 12, Speed: 28, DGE: 15, ACC: 15, CritC: 12, CritD: 1.5, Hatchable: true},
+	"Paresseux":    {Name: "Paresseux", Emoji: "🦥", Rarity: RarityCommon, Biome: BiomeTundra, Bonus: BonusFISH, MaxHP: 50, Atk: 15, Defense: 15, Speed: 2, DGE: 0, ACC: 10, CritC: 5, CritD: 1.2, Hatchable: true},
+	"Singe":        {Name: "Singe", Emoji: "🐵", Rarity: RarityRare, Biome: BiomeTundra, Bonus: BonusFARM, MaxHP: 55, Atk: 22, Defense: 12, Speed: 28, DGE: 15, ACC: 15, CritC: 12, CritD: 1.5, Hatchable: true},
 	"Ours polaire": {Name: "Ours polaire", Emoji: "🐻‍❄️", Rarity: RarityRare, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 100, Atk: 30, Defense: 20, Speed: 8, DGE: 2, ACC: 10, CritC: 5, CritD: 2.0, Hatchable: true},
-	"Mamouth":     {Name: "Mamouth", Emoji: "🦣", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 180, Atk: 20, Defense: 40, Speed: 10, DGE: 5, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
-	"Fenrir":      {Name: "Fenrir", Emoji: "🐺⛓️", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 100, Atk: 40, Defense: 20, Speed: 30, DGE: 20, ACC: 20, CritC: 20, CritD: 1.5, Hatchable: true},
-	"Ratatosk":    {Name: "Ratatosk", Emoji: "🐿️❄️", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 90, Atk: 30, Defense: 15, Speed: 40, DGE: 25, ACC: 30, CritC: 25, CritD: 2.0, Hatchable: true},
+	"Mamouth":      {Name: "Mamouth", Emoji: "🦣", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 180, Atk: 20, Defense: 40, Speed: 10, DGE: 5, ACC: 10, CritC: 5, CritD: 1.5, Hatchable: true},
+	"Fenrir":       {Name: "Fenrir", Emoji: "🐺⛓️", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 100, Atk: 40, Defense: 20, Speed: 30, DGE: 20, ACC: 20, CritC: 20, CritD: 1.5, Hatchable: true},
+	"Ratatosk":     {Name: "Ratatosk", Emoji: "🐿️❄️", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 90, Atk: 30, Defense: 15, Speed: 40, DGE: 25, ACC: 30, CritC: 25, CritD: 2.0, Hatchable: true},
 
 	// ── Volcano 🌋 ──
 	"Fourmi":       {Name: "Fourmi", Emoji: "🐜", Rarity: RarityCommon, Biome: BiomeVolcano, Bonus: BonusMINE, MaxHP: 5, Atk: 5, Defense: 5, Speed: 5, DGE: 5, ACC: 5, CritC: 5, CritD: 1.2, Hatchable: true},
@@ -113,9 +113,9 @@ var PetTypes = map[string]*PetType{
 }
 
 var RarityXP = map[string]float64{
-	RarityCommon:   0.5,
-	RarityRare:     1.0,
-	RarityEpic:     1.5,
+	RarityCommon:    0.5,
+	RarityRare:      1.0,
+	RarityEpic:      1.5,
 	RarityLegendary: 2.0,
 }
 
@@ -157,9 +157,9 @@ func RandomPersonality() string {
 }
 
 var RarityFoodCapacity = map[string]int{
-	RarityCommon:   5,
-	RarityRare:     4,
-	RarityEpic:     3,
+	RarityCommon:    5,
+	RarityRare:      4,
+	RarityEpic:      3,
 	RarityLegendary: 2,
 }
 

@@ -5,7 +5,7 @@ import "math/rand"
 type AffixDef struct {
 	ID     string
 	Name   string
-	Stat   string   // "str", "dex", "int", "vit", "luk"
+	Stat   string // "str", "dex", "int", "vit", "luk"
 	MinVal int
 	MaxVal int
 	MinRar Rarity   // minimum rarity this affix can appear at

@@ -15,9 +15,9 @@ import (
 )
 
 type Cog struct {
-	store      *store.Store
-	cfg        *config.Config
-	svc        *tournamentsvc.Service
+	store       *store.Store
+	cfg         *config.Config
+	svc         *tournamentsvc.Service
 	tournaments map[int64]*tournamentsvc.TournamentState
 }
 

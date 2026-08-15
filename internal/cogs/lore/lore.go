@@ -61,18 +61,18 @@ func (c *Cog) showMenu(b *interaction.Bot, i *discordgo.InteractionCreate, edit 
 }
 
 var catMeta = map[universe.Category]struct {
-	Name string
+	Name  string
 	Emoji string
 	Color int
-	Hint string
+	Hint  string
 }{
-	"aether_log":  {"Aether-Logs", "🟦", 0x3498db, "Found while mining deep strata"},
-	"tide_scroll": {"Tide-Scrolls", "🟩", 0x2ecc71, "Found while fishing"},
-	"root_whisper":  {"Root-Whispers", "🟫", 0x8b4513, "Found while farming"},
-	"field_obs":     {"Field Observations", "🟧", 0xe67e22, "Found while hunting"},
-	"rust_memory":   {"Rust-Memories", "🟥", 0xe74c3c, "Found while excavating fossils"},
-	"echo_shard":    {"Echo-Shards", "🟨", 0xf1c40f, "Found during pet expeditions"},
-	"bonus":         {"Secret Fragments", "💠", 0x9b59b6, "Special discoveries"},
+	"aether_log":   {"Aether-Logs", "🟦", 0x3498db, "Found while mining deep strata"},
+	"tide_scroll":  {"Tide-Scrolls", "🟩", 0x2ecc71, "Found while fishing"},
+	"root_whisper": {"Root-Whispers", "🟫", 0x8b4513, "Found while farming"},
+	"field_obs":    {"Field Observations", "🟧", 0xe67e22, "Found while hunting"},
+	"rust_memory":  {"Rust-Memories", "🟥", 0xe74c3c, "Found while excavating fossils"},
+	"echo_shard":   {"Echo-Shards", "🟨", 0xf1c40f, "Found during pet expeditions"},
+	"bonus":        {"Secret Fragments", "💠", 0x9b59b6, "Special discoveries"},
 }
 
 func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {

@@ -12,10 +12,10 @@ import (
 )
 
 type Service struct {
-	store      *store.Store
-	cfg        *config.Config
-	universe   *universe.Definition
-	cachedByID map[string]universe.Fragment
+	store       *store.Store
+	cfg         *config.Config
+	universe    *universe.Definition
+	cachedByID  map[string]universe.Fragment
 	cachedByCat map[universe.Category][]universe.Fragment
 }
 

@@ -24,7 +24,7 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	}
 }
 
-func (svc *Service) Store() *store.Store { return svc.store }
+func (svc *Service) Store() *store.Store            { return svc.store }
 func (svc *Service) Cfg() *config.CriminalityConfig { return svc.cfg }
 
 // T resolves a criminality translation key for the given language.

@@ -130,9 +130,15 @@ func init() {
 	register("rank_diamond", "💎", 1000, func(s map[string]any) bool { return anyRank(s, "Diamant") })
 	register("rank_top5", "🌟", 5000, func(s map[string]any) bool { return anyRank(s, "Top 5") })
 
-	register("community_initiate", "🧱", 10, func(s map[string]any) bool { return num(s, "community_money") >= 10000 || num(s, "community_items") >= 200 })
-	register("community_supporter", "🏛️", 50, func(s map[string]any) bool { return num(s, "community_money") >= 500000 || num(s, "community_items") >= 5000 })
-	register("community_pillar", "🏛️", 150, func(s map[string]any) bool { return num(s, "community_money") >= 5000000 || num(s, "community_items") >= 50000 })
+	register("community_initiate", "🧱", 10, func(s map[string]any) bool {
+		return num(s, "community_money") >= 10000 || num(s, "community_items") >= 200
+	})
+	register("community_supporter", "🏛️", 50, func(s map[string]any) bool {
+		return num(s, "community_money") >= 500000 || num(s, "community_items") >= 5000
+	})
+	register("community_pillar", "🏛️", 150, func(s map[string]any) bool {
+		return num(s, "community_money") >= 5000000 || num(s, "community_items") >= 50000
+	})
 
 	register("boss_league_1", "⚔️", 20, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 1 })
 	register("boss_league_2", "🏹", 50, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 2 })
@@ -216,7 +222,7 @@ func localPetRarity(petType string) string {
 		"Chien": "rare", "Chat": "rare", "Cheval": "rare", "Renard": "rare",
 		"Singe": "rare", "Ours": "rare", "Gorille": "rare", "Scorpion": "rare",
 		"Ours polaire": "rare",
-		"Chameau": "epic", "Panda": "epic", "Tigre": "epic", "Pieuvre": "epic",
+		"Chameau":      "epic", "Panda": "epic", "Tigre": "epic", "Pieuvre": "epic",
 		"Kangourou": "epic", "Iguane": "epic", "Aigle": "epic", "Rhino": "epic",
 		"Crocodile": "epic", "Dauphin": "epic", "Léopard": "epic", "Lion": "epic",
 		"Dragon": "legendary", "Tyrannosaure": "legendary", "Diplodocus": "legendary",
@@ -235,18 +241,18 @@ func localPetRarity(petType string) string {
 // filled in by their respective systems as they are ported.
 func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 	stats := map[string]any{
-		"balance":              0,
-		"boss_league_stage":    0,
-		"lore_count":           0,
-		"max_pet_level":        0,
-		"pet_ranks":            []string{},
-		"collected_common_pets": 0,
-		"collected_rare_pets":   0,
-		"collected_epic_pets":   0,
+		"balance":                  0,
+		"boss_league_stage":        0,
+		"lore_count":               0,
+		"max_pet_level":            0,
+		"pet_ranks":                []string{},
+		"collected_common_pets":    0,
+		"collected_rare_pets":      0,
+		"collected_epic_pets":      0,
 		"collected_legendary_pets": 0,
-		"collected_all_pets":    0,
-		"community_money":       0,
-		"community_items":       0,
+		"collected_all_pets":       0,
+		"community_money":          0,
+		"community_items":          0,
 	}
 	var u model.User
 	if res := db.Where("user_id = ?", userID).First(&u); res.Error == nil {

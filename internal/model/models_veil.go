@@ -51,6 +51,6 @@ type VeilRaidHallOfFame struct {
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
-func (VeilRaid) TableName() string            { return "veil_raids" }
-func (VeilRaidLockout) TableName() string     { return "veil_raid_lockouts" }
-func (VeilRaidHallOfFame) TableName() string  { return "veil_raid_hall_of_fame" }
+func (VeilRaid) TableName() string           { return "veil_raids" }
+func (VeilRaidLockout) TableName() string    { return "veil_raid_lockouts" }
+func (VeilRaidHallOfFame) TableName() string { return "veil_raid_hall_of_fame" }

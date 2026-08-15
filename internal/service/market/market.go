@@ -99,7 +99,7 @@ func (s *Service) rotateMarket(weekID string) error {
 		today := time.Now().Format("2006-01-02")
 		for _, it := range selected {
 			tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "item_id"}},
+				Columns: []clause.Column{{Name: "item_id"}},
 				DoUpdates: clause.Assignments(map[string]any{
 					"current_price": it.Price,
 					"daily_sold":    0,
@@ -245,8 +245,7 @@ func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, i
 		}
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)},
-			),
+			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)}),
 		}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: amount}).Error; err != nil {
 			return err
 		}

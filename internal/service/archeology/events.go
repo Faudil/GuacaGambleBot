@@ -141,10 +141,10 @@ func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
 			state.Finished = true
 		}
 		return &EventResult{
-			TitleID:    "arch.event_cavein_careful_title",
-			DescID:     "arch.event_cavein_careful_desc",
+			TitleID:     "arch.event_cavein_careful_title",
+			DescID:      "arch.event_cavein_careful_desc",
 			ActionsLost: 2,
-			BackToDig:  true,
+			BackToDig:   true,
 		}
 	case "rush":
 		state.Integrity -= 20
@@ -214,11 +214,11 @@ func (s *Service) resolveTreasure(state *GameState, choice string) *EventResult 
 		}
 		coins, _ := evtDataCoins(state)
 		return &EventResult{
-			TitleID:    "arch.event_treasure_dig_title",
-			DescID:     "arch.event_treasure_dig_desc",
-			CoinChange: coins,
+			TitleID:     "arch.event_treasure_dig_title",
+			DescID:      "arch.event_treasure_dig_desc",
+			CoinChange:  coins,
 			ActionsLost: 1,
-			BackToDig:  true,
+			BackToDig:   true,
 		}
 	case "ignore":
 		return &EventResult{

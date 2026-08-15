@@ -11,12 +11,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	delvesvc "guacagamblebot/internal/service/delve"
+	jsvc "guacagamblebot/internal/service/journal"
 	petsvc "guacagamblebot/internal/service/pets"
 )
 
@@ -1910,7 +1910,3 @@ func (c *Cog) onRestBandage(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
-
-
-
-

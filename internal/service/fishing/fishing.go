@@ -96,21 +96,21 @@ type FightActionResult struct {
 }
 
 type FightResolve struct {
-	ItemName    string
-	ItemID      string
-	Value       int
-	Weight      int
-	Size        int
-	XP          int
-	Caught      bool
-	Golden      bool
-	Mutated     bool
-	Secret      string
-	LoreID      string
-	LoreName    string
-	BottleMsg   string
-	LeveledUp   bool
-	NewLevel    int
+	ItemName  string
+	ItemID    string
+	Value     int
+	Weight    int
+	Size      int
+	XP        int
+	Caught    bool
+	Golden    bool
+	Mutated   bool
+	Secret    string
+	LoreID    string
+	LoreName  string
+	BottleMsg string
+	LeveledUp bool
+	NewLevel  int
 }
 
 var (
@@ -403,7 +403,7 @@ func applyMoodModifiers(state *FishFightState, tensionLoss, staminaLoss, tension
 		}
 	case "circling":
 		if action == "reel" || action == "pull" {
-			*staminaLoss += rand.Intn(*staminaLoss/2 + 1) - *staminaLoss/4
+			*staminaLoss += rand.Intn(*staminaLoss/2+1) - *staminaLoss/4
 			if *staminaLoss < 1 {
 				*staminaLoss = 1
 			}

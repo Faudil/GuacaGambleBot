@@ -32,16 +32,16 @@ func toInt(v any) int {
 }
 
 var activityLabels = map[string]string{
-	"items_mined":          "⛏️ Mining",
-	"items_farmed":         "🌾 Farming",
-	"items_fished":         "🎣 Fishing",
-	"items_hunted":         "⚔️ Hunting",
-	"items_digged":         "🦴 Digging",
-	"casino_games_played":  "🎰 Casino",
-	"bank_deposits":        "🏦 Bank",
-	"items_sold_market":    "🏪 Market",
-	"delve_completions":    "🏰 Delve",
-	"pets_fed":             "🐾 Pet Care",
+	"items_mined":         "⛏️ Mining",
+	"items_farmed":        "🌾 Farming",
+	"items_fished":        "🎣 Fishing",
+	"items_hunted":        "⚔️ Hunting",
+	"items_digged":        "🦴 Digging",
+	"casino_games_played": "🎰 Casino",
+	"bank_deposits":       "🏦 Bank",
+	"items_sold_market":   "🏪 Market",
+	"delve_completions":   "🏰 Delve",
+	"pets_fed":            "🐾 Pet Care",
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {

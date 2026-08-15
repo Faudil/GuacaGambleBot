@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	ErrNoMoney   = errors.New("insufficient funds")
-	ErrMaxBet    = errors.New("max bet exceeded")
-	ErrLimit     = errors.New("daily limit reached")
-	ErrChoice    = errors.New("invalid choice")
+	ErrNoMoney = errors.New("insufficient funds")
+	ErrMaxBet  = errors.New("max bet exceeded")
+	ErrLimit   = errors.New("daily limit reached")
+	ErrChoice  = errors.New("invalid choice")
 )
 
 var SLOT_SYMBOLS = map[string]struct {
@@ -42,22 +42,22 @@ func BuildWheel() []string {
 var wheel = BuildWheel()
 
 type SlotsResult struct {
-	Symbol1 string
-	Symbol2 string
-	Symbol3 string
-	Payout  int
-	IsWin   bool
-	WinType string
-	WinSym  string
-	XpGain  int
+	Symbol1   string
+	Symbol2   string
+	Symbol3   string
+	Payout    int
+	IsWin     bool
+	WinType   string
+	WinSym    string
+	XpGain    int
 	LeveledUp bool
 	NewLevel  int
 }
 
 type CoinflipResult struct {
-	Result string
-	Win    bool
-	XpGain int
+	Result    string
+	Win       bool
+	XpGain    int
 	LeveledUp bool
 	NewLevel  int
 }

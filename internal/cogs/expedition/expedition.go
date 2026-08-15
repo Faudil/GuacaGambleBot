@@ -12,8 +12,8 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
-	expeditionsvc "guacagamblebot/internal/service/expedition"
 	"guacagamblebot/internal/items"
+	expeditionsvc "guacagamblebot/internal/service/expedition"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )

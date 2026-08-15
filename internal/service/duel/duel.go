@@ -11,28 +11,28 @@ import (
 )
 
 var (
-	ErrNoMoney     = errors.New("insufficient funds")
-	ErrSelf        = errors.New("cannot duel yourself")
-	ErrBot         = errors.New("cannot duel a bot")
-	ErrAmount      = errors.New("amount must be positive")
-	ErrDuelLimit   = errors.New("duel daily limit reached")
-	ErrDuelCD      = errors.New("wait before dueling again")
+	ErrNoMoney   = errors.New("insufficient funds")
+	ErrSelf      = errors.New("cannot duel yourself")
+	ErrBot       = errors.New("cannot duel a bot")
+	ErrAmount    = errors.New("amount must be positive")
+	ErrDuelLimit = errors.New("duel daily limit reached")
+	ErrDuelCD    = errors.New("wait before dueling again")
 )
 
 type DuelResult struct {
-	ChallengerID  int64
-	OpponentID    int64
-	Amount        int
-	Die1C         int
-	Die2C         int
-	TotalC        int
-	Die1O         int
-	Die2O         int
-	TotalO        int
-	WinnerID      int64
-	IsDraw        bool
-	UnlocksC      []*achievement.Achievement
-	UnlocksO      []*achievement.Achievement
+	ChallengerID int64
+	OpponentID   int64
+	Amount       int
+	Die1C        int
+	Die2C        int
+	TotalC       int
+	Die1O        int
+	Die2O        int
+	TotalO       int
+	WinnerID     int64
+	IsDraw       bool
+	UnlocksC     []*achievement.Achievement
+	UnlocksO     []*achievement.Achievement
 }
 
 type Service struct {
@@ -94,7 +94,7 @@ func (s *Service) Duel(challengerID, opponentID int64, amount int) (*DuelResult,
 		OpponentID:   opponentID,
 		Amount:       amount,
 		Die1C:        d1c, Die2C: d2c, TotalC: tc,
-		Die1O:        d1o, Die2O: d2o, TotalO: to,
+		Die1O: d1o, Die2O: d2o, TotalO: to,
 	}
 
 	if tc > to {

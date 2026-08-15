@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"guacagamblebot/internal/i18n"
-	"guacagamblebot/internal/store"
 	charsvc "guacagamblebot/internal/service/character"
+	"guacagamblebot/internal/store"
 )
 
 type CombatAbility struct {

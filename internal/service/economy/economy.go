@@ -15,9 +15,9 @@ var ErrAlreadyClaimed = errors.New("daily already claimed today")
 
 // DailyObjective mirrors the Python DailyQuest objectives.
 type DailyObjective struct {
-	Stat     string
-	Count    int
-	TextKey  string
+	Stat    string
+	Count   int
+	TextKey string
 }
 
 var DailyObjectives = []DailyObjective{
@@ -148,9 +148,9 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 }
 
 var (
-	ErrSelf     = errors.New("cannot transfer to yourself")
-	ErrAmount   = errors.New("amount must be positive")
-	ErrNoMoney  = errors.New("sender has insufficient funds")
+	ErrSelf    = errors.New("cannot transfer to yourself")
+	ErrAmount  = errors.New("amount must be positive")
+	ErrNoMoney = errors.New("sender has insufficient funds")
 )
 
 // Give transfers amount from sender to recipient atomically.

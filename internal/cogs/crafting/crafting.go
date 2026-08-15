@@ -11,10 +11,10 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
-	crtsvc "guacagamblebot/internal/service/crafting"
-	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	crtsvc "guacagamblebot/internal/service/crafting"
+	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
 )
 
@@ -153,7 +153,7 @@ func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate)
 		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
 		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
 		if levelOK && researchOK && research2OK {
-			unlocked = append(unlocked, "✅ " + resLine)
+			unlocked = append(unlocked, "✅ "+resLine)
 		} else {
 			reqs := ""
 			if !levelOK {
@@ -209,7 +209,7 @@ func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *di
 		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
 		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
 		if levelOK && researchOK && research2OK {
-			unlocked = append(unlocked, "✅ " + resLine)
+			unlocked = append(unlocked, "✅ "+resLine)
 		} else {
 			reqs := ""
 			if !levelOK {

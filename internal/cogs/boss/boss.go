@@ -473,5 +473,3 @@ func (c *Cog) petToBattlePet(pet *model.UserPet) *battle.BattlePet {
 		Skills: skillIDs,
 	}
 }
-
-

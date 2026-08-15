@@ -12,19 +12,19 @@ import (
 )
 
 type StealResult struct {
-	Success   bool
-	GoldStolen int
+	Success       bool
+	GoldStolen    int
 	NotorietyGain int
-	Message   string
-	Exposed   bool
+	Message       string
+	Exposed       bool
 }
 
 type BurgleResult struct {
-	Success   bool
-	ItemName  string
+	Success       bool
+	ItemName      string
 	NotorietyGain int
-	Message   string
-	IsMajor   bool
+	Message       string
+	IsMajor       bool
 }
 
 // AttemptPickpocket tries to steal gold from a target.

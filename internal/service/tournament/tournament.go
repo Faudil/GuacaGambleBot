@@ -42,11 +42,11 @@ type TournamentPlayer struct {
 }
 
 type TournamentState struct {
-	ServerID   int64
-	CreatorID  int64
-	Fee        int
-	Players    []TournamentPlayer
-	Started    bool
+	ServerID  int64
+	CreatorID int64
+	Fee       int
+	Players   []TournamentPlayer
+	Started   bool
 }
 
 type MatchResult struct {

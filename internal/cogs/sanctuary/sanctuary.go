@@ -11,11 +11,11 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	ps "guacagamblebot/internal/service/pets"
 	sansvc "guacagamblebot/internal/service/sanctuary"
 	"guacagamblebot/internal/store"
-	"guacagamblebot/internal/items"
 )
 
 type Cog struct {
@@ -411,9 +411,9 @@ func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 			components.Embed("⭐ Showcase Pets", i18n.T("sanctuary.showcase_prompt", lang), 0xf1c40f),
 			[]discordgo.MessageComponent{
 				components.ActionRow(
-			discordgo.SelectMenu{
-					CustomID:    components.EncodeOwner(userID, "sanctuary", "showcase_select"),
-					Placeholder: i18n.T("sanctuary.showcase_placeholder", lang),
+					discordgo.SelectMenu{
+						CustomID:    components.EncodeOwner(userID, "sanctuary", "showcase_select"),
+						Placeholder: i18n.T("sanctuary.showcase_placeholder", lang),
 						Options:     opts,
 					},
 				),

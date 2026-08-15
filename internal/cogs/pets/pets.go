@@ -11,7 +11,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/battle"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -19,6 +18,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
@@ -1449,14 +1449,14 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	opts := make([]discordgo.SelectMenuOption, 0, len(options))
 	for _, sk := range options {
 		opts = append(opts, discordgo.SelectMenuOption{
-			Label: sk.Emoji + " " + sk.Name,
-			Value: sk.ID + ":" + itoa2(slot),
+			Label:       sk.Emoji + " " + sk.Name,
+			Value:       sk.ID + ":" + itoa2(slot),
 			Description: truncate(sk.Description, 50),
 		})
 	}
 
 	embed := components.Embed(
-		i18n.T("pets.skills.choose_title", lang, map[string]any{"level": (slot+1)*10}),
+		i18n.T("pets.skills.choose_title", lang, map[string]any{"level": (slot + 1) * 10}),
 		i18n.T("pets.skills.choose_desc", lang),
 		0x9b59b6,
 	)
@@ -1886,8 +1886,6 @@ func (c *Cog) onArtifactReset(b *interaction.Bot, i *discordgo.InteractionCreate
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-
-
 func (c *Cog) onArtifactStatChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -2073,7 +2071,3 @@ func (c *Cog) weeklyHistoryEmbed(userID, serverID int64, lang string) *discordgo
 	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, 0x9b59b6)
 	return embed
 }
-
-
-
-

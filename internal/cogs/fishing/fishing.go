@@ -10,12 +10,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
-	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	fishingsvc "guacagamblebot/internal/service/fishing"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jsvc "guacagamblebot/internal/service/journal"
 	loresvc "guacagamblebot/internal/service/lore"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
@@ -996,7 +996,3 @@ func itoa(n int) string {
 	}
 	return s
 }
-
-
-
-

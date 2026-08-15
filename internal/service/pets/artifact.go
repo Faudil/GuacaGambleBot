@@ -11,17 +11,16 @@ import (
 )
 
 const (
-	ArtifactPVPWinXP      = 100
-	ArtifactPVPLossXP     = 50
-	ArtifactExpeditionXP  = 120
-	ArtifactHuntXP        = 80
-	ArtifactDelveCombatXP = 100
+	ArtifactPVPWinXP        = 100
+	ArtifactPVPLossXP       = 50
+	ArtifactExpeditionXP    = 120
+	ArtifactHuntXP          = 80
+	ArtifactDelveCombatXP   = 100
 	ArtifactDelveCompleteXP = 300
-	ArtifactDailyBonusXP  = 100
-	ArtifactAutoBattleXP  = 5
-	ArtifactMaxLevel      = 10
+	ArtifactDailyBonusXP    = 100
+	ArtifactAutoBattleXP    = 5
+	ArtifactMaxLevel        = 10
 )
-
 
 type ArtifactStatDef struct {
 	ID         string
@@ -187,7 +186,7 @@ func (s *Service) ResetArtifact(userID int64) (*model.UserPetArtifact, error) {
 		Stat3Lvl: 1,
 	}
 	err := s.store.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},
+		Columns: []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.Assignments(map[string]any{
 			"level": 1, "xp": 0, "unspent_points": 0,
 			"stat1": a.Stat1, "stat1_lvl": 1,
