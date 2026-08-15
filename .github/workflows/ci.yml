@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@40f1582b2485089dde7abd97c1529aa768e1baff
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@40f1582b2485089dde7abd97c1529aa768e1baff
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       # Build the .env on the runner and transfer it as a file, so the token is
       # never interpolated into a shell command line on the production host.
@@ -50,7 +50,7 @@ jobs:
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
 
       - name: Copy files via SCP
-        uses: appleboy/scp-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
         with:
           host: ${{ secrets.OVH_HOST }}
           username: ${{ secrets.OVH_USERNAME }}
@@ -60,7 +60,7 @@ jobs:
           target: "~/guacabot"
 
       - name: Deploy on Server via SSH
-        uses: appleboy/ssh-action@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
         with:
           host: ${{ secrets.OVH_HOST }}
           username: ${{ secrets.OVH_USERNAME }}
