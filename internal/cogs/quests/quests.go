@@ -77,6 +77,46 @@ var activityLabels = map[string]string{
 	"pets_fed":            "🐾 Pet Care",
 }
 
+// activityCommands maps an activity target stat to the slash command the player
+// should type to complete it, shown next to each quest step.
+var activityCommands = map[string]string{
+	"items_mined":          "/mine",
+	"items_farmed":         "/farm",
+	"items_fished":         "/fish",
+	"items_hunted":         "/hunt",
+	"items_digged":         "/dig",
+	"casino_games_played":  "/casino",
+	"bank_deposits":        "/deposit",
+	"items_sold_market":    "/market",
+	"delve_completions":    "/delve",
+	"pets_fed":             "/pets",
+	"hunt_evidence":        "/crimhunt",
+	"stealth_progress":     "/steal",
+	"blackjack_won":        "/blackjack",
+	"slots_won":            "/casino",
+	"wagers_won":           "/bet",
+}
+
+func stepCommand(targetStat string) string {
+	return activityCommands[targetStat]
+}
+
+// stepButtonDisabled reports whether a quest step's action button should be
+// greyed out because its objective is not completed yet. Dialogue and choice
+// steps are always continuable.
+func (c *Cog) stepButtonDisabled(userID int64, q questssvc.QuestInfo, step questssvc.QuestStep) bool {
+	switch step.Type {
+	case questssvc.StepActivity:
+		return !c.svc.IsActivityComplete(userID, q.QuestID)
+	case questssvc.StepBossBattle:
+		return true
+	case questssvc.StepRequirement:
+		return c.svc.CheckRequirement(userID, q.QuestID) != nil
+	default:
+		return false
+	}
+}
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: questssvc.New(s, cfg)}
 	r.Slash("quest", "View your active quests and progress.", c.onSlash)
@@ -84,6 +124,24 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("q", c.onPrefix)
 	r.Component("quest", "show", c.onShow)
 	r.Component("quest", "advance", c.onAdvance)
+}
+
+// nextStepText builds the text shown for a quest step after advancing, appending
+// the command to type for activity objectives.
+func (c *Cog) nextStepText(lang string, def *questssvc.QuestDef, step questssvc.QuestStep) string {
+	text := i18n.T(step.TextKey, lang)
+	if step.Type == questssvc.StepActivity {
+		targetStat, _ := step.Extra["target_stat"].(string)
+		label := targetStat
+		if l, ok := activityLabels[targetStat]; ok {
+			label = l
+		}
+		text = i18n.T("quests.activity_intro", lang, map[string]any{"label": label, "quest": i18n.T(def.TitleKey, lang)})
+		if cmd := stepCommand(targetStat); cmd != "" {
+			text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
+		}
+	}
+	return text
 }
 
 func progressBar(current, target int) string {
@@ -181,6 +239,9 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 			if progStr != "" {
 				desc += progStr + "\n"
 			}
+			if cmd := stepCommand(targetStat); cmd != "" {
+				desc += i18n.T("quests.step_command", lang, map[string]any{"command": cmd}) + "\n"
+			}
 			btnLabel = i18n.T("quests.activity_view_btn", lang)
 		case questssvc.StepDialogue, questssvc.StepChoice:
 			btnLabel = i18n.T("quests.continue_label", lang)
@@ -208,7 +269,12 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 		}
 
 		btnLabel = title + " — " + btnLabel
-		btns = append(btns, components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", q.QuestID), discordgo.SuccessButton))
+		btns = append(btns, discordgo.Button{
+			Label:    btnLabel,
+			CustomID: components.EncodeOwner(userID, "quest", "advance", q.QuestID),
+			Style:    discordgo.SuccessButton,
+			Disabled: c.stepButtonDisabled(userID, q, step),
+		})
 		desc += "\n"
 	}
 
@@ -304,15 +370,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				nextIdx = uqd2.StepIndex
 			}
 			nextStep := def.Steps[nextIdx]
-			text := i18n.T(nextStep.TextKey, lang)
-			if nextStep.Type == questssvc.StepActivity {
-				targetStat, _ := nextStep.Extra["target_stat"].(string)
-				label := targetStat
-				if l, ok := activityLabels[targetStat]; ok {
-					label = l
-				}
-				text = i18n.T("quests.activity_intro", lang, map[string]any{"label": label, "quest": i18n.T(def.TitleKey, lang)})
-			}
+			text := c.nextStepText(lang, def, nextStep)
 			title := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.step_progress", lang, map[string]any{
 				"current": nextIdx + 1,
 				"total":   len(def.Steps),
@@ -320,7 +378,12 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			btnLabel := i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.continue_label", lang)
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
-					components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", questID), discordgo.SuccessButton),
+					discordgo.Button{
+						Label:    btnLabel,
+						CustomID: components.EncodeOwner(userID, "quest", "advance", questID),
+						Style:    discordgo.SuccessButton,
+						Disabled: c.stepButtonDisabled(userID, questssvc.QuestInfo{QuestID: questID}, nextStep),
+					},
 				),
 				components.ActionRow(
 					components.Button("🔄", components.EncodeOwner(userID, "quest", "show"), discordgo.SecondaryButton),
@@ -364,7 +427,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			return
 		}
 		nextStep := def.Steps[uqd2.StepIndex]
-		text := i18n.T(nextStep.TextKey, lang)
+		text := c.nextStepText(lang, def, nextStep)
 		doneTitle := "✅ " + i18n.T(def.TitleKey, lang) + " — " + i18n.T("quests.step_progress", lang, map[string]any{
 			"current": uqd2.StepIndex + 1,
 			"total":   len(def.Steps),
@@ -374,7 +437,12 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				components.Embed(doneTitle, i18n.T("quests.req_done", lang)+"\n\n"+text, 0x2ecc71),
 				[]discordgo.MessageComponent{
 					components.ActionRow(
-						components.Button(i18n.T("quests.continue_label", lang), components.EncodeOwner(userID, "quest", "advance", questID), discordgo.SuccessButton),
+						discordgo.Button{
+							Label:    i18n.T("quests.continue_label", lang),
+							CustomID: components.EncodeOwner(userID, "quest", "advance", questID),
+							Style:    discordgo.SuccessButton,
+							Disabled: c.stepButtonDisabled(userID, questssvc.QuestInfo{QuestID: questID}, nextStep),
+						},
 					),
 				}))
 		return
@@ -398,23 +466,17 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		nextIdx = uqd2.StepIndex
 	}
 	nextStep := def.Steps[nextIdx]
-	text := i18n.T(nextStep.TextKey, lang)
-	if nextStep.Type == questssvc.StepActivity {
-		targetStat := ""
-		if s, ok := nextStep.Extra["target_stat"].(string); ok {
-			targetStat = s
-		}
-		label := targetStat
-		if l, ok := activityLabels[targetStat]; ok {
-			label = l
-		}
-		text = i18n.T("quests.activity_intro", lang, map[string]any{"label": label, "quest": i18n.T(def.TitleKey, lang)})
-	}
+	text := c.nextStepText(lang, def, nextStep)
 
 	btnLabel := i18n.T(def.TitleKey, lang) + " " + i18n.T("quests.continue_label", lang)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(btnLabel, components.EncodeOwner(userID, "quest", "advance", questID), discordgo.SuccessButton),
+			discordgo.Button{
+				Label:    btnLabel,
+				CustomID: components.EncodeOwner(userID, "quest", "advance", questID),
+				Style:    discordgo.SuccessButton,
+				Disabled: c.stepButtonDisabled(userID, questssvc.QuestInfo{QuestID: questID}, nextStep),
+			},
 		),
 		components.ActionRow(
 			components.Button("🔄", components.EncodeOwner(userID, "quest", "show"), discordgo.SecondaryButton),

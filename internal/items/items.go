@@ -180,6 +180,7 @@ var all = []Item{
 	{ID: "coffee", Name: "Coffee", Emoji: "☕", Price: 50, Description: "Wakes you up. Resets !daily cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "bow", Name: "Bow", Emoji: "🏹", Price: 300, Description: "Helps with hunting! Resets !hunt cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "fertilizer", Name: "Fertilizer", Emoji: "🧪", Price: 200, Description: "Accelerates crop growth! Reduces remaining grow time by 30%.", EffectType: "consumable", Droppable: false, Category: Tools},
+	{ID: "growth_elixir", Name: "Growth Elixir", Emoji: "⚡", Price: 250, Description: "Instantly matures a growing crop.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "hook", Name: "Hook", Emoji: "🪝", Price: 200, Description: "Attracts fish! Resets !fish cooldown.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "forget_potion", Name: "Forget Potion", Emoji: "🧪", Price: 2500, Description: "Resets your pet to level 10.", EffectType: "consumable", Droppable: false, Category: Tools},
 	{ID: "skill_scroll", Name: "Skill Scroll", Emoji: "📜", Price: 5000, Description: "Resets all your active pet's learned skills.", EffectType: "consumable", Droppable: false, Category: Tools},

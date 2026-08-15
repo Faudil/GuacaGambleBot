@@ -229,6 +229,19 @@ func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equip
 	minLevel int,
 	statSTR, statDEX, statINT, statVIT, statLUK int,
 	affixes []byte, setID string) (*model.UserEquipment, error) {
+	return s.CreateEquipmentTx(s.DB, userID, baseID, name, emoji, rarity, equipSlot, minLevel,
+		statSTR, statDEX, statINT, statVIT, statLUK, affixes, setID)
+}
+
+// CreateEquipmentTx creates a new UserEquipment instance inside an existing
+// transaction. Callers running within an outer s.DB.Transaction must use this
+// instead of CreateEquipment: the transaction holds the pool's single SQLite
+// connection, so a nested pool query would deadlock (maxOpenConns is 1 in
+// production).
+func (s *Store) CreateEquipmentTx(tx *gorm.DB, userID int64, baseID, name, emoji, rarity, equipSlot string,
+	minLevel int,
+	statSTR, statDEX, statINT, statVIT, statLUK int,
+	affixes []byte, setID string) (*model.UserEquipment, error) {
 	if minLevel <= 0 {
 		minLevel = 1
 	}
@@ -253,7 +266,7 @@ func (s *Store) CreateEquipment(userID int64, baseID, name, emoji, rarity, equip
 		SetID:      setID,
 		IsEquipped: false,
 	}
-	if err := s.DB.Create(&eq).Error; err != nil {
+	if err := tx.Create(&eq).Error; err != nil {
 		return nil, err
 	}
 	return &eq, nil

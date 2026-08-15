@@ -60,12 +60,27 @@ func (s *Service) DailyOffers(count int) []ShopOffer {
 	return offers
 }
 
-func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
+// OfferForItem returns today's offer for the given item ID, if it is present in
+// the daily rotation.
+func (s *Service) OfferForItem(itemID string) (ShopOffer, bool) {
+	for _, offer := range s.DailyOffers(4) {
+		if offer.Item.ID == itemID {
+			return offer, true
+		}
+	}
+	return ShopOffer{}, false
+}
+
+// BuyItem purchases quantity of the item at the given unit price. The balance is
+// deducted and the item is granted atomically. unitPrice is the price charged
+// per unit (normally the offer's discounted price); it is not derived from the
+// item's base price so the displayed price matches the charged price.
+func (s *Service) BuyItem(userID int64, itemName string, quantity, unitPrice int) error {
 	it := items.Get(itemName)
 	if it == nil {
 		return ErrNotFound
 	}
-	totalCost := it.Price * quantity
+	totalCost := unitPrice * quantity
 	bal, err := s.store.GetBalance(userID)
 	if err != nil {
 		return err
@@ -104,10 +119,10 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 		}
 		affixData, _ := json.Marshal(applied)
 		return s.store.DB.Transaction(func(tx *gorm.DB) error {
-			if _, err := s.store.UpdateBalance(userID, -totalCost); err != nil {
+			if err := s.store.UpdateBalanceTx(tx, userID, -totalCost); err != nil {
 				return err
 			}
-			_, err := s.store.CreateEquipment(userID, it.ID, it.Name, it.Emoji,
+			_, err := s.store.CreateEquipmentTx(tx, userID, it.ID, it.Name, it.Emoji,
 				string(rar), it.EquipSlot, it.MinLevel,
 				totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
 				affixData, it.SetID)
@@ -117,7 +132,7 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity int) error {
 
 	// Non-equipment: add to regular inventory
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
-		if _, err := s.store.UpdateBalance(userID, -totalCost); err != nil {
+		if err := s.store.UpdateBalanceTx(tx, userID, -totalCost); err != nil {
 			return err
 		}
 		return tx.Clauses(clause.OnConflict{

@@ -1,5 +1,8 @@
 {
   "farm": {
+    "accelerate_btn": "⚡ Accelerate",
+    "accelerate_desc": "You pour the Growth Elixir over the soil.\n*The crop ripens in a flash!*",
+    "accelerate_title": "⚡ Growth Elixir Applied",
     "back": "← Back",
     "blessed_active": "🍀 **Blessed Harvest:** Active",
     "blessed_zone_active": "🍀 *Nature's blessing lingers here , next harvest doubled!*",

@@ -107,6 +107,7 @@ var (
 	ErrNotReady       = errors.New("crop is not ready yet")
 	ErrAlreadyWatered = errors.New("this plot has already been watered")
 	ErrNoFertilizer   = errors.New("you don't have fertilizer")
+	ErrNoAccelerator  = errors.New("you don't have a growth elixir")
 	ErrCooldown       = errors.New("please wait before using the farm again")
 	ErrNoCrop         = errors.New("you don't have that crop")
 	ErrNotProcessable = errors.New("that item can't be processed into seeds")
@@ -388,6 +389,39 @@ func (s *Service) Fertilize(userID int64, zoneKey string, plotIndex int) error {
 		newGrowTime = 60
 	}
 	if err := s.store.DB.Model(&plot).UpdateColumn("grow_time", newGrowTime).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// Accelerate consumes a Growth Elixir to instantly mature the crop on the given
+// plot. The grow time is set to the elapsed time so the plot becomes harvestable
+// immediately.
+func (s *Service) Accelerate(userID int64, zoneKey string, plotIndex int) error {
+	var plot model.UserFarming
+	if err := s.store.DB.Where("user_id = ? AND zone_key = ? AND plot_index = ?", userID, zoneKey, plotIndex).First(&plot).Error; err != nil {
+		return fmt.Errorf("no crop found")
+	}
+
+	if time.Since(plot.PlantTime).Seconds() >= float64(plot.GrowTime) {
+		return ErrNotReady
+	}
+
+	var inv model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "growth_elixir").First(&inv).Error; err != nil {
+		return ErrNoAccelerator
+	}
+	if inv.Quantity < 1 {
+		return ErrNoAccelerator
+	}
+	if inv.Quantity <= 1 {
+		s.store.DB.Delete(&inv)
+	} else {
+		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
+	}
+
+	elapsed := int(time.Since(plot.PlantTime).Seconds())
+	if err := s.store.DB.Model(&plot).UpdateColumn("grow_time", elapsed).Error; err != nil {
 		return err
 	}
 	return nil

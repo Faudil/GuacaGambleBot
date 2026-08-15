@@ -208,7 +208,7 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 					}
 				}
 				affixData, _ := json.Marshal(applied)
-				_, err := s.store.CreateEquipment(userID, base.ID, base.Name, base.Emoji,
+				_, err := s.store.CreateEquipmentTx(tx, userID, base.ID, base.Name, base.Emoji,
 					string(rar), base.EquipSlot, base.MinLevel,
 					totalSTR, totalDEX, totalINT, totalVIT, totalLUK,
 					affixData, base.SetID)

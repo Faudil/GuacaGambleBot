@@ -45,10 +45,10 @@ func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price i
 	}
 
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
-		if _, err := s.store.UpdateBalance(sellerID, price); err != nil {
+		if err := s.store.UpdateBalanceTx(tx, sellerID, price); err != nil {
 			return err
 		}
-		if _, err := s.store.UpdateBalance(buyerID, -price); err != nil {
+		if err := s.store.UpdateBalanceTx(tx, buyerID, -price); err != nil {
 			return err
 		}
 		if err := tx.Model(&model.Inventory{}).

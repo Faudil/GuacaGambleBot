@@ -58,6 +58,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("farm", "seedmaker_choose", c.onSeedMakerChoose)
 	r.Component("farm", "water", c.onWater)
 	r.Component("farm", "fertilize", c.onFertilize)
+	r.Component("farm", "accelerate", c.onAccelerate)
 	r.Component("farm", "inspect", c.onInspect)
 	r.Component("farm", "inspect_main", c.onInspectFarm)
 	r.Component("farm", "stats", c.onStats)
@@ -857,6 +858,38 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
+func (c *Cog) onAccelerate(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 2 {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	zoneKey := rest[0]
+	plotIdx, _ := strconv.Atoi(rest[1])
+
+	err := c.svc.Accelerate(userID, zoneKey, plotIdx)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("farm.accelerate_title", lang),
+		i18n.T("farm.accelerate_desc", lang),
+		0xF1C40F,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
 func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -933,6 +966,13 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				i18n.T("farm.fertilize_btn", lang),
 				components.EncodeOwner(userID, "farm", "fertilize", zoneKey, rest[1]),
 				discordgo.DangerButton,
+			))
+		}
+		if c.svc.HasItem(userID, "growth_elixir") {
+			btns = append(btns, components.Button(
+				i18n.T("farm.accelerate_btn", lang),
+				components.EncodeOwner(userID, "farm", "accelerate", zoneKey, rest[1]),
+				discordgo.PrimaryButton,
 			))
 		}
 	}

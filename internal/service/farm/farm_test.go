@@ -3,6 +3,7 @@ package farm
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -117,6 +118,51 @@ func TestFertilizeNoFertilizer(t *testing.T) {
 
 	err = svc.Fertilize(1, "public", 0)
 	assert.ErrorIs(t, err, ErrNoFertilizer)
+}
+
+func TestAccelerate(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "wheat_seed", Quantity: 5})
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "growth_elixir", Quantity: 1})
+
+	err := svc.Plant(1, "public", 0, "wheat_seed", 3600)
+	require.NoError(t, err)
+
+	plots, _ := svc.GetPlots(1, "public")
+	assert.False(t, plots[0].Ready)
+
+	err = svc.Accelerate(1, "public", 0)
+	assert.NoError(t, err)
+
+	plots, _ = svc.GetPlots(1, "public")
+	assert.True(t, plots[0].Ready)
+
+	var inv model.Inventory
+	err = s.DB.Where("user_id = ? AND item_id = ?", 1, "growth_elixir").First(&inv).Error
+	assert.Error(t, err, "elixir should be consumed")
+}
+
+func TestAccelerateNoElixir(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "wheat_seed", Quantity: 5})
+
+	err := svc.Plant(1, "public", 0, "wheat_seed", 3600)
+	require.NoError(t, err)
+
+	err = svc.Accelerate(1, "public", 0)
+	assert.ErrorIs(t, err, ErrNoAccelerator)
+}
+
+func TestAccelerateReadyPlot(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "growth_elixir", Quantity: 1})
+	_ = s.DB.Create(&model.UserFarming{
+		UserID: 1, ZoneKey: "public", PlotIndex: 0,
+		ItemName: "wheat_seed", PlantTime: time.Now().Add(-2 * time.Second), GrowTime: 1,
+	})
+
+	err := svc.Accelerate(1, "public", 0)
+	assert.ErrorIs(t, err, ErrNotReady)
 }
 
 func TestHasZoneAccessPublic(t *testing.T) {

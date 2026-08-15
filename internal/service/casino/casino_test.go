@@ -86,6 +86,30 @@ func TestCoinflipPlay(t *testing.T) {
 	assert.Contains(t, []string{"pile", "face"}, res.Result)
 }
 
+func TestCoinflipWinCreditsPayout(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 10000)
+	require.NoError(t, err)
+
+	before, err := st.GetBalance(1)
+	require.NoError(t, err)
+	const bet = 100
+	wins, losses := 0, 0
+	for i := 0; i < 10; i++ {
+		res, err := svc.Coinflip(1, "pile", bet, true)
+		require.NoError(t, err)
+		if res.Win {
+			wins++
+		} else {
+			losses++
+		}
+	}
+	after, err := st.GetBalance(1)
+	require.NoError(t, err)
+	assert.Greater(t, wins, 0)
+	assert.Equal(t, before+(wins-losses)*bet, after)
+}
+
 func TestSlotsAddsCharacterXP(t *testing.T) {
 	svc, st := testService(t)
 	_, err := st.UpdateBalance(1, 1000)

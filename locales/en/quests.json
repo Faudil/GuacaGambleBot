@@ -61,7 +61,7 @@
       "step1_activity": "Goal: Mine 2 times using `!mine`.",
       "step2_transition": "You step out of the mine covered in dust. A woman at the docks waves you over.\n\n\"Long day underground? Come try the water. Clears the head.\"\n\nShe sizes you up. \"No tackle on you, I bet. Rod and a tin of worms — my treat.\"\n\n\"Once you've got the gear, `!fish` to cast a line. Pick a spot, pick your bait, wait for a bite. Nothing to it.\"",
       "step3_activity": "Goal: Fish 1 time using `!fish`.",
-      "step4_dialogue": "You pull in your catch. The woman nods.\n\n\"Not bad. You should talk to Elara next. Village gardener, spends her time near the old gardens. She found something strange out there.\"\n\nShe sets a small pouch of **Wheat seeds** on the rail beside you. \"Take them with you. You'll need them at Elara's.\"",
+      "step4_dialogue": "You pull in your catch. The woman nods.\n\n\"Not bad. You should talk to Elara next. Village gardener, spends her time near the old gardens. She found something strange out there.\"\n\nShe sets a small pouch of **Wheat seeds** and a vial of **Growth Elixir** on the rail beside you. \"The seeds will get you through the door. The elixir, if you don't want to wait for them to grow.\"",
       "title": "Day 1: The Forge"
     },
     "day2_alchemy": {
@@ -137,6 +137,7 @@
     "req_money_status": "💰 Money: ${current} / ${required}",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objective complete!\n🎯 **Next:** {next}\n\nType `/quest` to see your progress.",
+    "step_command": "📝 Type: {command}",
     "step_progress": "Step {current} / {total}",
     "title": "Active Quests",
     "tutorial_egg_granted": "🎁 You found a **Forest Egg**! Irian must have dropped it earlier. Hatch it with `/hatch`, then select it with `/pets`.",

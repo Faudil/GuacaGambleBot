@@ -107,6 +107,20 @@ func (s *Store) UpdateBalance(userID int64, delta int) (int, error) {
 	return bal, nil
 }
 
+// UpdateBalanceTx adjusts the wallet balance by delta inside an existing
+// transaction, ensuring the user row exists first. Callers running within an
+// outer s.DB.Transaction must use this instead of UpdateBalance: the transaction
+// holds the pool's single SQLite connection, so a nested pool query would
+// deadlock (maxOpenConns is 1 in production).
+func (s *Store) UpdateBalanceTx(tx *gorm.DB, userID int64, delta int) error {
+	if err := s.ensureUserTx(tx, userID); err != nil {
+		return err
+	}
+	return tx.Model(&model.User{}).
+		Where("user_id = ?", userID).
+		UpdateColumn("balance", gorm.Expr("balance + ?", delta)).Error
+}
+
 // Debit checks that the user can afford amount and deducts it from the wallet
 // in a single transaction, so concurrent callers cannot overdraw the balance.
 // It returns the new balance.

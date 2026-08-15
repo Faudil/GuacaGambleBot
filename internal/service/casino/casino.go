@@ -76,12 +76,6 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	if amount <= 0 {
 		return nil, ErrMaxBet
 	}
-	if _, err := s.store.Debit(userID, amount); err != nil {
-		if errors.Is(err, store.ErrInsufficientFunds) {
-			return nil, ErrNoMoney
-		}
-		return nil, err
-	}
 	ok, _, err := s.store.CheckGameLimit(userID, "slots", 10)
 	if err != nil {
 		return nil, err
@@ -93,6 +87,12 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		return nil, err
 	}
 	if err := achievement.IncrementStat(s.store.DB, userID, "slots_spent", amount); err != nil {
+		return nil, err
+	}
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
 		return nil, err
 	}
 
@@ -203,12 +203,6 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	if amount > 2000 {
 		return nil, ErrMaxBet
 	}
-	if _, err := s.store.Debit(userID, amount); err != nil {
-		if errors.Is(err, store.ErrInsufficientFunds) {
-			return nil, ErrNoMoney
-		}
-		return nil, err
-	}
 	ok, _, err := s.store.CheckGameLimit(userID, "coinflip", 10)
 	if err != nil {
 		return nil, err
@@ -220,6 +214,12 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		return nil, err
 	}
 	if err := achievement.IncrementStat(s.store.DB, userID, "coinflip_spent", amount); err != nil {
+		return nil, err
+	}
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
 		return nil, err
 	}
 
@@ -284,9 +284,9 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 
 	res := &CoinflipResult{Result: result, Win: win}
 	if win {
-		// The wager was debited upfront, so a win credits it back.
+		// The wager was debited upfront, so a win credits the full 1:1 payout.
 		s.npcSvc.AddActivityReputation(userID, "gambling", 1)
-		if _, err := s.store.UpdateBalance(userID, amount); err != nil {
+		if _, err := s.store.UpdateBalance(userID, 2*amount); err != nil {
 			return nil, err
 		}
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_won", 1)

@@ -61,7 +61,7 @@
       "step1_activity": "Objectif : Mine 2 fois avec `!mine`.",
       "step2_transition": "Tu sors de la mine couvert de poussière. Une femme sur les quais te fait signe.\n\n\"Longue journée sous terre ? Viens essayer l'eau. Ça nettoie la tête.\"\n\nElle te détaille du regard. \"Pas de matériel sur toi, je parie. Une canne et une boîte de vers — c'est moi qui régale.\"\n\n\"Une fois que tu as l'équipement, `!fish` pour lancer ta ligne. Choisis un coin, un appât, et attends la touche. Rien de compliqué.\"",
       "step3_activity": "Objectif : Pêche 1 fois avec `!fish`.",
-      "step4_dialogue": "Tu remontes ton poisson. La femme hoche la tête.\n\n\"Pas mal. Tu devrais parler à Elara. La jardinière du village. Elle traîne près des vieux jardins. Elle a trouvé quelque chose de bizarre là-bas.\"\n\nElle pose une petite pochette de **Graines de blé** sur la rambarde à côté de toi. \"Prends-les avec toi. Tu en auras besoin chez Elara.\"",
+      "step4_dialogue": "Tu remontes ton poisson. La femme hoche la tête.\n\n\"Pas mal. Tu devrais parler à Elara. La jardinière du village. Elle traîne près des vieux jardins. Elle a trouvé quelque chose de bizarre là-bas.\"\n\nElle pose une petite pochette de **Graines de blé** et une fiole d'**Élixir de Croissance** sur la rambarde à côté de toi. \"Les graines t'ouvriront la porte. L'élixir, si tu ne veux pas attendre qu'elles poussent.\"",
       "title": "Jour 1 : La Forge"
     },
     "day2_alchemy": {
@@ -137,6 +137,7 @@
     "req_money_status": "💰 Argent : ${current} / ${required}",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objectif accompli !\n🎯 **Suite :** {next}\n\nTape `/quest` pour voir ta progression.",
+    "step_command": "📝 Commande : {command}",
     "step_progress": "Étape {current} / {total}",
     "title": "Quêtes Actives",
     "tutorial_egg_granted": "🎁 Tu as trouvé un **Œuf de Forêt** ! Irian a dû le laisser tomber plus tôt. Fais-le éclore avec `/hatch`, puis choisis-le avec `/pets`.",

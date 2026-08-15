@@ -113,7 +113,7 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.day1_strata.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 2}},
 			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_transition", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"worm", "worm"}}},
 			{Type: StepActivity, TextKey: "quests.day1_strata.step3_activity", Extra: map[string]any{"target_stat": "items_fished", "target_count": 1}},
-			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"wheat_seed", "wheat_seed"}}},
+			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"wheat_seed", "wheat_seed", "growth_elixir"}}},
 			// Day 2 — Farming + Archeology
 			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 2}},
 			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_transition"},

@@ -51,7 +51,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent
-	for idx, offer := range offers {
+	for _, offer := range offers {
 		priceStr := fmt.Sprintf("$%d", offer.Price)
 		if offer.Discounted {
 			priceStr += " 🔥"
@@ -64,7 +64,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		))
 		btns = append(btns, components.Button(
 			fmt.Sprintf("%s (%s)", name, priceStr),
-			components.Encode("shop", "buy", fmt.Sprintf("%d", idx), fmt.Sprintf("%d", userID)),
+			components.Encode("shop", "buy", offer.Item.ID, fmt.Sprintf("%d", userID)),
 			discordgo.PrimaryButton,
 		))
 	}
@@ -94,7 +94,7 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent
-	for i, offer := range offers {
+	for _, offer := range offers {
 		priceStr := fmt.Sprintf("$%d", offer.Price)
 		if offer.Discounted {
 			priceStr += " 🔥"
@@ -107,7 +107,7 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 		))
 		btns = append(btns, components.Button(
 			fmt.Sprintf("%s (%s)", name, priceStr),
-			components.Encode("shop", "buy", fmt.Sprintf("%d", i), fmt.Sprintf("%d", userID)),
+			components.Encode("shop", "buy", offer.Item.ID, fmt.Sprintf("%d", userID)),
 			discordgo.PrimaryButton,
 		))
 	}
@@ -127,7 +127,7 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "shop.error")
 		return
 	}
-	offerIdx := interaction.ToInt64(rest[0])
+	itemID := rest[0]
 	ownerID := interaction.ToInt64(rest[1])
 	userID := interaction.ToInt64(interaction.UserID(i))
 
@@ -135,14 +135,13 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "shop.not_your_shop")
 		return
 	}
-	offers := c.svc.DailyOffers(4)
-	if int(offerIdx) >= len(offers) {
+	offer, ok := c.svc.OfferForItem(itemID)
+	if !ok {
 		interaction.RespondError(b, i, lang, "shop.error")
 		return
 	}
-	offer := offers[offerIdx]
 
-	if err := c.svc.BuyItem(userID, offer.Item.Name, 1); err != nil {
+	if err := c.svc.BuyItem(userID, offer.Item.Name, 1, offer.Price); err != nil {
 		switch err {
 		case shop.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "shop.too_broke_item")

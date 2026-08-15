@@ -44,6 +44,30 @@ var activityLabels = map[string]string{
 	"pets_fed":            "🐾 Pet Care",
 }
 
+// activityCommands maps an activity target stat to the slash command the player
+// should type to complete it, shown next to each quest step.
+var activityCommands = map[string]string{
+	"items_mined":          "/mine",
+	"items_farmed":         "/farm",
+	"items_fished":         "/fish",
+	"items_hunted":         "/hunt",
+	"items_digged":         "/dig",
+	"casino_games_played":  "/casino",
+	"bank_deposits":        "/deposit",
+	"items_sold_market":    "/market",
+	"delve_completions":    "/delve",
+	"pets_fed":             "/pets",
+	"hunt_evidence":        "/crimhunt",
+	"stealth_progress":     "/steal",
+	"blackjack_won":        "/blackjack",
+	"slots_won":            "/casino",
+	"wagers_won":           "/bet",
+}
+
+func stepCommand(targetStat string) string {
+	return activityCommands[targetStat]
+}
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: questssvc.New(s, cfg)}
 	r.Slash("start", "Begin your journey!", c.onSlash)
@@ -92,7 +116,26 @@ func activityProgressStr(step *questssvc.QuestStep, progress int) string {
 		label = l
 	}
 	bar := progressBar(progress, targetCount)
-	return fmt.Sprintf("%s %s %d/%d", label, bar, progress, targetCount)
+	s := fmt.Sprintf("%s %s %d/%d", label, bar, progress, targetCount)
+	if cmd := stepCommand(targetStat); cmd != "" {
+		s += fmt.Sprintf(" — `%s`", cmd)
+	}
+	return s
+}
+
+// stepButtonDisabled reports whether a quest step's action button should be
+// greyed out because its objective is not completed yet.
+func (c *Cog) stepButtonDisabled(userID int64, questID string, step questssvc.QuestStep) bool {
+	switch step.Type {
+	case questssvc.StepActivity:
+		return !c.svc.IsActivityComplete(userID, questID)
+	case questssvc.StepBossBattle:
+		return true
+	case questssvc.StepRequirement:
+		return c.svc.CheckRequirement(userID, questID) != nil
+	default:
+		return false
+	}
 }
 
 func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -138,7 +181,12 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button(label, components.EncodeOwner(userID, "start", "continue", "tutorial"), discordgo.SuccessButton),
+				discordgo.Button{
+					Label:    label,
+					CustomID: components.EncodeOwner(userID, "start", "continue", "tutorial"),
+					Style:    discordgo.SuccessButton,
+					Disabled: c.stepButtonDisabled(userID, "tutorial", step),
+				},
 			),
 		}
 		return components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps
@@ -196,7 +244,12 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
-					components.Button(i18n.T("quests.activity_view_btn", lang), components.EncodeOwner(userID, "start", "continue", questID), discordgo.SuccessButton),
+					discordgo.Button{
+						Label:    i18n.T("quests.activity_view_btn", lang),
+						CustomID: components.EncodeOwner(userID, "start", "continue", questID),
+						Style:    discordgo.SuccessButton,
+						Disabled: true,
+					},
 				),
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
@@ -272,7 +325,12 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button(btnLabel, components.EncodeOwner(userID, "start", "continue", questID), discordgo.SuccessButton),
+			discordgo.Button{
+				Label:    btnLabel,
+				CustomID: components.EncodeOwner(userID, "start", "continue", questID),
+				Style:    discordgo.SuccessButton,
+				Disabled: c.stepButtonDisabled(userID, questID, nextStep),
+			},
 		),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,

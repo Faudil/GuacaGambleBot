@@ -1,5 +1,8 @@
 {
   "farm": {
+    "accelerate_btn": "⚡ Accélérer",
+    "accelerate_desc": "Tu verses l'Élixir de Croissance sur le sol.\n*La récolte mûrit en un éclair !*",
+    "accelerate_title": "⚡ Élixir de Croissance Appliqué",
     "back": "← Retour",
     "blessed_active": "🍀 **Récolte Bénie :** Active",
     "blessed_zone_active": "🍀 *La bénédiction de la nature plane ici , prochaine récolte doublée !*",
