@@ -528,7 +528,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	return items.DisplayName(name)
+	return items.LocalizedName(name, lang)
 }
 
 func currentWeekID() string {

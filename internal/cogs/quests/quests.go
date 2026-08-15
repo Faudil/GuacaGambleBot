@@ -48,7 +48,7 @@ func (c *Cog) requirementErrorDesc(reqErr *questssvc.RequirementError, lang stri
 	}
 	for _, m := range reqErr.MissingItems {
 		lines = append(lines, i18n.T("quests.req_missing_item", lang, map[string]any{
-			"item":   items.DisplayName(m.ItemID),
+			"item":   items.LocalizedName(m.ItemID, lang),
 			"have":   m.Have,
 			"needed": m.Needed,
 		}))

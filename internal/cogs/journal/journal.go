@@ -135,7 +135,7 @@ func rewardString(r jsvc.Reward, lang string) string {
 		parts = append(parts, i18n.T("journal.reward.crowns", lang, map[string]any{"amount": r.Crowns}))
 	}
 	for _, id := range r.ItemIDs {
-		parts = append(parts, items.DisplayName(id))
+		parts = append(parts, items.LocalizedName(id, lang))
 	}
 	return strings.Join(parts, ", ")
 }

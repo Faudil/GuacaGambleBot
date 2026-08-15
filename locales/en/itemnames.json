@@ -1,0 +1,724 @@
+{
+  "itemnames": {
+    "abyss_pearl": {
+      "name": "Abyss Pearl",
+      "description": "Vorgath's gift from the deep. (+6 INT, +3 LUK)"
+    },
+    "adamant_tonic": {
+      "name": "Adamant Tonic",
+      "description": "Turns the drinker's hide to living stone. +2 DEF."
+    },
+    "ancient_alloy": {
+      "name": "Ancient Alloy",
+      "description": "A fragment of metal from a forgotten forge. It hums with residual heat."
+    },
+    "ancient_amulet": {
+      "name": "Ancient Amulet",
+      "description": "Humming with ancient magic. (+4 INT, +4 LUK)"
+    },
+    "ancient_core_shard": {
+      "name": "Ancient Core Shard",
+      "description": "A crystalline shard from the Heart of the Mountain. It pulses with a faint light."
+    },
+    "arcane_weaver_crown": {
+      "name": "Arcane Weaver Crown",
+      "description": "A circlet of crystallized thought. Part of the Arcane Weaver set."
+    },
+    "arcane_weaver_orb": {
+      "name": "Arcane Weaver Orb",
+      "description": "A sphere of pure arcane energy. Part of the Arcane Weaver set."
+    },
+    "arcane_weaver_robe": {
+      "name": "Arcane Weaver Robe",
+      "description": "Ethereal fabric humming with power. Part of the Arcane Weaver set."
+    },
+    "arcane_weaver_staff": {
+      "name": "Arcane Weaver Staff",
+      "description": "A conduit of raw magic. Part of the Arcane Weaver set."
+    },
+    "artifact_shard": {
+      "name": "Artifact Shard",
+      "description": "Resets your pet artifact, re-rolling all 3 stats."
+    },
+    "beer": {
+      "name": "Beer",
+      "description": "The miner's drink! Resets !mine cooldown."
+    },
+    "berserker_elixir": {
+      "name": "Berserker Elixir",
+      "description": "A volatile brew that awakens raw fury. +2 ATK."
+    },
+    "blood_tomato": {
+      "name": "Blood Tomato",
+      "description": "Deep crimson, pulsing with warmth..."
+    },
+    "bond_treat": {
+      "name": "Bond Treat",
+      "description": "Increases your active pet's bond level by 5."
+    },
+    "bone_dust": {
+      "name": "Bone Dust",
+      "description": "Bone dust from a completely destroyed fossil."
+    },
+    "boss_trophy": {
+      "name": "Boss Trophy",
+      "description": "A legendary trophy for defeating the boss."
+    },
+    "bounty_scope": {
+      "name": "Bounty Scope",
+      "description": "It never loses a trail. (+6 DEX, +4 LUK)"
+    },
+    "bow": {
+      "name": "Bow",
+      "description": "Helps with hunting! Resets !hunt cooldown."
+    },
+    "carp": {
+      "name": "Carp",
+      "description": "The best freshwater fish."
+    },
+    "carrot": {
+      "name": "Carrot",
+      "description": "A crunchy orange root."
+    },
+    "carrot_seed": {
+      "name": "Carrot Seed",
+      "description": "Plant to get carrot (15 min)."
+    },
+    "casino_token": {
+      "name": "Casino Token",
+      "description": "Gives you another chance at !casino."
+    },
+    "cave_egg": {
+      "name": "Cave Egg",
+      "description": "A cavern-dark egg. Type !hatch to open it!"
+    },
+    "coal": {
+      "name": "Coal",
+      "description": "Great for keeping warm."
+    },
+    "cocoa_bean": {
+      "name": "Cocoa Bean",
+      "description": "The main ingredient for happiness (chocolate)."
+    },
+    "cocoa_seed": {
+      "name": "Cocoa Seed",
+      "description": "Plant to get cocoa (12h)."
+    },
+    "coelacanth_egg": {
+      "name": "Coelacanth Egg",
+      "description": "An egg that seems prehistoric. It pulses faintly."
+    },
+    "coffee": {
+      "name": "Coffee",
+      "description": "Wakes you up. Resets !daily cooldown."
+    },
+    "coffee_bean": {
+      "name": "Coffee Bean",
+      "description": "The black gold of the morning."
+    },
+    "coffee_seed": {
+      "name": "Coffee Seed",
+      "description": "Plant to get coffee (8h)."
+    },
+    "common_fossil": {
+      "name": "Common Fossil",
+      "description": "An intact fossil of a common animal."
+    },
+    "copper_ore": {
+      "name": "Copper Ore",
+      "description": "Useful for forging sturdy tools."
+    },
+    "corn": {
+      "name": "Corn",
+      "description": "Also makes popcorn!"
+    },
+    "corn_seed": {
+      "name": "Corn Seed",
+      "description": "Plant to get corn (30 min)."
+    },
+    "crayfish": {
+      "name": "Crayfish",
+      "description": "Rare bait. Attracts stronger fish."
+    },
+    "crystal_staff": {
+      "name": "Crystal Staff",
+      "description": "Pulsing with arcane energy. (+6 INT)"
+    },
+    "cursed_artifact": {
+      "name": "Cursed Artifact",
+      "description": "An ancient relic pulsing with dark energy."
+    },
+    "cursed_pumpkin": {
+      "name": "Cursed Pumpkin",
+      "description": "It whispers to you at night."
+    },
+    "damaged_fossil": {
+      "name": "Damaged Fossil",
+      "description": "A poorly extracted fossil that lost its value."
+    },
+    "data_disk": {
+      "name": "Data Disk",
+      "description": "A corrupted memory disk from a lost era."
+    },
+    "dechirure_scythe": {
+      "name": "Scythe of the Sundered Veil",
+      "description": "Forged from a shard of Déchirure's own form. Part of the Rift Walker set."
+    },
+    "desert_egg": {
+      "name": "Desert Egg",
+      "description": "A sun-scorched egg. Type !hatch to open it!"
+    },
+    "diamond_drill": {
+      "name": "Diamond Drill",
+      "description": "A diamond-tipped drill. Grants +2 loot tiers and -10% collapse risk per descend."
+    },
+    "dimensional_shard": {
+      "name": "Dimensional Shard",
+      "description": "Fragments of broken reality. Used as raid currency for exclusive gear and cosmetics."
+    },
+    "dragon_slayer_armor": {
+      "name": "Dragon Slayer Armor",
+      "description": "Scale mail of an ancient wyrm. Part of the Dragon Slayer set."
+    },
+    "dragon_slayer_ring": {
+      "name": "Dragon Slayer Ring",
+      "description": "A band of dragon bone and gold. Part of the Dragon Slayer set."
+    },
+    "dragon_slayer_sword": {
+      "name": "Dragon Slayer Sword",
+      "description": "A blade forged from a dragon's fang. Part of the Dragon Slayer set."
+    },
+    "dragon_slayer_talisman": {
+      "name": "Dragon Slayer Talisman",
+      "description": "A tooth of the first dragon ever slain. Part of the Dragon Slayer set."
+    },
+    "electric_magnet": {
+      "name": "Electric Magnet",
+      "description": "Use it to find lots of money!"
+    },
+    "emerald": {
+      "name": "Emerald",
+      "description": "AMAZING! Worth a fortune!"
+    },
+    "enchanted_orchard": {
+      "name": "Enchanted Orchard",
+      "description": "A magical floating island. Only legendary fruits grow here."
+    },
+    "enchanted_robe": {
+      "name": "Enchanted Robe",
+      "description": "Woven with wisdom. (+6 INT, +3 VIT)"
+    },
+    "epic_fossil": {
+      "name": "Epic Fossil",
+      "description": "An intact fossil of an epic animal."
+    },
+    "excavator_hat": {
+      "name": "Excavator's Hat",
+      "description": "A worn expedition hat. It carries centuries of stories."
+    },
+    "fertilizer": {
+      "name": "Fertilizer",
+      "description": "Accelerates crop growth! Reduces remaining grow time by 30%."
+    },
+    "fishing_rod": {
+      "name": "Fishing Rod",
+      "description": "A quality rod. (+4 DEX)"
+    },
+    "forest_egg": {
+      "name": "Forest Egg",
+      "description": "A forest-embraced egg. Type !hatch to open it!"
+    },
+    "forget_potion": {
+      "name": "Forget Potion",
+      "description": "Resets your pet to level 10."
+    },
+    "fortune_cookie": {
+      "name": "Fortune Cookie",
+      "description": "A delicious cookie with a premonitory message."
+    },
+    "fossilized_egg": {
+      "name": "Fossilized Egg",
+      "description": "A stone egg with ancient patterns. Who knows what's inside?"
+    },
+    "gale_draught": {
+      "name": "Gale Draught",
+      "description": "Tastes like a storm on the tongue. +2 SPD."
+    },
+    "garden_plot": {
+      "name": "Garden Plot",
+      "description": "A patch of fertile soil for growing vegetables."
+    },
+    "ghost_wheat": {
+      "name": "Ghost Wheat",
+      "description": "Translucent wheat that shimmers in moonlight."
+    },
+    "gold_nugget": {
+      "name": "Gold Nugget",
+      "description": "Shiny! Merchants love this."
+    },
+    "golden_apple": {
+      "name": "Golden Apple",
+      "description": "It shines with a magical glow."
+    },
+    "golden_apple_seed": {
+      "name": "Golden Apple Seed",
+      "description": "Plant to get golden apple (24h)."
+    },
+    "golden_carrot": {
+      "name": "Golden Carrot",
+      "description": "A carrot of pure gold. Legendary."
+    },
+    "golden_lure": {
+      "name": "Golden Lure",
+      "description": "Legendary bait. Draws the deadliest creatures."
+    },
+    "golden_potato": {
+      "name": "Golden Potato",
+      "description": "A potato encased in solid gold!"
+    },
+    "golden_ring": {
+      "name": "Golden Ring",
+      "description": "Glows with fortune. (+4 LUK, +1 STR)"
+    },
+    "growth_elixir": {
+      "name": "Growth Elixir",
+      "description": "Instantly matures a growing crop."
+    },
+    "hook": {
+      "name": "Hook",
+      "description": "Attracts fish! Resets !fish cooldown."
+    },
+    "hounds_cloak": {
+      "name": "Hound's Cloak",
+      "description": "The ceremonial cloak of the Iron Lodge. A symbol of the hunt. (+6 VIT, +2 STR)"
+    },
+    "hunter_cloak": {
+      "name": "Hunter's Cloak",
+      "description": "Warm and agile. (+4 VIT, +3 DEX)"
+    },
+    "hunters_bow": {
+      "name": "Hunter's Bow",
+      "description": "A precise bow. (+6 STR)"
+    },
+    "hunters_soup": {
+      "name": "Hunter's Eye Soup",
+      "description": "A sharp-eyed hunter's secret recipe. +1 ACC."
+    },
+    "identity_scroll": {
+      "name": "Identity Scroll",
+      "description": "Randomly changes your server nickname."
+    },
+    "iron_ore": {
+      "name": "Iron Ore",
+      "description": "Useful for forging sturdy tools."
+    },
+    "iron_pickaxe": {
+      "name": "Iron Pickaxe",
+      "description": "A miner's best friend. (+4 STR)"
+    },
+    "iron_shackles": {
+      "name": "Iron Shackles",
+      "description": "Rusty but reliable manacles. (+3 VIT, +1 STR)"
+    },
+    "journal_page_1": {
+      "name": "Journal Page #1",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_2": {
+      "name": "Journal Page #2",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_3": {
+      "name": "Journal Page #3",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_4": {
+      "name": "Journal Page #4",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_5": {
+      "name": "Journal Page #5",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_6": {
+      "name": "Journal Page #6",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_7": {
+      "name": "Journal Page #7",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "journal_page_8": {
+      "name": "Journal Page #8",
+      "description": "A torn page from an ancient excavator's journal."
+    },
+    "kethari_crystal": {
+      "name": "Kethari Crystal",
+      "description": "A prismatic crystal forged by the Kethari. It hums with stored resonance."
+    },
+    "kraken_tentacle": {
+      "name": "Kraken Tentacle",
+      "description": "YOU CAUGHT A MONSTER?!"
+    },
+    "lava_serpent": {
+      "name": "Lava Serpent",
+      "description": "A legendary beast of molten rock."
+    },
+    "lawbringer_seal": {
+      "name": "Lawbringer's Seal",
+      "description": "The authority of the Iron Lodge itself. (+8 VIT, +4 STR, +2 LUK)"
+    },
+    "leather_armor": {
+      "name": "Leather Armor",
+      "description": "Basic protection. (+2 VIT)"
+    },
+    "legendary_fragment": {
+      "name": "Legendary Fragment",
+      "description": "A legendary T-Rex fragment!"
+    },
+    "lockpick_set": {
+      "name": "Lockpick Set",
+      "description": "Every lock has a secret. This finds it. (+3 DEX, +1 LUK)"
+    },
+    "lucky_charm": {
+      "name": "Lucky Charm",
+      "description": "A four-leaf clover. (+3 LUK)"
+    },
+    "magma_carp": {
+      "name": "Magma Carp",
+      "description": "A fiery fish from the depths."
+    },
+    "magnet": {
+      "name": "Magnet",
+      "description": "Use it to find money on the ground."
+    },
+    "mask_of_malveillance": {
+      "name": "Mask of Malveillance",
+      "description": "An ancient mask that awakens the underworld. Those who wear it gain access to the shadows."
+    },
+    "master_key": {
+      "name": "Master Key",
+      "description": "It opens doors that don't exist. (+8 LUK, +4 DEX, +2 INT)"
+    },
+    "mastery_medallion": {
+      "name": "Mastery Medallion",
+      "description": "Awarded only to those who master every journal path."
+    },
+    "miner_helmet": {
+      "name": "Miner's Helmet",
+      "description": "Thick steel helmet. (+3 VIT, +1 STR)"
+    },
+    "mountain_egg": {
+      "name": "Mountain Egg",
+      "description": "A peak-born egg. Type !hatch to open it!"
+    },
+    "mutagen": {
+      "name": "Mutagen",
+      "description": "A glowing mutagenic substance from a mutated fish."
+    },
+    "mysterious_seed": {
+      "name": "Mysterious Seed",
+      "description": "An unknown seed pulsing with energy."
+    },
+    "nova_fruit": {
+      "name": "Nova Fruit",
+      "description": "A miniature sun cradled in your hands."
+    },
+    "oat": {
+      "name": "Oat",
+      "description": "Perfect for breakfast."
+    },
+    "oat_seed": {
+      "name": "Oat Seed",
+      "description": "Plant to get oat (10 min)."
+    },
+    "ocean_egg": {
+      "name": "Ocean Egg",
+      "description": "A deep-sea egg. Type !hatch to open it!"
+    },
+    "old_boot": {
+      "name": "Old Boot",
+      "description": "An old boot. Worthless."
+    },
+    "old_journal": {
+      "name": "Old Journal",
+      "description": "A dusty notebook handwritten by an unknown author."
+    },
+    "oracles_insight": {
+      "name": "Oracle's Insight",
+      "description": "A single sip of foresight. +2 ACC."
+    },
+    "pebble": {
+      "name": "Pebble",
+      "description": "A useless little rock. Totally worthless."
+    },
+    "personality_mirror": {
+      "name": "Personality Mirror",
+      "description": "Mysteriously changes your pet's personality."
+    },
+    "phoenix_crest": {
+      "name": "Phoenix Crest",
+      "description": "Solaris' flame, now yours. (+5 STR, +4 INT, +3 VIT, +3 LUK)"
+    },
+    "platinum": {
+      "name": "Platinum",
+      "description": "Shiny! Merchants love this."
+    },
+    "potato": {
+      "name": "Potato",
+      "description": "You can make vodka from it…"
+    },
+    "potato_seed": {
+      "name": "Potato Seed",
+      "description": "Plant to get potato (1h)."
+    },
+    "primordial_geode": {
+      "name": "Primordial Geode",
+      "description": "A geode from the dawn of the mountain. Who knows what lies within?"
+    },
+    "prismatic_corn": {
+      "name": "Prismatic Corn",
+      "description": "Kernels shift through impossible colors."
+    },
+    "pufferfish": {
+      "name": "Pufferfish",
+      "description": "Watch out, it stings!"
+    },
+    "pumpkin": {
+      "name": "Pumpkin",
+      "description": "Perfect for Halloween."
+    },
+    "pumpkin_seed": {
+      "name": "Pumpkin Seed",
+      "description": "Plant to get pumpkin (4h)."
+    },
+    "pure_dna": {
+      "name": "Pure DNA",
+      "description": "Perfectly preserved dinosaur DNA. Amazing!"
+    },
+    "purified_relic": {
+      "name": "Purified Relic",
+      "description": "A relic cleansed of its dark curse."
+    },
+    "rare_fossil": {
+      "name": "Rare Fossil",
+      "description": "An intact fossil of a rare animal."
+    },
+    "reinforced_badge": {
+      "name": "Reinforced Badge",
+      "description": "A badge that has stopped a knife or two. (+6 VIT, +2 STR)"
+    },
+    "resonance_core": {
+      "name": "Resonance Core",
+      "description": "A perfectly preserved Kethari power source. It radiates ancient energy."
+    },
+    "rift_band": {
+      "name": "Band of Dimensional Passage",
+      "description": "A ring that hums with a thousand planes. Part of the Rift Walker set."
+    },
+    "rift_blade": {
+      "name": "Rift-Tempered Blade",
+      "description": "A blade forged in the space between worlds. Part of the Rift Walker set."
+    },
+    "rift_cowl": {
+      "name": "Cowl of the Veil Walker",
+      "description": "Woven from threads of fractured reality. Part of the Rift Walker set."
+    },
+    "rift_eye": {
+      "name": "Eye of the Rift",
+      "description": "It sees what should not be seen. Part of the Rift Walker set."
+    },
+    "rift_warden_aegis": {
+      "name": "Aegis of the Rift Warden",
+      "description": "Forged from crystallized dimensional tears. Part of the Rift Walker set."
+    },
+    "rigged_coin": {
+      "name": "Rigged Coin",
+      "description": "Boosts your luck. Raises coinflip odds to 75%."
+    },
+    "rotten_plant": {
+      "name": "Rotten Plant",
+      "description": "You mismanaged your farm..."
+    },
+    "rough_diamond": {
+      "name": "Rough Diamond",
+      "description": "AMAZING! Worth a fortune!"
+    },
+    "rusty_magnet": {
+      "name": "Rusty Magnet",
+      "description": "Use it to find some pocket change."
+    },
+    "salmon": {
+      "name": "Salmon",
+      "description": "Perfect for sushi."
+    },
+    "sardine": {
+      "name": "Sardine",
+      "description": "A small saltwater fish."
+    },
+    "scarecrow_charm": {
+      "name": "Scarecrow Charm",
+      "description": "A small charm shaped like a winking scarecrow."
+    },
+    "scratch_ticket": {
+      "name": "Scratch Ticket",
+      "description": "Scratch to win up to $1000 instantly!"
+    },
+    "shadow_cloak": {
+      "name": "Shadow Cloak",
+      "description": "Woven from the night itself. (+6 VIT, +4 DEX)"
+    },
+    "shadow_cowl": {
+      "name": "Shadow Cowl",
+      "description": "A dark hood worn by those who walk the Silent Path. (+4 DEX, +2 VIT)"
+    },
+    "shadow_fossil": {
+      "name": "Shadow Fossil",
+      "description": "A fossil of pure darkness. It seems to absorb light."
+    },
+    "shadow_stalker_amulet": {
+      "name": "Shadow Stalker Amulet",
+      "description": "A dark gem that whispers secrets. Part of the Shadow Stalker set."
+    },
+    "shadow_stalker_blade": {
+      "name": "Shadow Stalker Blade",
+      "description": "A dagger that drinks the light. Part of the Shadow Stalker set."
+    },
+    "shadow_stalker_charm": {
+      "name": "Shadow Stalker Charm",
+      "description": "Luck woven from shadow itself. Part of the Shadow Stalker set."
+    },
+    "shadow_stalker_cloak": {
+      "name": "Shadow Stalker Cloak",
+      "description": "Woven from midnight silk. Part of the Shadow Stalker set."
+    },
+    "shark": {
+      "name": "Shark",
+      "description": "AMAZING! Worth a fortune!"
+    },
+    "silent_steps": {
+      "name": "Silenced Footsteps",
+      "description": "Boots that never make a sound. (+6 DEX, +4 VIT)"
+    },
+    "silver_ore": {
+      "name": "Silver Ore",
+      "description": "Useful for forging sturdy tools."
+    },
+    "skill_scroll": {
+      "name": "Skill Scroll",
+      "description": "Resets all your active pet's learned skills."
+    },
+    "smoke_pellet": {
+      "name": "Smoke Pellet",
+      "description": "A quick getaway in a tiny ball. (+4 DEX)"
+    },
+    "spark_shard": {
+      "name": "Spark Shard",
+      "description": "A crackling fragment of Vezir's lightning. (+5 STR, +2 VIT)"
+    },
+    "star_fruit": {
+      "name": "Star Fruit",
+      "description": "A cosmic fruit from another dimension."
+    },
+    "star_fruit_seed": {
+      "name": "Star Fruit Seed",
+      "description": "Plant to get star fruit (48h)."
+    },
+    "steel_pickaxe": {
+      "name": "Steel Pickaxe",
+      "description": "A sturdy steel pickaxe. Grants +1 loot tier and -5% collapse risk per descend."
+    },
+    "stick": {
+      "name": "Wooden Stick",
+      "description": "A sturdy branch. Decent for a start. (+2 STR)"
+    },
+    "stone_heart": {
+      "name": "Stone Heart",
+      "description": "Tal'Rok's core, dense with resolve. (+4 DEX, +4 VIT)"
+    },
+    "stonebread": {
+      "name": "Stonebread",
+      "description": "A dense, mineral-rich loaf. +1 DEF."
+    },
+    "storm_core": {
+      "name": "Storm Core",
+      "description": "Kael's fury, captured in crystal. (+5 DEX, +3 LUK)"
+    },
+    "strawberry": {
+      "name": "Strawberry",
+      "description": "Red, sweet and juicy."
+    },
+    "strawberry_seed": {
+      "name": "Strawberry Seed",
+      "description": "Plant to get strawberry (18h)."
+    },
+    "swordfish": {
+      "name": "Swordfish",
+      "description": "A majestic fighting fish."
+    },
+    "thieves_glove": {
+      "name": "Thieve's Glove",
+      "description": "Use !rob @target with these gloves."
+    },
+    "tomato": {
+      "name": "Tomato",
+      "description": "Fruit or vegetable? The debate continues."
+    },
+    "tomato_seed": {
+      "name": "Tomato Seed",
+      "description": "Plant to get tomato (2h)."
+    },
+    "tropical_greenhouse": {
+      "name": "Tropical Greenhouse",
+      "description": "A heated glass structure for coffee and cocoa."
+    },
+    "trout": {
+      "name": "Trout",
+      "description": "Freshwater fish."
+    },
+    "tundra_egg": {
+      "name": "Tundra Egg",
+      "description": "An ice-wrapped egg. Type !hatch to open it!"
+    },
+    "veil_key": {
+      "name": "Veil Key",
+      "description": "Opens a dimensional tear into the Veil Rift. Required to create or join a raid."
+    },
+    "vip_ticket": {
+      "name": "VIP Ticket",
+      "description": "Resets your casino and coinflip limits."
+    },
+    "volcano_egg": {
+      "name": "Volcano Egg",
+      "description": "A magma-infused egg. Type !hatch to open it!"
+    },
+    "wanted_poster": {
+      "name": "Wanted Poster",
+      "description": "Every outlaw's face eventually ends up here. (+4 LUK)"
+    },
+    "warrior_stew": {
+      "name": "Warrior's Stew",
+      "description": "A hearty meat stew that fortifies your pet. +1 ATK."
+    },
+    "whale": {
+      "name": "Whale",
+      "description": "AMAZING! Worth a fortune!"
+    },
+    "wheat": {
+      "name": "Wheat",
+      "description": "Essential for making bread."
+    },
+    "wheat_seed": {
+      "name": "Wheat Seed",
+      "description": "Plant to get wheat (5 min)."
+    },
+    "worm": {
+      "name": "Worm",
+      "description": "Common bait. Good for small catches."
+    },
+    "zephyr_berries": {
+      "name": "Zephyr Berries",
+      "description": "Wild berries crackling with wind energy. +1 SPD."
+    }
+  }
+}

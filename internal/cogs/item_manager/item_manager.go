@@ -222,5 +222,5 @@ func (c *Cog) onDecline(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	return items.DisplayName(name)
+	return items.LocalizedName(name, lang)
 }

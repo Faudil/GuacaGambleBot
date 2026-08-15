@@ -296,7 +296,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	if result.ItemGiven != "" {
 		c.svc.AwardResult(userID, &archsvc.DigResult{ItemName: result.ItemGiven, Value: 0, XP: 0})
-		desc += "\n\n" + i18n.T("arch.item_received", lang, map[string]any{"item": items.DisplayName(result.ItemGiven), "qty": result.ItemQty})
+		desc += "\n\n" + i18n.T("arch.item_received", lang, map[string]any{"item": items.LocalizedName(result.ItemGiven, lang), "qty": result.ItemQty})
 	}
 
 	if result.BackToDig && sess.state != nil && !sess.state.Finished {
@@ -358,7 +358,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		embed = components.Embed(
 			i18n.T("arch.sold_title", lang),
-			i18n.T("arch.sold_desc", lang, map[string]any{"item": items.DisplayName(res.ItemName), "coins": bal}),
+			i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": bal}),
 			0xF1C40F,
 		)
 
@@ -373,7 +373,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		embed = components.Embed(
 			i18n.T("arch.keep_title", lang),
-			i18n.T("arch.keep_desc", lang, map[string]any{"item": items.DisplayName(res.ItemName), "xp": xpStr}),
+			i18n.T("arch.keep_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "xp": xpStr}),
 			0x00FF00,
 		)
 	}
@@ -559,7 +559,7 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 }
 
 func outcomeDesc(res *archsvc.DigResult, lang string) string {
-	itemName := items.DisplayName(res.ItemName)
+	itemName := items.LocalizedName(res.ItemName, lang)
 	qtyStr := ""
 	if res.Quantity > 1 {
 		qtyStr = " x" + itoa(res.Quantity)
@@ -622,7 +622,7 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 	petName, success, err := c.svc.Reanimate(userID, resolvedRarity)
 	if err != nil {
 		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.DisplayName(pool.ItemName)}),
+			Content: i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)}),
 		})
 		return
 	}
@@ -655,7 +655,7 @@ func (c *Cog) onPrefixReanimateList(b *interaction.Bot, s *discordgo.Session, m 
 		desc += i18n.T("arch.reanimate_list_line", lang, map[string]any{
 			"rarity": rarityName,
 			"count":  count,
-			"item":   items.DisplayName(pool.ItemName),
+			"item":   items.LocalizedName(pool.ItemName, lang),
 		}) + "\n"
 	}
 

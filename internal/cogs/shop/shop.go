@@ -12,7 +12,6 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
-	"guacagamblebot/internal/items"
 	shop "guacagamblebot/internal/service/shop"
 	"guacagamblebot/internal/store"
 )
@@ -56,10 +55,10 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if offer.Discounted {
 			priceStr += " 🔥"
 		}
-		name := c.displayName(offer.Item.Name, lang)
+		name := offer.Item.LocalizedName(lang)
 		embed.Fields = append(embed.Fields, components.Field(
 			name,
-			fmt.Sprintf("%s\n%s: **%s**", offer.Item.Description, i18n.T("shop.price_label", lang), priceStr),
+			fmt.Sprintf("%s\n%s: **%s**", offer.Item.LocalizedDescription(lang), i18n.T("shop.price_label", lang), priceStr),
 			true,
 		))
 		btns = append(btns, components.Button(
@@ -99,10 +98,10 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 		if offer.Discounted {
 			priceStr += " 🔥"
 		}
-		name := c.displayName(offer.Item.Name, lang)
+		name := offer.Item.LocalizedName(lang)
 		embed.Fields = append(embed.Fields, components.Field(
 			name,
-			fmt.Sprintf("%s\n%s: **%s**", offer.Item.Description, i18n.T("shop.price_label", lang), priceStr),
+			fmt.Sprintf("%s\n%s: **%s**", offer.Item.LocalizedDescription(lang), i18n.T("shop.price_label", lang), priceStr),
 			true,
 		))
 		btns = append(btns, components.Button(
@@ -151,7 +150,7 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	embed := i18n.T("shop.buy_success", lang, map[string]any{"item": c.displayName(offer.Item.Name, lang), "price": offer.Price})
+	embed := i18n.T("shop.buy_success", lang, map[string]any{"item": offer.Item.LocalizedName(lang), "price": offer.Price})
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{Content: embed, Flags: discordgo.MessageFlagsEphemeral},
@@ -160,10 +159,6 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
 	}
-}
-
-func (c *Cog) displayName(name, lang string) string {
-	return items.DisplayName(name)
 }
 
 func init() {

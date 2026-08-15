@@ -373,7 +373,7 @@ func (c *Cog) resultDesc(res *huntsvc.BattleResult, petName, lang string, artifa
 		if len(res.Loot) > 0 {
 			lootNames := make([]string, len(res.Loot))
 			for i, loot := range res.Loot {
-				lootNames[i] = items.DisplayName(loot)
+				lootNames[i] = items.LocalizedName(loot, lang)
 			}
 			desc += "\n\n" + i18n.T("hunt.loot_found", lang) + strings.Join(lootNames, ", ")
 		} else {

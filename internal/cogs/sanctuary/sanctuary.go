@@ -246,7 +246,7 @@ func (c *Cog) onCollect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	names := make([]string, 0, len(loot))
 	for _, id := range loot {
-		names = append(names, items.DisplayName(id))
+		names = append(names, items.LocalizedName(id, lang))
 	}
 	itemList := joinUnique(names)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

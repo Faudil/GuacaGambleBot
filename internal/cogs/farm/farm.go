@@ -111,10 +111,10 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 		if mins < 1 {
 			nextHarvest = i18n.T("farm.next_harvest_soon", lang)
 		} else if mins < 60 {
-			nextHarvest = i18n.T("farm.next_harvest_mins", lang, map[string]any{"item": displayCrop(cropNext), "min": mins})
+			nextHarvest = i18n.T("farm.next_harvest_mins", lang, map[string]any{"item": displayCrop(cropNext, lang), "min": mins})
 		} else {
 			hours := mins / 60
-			nextHarvest = i18n.T("farm.next_harvest_hours", lang, map[string]any{"item": displayCrop(cropNext), "hours": hours})
+			nextHarvest = i18n.T("farm.next_harvest_hours", lang, map[string]any{"item": displayCrop(cropNext, lang), "hours": hours})
 		}
 	} else {
 		nextHarvest = i18n.T("farm.next_harvest_none", lang)
@@ -195,7 +195,7 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		deed := deedMap[zoneKey]
 		embed := components.Embed(
 			i18n.T("farm.no_land_title", lang),
-			i18n.T("farm.no_land_desc", lang, map[string]any{"deed": items.DisplayName(deed)}),
+			i18n.T("farm.no_land_desc", lang, map[string]any{"deed": items.LocalizedName(deed, lang)}),
 			0xE74C3C,
 		)
 		back := []discordgo.MessageComponent{
@@ -263,12 +263,12 @@ func (c *Cog) showZone(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 			))
 		} else if p.Ready {
 			row = append(row, components.Button(
-				i18n.T("farm.plot_ready_btn", lang, map[string]any{"item": plotDisplayName(&p)}),
+				i18n.T("farm.plot_ready_btn", lang, map[string]any{"item": plotDisplayName(&p, lang)}),
 				components.EncodeOwner(userID, "farm", "harvest", zoneKey, strconv.Itoa(p.PlotIndex)),
 				discordgo.SuccessButton,
 			))
 		} else {
-			btnLabel := plotDisplayName(&p) + " " + strconv.Itoa(p.Progress) + "%"
+			btnLabel := plotDisplayName(&p, lang) + " " + strconv.Itoa(p.Progress) + "%"
 			row = append(row, components.Button(
 				btnLabel,
 				components.EncodeOwner(userID, "farm", "inspect", zoneKey, strconv.Itoa(p.PlotIndex)),
@@ -361,7 +361,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		desc += "\n\n" + i18n.T("farm.coins_spent", lang, map[string]any{"coins": -result.CoinChange})
 	}
 	if result.ItemGiven != "" {
-		desc += "\n\n" + i18n.T("farm.item_received", lang, map[string]any{"item": items.DisplayName(result.ItemGiven), "qty": result.ItemQty})
+		desc += "\n\n" + i18n.T("farm.item_received", lang, map[string]any{"item": items.LocalizedName(result.ItemGiven, lang), "qty": result.ItemQty})
 	}
 
 	embed := components.Embed(
@@ -408,7 +408,7 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		desc := i18n.T("farm.seed_option_desc", lang, map[string]any{"time": growTime / 60, "price": seedPrice(seed)})
 		options = append(options, discordgo.SelectMenuOption{
-			Label:       items.DisplayName(seed),
+			Label:       items.LocalizedName(seed, lang),
 			Value:       seed,
 			Description: desc,
 			Emoji:       &discordgo.ComponentEmoji{Name: "🌱"},
@@ -514,7 +514,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.planted_title", lang),
 		i18n.T("farm.planted_desc", lang, map[string]any{
-			"item": items.DisplayName(seedName),
+			"item": items.LocalizedName(seedName, lang),
 			"time": mins,
 		}),
 		0x00FF00,
@@ -539,7 +539,7 @@ func (c *Cog) onSeedMaker(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			continue
 		}
 		options = append(options, discordgo.SelectMenuOption{
-			Label: items.DisplayName(crop.Name),
+			Label: items.LocalizedName(crop.Name, lang),
 			Value: crop.Name,
 			Description: i18n.T("farm.seedmaker_option_desc", lang, map[string]any{
 				"qty": qty,
@@ -594,9 +594,9 @@ func (c *Cog) onSeedMakerChoose(b *interaction.Bot, i *discordgo.InteractionCrea
 	embed := components.Embed(
 		i18n.T("farm.seedmaker_result_title", lang),
 		i18n.T("farm.seedmaker_result_desc", lang, map[string]any{
-			"crop": items.DisplayName(cropName),
+			"crop": items.LocalizedName(cropName, lang),
 			"qty":  qty,
-			"seed": items.DisplayName(seedID),
+			"seed": items.LocalizedName(seedID, lang),
 		}),
 		0x00FF00,
 	)
@@ -663,9 +663,9 @@ func (c *Cog) onSeedMakerPrefix(b *interaction.Bot, s *discordgo.Session, m *dis
 	embed := components.Embed(
 		i18n.T("farm.seedmaker_result_title", lang),
 		i18n.T("farm.seedmaker_result_desc", lang, map[string]any{
-			"crop": items.DisplayName(cropName),
+			"crop": items.LocalizedName(cropName, lang),
 			"qty":  totalSeeds,
-			"seed": items.DisplayName(seedID),
+			"seed": items.LocalizedName(seedID, lang),
 		}),
 		0x00FF00,
 	)
@@ -713,7 +713,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		msg = i18n.T("farm.harvest_blessed", lang)
 	}
 
-	loot := i18n.T("farm.harvest_msg", lang, map[string]any{"qty": res.Quantity, "item": items.DisplayName(res.CropName)})
+	loot := i18n.T("farm.harvest_msg", lang, map[string]any{"qty": res.Quantity, "item": items.LocalizedName(res.CropName, lang)})
 	if res.Mutated {
 		flavorKey := c.svc.GetMutationFlavor(res.CropName)
 		if flavorKey == "" {
@@ -937,7 +937,7 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	desc := i18n.T("farm.inspect_desc", lang, map[string]any{
-		"item":     plotDisplayName(&p),
+		"item":     plotDisplayName(&p, lang),
 		"cropdesc": cropDesc,
 		"bar":      progressBar(progressPct, 100, 10),
 		"pct":      progressPct,
@@ -1015,7 +1015,7 @@ func (c *Cog) onInspectFarm(b *interaction.Bot, i *discordgo.InteractionCreate) 
 				if p.Mysterious {
 					status += " 🔮"
 				}
-				details = append(details, plotDisplayName(&p)+" "+status)
+				details = append(details, plotDisplayName(&p, lang)+" "+status)
 			}
 		}
 
@@ -1065,7 +1065,7 @@ func (c *Cog) onStats(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				title = " " + i18n.T(e.Title, lang)
 			}
 			desc += i18n.T("farm.stats_line", lang, map[string]any{
-				"item":      items.DisplayName(e.CropName),
+				"item":      items.LocalizedName(e.CropName, lang),
 				"harvested": e.Harvested,
 				"title":     title,
 			}) + "\n"
@@ -1086,25 +1086,25 @@ func (c *Cog) onStats(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-func plotDisplayName(p *farmsvc.PlotInfo) string {
+func plotDisplayName(p *farmsvc.PlotInfo, lang string) string {
 	if p.Mysterious {
-		return "🔮 " + i18n.T("farm.mysterious_label", "en")
+		return "🔮 " + i18n.T("farm.mysterious_label", lang)
 	}
 	if p.Ready {
 		for _, s := range farmsvc.Seeds {
 			if s.Name == p.ItemName {
-				return items.DisplayName(s.Crop.Name)
+				return items.LocalizedName(s.Crop.Name, lang)
 			}
 		}
 	}
-	return items.DisplayName(p.ItemName)
+	return items.LocalizedName(p.ItemName, lang)
 }
 
-func displayCrop(cropName string) string {
+func displayCrop(cropName, lang string) string {
 	if cropName == "" {
 		return "???"
 	}
-	return items.DisplayName(cropName)
+	return items.LocalizedName(cropName, lang)
 }
 
 func zoneDisplayName(key, lang string) string {
@@ -1172,7 +1172,7 @@ func (c *Cog) plotField(p *farmsvc.PlotInfo, lang string) string {
 		if p.Watered {
 			w = " 💧"
 		}
-		return i18n.T("farm.plot_ready_desc", lang, map[string]any{"item": plotDisplayName(p)}) + w
+		return i18n.T("farm.plot_ready_desc", lang, map[string]any{"item": plotDisplayName(p, lang)}) + w
 	}
 	bar := progressBar(p.Progress, 100, 8)
 	w := ""
@@ -1183,7 +1183,7 @@ func (c *Cog) plotField(p *farmsvc.PlotInfo, lang string) string {
 	if p.Mysterious {
 		extra += " 🔮"
 	}
-	return i18n.T("farm.plot_growing_desc", lang, map[string]any{"item": plotDisplayName(p), "bar": bar, "pct": p.Progress}) + w + extra
+	return i18n.T("farm.plot_growing_desc", lang, map[string]any{"item": plotDisplayName(p, lang), "bar": bar, "pct": p.Progress}) + w + extra
 }
 
 func progressBar(current, max, width int) string {

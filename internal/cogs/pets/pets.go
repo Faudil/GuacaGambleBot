@@ -700,7 +700,7 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: i18n.T("pets.feed.refuse", lang, map[string]any{
-					"name": pet.Nickname, "item": items.DisplayName(itemID),
+					"name": pet.Nickname, "item": items.LocalizedName(itemID, lang),
 				}),
 				Flags: discordgo.MessageFlagsEphemeral,
 			},
@@ -714,7 +714,7 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: i18n.T("pets.feed.no_inventory", lang, map[string]any{
-					"name": items.DisplayName(itemID),
+					"name": items.LocalizedName(itemID, lang),
 				}),
 				Flags: discordgo.MessageFlagsEphemeral,
 			},
@@ -751,7 +751,7 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	itemName := items.DisplayName(itemID)
+	itemName := items.LocalizedName(itemID, lang)
 	content := ""
 	switch {
 	case def.Stat != "" && def.Bond > 0:

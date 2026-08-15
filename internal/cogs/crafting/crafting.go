@@ -122,10 +122,10 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func recipeDisplayInfo(recipe crtsvc.Recipe, lang string) string {
 	ingStrs := make([]string, 0, len(recipe.Ingredients))
 	for ing, qty := range recipe.Ingredients {
-		ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, items.DisplayName(ing)))
+		ingStrs = append(ingStrs, fmt.Sprintf("%dx %s", qty, items.LocalizedName(ing, lang)))
 	}
 	ingStr := strings.Join(ingStrs, ", ")
-	resName := items.DisplayName(recipe.Result)
+	resName := items.LocalizedName(recipe.Result, lang)
 
 	if recipe.IsEquipment {
 		it := items.Get(recipe.Result)
@@ -356,7 +356,7 @@ func (c *Cog) researchName(researchID string) string {
 }
 
 func (c *Cog) displayName(name, lang string) string {
-	return items.DisplayName(name)
+	return items.LocalizedName(name, lang)
 }
 
 func isNumeric(s string) bool {

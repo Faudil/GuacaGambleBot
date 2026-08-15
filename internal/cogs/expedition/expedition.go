@@ -222,7 +222,7 @@ func (c *Cog) claim(userID int64, lang string) (*discordgo.MessageEmbed, []disco
 			counts[it]++
 		}
 		for itName, count := range counts {
-			lootStr += "- " + itoa(count) + "x " + items.DisplayName(itName) + "\n"
+			lootStr += "- " + itoa(count) + "x " + items.LocalizedName(itName, lang) + "\n"
 		}
 	} else {
 		lootStr = i18n.T("expedition.no_items", lang)

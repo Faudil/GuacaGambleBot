@@ -344,7 +344,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 			o.final.Description += fmt.Sprintf("\n💵 +$%d", bossCfg.RewardMoney)
 		}
 		for item, qty := range bossCfg.RewardItems {
-			o.final.Description += fmt.Sprintf("\n📦 %s x%d", items.DisplayName(item), qty)
+			o.final.Description += fmt.Sprintf("\n📦 %s x%d", items.LocalizedName(item, lang), qty)
 		}
 		if bossCfg.XP > 0 {
 			charLeveled, charLvl := charsvc.AddXP(c.store, userID, bossCfg.XP)

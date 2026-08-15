@@ -1,0 +1,724 @@
+{
+  "itemnames": {
+    "abyss_pearl": {
+      "name": "Perle des Abysses",
+      "description": "Le don de Vorgath venu des profondeurs. (+6 INT, +3 CHA)"
+    },
+    "adamant_tonic": {
+      "name": "Tonic d'Adamant",
+      "description": "Transforme la peau du buveur en pierre vivante. +2 DÉF."
+    },
+    "ancient_alloy": {
+      "name": "Alliage Ancien",
+      "description": "Un fragment de métal d'une forge oubliée. Il vibre d'une chaleur résiduelle."
+    },
+    "ancient_amulet": {
+      "name": "Amulette Ancienne",
+      "description": "Vibrant de magie ancienne. (+4 INT, +4 CHA)"
+    },
+    "ancient_core_shard": {
+      "name": "Éclat de Cœur Ancien",
+      "description": "Un éclat cristallin du Cœur de la Montagne. Il pulse d'une faible lumière."
+    },
+    "arcane_weaver_crown": {
+      "name": "Couronne Tisseuse Arcanique",
+      "description": "Un diadème de pensée cristallisée. Fait partie de l'ensemble Tisseur Arcanique."
+    },
+    "arcane_weaver_orb": {
+      "name": "Orbe Tisseur Arcanique",
+      "description": "Une sphère d'énergie arcanique pure. Fait partie de l'ensemble Tisseur Arcanique."
+    },
+    "arcane_weaver_robe": {
+      "name": "Robe Tisseuse Arcanique",
+      "description": "Un tissu éthéré vibrant de puissance. Fait partie de l'ensemble Tisseur Arcanique."
+    },
+    "arcane_weaver_staff": {
+      "name": "Bâton Tisseur Arcanique",
+      "description": "Un conduit de magie brute. Fait partie de l'ensemble Tisseur Arcanique."
+    },
+    "artifact_shard": {
+      "name": "Éclat d'Artefact",
+      "description": "Réinitialise l'artefact de ton familier, relançant les 3 statistiques."
+    },
+    "beer": {
+      "name": "Bière",
+      "description": "La boisson du mineur ! Réinitialise le cooldown de !mine."
+    },
+    "berserker_elixir": {
+      "name": "Élixir du Berserker",
+      "description": "Un breuvage volatil qui éveille la fureur brute. +2 ATK."
+    },
+    "blood_tomato": {
+      "name": "Tomate de Sang",
+      "description": "Pourpre foncé, palpitant de chaleur..."
+    },
+    "bond_treat": {
+      "name": "Friandise de Lien",
+      "description": "Augmente le niveau de lien de ton familier actif de 5."
+    },
+    "bone_dust": {
+      "name": "Poussière d'Os",
+      "description": "Poussière d'os d'un fossile entièrement détruit."
+    },
+    "boss_trophy": {
+      "name": "Trophée de Boss",
+      "description": "Un trophée légendaire récompensant le premier joueur à vaincre le boss de fin du serveur."
+    },
+    "bounty_scope": {
+      "name": "Lunette de Chasse",
+      "description": "Elle ne perd jamais une piste. (+6 DEX, +4 CHA)"
+    },
+    "bow": {
+      "name": "Arc",
+      "description": "Aide à la chasse ! Réinitialise le cooldown de !hunt."
+    },
+    "carp": {
+      "name": "Carpe",
+      "description": "Le meilleur poisson d'eau douce."
+    },
+    "carrot": {
+      "name": "Carotte",
+      "description": "Une racine orange croquante."
+    },
+    "carrot_seed": {
+      "name": "Graine de Carotte",
+      "description": "À planter pour obtenir une carotte (15 min)."
+    },
+    "casino_token": {
+      "name": "Jeton de Casino",
+      "description": "Te donne une nouvelle chance, reset ta limite de `!casino`"
+    },
+    "cave_egg": {
+      "name": "Œuf des Cavernes",
+      "description": "Un œuf obscur des cavernes. Tape !hatch pour l'ouvrir !"
+    },
+    "coal": {
+      "name": "Charbon",
+      "description": "Pas mal pour se réchauffer."
+    },
+    "cocoa_bean": {
+      "name": "Fève de Cacao",
+      "description": "L'ingrédient principal du bonheur (chocolat)."
+    },
+    "cocoa_seed": {
+      "name": "Graine de Cacao",
+      "description": "À planter pour obtenir du cacao (12h)."
+    },
+    "coelacanth_egg": {
+      "name": "Œuf de Cœlacanthe",
+      "description": "Un œuf d'apparence préhistorique. Il pulse faiblement."
+    },
+    "coffee": {
+      "name": "Café",
+      "description": "Réveille tes sens. Réinitialise le cooldown du !daily."
+    },
+    "coffee_bean": {
+      "name": "Grain de Café",
+      "description": "L'or noir du matin."
+    },
+    "coffee_seed": {
+      "name": "Graine de Café",
+      "description": "À planter pour obtenir du café (8h)."
+    },
+    "common_fossil": {
+      "name": "Fossile Commun",
+      "description": "Un fossile intact d'un animal commun."
+    },
+    "copper_ore": {
+      "name": "Minerai de Cuivre",
+      "description": "Utile pour forger des trucs solides."
+    },
+    "corn": {
+      "name": "Maïs",
+      "description": "Fait aussi du pop-corn !"
+    },
+    "corn_seed": {
+      "name": "Graine de Maïs",
+      "description": "À planter pour obtenir du maïs (30 min)."
+    },
+    "crayfish": {
+      "name": "Écrevisse",
+      "description": "Appât rare. Attire des poissons plus puissants."
+    },
+    "crystal_staff": {
+      "name": "Bâton de Cristal",
+      "description": "Pulsant d'énergie arcanique. (+6 INT)"
+    },
+    "cursed_artifact": {
+      "name": "Artefact Maudit",
+      "description": "Une relique ancienne pulsant d'énergie sombre."
+    },
+    "cursed_pumpkin": {
+      "name": "Citrouille Maudite",
+      "description": "Elle te murmure la nuit."
+    },
+    "damaged_fossil": {
+      "name": "Fossile Endommagé",
+      "description": "Un fossile mal extrait qui a perdu sa valeur."
+    },
+    "data_disk": {
+      "name": "Disque de Données",
+      "description": "Un disque mémoire Zénith corrompu. Contient d'anciens logs de la Strate."
+    },
+    "dechirure_scythe": {
+      "name": "Faux de la Faille Déchirée",
+      "description": "Forgée d'un éclat de la forme même de Déchirure. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "desert_egg": {
+      "name": "Œuf du Désert",
+      "description": "Un œuf brûlé par le soleil. Tape !hatch pour l'ouvrir !"
+    },
+    "diamond_drill": {
+      "name": "Foreuse à Diamant",
+      "description": "Une foreuse à pointe de diamant. Confère +2 paliers de butin et -10 % de risque d'effondrement par descente."
+    },
+    "dimensional_shard": {
+      "name": "Éclat Dimensionnel",
+      "description": "Des fragments de réalité brisée. Utilisés comme monnaie de raid pour des objets exclusifs."
+    },
+    "dragon_slayer_armor": {
+      "name": "Armure Tueuse de Dragon",
+      "description": "Cotte de mailles d'un ancien wyrm. Fait partie de l'ensemble Tueur de Dragon."
+    },
+    "dragon_slayer_ring": {
+      "name": "Anneau Tueur de Dragon",
+      "description": "Un anneau d'os de dragon et d'or. Fait partie de l'ensemble Tueur de Dragon."
+    },
+    "dragon_slayer_sword": {
+      "name": "Épée Tueuse de Dragon",
+      "description": "Une lame forgée d'un croc de dragon. Fait partie de l'ensemble Tueur de Dragon."
+    },
+    "dragon_slayer_talisman": {
+      "name": "Talisman Tueur de Dragon",
+      "description": "Une dent du premier dragon jamais vaincu. Fait partie de l'ensemble Tueur de Dragon."
+    },
+    "electric_magnet": {
+      "name": "Aimant Électrique",
+      "description": "Utilise-le pour trouver beaucoup d'argent !"
+    },
+    "emerald": {
+      "name": "Émeraude",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
+    },
+    "enchanted_orchard": {
+      "name": "Verger Enchanté",
+      "description": "Une île flottante magique. Seuls les fruits légendaires y poussent."
+    },
+    "enchanted_robe": {
+      "name": "Robe Enchantée",
+      "description": "Tissée de sagesse. (+6 INT, +3 VIT)"
+    },
+    "epic_fossil": {
+      "name": "Fossile Épique",
+      "description": "Un fossile intact d'un animal épique."
+    },
+    "excavator_hat": {
+      "name": "Chapeau d'Excavateur",
+      "description": "Un chapeau d'expédition usé. Il porte des siècles d'histoires."
+    },
+    "fertilizer": {
+      "name": "Engrais",
+      "description": "Accélère la croissance des cultures ! Réduit le temps de croissance restant de 30 %."
+    },
+    "fishing_rod": {
+      "name": "Canne à Pêche",
+      "description": "Une canne de qualité. (+4 DEX)"
+    },
+    "forest_egg": {
+      "name": "Œuf de la Forêt",
+      "description": "Un œuf embrassé par la forêt. Tape !hatch pour l'ouvrir !"
+    },
+    "forget_potion": {
+      "name": "Potion d'Oubli",
+      "description": "Réinitialise ton familier. Reset son estomac et le remet niveau 10."
+    },
+    "fortune_cookie": {
+      "name": "Fortune Cookie",
+      "description": "Un biscuit délicieux avec un message prémonitoire."
+    },
+    "fossilized_egg": {
+      "name": "Œuf Fossilisé",
+      "description": "Un œuf de pierre aux motifs anciens. Qui sait ce qu'il renferme ?"
+    },
+    "gale_draught": {
+      "name": "Coup de Bourrasque",
+      "description": "A le goût d'une tempête sur la langue. +2 VIT."
+    },
+    "garden_plot": {
+      "name": "Parcelle de Jardin",
+      "description": "Un carré de terre fertile pour cultiver des légumes."
+    },
+    "ghost_wheat": {
+      "name": "Blé Fantôme",
+      "description": "Un blé translucide qui scintille au clair de lune."
+    },
+    "gold_nugget": {
+      "name": "Pépite d'Or",
+      "description": "Brillant ! Les marchands adorent ça."
+    },
+    "golden_apple": {
+      "name": "Pomme Dorée",
+      "description": "Elle brille d'une lueur magique."
+    },
+    "golden_apple_seed": {
+      "name": "Pépin de Pomme Dorée",
+      "description": "À planter pour obtenir des pommes dorées (24h)."
+    },
+    "golden_carrot": {
+      "name": "Carotte Dorée",
+      "description": "Une carotte d'or pur. Légendaire."
+    },
+    "golden_lure": {
+      "name": "Leurre Doré",
+      "description": "Appât légendaire. Attire les créatures les plus mortelles."
+    },
+    "golden_potato": {
+      "name": "Patate Dorée",
+      "description": "Une patate enrobée d'or massif !"
+    },
+    "golden_ring": {
+      "name": "Anneau Doré",
+      "description": "Brille de fortune. (+4 CHA, +1 FOR)"
+    },
+    "growth_elixir": {
+      "name": "Élixir de Croissance",
+      "description": "Fait mûrir instantanément une culture en croissance."
+    },
+    "hook": {
+      "name": "Hameçon",
+      "description": "Attre les poissons ! Réinitialise le cooldown de !fish."
+    },
+    "hounds_cloak": {
+      "name": "Cape du Molosse",
+      "description": "La cape cérémonielle de la Loge de Fer. Un symbole de la chasse. (+6 VIT, +2 FOR)"
+    },
+    "hunter_cloak": {
+      "name": "Cape de Chasseur",
+      "description": "Chaude et agile. (+4 VIT, +3 DEX)"
+    },
+    "hunters_bow": {
+      "name": "Arc de Chasseur",
+      "description": "Un arc précis. (+6 FOR)"
+    },
+    "hunters_soup": {
+      "name": "Soupe de l'Œil du Chasseur",
+      "description": "La recette secrète d'un chasseur à l'œil vif. +1 PRÉC."
+    },
+    "identity_scroll": {
+      "name": "Parchemin d'Identité",
+      "description": "Change ton surnom sur le serveur aléatoirement."
+    },
+    "iron_ore": {
+      "name": "Minerai de Fer",
+      "description": "Utile pour forger des trucs solides."
+    },
+    "iron_pickaxe": {
+      "name": "Pioche en Fer",
+      "description": "Le meilleur ami du mineur. (+4 FOR)"
+    },
+    "iron_shackles": {
+      "name": "Menottes de Fer",
+      "description": "Des menottes rouillées mais fiables. (+3 VIT, +1 FOR)"
+    },
+    "journal_page_1": {
+      "name": "Page de Journal #1",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_2": {
+      "name": "Page de Journal #2",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_3": {
+      "name": "Page de Journal #3",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_4": {
+      "name": "Page de Journal #4",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_5": {
+      "name": "Page de Journal #5",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_6": {
+      "name": "Page de Journal #6",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_7": {
+      "name": "Page de Journal #7",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "journal_page_8": {
+      "name": "Page de Journal #8",
+      "description": "Une page déchirée du journal d'un ancien excavateur."
+    },
+    "kethari_crystal": {
+      "name": "Cristal Kethari",
+      "description": "Un cristal prismatique forgé par les Kethari. Il vibre d'une résonance emmagasinée."
+    },
+    "kraken_tentacle": {
+      "name": "Tentacule de Kraken",
+      "description": "TU AS PÊCHÉ UN MONSTRE ?!"
+    },
+    "lava_serpent": {
+      "name": "Serpent de lave",
+      "description": "Une bête légendaire de roche en fusion."
+    },
+    "lawbringer_seal": {
+      "name": "Sceau du Gardien de la Loi",
+      "description": "L'autorité de la Loge de Fer elle-même. (+8 VIT, +4 FOR, +2 CHA)"
+    },
+    "leather_armor": {
+      "name": "Armure de Cuir",
+      "description": "Une protection basique. (+2 VIT)"
+    },
+    "legendary_fragment": {
+      "name": "Fragment Légendaire",
+      "description": "Un fragment légendaire de T-Rex !"
+    },
+    "lockpick_set": {
+      "name": "Set de Crochets",
+      "description": "Chaque serrure a un secret. Celui-ci le trouve. (+3 DEX, +1 CHA)"
+    },
+    "lucky_charm": {
+      "name": "Porte-Bonheur",
+      "description": "Un trèfle à quatre feuilles. (+3 CHA)"
+    },
+    "magma_carp": {
+      "name": "Carpe de Magma",
+      "description": "Un poisson enflammé des profondeurs."
+    },
+    "magnet": {
+      "name": "Aimant",
+      "description": "Utilise-le pour trouver de l'argent par terre."
+    },
+    "mask_of_malveillance": {
+      "name": "Masque de Malveillance",
+      "description": "Un masque ancien qui éveille les bas-fonds. Ceux qui le portent accèdent aux ombres."
+    },
+    "master_key": {
+      "name": "Passe-Partout",
+      "description": "Il ouvre des portes qui n'existent pas. (+8 CHA, +4 DEX, +2 INT)"
+    },
+    "mastery_medallion": {
+      "name": "Médaillon de Maîtrise",
+      "description": "Décerné uniquement à ceux qui maîtrisent chaque voie du journal."
+    },
+    "miner_helmet": {
+      "name": "Casque de Mineur",
+      "description": "Casque en acier épais. (+3 VIT, +1 FOR)"
+    },
+    "mountain_egg": {
+      "name": "Œuf de la Montagne",
+      "description": "Un œuf né des sommets. Tape !hatch pour l'ouvrir !"
+    },
+    "mutagen": {
+      "name": "Mutagène",
+      "description": "Une substance mutagène lumineuse issue d'un poisson muté."
+    },
+    "mysterious_seed": {
+      "name": "Graine Mystérieuse",
+      "description": "Une graine inconnue pulsant d'énergie."
+    },
+    "nova_fruit": {
+      "name": "Fruit Nova",
+      "description": "Un soleil miniature entre tes mains."
+    },
+    "oat": {
+      "name": "Avoine",
+      "description": "Parfait pour le petit déjeuner."
+    },
+    "oat_seed": {
+      "name": "Graine d'Avoine",
+      "description": "À planter pour obtenir de l'avoine (10 min)."
+    },
+    "ocean_egg": {
+      "name": "Œuf de l'Océan",
+      "description": "Un œuf des profondeurs marines. Tape !hatch pour l'ouvrir !"
+    },
+    "old_boot": {
+      "name": "Vieille botte",
+      "description": "Un caillou tout nul. Sert à rien."
+    },
+    "old_journal": {
+      "name": "Vieux Journal",
+      "description": "Un carnet poussiéreux, écrit à la main par un survivant. Les pages sont couvertes de suie."
+    },
+    "oracles_insight": {
+      "name": "Intuition de l'Oracle",
+      "description": "Une seule gorgée de prescience. +2 PRÉC."
+    },
+    "pebble": {
+      "name": "Caillou",
+      "description": "Un caillou tout nul. Sert à rien."
+    },
+    "personality_mirror": {
+      "name": "Miroir de Personnalité",
+      "description": "Change mystérieusement la personnalité de ton familier."
+    },
+    "phoenix_crest": {
+      "name": "Cimier de Phénix",
+      "description": "La flamme de Solaris, désormais à toi. (+5 FOR, +4 INT, +3 VIT, +3 CHA)"
+    },
+    "platinum": {
+      "name": "Platine",
+      "description": "Brillant ! Les marchands adorent ça."
+    },
+    "potato": {
+      "name": "Patate",
+      "description": "On peut en faire de la vodka..."
+    },
+    "potato_seed": {
+      "name": "Graine de Patate",
+      "description": "À planter pour obtenir des patates (1h)."
+    },
+    "primordial_geode": {
+      "name": "Géode Primordiale",
+      "description": "Une géode de l'aube de la montagne. Qui sait ce qu'elle renferme ?"
+    },
+    "prismatic_corn": {
+      "name": "Maïs Prismatique",
+      "description": "Des grains qui traversent des couleurs impossibles."
+    },
+    "pufferfish": {
+      "name": "Poisson-Globe",
+      "description": "Attention, ça pique !"
+    },
+    "pumpkin": {
+      "name": "Citrouille",
+      "description": "Parfait pour Halloween."
+    },
+    "pumpkin_seed": {
+      "name": "Graine de Citrouille",
+      "description": "À planter pour obtenir des citrouilles (4h)."
+    },
+    "pure_dna": {
+      "name": "ADN Pur",
+      "description": "ADN de dinosaure parfaitement préservé. Incroyable !"
+    },
+    "purified_relic": {
+      "name": "Relique Purifiée",
+      "description": "Une relique purgée de sa malédiction."
+    },
+    "rare_fossil": {
+      "name": "Fossile Rare",
+      "description": "Un fossile intact d'un animal rare."
+    },
+    "reinforced_badge": {
+      "name": "Insigne Renforcé",
+      "description": "Un insigne qui a arrêté un couteau ou deux. (+6 VIT, +2 FOR)"
+    },
+    "resonance_core": {
+      "name": "Cœur de Résonance",
+      "description": "Une source d'énergie Kethari parfaitement préservée. Elle rayonne d'une énergie ancienne."
+    },
+    "rift_band": {
+      "name": "Anneau de Passage Dimensionnel",
+      "description": "Un anneau qui vibre d'un millier de plans. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "rift_blade": {
+      "name": "Lame Tempérée par la Faille",
+      "description": "Une lame forgée dans l'espace entre les mondes. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "rift_cowl": {
+      "name": "Capuche du Marcheur de la Faille",
+      "description": "Tissée de fils de réalité fracturée. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "rift_eye": {
+      "name": "Œil de la Faille",
+      "description": "Il voit ce qui ne devrait pas être vu. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "rift_warden_aegis": {
+      "name": "Égide du Gardien de la Faille",
+      "description": "Forgée de déchirures dimensionnelles cristallisées. Fait partie de l'ensemble Marcheur de la Faille."
+    },
+    "rigged_coin": {
+      "name": "Pièce Truquée",
+      "description": "Augmente ta chance. Passe ta probabilité de réussir ton pile ou face à 75%."
+    },
+    "rotten_plant": {
+      "name": "Plante Pourrie",
+      "description": "Tu as mal géré ta ferme..."
+    },
+    "rough_diamond": {
+      "name": "Diamant Brut",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
+    },
+    "rusty_magnet": {
+      "name": "Aimant Rouillé",
+      "description": "Utilise-le pour trouver un peu de monnaie."
+    },
+    "salmon": {
+      "name": "Saumon",
+      "description": "Parfait pour faire des sushis."
+    },
+    "sardine": {
+      "name": "Sardine",
+      "description": "Un petit poisson d'eau de mer"
+    },
+    "scarecrow_charm": {
+      "name": "Charme d'Épouvantail",
+      "description": "Un petit charme en forme d'épouvantail qui cligne de l'œil."
+    },
+    "scratch_ticket": {
+      "name": "Ticket à Gratter",
+      "description": "Gratte pour gagner jusqu'à 1 000 $ instantanément !"
+    },
+    "shadow_cloak": {
+      "name": "Cape d'Ombre",
+      "description": "Tissée de la nuit elle-même. (+6 VIT, +4 DEX)"
+    },
+    "shadow_cowl": {
+      "name": "Capuche d'Ombre",
+      "description": "Une capuche sombre portée par ceux qui suivent la Voie du Silence. (+4 DEX, +2 VIT)"
+    },
+    "shadow_fossil": {
+      "name": "Fossile d'Ombre",
+      "description": "Un fossile de ténèbres pures. Il semble absorber la lumière."
+    },
+    "shadow_stalker_amulet": {
+      "name": "Amulette Traqueuse d'Ombres",
+      "description": "Une gemme sombre qui murmure des secrets. Fait partie de l'ensemble Traqueur d'Ombres."
+    },
+    "shadow_stalker_blade": {
+      "name": "Lame Traqueuse d'Ombres",
+      "description": "Une dague qui boit la lumière. Fait partie de l'ensemble Traqueur d'Ombres."
+    },
+    "shadow_stalker_charm": {
+      "name": "Charme Traqueur d'Ombres",
+      "description": "Une chance tissée d'ombre elle-même. Fait partie de l'ensemble Traqueur d'Ombres."
+    },
+    "shadow_stalker_cloak": {
+      "name": "Cape Traqueuse d'Ombres",
+      "description": "Tissée de soie de minuit. Fait partie de l'ensemble Traqueur d'Ombres."
+    },
+    "shark": {
+      "name": "Requin",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
+    },
+    "silent_steps": {
+      "name": "Pas Silencieux",
+      "description": "Des bottes qui ne font jamais de bruit. (+6 DEX, +4 VIT)"
+    },
+    "silver_ore": {
+      "name": "Minerai d'Argent",
+      "description": "Utile pour forger des trucs solides."
+    },
+    "skill_scroll": {
+      "name": "Parchemin de Compétences",
+      "description": "Réinitialise toutes les compétences apprises par ton familier actif."
+    },
+    "smoke_pellet": {
+      "name": "Boule de Fumée",
+      "description": "Une évasion rapide dans une petite boule. (+4 DEX)"
+    },
+    "spark_shard": {
+      "name": "Éclat d'Étincelle",
+      "description": "Un fragment crépitant de la foudre de Vezir. (+5 FOR, +2 VIT)"
+    },
+    "star_fruit": {
+      "name": "Fruit Étoile",
+      "description": "Un fruit cosmique venu d'une autre dimension."
+    },
+    "star_fruit_seed": {
+      "name": "Pépin de Fruit Étoile",
+      "description": "À planter pour obtenir un fruit étoile (48h)."
+    },
+    "steel_pickaxe": {
+      "name": "Pioche en Acier",
+      "description": "Une pioche en acier robuste. Confère +1 palier de butin et -5 % de risque d'effondrement par descente."
+    },
+    "stick": {
+      "name": "Bâton en Bois",
+      "description": "Une branche robuste. Pas mal pour commencer. (+2 FOR)"
+    },
+    "stone_heart": {
+      "name": "Cœur de Pierre",
+      "description": "Le cœur de Tal'Rok, dense de détermination. (+4 DEX, +4 VIT)"
+    },
+    "stonebread": {
+      "name": "Pain de Pierre",
+      "description": "Un pain dense et riche en minéraux. +1 DÉF."
+    },
+    "storm_core": {
+      "name": "Noyau de Tempête",
+      "description": "La fureur de Kael, capturée dans du cristal. (+5 DEX, +3 CHA)"
+    },
+    "strawberry": {
+      "name": "Fraise",
+      "description": "Rouge, sucrée et juteuse."
+    },
+    "strawberry_seed": {
+      "name": "Graine de Fraise",
+      "description": "À planter pour obtenir des fraises (18h)."
+    },
+    "swordfish": {
+      "name": "Espadon",
+      "description": "Un poisson combattant majestueux."
+    },
+    "thieves_glove": {
+      "name": "Gant de Voleur",
+      "description": "Utilise !rob @cible avec ces gants."
+    },
+    "tomato": {
+      "name": "Tomate",
+      "description": "Un fruit ou un légume ? Le débat continue."
+    },
+    "tomato_seed": {
+      "name": "Graine de Tomate",
+      "description": "À planter pour obtenir des tomates (2h)."
+    },
+    "tropical_greenhouse": {
+      "name": "Serre Tropicale",
+      "description": "Une structure de verre chauffée pour le café et le cacao."
+    },
+    "trout": {
+      "name": "Truite",
+      "description": "Un poisson d'eau douce."
+    },
+    "tundra_egg": {
+      "name": "Œuf de la Toundra",
+      "description": "Un œuf enveloppé de glace. Tape !hatch pour l'ouvrir !"
+    },
+    "veil_key": {
+      "name": "Clé du Voile",
+      "description": "Ouvre une déchirure dimensionnelle vers la Faille du Voile. Requise pour créer ou rejoindre un raid."
+    },
+    "vip_ticket": {
+      "name": "Ticket VIP",
+      "description": "Réinitialise tes limites de casino et de pile ou face."
+    },
+    "volcano_egg": {
+      "name": "Œuf du Volcan",
+      "description": "Un œuf imprégné de magma. Tape !hatch pour l'ouvrir !"
+    },
+    "wanted_poster": {
+      "name": "Avis de Recherche",
+      "description": "Le visage de chaque hors-la-loi finit par s'y retrouver. (+4 CHA)"
+    },
+    "warrior_stew": {
+      "name": "Ragoût de Guerrier",
+      "description": "Un ragoût de viande copieux qui fortifie ton familier. +1 ATK."
+    },
+    "whale": {
+      "name": "Baleine",
+      "description": "INCROYABLE ! Ça vaut une fortune !"
+    },
+    "wheat": {
+      "name": "Blé",
+      "description": "Indispensable pour faire du pain."
+    },
+    "wheat_seed": {
+      "name": "Graine de Blé",
+      "description": "À planter pour obtenir du blé (5 min)."
+    },
+    "worm": {
+      "name": "Ver",
+      "description": "Appât courant. Bon pour les petites prises."
+    },
+    "zephyr_berries": {
+      "name": "Baies de Zéphyr",
+      "description": "Des baies sauvages crépitant d'énergie du vent. +1 VIT."
+    }
+  }
+}

@@ -169,5 +169,5 @@ func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedFi
 }
 
 func displayName(name, lang string) string {
-	return items.DisplayName(name)
+	return items.LocalizedName(name, lang)
 }
