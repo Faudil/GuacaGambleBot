@@ -80,21 +80,21 @@ var activityLabels = map[string]string{
 // activityCommands maps an activity target stat to the slash command the player
 // should type to complete it, shown next to each quest step.
 var activityCommands = map[string]string{
-	"items_mined":          "/mine",
-	"items_farmed":         "/farm",
-	"items_fished":         "/fish",
-	"items_hunted":         "/hunt",
-	"items_digged":         "/dig",
-	"casino_games_played":  "/casino",
-	"bank_deposits":        "/deposit",
-	"items_sold_market":    "/market",
-	"delve_completions":    "/delve",
-	"pets_fed":             "/pets",
-	"hunt_evidence":        "/crimhunt",
-	"stealth_progress":     "/steal",
-	"blackjack_won":        "/blackjack",
-	"slots_won":            "/casino",
-	"wagers_won":           "/bet",
+	"items_mined":         "/mine",
+	"items_farmed":        "/farm",
+	"items_fished":        "/fish",
+	"items_hunted":        "/hunt",
+	"items_digged":        "/dig",
+	"casino_games_played": "/casino",
+	"bank_deposits":       "/deposit",
+	"items_sold_market":   "/market",
+	"delve_completions":   "/delve",
+	"pets_fed":            "/pets",
+	"hunt_evidence":       "/crimhunt",
+	"stealth_progress":    "/steal",
+	"blackjack_won":       "/blackjack",
+	"slots_won":           "/casino",
+	"wagers_won":          "/bet",
 }
 
 func stepCommand(targetStat string) string {
