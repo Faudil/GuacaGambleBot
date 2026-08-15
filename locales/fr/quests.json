@@ -68,14 +68,14 @@
       "description": "Cultiver et creuser pour des réponses.",
       "step0_dialogue": "Elara s'agenouille près d'un mécanisme circulaire dans la terre du jardin. Sa surface luit de rainures en forme de racines.\n\n\"Une Serrure Alchimique. Une biotechnologie qui lit l'ADN des plantes comme une clé. Le **Blé** est commun, stable, pur. Les Anciens l'auraient utilisé comme référence. Plante quelques cultures avec `!farm`. Voyons si la serrure écoute encore.\"",
       "step1_activity": "Objectif : Plante 2 cultures avec `!farm`.",
-      "step2_transition": "Le mécanisme vibre. Les rainures palpitent d'une lumière pâle. Elara étudie les données qui s'affichent.\n\n\"Ça répond. Mais les données sont incomplètes. Il y a une autre couche enfouie sous le village. Essaie `!dig` dans les fosses de fouille. Les Anciens ont enterré quelque chose là-dessous.\"",
+      "step2_transition": "Le mécanisme vibre. Les rainures palpitent d'une lumière pâle. Elara étudie les données qui s'affichent.\n\n\"Ça répond. Mais la serrure veut plus que de l'ADN végétal — il lui faut un échantillon vivant de la nature sauvage.\"\n\nElle désigne la lisière des bois. \"Une ranger nommée **Irian** connaît la forêt. Elle campe à la sortie du village. Dis-lui que je t'envoie.\"",
       "step3_activity": "Objectif : Creuse 2 fois avec `!dig`.",
-      "step4_dialogue": "Ta pelle heurte du métal. Tu dégages une capsule scellée. À l'intérieur : des graines anciennes et un fragment de carte holographique.\n\nElara contemple la capsule. \"Ils stockaient la vie elle-même. Des graines qui n'existent nulle part ailleurs.\"\n\nElle hoche la tête vers le **Blé** que tu as cultivé. \"Prends-le — tu en auras besoin avant la fin. Et trouve-toi un toit. `!house shop` propose des cabanes de départ.\"",
+      "step4_dialogue": "Ta pelle heurte du métal. Tu dégages une capsule scellée. À l'intérieur : des graines anciennes et un fragment de carte holographique.\n\nElara contemple la capsule. \"Ils stockaient la vie elle-même. Des graines qui n'existent nulle part ailleurs.\"\n\nElle hoche la tête vers le **Blé** que tu as cultivé. \"Prends-le — tu en auras besoin avant la fin.\"\n\nElle jette un œil au village. \"Et si tu veux un toit, il te faudra des crédits. Vends ce que tu as récolté avec `!market sell` — le village achète presque tout.\"",
       "title": "Jour 2 : La Serrure"
     },
     "day3_base": {
       "description": "S'installer et se préparer.",
-      "step0_req": "GambleBot analyse les données de la capsule. Un schéma partiel apparaît à l'écran.\n\n\"Plans Strata, section une. Besoin d'un terminal fixe pour décoder le reste. Achète une Cabane de Départ avec `!house shop`. Coût : 500 crédits et 2 Minerais de Fer.\"",
+      "step0_req": "GambleBot analyse les données de la capsule. Un schéma partiel apparaît à l'écran.\n\n\"Plans Strata, section une. Besoin d'un terminal fixe pour décoder le reste. Achète une Cabane de Départ avec `!house shop`. Coût : 500 crédits.\"",
       "step1_transition": "Le terminal de la cabane s'allume. La voix de GambleBot grésille.\n\n\"Bien. Maintenant protège tes pièces. `!deposit` une fois. Si tu perds tout au casino, au moins tes économies sont en sécurité.\"",
       "step2_activity": "Objectif : Fais 1 dépôt avec `!deposit`.",
       "step3_dialogue": "Dépôt enregistré.\n\nLes plans révèlent que le Coffre utilise un verrou biologique. Il faut un échantillon ADN de la faune locale.\n\n\"La forêt hors de la ville. Une ranger nommée **Irian** la connaît. Elle campe à la lisière. Ne traîne pas trop.\"\n\nIrian te rejoint à la sortie de la ville et te tend un **Œuf de Forêt**, niché dans de la mousse, chaud au toucher. \"Une graine sauvage des bois. Prends-le. Quand tu es prêt, `!hatch` pour l'ouvrir. Ça peut être n'importe quoi.\"",
@@ -83,20 +83,20 @@
     },
     "day4_will": {
       "description": "Chasse et œuf mystère.",
-      "step0_dialogue": "Irian t'attend à la lisière. Elle va droit au but.\n\n\"La forêt n'est pas sûre. De vieilles expériences y traînent encore. Mais le Coffre a besoin d'un échantillon ADN de la faune locale. Alors on chasse. Utilise `!hunt` deux ou trois fois. Ton familier se bat.\"",
+      "step0_dialogue": "Irian te rejoint à la sortie du village et te tend un **Œuf de Forêt**, niché dans de la mousse, chaud au toucher. \"Une graine sauvage des bois. Prends-le.\"\n\nElle incline la tête vers les arbres. \"Le Coffre a besoin d'un échantillon ADN de la faune locale — et il te faudra un compagnon pour l'obtenir. Quand tu es prêt, `!hatch` pour l'ouvrir. Ça peut être n'importe quoi.\"\n\nElle jauge la forêt. \"Les bois ne sont pas sûrs. De vieilles expériences y traînent encore. Alors on chasse. Ton familier se bat.\"",
       "step1_activity": "Objectif : Fais éclore ton œuf avec `!hatch`, puis chasse 2 fois avec `!hunt`.",
       "step2_dialogue": "Ton familier ramène l'échantillon ADN de la broussaille. Irian l'examine et hoche la tête. \"C'est exactement ce qu'il nous faut.\"\n\nElle jette un œil à l'œuf que tu portes. \"Quand il éclora, nourris le nouveau avec `!pets`. Un familier affamé est un familier mort.\"",
       "step3_activity": "Objectif : Nourris ton familier 1 fois avec `!pets`.",
-      "step4_dialogue": "Ton compagnon se calme après le repas. Irian l'observe un instant.\n\n\"Prends-en soin. Peu importe ce qui nous attend, tu auras besoin de quelqu'un à tes côtés.\"\n\nElle regarde le Casino. \"GambleBot a trouvé quelque chose sous son plancher. Va voir par toi-même.\"",
+      "step4_dialogue": "Ton compagnon se calme après le repas. Irian l'observe un instant.\n\n\"Prends-en soin. Peu importe ce qui nous attend, tu auras besoin de quelqu'un à tes côtés.\"\n\nSa radio grésille. La voix d'Elara, pressante.\n\n\"La lecture de la serrure est presque complète — mais il y a une autre couche enfouie sous le village. Essaie `!dig` dans les fosses de fouille. Les Anciens ont enterré quelque chose là-dessous.\"",
       "title": "Jour 4 : La Forêt"
     },
     "day5_odds": {
       "description": "L'énergie et le marché.",
       "step0_dialogue": "GambleBot fait les cent pas quand tu entres.\n\n\"Le Coffre n'est pas sous le Casino par hasard. Ce bâtiment tourne au risque. Chaque tour, chaque lancer, chaque main alimente le système.\"\n\nIl désigne les machines. \"Joue quelques parties. N'importe lesquelles. Je surveille les lectures.\"",
       "step1_activity": "Objectif : Joue 2 fois à des jeux du Casino.",
-      "step2_transition": "Le sol vibre. Un hologramme apparaît. Sa voix est plate, synthétique.\n\n\"Niveaux d'énergie : adéquats. Évaluation du marché : insuffisante. Commerce requis.\"\n\nGambleBot hausse les épaules. \"Le système veut voir du commerce. Utilise `!market sell` pour vendre un objet. Une transaction devrait suffire.\"",
+      "step2_transition": "Le sol vibre. Un hologramme apparaît. Sa voix est plate, synthétique.\n\n\"Niveaux d'énergie : adéquats. Activité du marché : vérifiée. Seuil d'investissement communautaire non atteint. Accès au Coffre refusé.\"\n\nLes voyants de GambleBot faiblissent. \"Il veut qu'on investisse dans le village. Rassemble tout le monde. On a encore une chose à faire.\"",
       "step3_activity": "Objectif : Vends 1 objet avec `!market sell`.",
-      "step4_dialogue": "La transaction est enregistrée. L'hologramme vacille.\n\n\"Activité du marché vérifiée. Seuil d'investissement communautaire non atteint. Accès au Coffre refusé.\"\n\nLes voyants de GambleBot faiblissent. \"Il veut qu'on investisse dans le village. Rassemble tout le monde. On a encore une chose à faire.\"",
+      "step4_dialogue": "La transaction est enregistrée. Les pièces tintent dans ton compte.\n\nGambleBot hoche la tête. \"Bien. Des crédits en poche, le monde s'ouvre à toi.\"\n\nIl jette un œil au terminal. \"Tu vis en dehors de ton sac. Une base d'opérations t'aiderait — et tu as enfin de quoi t'en offrir une.\"",
       "title": "Jour 5 : Le Casino"
     },
     "day6_contribution": {

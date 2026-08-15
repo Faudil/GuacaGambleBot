@@ -68,14 +68,14 @@
       "description": "Farming and digging for answers.",
       "step0_dialogue": "Elara kneels beside a circular mechanism in the garden soil. Its surface glows with faint grooves shaped like roots.\n\n\"An Alchemical Lock. Old world biotech that reads plant DNA like a key. **Wheat** is common, stable, pure. The Ancients would have used it as a baseline. Plant a couple crops with `!farm`. Let's see if the lock still listens.\"",
       "step1_activity": "Goal: Plant 2 crops using `!farm`.",
-      "step2_transition": "The mechanism hums. The grooves pulse with pale light. Elara studies a readout on her tablet.\n\n\"It's responding. But the data is incomplete. There's another layer buried underneath the village. Try `!dig` in the excavation pits. The Ancients buried something down there.\"",
+      "step2_transition": "The mechanism hums. The grooves pulse with pale light. Elara studies a readout on her tablet.\n\n\"It's responding. But the lock wants more than plant DNA — it needs a living sample from the wild.\"\n\nShe points toward the treeline. \"A ranger named **Irian** knows the woods. She's at the edge of town. Tell her I sent you.\"",
       "step3_activity": "Goal: Dig 2 times using `!dig`.",
-      "step4_dialogue": "Your shovel strikes metal. You pull a small capsule from the dirt, sealed tight against time. Inside: old seeds, perfectly preserved, and a fragment of a holographic map.\n\nElara stares at it. \"They weren't just storing power. They were storing life itself. Seeds that don't exist anywhere else.\"\n\nShe nods at the **Wheat** you grew. \"Take it — you'll need it before this is over. And get yourself a place in town. `!house shop` has starter cabins. You'll need somewhere to work from.\"",
+      "step4_dialogue": "Your shovel strikes metal. You pull a small capsule from the dirt, sealed tight against time. Inside: old seeds, perfectly preserved, and a fragment of a holographic map.\n\nElara stares at it. \"They weren't just storing power. They were storing life itself. Seeds that don't exist anywhere else.\"\n\nShe nods at the **Wheat** you grew. \"Take it — you'll need it before this is over.\"\n\nShe glances at the village. \"And if you want a place of your own, you'll need credits. Sell what you've gathered with `!market sell` — the village will buy almost anything.\"",
       "title": "Day 2: The Lock"
     },
     "day3_base": {
       "description": "Setting up and getting settled.",
-      "step0_req": "GambleBot runs the capsule data through the terminal. A partial schematic flickers onto the screen.\n\n\"Strata Blueprints, section one. Need a stationary terminal to decode the rest. Buy a Starter Shack via `!house shop`. Cost: 500 credits and 2 Iron Ore.\"",
+      "step0_req": "GambleBot runs the capsule data through the terminal. A partial schematic flickers onto the screen.\n\n\"Strata Blueprints, section one. Need a stationary terminal to decode the rest. Buy a Starter Shack via `!house shop`. Cost: 500 credits.\"",
       "step1_transition": "The shack terminal powers on. GambleBot's voice crackles through the speaker.\n\n\"Good. Now protect your coins. `!deposit` one time. If you lose it all gambling, at least your savings stay safe.\"",
       "step2_activity": "Goal: Make 1 deposit using `!deposit`.",
       "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\"\n\nIrian meets you at the edge of town and holds out a **Forest Egg**, cradled in moss, warm to the touch. \"A wild seed of the woods. Take it. When you're ready, `!hatch` to open it. Could be anything inside.\"",
@@ -83,20 +83,20 @@
     },
     "day4_will": {
       "description": "Hunting and the mystery egg.",
-      "step0_dialogue": "Irian waits at the treeline. She gets straight to it.\n\n\"The woods aren't safe. Old experiments still run loose. But the Vault needs a DNA sample from local wildlife. So we hunt. Use `!hunt` a couple times. Your pet does the fighting.\"",
+      "step0_dialogue": "Irian meets you at the edge of town and holds out a **Forest Egg**, cradled in moss, warm to the touch. \"A wild seed of the woods. Take it.\"\n\nShe tilts her head toward the trees. \"The Vault needs a DNA sample from local wildlife — and you'll need a companion to get one. When you're ready, `!hatch` to open it. Could be anything inside.\"\n\nShe sizes up the forest. \"The woods aren't safe. Old experiments still run loose. So we hunt. Your pet does the fighting.\"",
       "step1_activity": "Goal: `!hatch` your egg, then hunt 2 times using `!hunt`.",
       "step2_dialogue": "Your pet drags the DNA sample out of the brush. Irian examines it and nods. \"That's what we needed.\"\n\nShe glances at the egg you carry. \"When it hatches, feed the new one with `!pets`. A hungry pet is a dead pet.\"",
       "step3_activity": "Goal: Feed your pet 1 time using `!pets`.",
-      "step4_dialogue": "Your companion settles down after feeding. Irian watches for a moment.\n\n\"Take care of it. Whatever's ahead, you'll need something at your side.\"\n\nShe looks toward the Casino. \"GambleBot found something under his floorboards. Go see for yourself.\"",
+      "step4_dialogue": "Your companion settles down after feeding. Irian watches for a moment.\n\n\"Take care of it. Whatever's ahead, you'll need something at your side.\"\n\nHer radio crackles. Elara's voice comes through, urgent.\n\n\"The lock's reading is almost complete — but there's another layer buried underneath the village. Try `!dig` in the excavation pits. The Ancients buried something down there.\"",
       "title": "Day 4: The Wilds"
     },
     "day5_odds": {
       "description": "Energy and the market.",
       "step0_dialogue": "GambleBot paces when you walk in.\n\n\"The Vault isn't under the Casino by accident. This building runs on risk. Every spin, every flip, every hand feeds the system.\"\n\nHe gestures at the machines. \"Play a couple rounds. Any game. I'll watch the readings.\"",
       "step1_activity": "Goal: Play 2 Casino games.",
-      "step2_transition": "The room hums. A hologram flickers to life. Its voice is flat, synthetic.\n\n\"Power levels: adequate. Market assessment: insufficient. Trade required.\"\n\nGambleBot shrugs. \"The system wants to see commerce. Use `!market sell` to put something up for sale. One transaction should cover it.\"",
+      "step2_transition": "The room hums. A hologram flickers to life. Its voice is flat, synthetic.\n\n\"Power levels: adequate. Market activity: verified. Community investment threshold not met. Vault access denied.\"\n\nGambleBot's lights dim. \"It wants us to invest in the village itself. Get everyone together. We've got one more thing to do.\"",
       "step3_activity": "Goal: Sell 1 item using `!market sell`.",
-      "step4_dialogue": "The transaction registers. The hologram flickers.\n\n\"Market activity verified. Community investment threshold not met. Vault access denied.\"\n\nGambleBot's lights dim. \"It wants us to invest in the village itself. Get everyone together. We've got one more thing to do.\"",
+      "step4_dialogue": "The transaction registers. Coins clink into your account.\n\nGambleBot nods. \"Good. Credits in hand, the world opens up.\"\n\nHe glances at the terminal. \"You've been living out of your pack. A base of operations would help — and the funds to get one are finally there.\"",
       "title": "Day 5: The Casino"
     },
     "day6_contribution": {

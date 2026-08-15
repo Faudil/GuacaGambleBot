@@ -114,35 +114,37 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.day1_strata.step2_transition", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"worm", "worm"}}},
 			{Type: StepActivity, TextKey: "quests.day1_strata.step3_activity", Extra: map[string]any{"target_stat": "items_fished", "target_count": 1}},
 			{Type: StepDialogue, TextKey: "quests.day1_strata.step4_dialogue", Rewards: &QuestReward{Money: 100, ItemIDs: []string{"wheat_seed", "wheat_seed", "growth_elixir"}}},
-			// Day 2 — Farming + Archeology
+			// Day 2 — Farming + Hunting + Pet Care
 			{Type: StepActivity, TextKey: "quests.day2_alchemy.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 2}},
 			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step2_transition"},
-			{Type: StepActivity, TextKey: "quests.day2_alchemy.step3_activity", Extra: map[string]any{"target_stat": "items_digged", "target_count": 2}},
-			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step4_dialogue", Rewards: &QuestReward{ItemIDs: []string{"wheat"}}},
-			// Day 3 — House + Bank
-			{Type: StepRequirement, TextKey: "quests.day3_base.step0_req", Extra: map[string]any{"req_owns_house": true}},
-			{Type: StepDialogue, TextKey: "quests.day3_base.step1_transition"},
-			{Type: StepActivity, TextKey: "quests.day3_base.step2_activity", Extra: map[string]any{"target_stat": "bank_deposits", "target_count": 1}},
-			// Day 4 — Hunting + Pet Care (merged with day3 wrap)
-			{Type: StepDialogue, TextKey: "quests.day3_base.step3_dialogue", Rewards: &QuestReward{Money: 300, ItemIDs: []string{"forest_egg"}}},
+			{Type: StepDialogue, TextKey: "quests.day4_will.step0_dialogue", Rewards: &QuestReward{Money: 300, ItemIDs: []string{"forest_egg"}}},
 			{Type: StepActivity, TextKey: "quests.day4_will.step1_activity", Extra: map[string]any{"target_stat": "items_hunted", "target_count": 2}},
 			{Type: StepDialogue, TextKey: "quests.day4_will.step2_dialogue"},
 			{Type: StepActivity, TextKey: "quests.day4_will.step3_activity", Extra: map[string]any{"target_stat": "pets_fed", "target_count": 1}},
-			// Day 5 — Casino + Market (merged with day4 wrap)
+			// Day 3 — Archeology (dig for the capsule)
 			{Type: StepDialogue, TextKey: "quests.day4_will.step4_dialogue", Rewards: &QuestReward{Money: 300}},
-			{Type: StepActivity, TextKey: "quests.day5_odds.step1_activity", Extra: map[string]any{"target_stat": "casino_games_played", "target_count": 2}},
-			{Type: StepDialogue, TextKey: "quests.day5_odds.step2_transition"},
+			{Type: StepActivity, TextKey: "quests.day2_alchemy.step3_activity", Extra: map[string]any{"target_stat": "items_digged", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day2_alchemy.step4_dialogue", Rewards: &QuestReward{ItemIDs: []string{"wheat"}}},
+			// Day 4 — Market (sell goods to fund a home)
 			{Type: StepActivity, TextKey: "quests.day5_odds.step3_activity", Extra: map[string]any{"target_stat": "items_sold_market", "target_count": 1}},
 			{Type: StepDialogue, TextKey: "quests.day5_odds.step4_dialogue", Rewards: &QuestReward{Money: 300}},
-
+			// Day 5 — House + Bank
+			{Type: StepRequirement, TextKey: "quests.day3_base.step0_req", Extra: map[string]any{"req_owns_house": true}},
+			{Type: StepDialogue, TextKey: "quests.day3_base.step1_transition"},
+			{Type: StepActivity, TextKey: "quests.day3_base.step2_activity", Extra: map[string]any{"target_stat": "bank_deposits", "target_count": 1}},
+			// Day 6 — Casino
+			{Type: StepDialogue, TextKey: "quests.day5_odds.step0_dialogue"},
+			{Type: StepActivity, TextKey: "quests.day5_odds.step1_activity", Extra: map[string]any{"target_stat": "casino_games_played", "target_count": 2}},
+			{Type: StepDialogue, TextKey: "quests.day5_odds.step2_transition"},
+			// Day 7 — Community contribution
 			{Type: StepDialogue, TextKey: "quests.day6_contribution.step0_dialogue"},
 			{Type: StepRequirement, TextKey: "quests.day6_contribution.step1_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 5, "wheat": 3}}},
 			{Type: StepDialogue, TextKey: "quests.day6_contribution.step2_dialogue"},
-			// Day 7 — The Undercroft (find the key)
+			// Day 8 — The Undercroft (find the key)
 			{Type: StepDialogue, TextKey: "quests.day7_delve.step0_dialogue"},
 			{Type: StepActivity, TextKey: "quests.day7_delve.step1_activity", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 1}},
 			{Type: StepDialogue, TextKey: "quests.day7_delve.step2_dialogue", Rewards: &QuestReward{Money: 200}},
-			// Day 8 — Guardian + finale
+			// Day 9 — Guardian + finale
 			{Type: StepDialogue, TextKey: "quests.day8_sprout.step0_event"},
 			{Type: StepBossBattle, TextKey: "quests.day8_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
 			{Type: StepDialogue, TextKey: "quests.day8_sprout.step2_transition"},

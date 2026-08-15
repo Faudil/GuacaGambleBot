@@ -3,6 +3,7 @@ package mining
 import (
 	"encoding/json"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/glebarez/sqlite"
@@ -113,4 +114,69 @@ func TestEventFlowRepro(t *testing.T) {
 		t.Logf("option %d embed: %s", idx, mb)
 		t.Logf("option %d comps: %s", idx, mcb)
 	}
+}
+
+// TestConcurrentSessionAccess exercises the sessions map through the cog's
+// lock-protected read path (mineEmbed) while a writer mutates the session
+// exactly like onDescend does. Run with -race to catch any unlocked access to
+// the shared session state (the "leave after restart/descend loses loot" bug).
+func TestConcurrentSessionAccess(t *testing.T) {
+	if err := i18n.Load("../../../locales"); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "m.db")), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Migrate(d))
+	cfg := &config.Config{StartingBalance: 100}
+	st := store.New(d, cfg)
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	inv := invsvc.New(st, cfg)
+	npc := npcsvc.New(st, cfg, def, inv)
+	svc := miningsvc.New(st, cfg, npc)
+	c := &Cog{store: st, cfg: cfg, svc: svc}
+
+	sessionsMu.Lock()
+	sessions[42] = &userSession{depth: 5, bag: []miningsvc.BagEntry{{Name: "coal", Count: 3}}}
+	sessionsMu.Unlock()
+
+	const readers = 8
+	const iterations = 200
+	var wg sync.WaitGroup
+
+	for r := 0; r < readers; r++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < iterations; i++ {
+				embed, comps := c.mineEmbed("en", 42, "")
+				if embed == nil || len(comps) == 0 {
+					t.Error("mineEmbed returned nil embed/components")
+				}
+			}
+		}()
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < iterations; i++ {
+			sessionsMu.Lock()
+			sess := sessions[42]
+			sess.bag = append(sess.bag, miningsvc.BagEntry{Name: "pebble", Count: 1})
+			sess.depth++
+			sessionsMu.Unlock()
+		}
+	}()
+
+	wg.Wait()
+
+	sessionsMu.Lock()
+	sess := sessions[42]
+	require.NotNil(t, sess)
+	require.Len(t, sess.bag, iterations+1)
+	sessionsMu.Unlock()
+	delete(sessions, 42)
 }

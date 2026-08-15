@@ -8,6 +8,7 @@
     "effects_label": "🌀 Effets : {list}",
     "empty_msg": "😐 Tu sors de la mine les mains vides.\n📈 **XP Mineur :** +{xp}",
     "error": "❌ Quelque chose a mal tourné durant l'expédition. Réessaie.",
+    "entries_remaining": "⛏️ **Expéditions restantes aujourd'hui :** {count}",
     "ev_camp_desc": "Tu trouves un vieux feu de camp encore chaud. Quelqu'un était là récemment.",
     "ev_camp_o1": "🔍 Fouiller",
     "ev_camp_o1d": "Cherche des provisions laissées sur place.",

@@ -8,6 +8,7 @@
     "effects_label": "🌀 Effects: {list}",
     "empty_msg": "😐 You exit the mine empty-handed.\n📈 **Miner XP:** +{xp}",
     "error": "❌ Something went wrong during the expedition. Please try again.",
+    "entries_remaining": "⛏️ **Expeditions left today:** {count}",
     "ev_camp_desc": "You find an old campfire, still warm. Someone was here recently.",
     "ev_camp_o1": "🔍 Search",
     "ev_camp_o1d": "Look for supplies left behind.",

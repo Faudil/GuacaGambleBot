@@ -164,7 +164,7 @@ func TestSellItemNotOwned(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoItem)
 }
 
-func TestSellItemNotActive(t *testing.T) {
+func TestSellItemDeactivatedUsesVendorPrice(t *testing.T) {
 	svc, st := testService(t)
 
 	seedInventory(t, st, 1, "coal", 5)
@@ -172,16 +172,90 @@ func TestSellItemNotActive(t *testing.T) {
 	_ = svc.ensureWeekRotation()
 	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "coal").Update("is_active", false)
 
-	_, _, _, err := svc.SellItem(1, "coal", 1)
-	assert.ErrorIs(t, err, ErrNotActive)
+	gain, _, _, err := svc.SellItem(1, "coal", 1)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(items.Get("coal").Price), gain)
+
+	// A vendor sale must not touch the market state
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, 0, st2.DailySold)
 }
 
-func TestSellItemNotMarketable(t *testing.T) {
-	svc, _ := testService(t)
+func TestSellItemVendorPrice(t *testing.T) {
+	svc, st := testService(t)
 
-	// Equipment is not marketable
-	_, _, _, err := svc.SellItem(1, "stick", 1)
-	assert.ErrorIs(t, err, ErrNotActive)
+	// Equipment is not in the rotation but has a price, so it sells at the
+	// fixed vendor rate.
+	seedInventory(t, st, 1, "stick", 2)
+
+	gain, _, _, err := svc.SellItem(1, "stick", 1)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(items.Get("stick").Price), gain)
+
+	// No MarketState row should be created for a vendor sale
+	var count int64
+	st.DB.Model(&model.MarketState{}).Where("item_id = ?", "stick").Count(&count)
+	assert.Equal(t, int64(0), count)
+
+	var inv model.Inventory
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "stick").First(&inv)
+	assert.Equal(t, 1, inv.Quantity)
+
+	bal, _ := st.GetBalance(1)
+	assert.Equal(t, 100+gain, bal)
+}
+
+func TestSellItemNotSellable(t *testing.T) {
+	svc, st := testService(t)
+
+	// Price-0 items (legendary sets, boss trinkets) can never be sold
+	seedInventory(t, st, 1, "dragon_slayer_sword", 1)
+
+	_, _, _, err := svc.SellItem(1, "dragon_slayer_sword", 1)
+	assert.ErrorIs(t, err, ErrNotSellable)
+}
+
+func TestSellSeedVendorPrice(t *testing.T) {
+	svc, st := testService(t)
+
+	// Seeds are Materials — not in the rotation, but sellable at vendor rate
+	seedInventory(t, st, 1, "wheat_seed", 3)
+
+	gain, _, _, err := svc.SellItem(1, "wheat_seed", 2)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(items.Get("wheat_seed").Price)*2, gain)
+
+	var inv model.Inventory
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "wheat_seed").First(&inv)
+	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestSellItemVendorGoldenTouch(t *testing.T) {
+	svc, st := testService(t)
+
+	seedInventory(t, st, 1, "stick", 5)
+	require.NoError(t, st.SetActiveBuff(1, "golden_touch"))
+
+	gain, _, _, err := svc.SellItem(1, "stick", 1)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(items.Get("stick").Price)*2, gain)
+}
+
+func TestSellPricesFor(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 9, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	prices := svc.SellPricesFor([]string{"coal", "stick", "wheat_seed"})
+	assert.Equal(t, 9, prices["coal"])
+	assert.Equal(t, vendorPrice(items.Get("stick").Price), prices["stick"])
+	assert.Equal(t, vendorPrice(items.Get("wheat_seed").Price), prices["wheat_seed"])
 }
 
 func TestBuyItemAdjustsPriceUp(t *testing.T) {

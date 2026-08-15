@@ -198,6 +198,39 @@ func TestApplyEventOptionShrineMystery(t *testing.T) {
 	assert.Greater(t, types["b"], 0)
 }
 
+func TestEnterMine(t *testing.T) {
+	svc, _ := testService(t)
+	for i := 0; i < 50; i++ {
+		require.NoError(t, svc.EnterMine(1))
+	}
+	err := svc.EnterMine(1)
+	require.ErrorIs(t, err, ErrMineLimit)
+}
+
+func TestRemainingEntries(t *testing.T) {
+	svc, _ := testService(t)
+	r, err := svc.RemainingEntries(1)
+	require.NoError(t, err)
+	assert.Equal(t, 50, r)
+
+	require.NoError(t, svc.EnterMine(1))
+	r, err = svc.RemainingEntries(1)
+	require.NoError(t, err)
+	assert.Equal(t, 49, r)
+}
+
+func TestDescendDoesNotConsumeEntry(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
+	res, err := svc.Descend(1, 1, nil, "", 0)
+	require.NoError(t, err)
+	if !res.Collapsed {
+		r, rerr := svc.RemainingEntries(1)
+		require.NoError(t, rerr)
+		assert.Equal(t, 50, r, "digging must not consume the expedition quota")
+	}
+}
+
 func TestLeaveMine(t *testing.T) {
 	svc, _ := testService(t)
 	bag := []BagEntry{{Name: "pebble", Count: 3}, {Name: "coal", Count: 1}}

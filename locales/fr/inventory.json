@@ -13,6 +13,12 @@
     "empty": "🎒 Ton sac est vide, {user} ! Va miner ou achète des trucs.",
     "error": "❌ Impossible de charger l'inventaire.",
     "footer": "Utilise !use \u003cnom de l'objet\u003e pour t'en servir !",
+    "sell_amount_label": "Quantité",
+    "sell_button": "💰 Vendre des objets",
+    "sell_choose": "💰 Sélectionne un objet à vendre. Les objets de la rotation se vendent au prix du marché, les autres au prix de l'échoppe.",
+    "sell_modal_title": "Vendre {item}",
+    "sell_none": "❌ Tu n'as rien à vendre.",
+    "sell_placeholder": "💰 Sélectionner un objet à vendre",
     "title": "🎒 Sac à dos de {user}"
   }
 }

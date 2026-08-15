@@ -2,6 +2,7 @@ package start
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -10,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
@@ -66,6 +68,81 @@ var activityCommands = map[string]string{
 
 func stepCommand(targetStat string) string {
 	return activityCommands[targetStat]
+}
+
+// categoryCommands maps item categories to the slash command that produces them,
+// used to hint how to gather requirement items.
+var categoryCommands = map[items.Category]string{
+	items.Mining:     "/mine",
+	items.Farming:    "/farm",
+	items.Fishing:    "/fish",
+	items.Archeology: "/dig",
+}
+
+// itemCategoryCommand returns the slash command that produces the given item,
+// or "" when the item isn't a gatherable resource.
+func itemCategoryCommand(itemID string) string {
+	it := items.Get(itemID)
+	if it == nil {
+		return ""
+	}
+	return categoryCommands[it.Category]
+}
+
+// requirementCommands builds the slash commands the player should type to
+// fulfill a requirement step, deduplicated and in a stable order.
+func requirementCommands(step questssvc.QuestStep) string {
+	if step.Extra == nil {
+		return ""
+	}
+	var cmds []string
+	if _, ok := step.Extra["req_owns_house"]; ok {
+		cmds = append(cmds, "/house")
+	}
+	if _, ok := step.Extra["req_pet_level"]; ok {
+		cmds = append(cmds, "/pets", "/hunt")
+	}
+	if _, ok := step.Extra["req_money"]; ok {
+		cmds = append(cmds, "/daily", "/market")
+	}
+	if reqItems, ok := step.Extra["req_items"].(map[string]any); ok {
+		itemIDs := make([]string, 0, len(reqItems))
+		for id := range reqItems {
+			itemIDs = append(itemIDs, id)
+		}
+		sort.Strings(itemIDs)
+		for _, itemID := range itemIDs {
+			if cmd := itemCategoryCommand(itemID); cmd != "" {
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+	seen := make(map[string]bool)
+	var out []string
+	for _, cmd := range cmds {
+		if !seen[cmd] {
+			seen[cmd] = true
+			out = append(out, cmd)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
+// stepCommandHint returns the slash command(s) the player should type to make
+// progress on the given step, or "" when the step has no command to type
+// (dialogue and choice steps only need the Continue button).
+func stepCommandHint(step questssvc.QuestStep) string {
+	switch step.Type {
+	case questssvc.StepActivity:
+		targetStat, _ := step.Extra["target_stat"].(string)
+		return stepCommand(targetStat)
+	case questssvc.StepRequirement:
+		return requirementCommands(step)
+	case questssvc.StepBossBattle:
+		return "/boss"
+	default:
+		return ""
+	}
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
@@ -175,9 +252,15 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 			label = i18n.T("quests.activity_view_btn", lang)
 		case questssvc.StepRequirement:
 			label = i18n.T("quests.req_button", lang)
+			if cmd := stepCommandHint(step); cmd != "" {
+				text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
+			}
 		case questssvc.StepBossBattle:
 			label = i18n.T("quests.activity_view_btn", lang)
 			text = i18n.T("start.boss_prompt", lang)
+			if cmd := stepCommandHint(step); cmd != "" {
+				text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
+			}
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -322,6 +405,8 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		text += "\n\n" + activityProgressStr(&nextStep, progress)
 		btnLabel = i18n.T("quests.activity_view_btn", lang)
+	} else if cmd := stepCommandHint(nextStep); cmd != "" {
+		text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(

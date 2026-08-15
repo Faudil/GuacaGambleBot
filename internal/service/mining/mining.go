@@ -50,7 +50,7 @@ func lootAtDepth(depth int) []MineItem {
 }
 
 const (
-	dailyDescendLimit = 50
+	dailyDescendLimit = 15
 
 	steelPickaxeItem     = "steel_pickaxe"
 	diamondDrillItem     = "diamond_drill"
@@ -674,15 +674,28 @@ func (s *Service) ConsumeItem(userID int64, itemID string) error {
 		Delete(&model.Inventory{}).Error
 }
 
-func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns int) (*DescendResult, error) {
+// EnterMine reserves one daily expedition entry for the user. Returns
+// ErrMineLimit when the player has already started today's quota of
+// expeditions. Digs within an expedition do not consume quota.
+func (s *Service) EnterMine(userID int64) error {
 	ok, _, err := s.store.CheckGameLimit(userID, "mine_descend", dailyDescendLimit)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !ok {
-		return nil, ErrMineLimit
+		return ErrMineLimit
 	}
+	return s.store.IncrementGameLimit(userID, "mine_descend")
+}
 
+// RemainingEntries returns how many expedition entries the user still has
+// available today.
+func (s *Service) RemainingEntries(userID int64) (int, error) {
+	_, remaining, err := s.store.CheckGameLimit(userID, "mine_descend", dailyDescendLimit)
+	return remaining, err
+}
+
+func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns int) (*DescendResult, error) {
 	ml, err := s.GetMinerLevel(userID)
 	if err != nil {
 		return nil, err
@@ -713,8 +726,6 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 	if risk < 0 {
 		risk = 0
 	}
-
-	_ = s.store.IncrementGameLimit(userID, "mine_descend")
 
 	roll := rand.Intn(100) + 1
 	hiddenChamber := false

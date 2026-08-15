@@ -412,6 +412,13 @@ func ItemsByCategory(cat Category) []Item {
 	return byCategory[cat]
 }
 
+// IsSellable reports whether the item can be sold at all. Any item with a
+// positive base price can be sold to the vendor at any time; only the weekly
+// rotation decides whether it sells at the dynamic market price instead.
+func (it *Item) IsSellable() bool {
+	return it.Price > 0
+}
+
 func (it *Item) IsMarketable() bool {
 	if it.Price <= 0 {
 		return false

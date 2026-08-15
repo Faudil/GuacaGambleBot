@@ -454,6 +454,8 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) handleOrderError(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, err error) {
 	switch err {
 	case mktsvc.ErrNotActive:
+		interaction.RespondError(b, i, lang, "market.item_not_in_rotation")
+	case mktsvc.ErrNotSellable:
 		interaction.RespondError(b, i, lang, "market.item_not_sellable")
 	case mktsvc.ErrNotFound:
 		interaction.RespondError(b, i, lang, "market.item_not_found")
@@ -496,7 +498,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		switch err {
 		case mktsvc.ErrNotFound:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.item_not_found", lang))
-		case mktsvc.ErrNotActive:
+		case mktsvc.ErrNotSellable:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.item_not_sellable", lang))
 		case mktsvc.ErrNoItem:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.no_item", lang, map[string]any{"item": c.displayName(it.Name, lang), "amount": amount}))

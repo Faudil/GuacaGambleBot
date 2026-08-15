@@ -29,14 +29,19 @@ const (
 	DailyDecayRate = 0.10
 	PriceFloorMult = 0.20
 	PriceCeilMult  = 5.0
+
+	// VendorSellMult is the fraction of the base price paid for items that
+	// are not part of the weekly rotation.
+	VendorSellMult = 0.50
 )
 
 var (
-	ErrNotActive  = errors.New("item not in active rotation")
-	ErrNotFound   = errors.New("item not found")
-	ErrNoItem     = errors.New("item not owned")
-	ErrNoMoney    = errors.New("insufficient funds")
-	ErrInvalidQty = errors.New("quantity must be positive")
+	ErrNotActive   = errors.New("item not in active rotation")
+	ErrNotSellable = errors.New("item cannot be sold")
+	ErrNotFound    = errors.New("item not found")
+	ErrNoItem      = errors.New("item not owned")
+	ErrNoMoney     = errors.New("insufficient funds")
+	ErrInvalidQty  = errors.New("quantity must be positive")
 )
 
 type Service struct {
@@ -284,13 +289,17 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 	if it == nil {
 		return 0, false, 0, ErrNotFound
 	}
-	if !it.IsMarketable() {
-		return 0, false, 0, ErrNotActive
+	if it.Price <= 0 {
+		return 0, false, 0, ErrNotSellable
 	}
 
+	// Items in the active rotation sell at the dynamic market price;
+	// everything else sells at the fixed vendor rate.
 	var st model.MarketState
-	if err := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error; err != nil {
-		return 0, false, 0, ErrNotActive
+	inRotation := s.store.DB.Where("item_id = ? AND is_active = ?", itemID, true).First(&st).Error == nil
+	unitPrice := vendorPrice(it.Price)
+	if inRotation {
+		unitPrice = st.CurrentPrice
 	}
 
 	var inv model.Inventory
@@ -301,7 +310,7 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 		return 0, false, 0, ErrNoItem
 	}
 
-	totalGain := st.CurrentPrice * amount
+	totalGain := unitPrice * amount
 	if charsvc.HasPassive(s.store, userID, "perk_trader") {
 		totalGain = totalGain * 105 / 100
 	}
@@ -314,11 +323,14 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 		charsvc.ConsumeBuff(s.store, userID, "insider_trading")
 	}
 
-	priceDelta := maxInt(1, int(float64(it.Price)*SellImpact)) * amount
-	newPrice := st.CurrentPrice - priceDelta
-	minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
-	maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
-	newPrice = clampInt(newPrice, minP, maxP)
+	newPrice := 0
+	if inRotation {
+		priceDelta := maxInt(1, int(float64(it.Price)*SellImpact)) * amount
+		newPrice = st.CurrentPrice - priceDelta
+		minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
+		maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
+		newPrice = clampInt(newPrice, minP, maxP)
+	}
 
 	// Ensure user row exists before the transaction
 	if _, err := s.store.GetBalance(userID); err != nil {
@@ -335,13 +347,15 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 			UpdateColumn("balance", gorm.Expr("balance + ?", totalGain)).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.MarketState{}).
-			Where("item_id = ?", itemID).
-			Updates(map[string]any{
-				"current_price": newPrice,
-				"daily_sold":    gorm.Expr("daily_sold + ?", amount),
-			}).Error; err != nil {
-			return err
+		if inRotation {
+			if err := tx.Model(&model.MarketState{}).
+				Where("item_id = ?", itemID).
+				Updates(map[string]any{
+					"current_price": newPrice,
+					"daily_sold":    gorm.Expr("daily_sold + ?", amount),
+				}).Error; err != nil {
+				return err
+			}
 		}
 		if err := achievement.IncrementStat(tx, userID, "items_sold_market", amount); err != nil {
 			return err
@@ -354,6 +368,47 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 	_ = s.store.RecordActivity(userID, "items_sold_market", 1)
 	leveled, lvl := charsvc.AddXP(s.store, userID, amount)
 	return totalGain, leveled, lvl, nil
+}
+
+// SellPricesFor returns the unit sell price of each item: the dynamic market
+// price for items in the active rotation, or the fixed vendor rate otherwise.
+func (s *Service) SellPricesFor(itemIDs []string) map[string]int {
+	prices := make(map[string]int, len(itemIDs))
+	if len(itemIDs) == 0 {
+		return prices
+	}
+	if err := s.ensureWeekRotation(); err != nil {
+		return prices
+	}
+	if err := s.ensureDayReset(); err != nil {
+		return prices
+	}
+
+	var states []model.MarketState
+	if err := s.store.DB.Where("is_active = ? AND item_id IN ?", true, itemIDs).Find(&states).Error; err != nil {
+		return prices
+	}
+	inRotation := make(map[string]bool, len(states))
+	for _, st := range states {
+		inRotation[st.ItemID] = true
+		prices[st.ItemID] = st.CurrentPrice
+	}
+	for _, id := range itemIDs {
+		if inRotation[id] {
+			continue
+		}
+		it := items.Get(id)
+		if it != nil && it.Price > 0 {
+			prices[id] = vendorPrice(it.Price)
+		}
+	}
+	return prices
+}
+
+// vendorPrice is the fixed amount the vendor pays for an item outside the
+// weekly rotation.
+func vendorPrice(base int) int {
+	return maxInt(1, int(float64(base)*VendorSellMult))
 }
 
 func hashSeed(s string) int64 {

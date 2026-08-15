@@ -30,12 +30,44 @@ func TestGetQuestDef(t *testing.T) {
 	def := svc.GetQuestDef("tutorial")
 	require.NotNil(t, def)
 	assert.Equal(t, "main", def.Type)
-	assert.Len(t, def.Steps, 31)
+	assert.Len(t, def.Steps, 32)
 }
 
 func TestGetQuestDefMissing(t *testing.T) {
 	svc, _ := testService(t)
 	assert.Nil(t, svc.GetQuestDef("nonexistent"))
+}
+
+func tutorialStepIdx(t *testing.T, key string) int {
+	def := QuestRegistry["tutorial"]
+	require.NotNil(t, def)
+	for i, s := range def.Steps {
+		if s.TextKey == key {
+			return i
+		}
+	}
+	t.Fatalf("step key not found in tutorial: %s", key)
+	return -1
+}
+
+func TestTutorialOrderProgression(t *testing.T) {
+	dig := tutorialStepIdx(t, "quests.day2_alchemy.step3_activity")
+	hunt := tutorialStepIdx(t, "quests.day4_will.step1_activity")
+	feed := tutorialStepIdx(t, "quests.day4_will.step3_activity")
+	egg := tutorialStepIdx(t, "quests.day4_will.step0_dialogue")
+	house := tutorialStepIdx(t, "quests.day3_base.step0_req")
+	sell := tutorialStepIdx(t, "quests.day5_odds.step3_activity")
+	delve := tutorialStepIdx(t, "quests.day7_delve.step1_activity")
+
+	// Archeology must come after hunting and pet care.
+	assert.Greater(t, dig, feed, "dig should come after pet feeding")
+	assert.Greater(t, feed, hunt, "pet feeding should come after hunting")
+	// The egg is granted before the hunting activity.
+	assert.Less(t, egg, hunt, "egg should be granted before hunting")
+	// Housing must come after selling items at the market.
+	assert.Greater(t, house, sell, "housing requirement should come after selling at the market")
+	// Delve stays near the end, after housing.
+	assert.Greater(t, delve, house, "delve should come after housing")
 }
 
 func TestGetAllActiveQuestsEmpty(t *testing.T) {
@@ -60,7 +92,7 @@ func TestGetAllActiveQuestsWithData(t *testing.T) {
 	assert.Len(t, quests, 1)
 	assert.Equal(t, 2, quests[0].StepIndex)
 	assert.Equal(t, 5, quests[0].Progress)
-	assert.Equal(t, 31, quests[0].TotalSteps)
+	assert.Equal(t, 32, quests[0].TotalSteps)
 }
 
 func TestGetQuestProgressNotFound(t *testing.T) {
@@ -175,9 +207,9 @@ func TestAdvanceStepCompletesQuest(t *testing.T) {
 	require.NoError(t, st.DB.Create(&model.UserQuest{
 		UserID: 1, QuestID: "tutorial", Status: "ACTIVE", StartedAt: now,
 	}).Error)
-	// Start at step 30 (last step, index 30)
+	// Start at step 31 (last step, index 31)
 	require.NoError(t, st.DB.Create(&model.UserQuestData{
-		UserID: 1, QuestID: "tutorial", StepIndex: 30, ProgressValue: 0,
+		UserID: 1, QuestID: "tutorial", StepIndex: 31, ProgressValue: 0,
 	}).Error)
 
 	require.NoError(t, svc.AdvanceStep(1, "tutorial", ""))

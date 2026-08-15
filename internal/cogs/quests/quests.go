@@ -3,6 +3,7 @@ package quests
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -101,6 +102,81 @@ func stepCommand(targetStat string) string {
 	return activityCommands[targetStat]
 }
 
+// categoryCommands maps item categories to the slash command that produces them,
+// used to hint how to gather requirement items.
+var categoryCommands = map[items.Category]string{
+	items.Mining:     "/mine",
+	items.Farming:    "/farm",
+	items.Fishing:    "/fish",
+	items.Archeology: "/dig",
+}
+
+// itemCategoryCommand returns the slash command that produces the given item,
+// or "" when the item isn't a gatherable resource.
+func itemCategoryCommand(itemID string) string {
+	it := items.Get(itemID)
+	if it == nil {
+		return ""
+	}
+	return categoryCommands[it.Category]
+}
+
+// requirementCommands builds the slash commands the player should type to
+// fulfill a requirement step, deduplicated and in a stable order.
+func requirementCommands(step questssvc.QuestStep) string {
+	if step.Extra == nil {
+		return ""
+	}
+	var cmds []string
+	if _, ok := step.Extra["req_owns_house"]; ok {
+		cmds = append(cmds, "/house")
+	}
+	if _, ok := step.Extra["req_pet_level"]; ok {
+		cmds = append(cmds, "/pets", "/hunt")
+	}
+	if _, ok := step.Extra["req_money"]; ok {
+		cmds = append(cmds, "/daily", "/market")
+	}
+	if reqItems, ok := step.Extra["req_items"].(map[string]any); ok {
+		itemIDs := make([]string, 0, len(reqItems))
+		for id := range reqItems {
+			itemIDs = append(itemIDs, id)
+		}
+		sort.Strings(itemIDs)
+		for _, itemID := range itemIDs {
+			if cmd := itemCategoryCommand(itemID); cmd != "" {
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+	seen := make(map[string]bool)
+	var out []string
+	for _, cmd := range cmds {
+		if !seen[cmd] {
+			seen[cmd] = true
+			out = append(out, cmd)
+		}
+	}
+	return strings.Join(out, " ")
+}
+
+// stepCommandHint returns the slash command(s) the player should type to make
+// progress on the given step, or "" when the step has no command to type
+// (dialogue and choice steps only need the Continue button).
+func stepCommandHint(step questssvc.QuestStep) string {
+	switch step.Type {
+	case questssvc.StepActivity:
+		targetStat, _ := step.Extra["target_stat"].(string)
+		return stepCommand(targetStat)
+	case questssvc.StepRequirement:
+		return requirementCommands(step)
+	case questssvc.StepBossBattle:
+		return "/boss"
+	default:
+		return ""
+	}
+}
+
 // stepButtonDisabled reports whether a quest step's action button should be
 // greyed out because its objective is not completed yet. Dialogue and choice
 // steps are always continuable.
@@ -127,7 +203,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 }
 
 // nextStepText builds the text shown for a quest step after advancing, appending
-// the command to type for activity objectives.
+// the command to type when the step requires one.
 func (c *Cog) nextStepText(lang string, def *questssvc.QuestDef, step questssvc.QuestStep) string {
 	text := i18n.T(step.TextKey, lang)
 	if step.Type == questssvc.StepActivity {
@@ -137,9 +213,9 @@ func (c *Cog) nextStepText(lang string, def *questssvc.QuestDef, step questssvc.
 			label = l
 		}
 		text = i18n.T("quests.activity_intro", lang, map[string]any{"label": label, "quest": i18n.T(def.TitleKey, lang)})
-		if cmd := stepCommand(targetStat); cmd != "" {
-			text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
-		}
+	}
+	if cmd := stepCommandHint(step); cmd != "" {
+		text += "\n" + i18n.T("quests.step_command", lang, map[string]any{"command": cmd})
 	}
 	return text
 }
@@ -257,6 +333,9 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 				text = text[:1024] + "..."
 			}
 			desc += text + "\n"
+			if cmd := stepCommandHint(step); cmd != "" {
+				desc += i18n.T("quests.step_command", lang, map[string]any{"command": cmd}) + "\n"
+			}
 		case questssvc.StepBossBattle:
 			btnLabel = i18n.T("quests.activity_view_btn", lang)
 			text := i18n.T(step.TextKey, lang)
@@ -264,6 +343,9 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 				text = text[:1024] + "..."
 			}
 			desc += text + "\n"
+			if cmd := stepCommandHint(step); cmd != "" {
+				desc += i18n.T("quests.step_command", lang, map[string]any{"command": cmd}) + "\n"
+			}
 		default:
 			btnLabel = i18n.T("quests.continue_label", lang)
 		}

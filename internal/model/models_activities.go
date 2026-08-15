@@ -71,6 +71,14 @@ type JournalScene struct {
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
+// DataMigration records a one-time data migration that has been applied, so it
+// runs exactly once across restarts. Migrations are registered in
+// internal/db and executed right after AutoMigrate.
+type DataMigration struct {
+	ID        string    `gorm:"primaryKey;column:id"`
+	AppliedAt time.Time `gorm:"column:applied_at;autoCreateTime"`
+}
+
 func (UserCropHarvest) TableName() string   { return "user_crop_harvests" }
 func (UserFossilHarvest) TableName() string { return "user_fossil_harvests" }
 func (UserFarming) TableName() string       { return "user_farming" }
@@ -79,3 +87,4 @@ func (UserQuest) TableName() string         { return "user_quests" }
 func (UserQuestData) TableName() string     { return "user_quest_data" }
 func (QuestNotification) TableName() string { return "quest_notifications" }
 func (JournalScene) TableName() string      { return "journal_scenes" }
+func (DataMigration) TableName() string     { return "data_migrations" }

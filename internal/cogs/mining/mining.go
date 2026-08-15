@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -31,6 +32,7 @@ type userSession struct {
 }
 
 var sessions = map[int64]*userSession{}
+var sessionsMu sync.Mutex
 
 type Cog struct {
 	store *store.Store
@@ -65,7 +67,16 @@ func (c *Cog) respond(b *interaction.Bot, i *discordgo.InteractionCreate, embed 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	embed, comps := c.toolSelection(lang, userID)
+	remaining, err := c.svc.RemainingEntries(userID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "mining.error")
+		return
+	}
+	if remaining <= 0 {
+		interaction.RespondError(b, i, lang, "mining.limit_reached")
+		return
+	}
+	embed, comps := c.toolSelection(lang, userID, remaining)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
@@ -73,7 +84,16 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
-	embed, comps := c.toolSelection(lang, userID)
+	remaining, err := c.svc.RemainingEntries(userID)
+	if err != nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("mining.error", lang))
+		return
+	}
+	if remaining <= 0 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("mining.limit_reached", lang))
+		return
+	}
+	embed, comps := c.toolSelection(lang, userID, remaining)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
@@ -89,14 +109,16 @@ func localizedItemName(itemID, lang string) string {
 	return items.DisplayName(itemID)
 }
 
-func (c *Cog) toolSelection(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) toolSelection(lang string, userID int64, remaining int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	level, err := c.svc.GetMinerLevel(userID)
 	if err != nil {
 		level = 1
 	}
 	embed := components.Embed(
 		i18n.T("mining.tool_title", lang),
-		i18n.T("mining.tool_desc", lang)+fmt.Sprintf("\n🧑‍🏭 **%s:** %d", i18n.T("mining.miner_level_label", lang), level),
+		i18n.T("mining.tool_desc", lang)+
+			fmt.Sprintf("\n🧑‍🏭 **%s:** %d", i18n.T("mining.miner_level_label", lang), level)+
+			fmt.Sprintf("\n⛏️ %s", i18n.T("mining.entries_remaining", lang, map[string]any{"count": remaining})),
 		0x4A90D9,
 	)
 	owned := c.svc.OwnedTools(userID, level)
@@ -144,16 +166,36 @@ func (c *Cog) onToolSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(rest) > 0 {
 		toolID = rest[0]
 	}
+	sessionsMu.Lock()
+	_, active := sessions[userID]
+	if !active {
+		if err := c.svc.EnterMine(userID); err != nil {
+			sessionsMu.Unlock()
+			if errors.Is(err, miningsvc.ErrMineLimit) {
+				interaction.RespondError(b, i, lang, "mining.limit_reached")
+			} else {
+				slog.Error("mining entry failed", "user", userID, "error", err)
+				interaction.RespondError(b, i, lang, "mining.error")
+			}
+			return
+		}
+	}
 	sessions[userID] = &userSession{depth: 1, toolID: toolID}
+	sessionsMu.Unlock()
 	embed, comps := c.mineEmbed(lang, userID, "")
 	c.respond(b, i, embed, comps)
 }
 
 func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
+		sessionsMu.Unlock()
 		return components.Embed(i18n.T("mining.title", lang), i18n.T("mining.desc", lang), 0x4A90D9), nil
 	}
+	sessCopy := *sess
+	sessionsMu.Unlock()
+	sess = &sessCopy
 
 	depth := sess.depth
 	bagStr := c.bagString(sess.bag, lang)
@@ -255,11 +297,13 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 	if ev == nil || len(ev.Options) == 0 {
 		return c.mineEmbed(lang, userID, "")
 	}
-	sess := sessions[userID]
+	sessionsMu.Lock()
+	sess, _ := sessions[userID]
 	depthStr := ""
 	if sess != nil {
 		depthStr = fmt.Sprintf(" (%dm)", sess.depth)
 	}
+	sessionsMu.Unlock()
 
 	emoji := map[miningsvc.EventRarity]string{
 		"common":    "🟢",
@@ -323,6 +367,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
 		sess = &userSession{depth: 1}
@@ -332,6 +377,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	gvt := sess.ghostVeilTurns
 	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.toolID, gvt)
 	if err != nil {
+		sessionsMu.Unlock()
 		if errors.Is(err, miningsvc.ErrMineLimit) {
 			interaction.RespondError(b, i, lang, "mining.limit_reached")
 		} else {
@@ -343,6 +389,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if res.Collapsed {
 		delete(sessions, userID)
+		sessionsMu.Unlock()
 		bagStr := c.bagString(res.Bag, lang)
 		msg := i18n.T("mining.collapse_msg", lang, map[string]any{"items": bagStr})
 		if len(res.Bag) == 0 {
@@ -360,6 +407,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.Event != nil && res.Event.Buff == miningsvc.GhostVeilBuffID() {
 		sess.ghostVeilTurns = 3
 	}
+	sessionsMu.Unlock()
 
 	eventMsg := c.buildEasterEggText(res.Event, lang)
 	if res.LoreID != "" {
@@ -395,6 +443,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	optionIdx := 0
 	fmt.Sscanf(rest[1], "%d", &optionIdx)
 
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
 		sess = &userSession{depth: 1}
@@ -452,6 +501,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if eff.ForceLeave {
 		delete(sessions, userID)
 		res, err := c.svc.LeaveMine(userID, sess.bag, sess.toolID)
+		sessionsMu.Unlock()
 		if err != nil {
 			slog.Error("mining leave after event failed", "user", userID, "error", err)
 			interaction.RespondError(b, i, lang, "mining.error")
@@ -479,6 +529,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		return
 	}
+	sessionsMu.Unlock()
 
 	embed, comps := c.mineEmbed(lang, userID, msg)
 	c.respond(b, i, embed, comps)
@@ -487,6 +538,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
 		sess = &userSession{}
@@ -494,11 +546,13 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	res, err := c.svc.LeaveMine(userID, sess.bag, sess.toolID)
 	if err != nil {
+		sessionsMu.Unlock()
 		slog.Error("mining leave failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
 		return
 	}
 	delete(sessions, userID)
+	sessionsMu.Unlock()
 
 	title := i18n.T("mining.empty_msg", lang)
 	color := 0xC0C0C0

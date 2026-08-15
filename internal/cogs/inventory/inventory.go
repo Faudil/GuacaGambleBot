@@ -2,32 +2,41 @@ package inventory
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	invsvc "guacagamblebot/internal/service/inventory"
+	mktsvc "guacagamblebot/internal/service/market"
 	"guacagamblebot/internal/store"
 )
+
+const maxSellOptions = 25
 
 type Cog struct {
 	store *store.Store
 	cfg   *config.Config
 	svc   *invsvc.Service
+	mkt   *mktsvc.Service
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: invsvc.New(s, cfg)}
+	c := &Cog{store: s, cfg: cfg, svc: invsvc.New(s, cfg), mkt: mktsvc.New(s, cfg)}
 	r.Slash("inventory", "Voir ton inventaire.", c.onSlashMenu)
 	r.Prefix("inventory", c.onPrefix)
 	r.Prefix("inv", c.onPrefix)
 	r.Prefix("bag", c.onPrefix)
 	r.Prefix("sac", c.onPrefix)
+	r.Component("inventory", "sell", c.onSellButton)
+	r.Component("inventory", "pick", c.onPickItem)
+	r.Modal("inventory", "sellqty", c.onSellModal)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -56,7 +65,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		Text: i18n.T("inventory.footer", lang) + fmt.Sprintf(" — %d/%d", result.Current, result.Limit),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, sellButton(lang)))
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -82,7 +91,155 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("inventory.footer", lang) + fmt.Sprintf(" — %d/%d", result.Current, result.Limit),
 	}
-	_, _ = sess.ChannelMessageSendEmbed(m.ChannelID, embed)
+	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: sellButton(lang),
+	})
+}
+
+func sellButton(lang string) []discordgo.MessageComponent {
+	btn := components.Button(i18n.T("inventory.sell_button", lang),
+		components.Encode("inventory", "sell"), discordgo.SecondaryButton)
+	return []discordgo.MessageComponent{components.ActionRow(btn)}
+}
+
+func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	result, err := c.svc.GetInventory(userID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+
+	var sellables []invsvc.InvEntry
+	for _, e := range result.Entries {
+		if e.EquipInfo == nil && e.Item != nil && e.Item.IsSellable() {
+			sellables = append(sellables, e)
+		}
+	}
+
+	if len(sellables) == 0 {
+		interaction.RespondError(b, i, lang, "inventory.sell_none")
+		return
+	}
+
+	ids := make([]string, 0, len(sellables))
+	for _, e := range sellables {
+		ids = append(ids, e.Item.ID)
+	}
+	prices := c.mkt.SellPricesFor(ids)
+
+	options := make([]discordgo.SelectMenuOption, 0, len(sellables))
+	for _, e := range sellables {
+		if len(options) >= maxSellOptions {
+			break
+		}
+		label := fmt.Sprintf("%s x%d — $%d", displayName(e.Item.Name, lang), e.Quantity, prices[e.Item.ID])
+		if len(label) > 100 {
+			label = label[:97] + "..."
+		}
+		options = append(options, discordgo.SelectMenuOption{
+			Label: label,
+			Value: e.Item.ID,
+			Emoji: &discordgo.ComponentEmoji{Name: e.Item.Emoji},
+		})
+	}
+
+	selectMenu := discordgo.SelectMenu{
+		CustomID:    components.Encode("inventory", "pick"),
+		Placeholder: i18n.T("inventory.sell_placeholder", lang),
+		Options:     options,
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+			components.Embed("", i18n.T("inventory.sell_choose", lang), 0x3498db),
+			[]discordgo.MessageComponent{components.ActionRow(selectMenu)}))
+}
+
+func (c *Cog) onPickItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	itemID := i.MessageComponentData().Values[0]
+
+	it := items.Get(itemID)
+	if it == nil {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+
+	modal := components.ModalResponse(
+		components.Encode("inventory", "sellqty", itemID),
+		i18n.T("inventory.sell_modal_title", lang, map[string]any{"item": displayName(it.Name, lang)}),
+		components.TextInput("amount",
+			i18n.T("inventory.sell_amount_label", lang), true, "1",
+			discordgo.TextInputShort, 1, 5),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+func (c *Cog) onSellModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
+
+	if len(rest) < 1 {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+	itemID := rest[0]
+	values := interaction.ModalValues(i)
+	amountStr := strings.TrimSpace(values["amount"])
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil || amount <= 0 || amount > 999 {
+		interaction.RespondError(b, i, lang, "market.invalid_amount")
+		return
+	}
+
+	it := items.Get(itemID)
+	if it == nil {
+		interaction.RespondError(b, i, lang, "market.item_not_found")
+		return
+	}
+
+	gain, leveled, newLevel, err := c.mkt.SellItem(userID, itemID, amount)
+	if err != nil {
+		switch err {
+		case mktsvc.ErrNotSellable:
+			interaction.RespondError(b, i, lang, "market.item_not_sellable")
+		case mktsvc.ErrNotFound:
+			interaction.RespondError(b, i, lang, "market.item_not_found")
+		case mktsvc.ErrNoItem:
+			interaction.RespondError(b, i, lang, "market.no_item")
+		default:
+			interaction.RespondError(b, i, lang, "inventory.error")
+		}
+		return
+	}
+
+	content := i18n.T("market.sold_msg", lang, map[string]any{
+		"amount": amount, "item": displayName(it.Name, lang), "gain": gain,
+	})
+	if leveled {
+		content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
+	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
 }
 
 func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedField {

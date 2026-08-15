@@ -13,6 +13,12 @@
     "empty": "🎒 Your bag is empty, {user}! Go mining or buy some stuff.",
     "error": "❌ Could not load inventory.",
     "footer": "Use !use \u003citem name\u003e to use it!",
+    "sell_amount_label": "Quantity",
+    "sell_button": "💰 Sell items",
+    "sell_choose": "💰 Select an item to sell. Items in this week's rotation sell at market price, everything else at vendor price.",
+    "sell_modal_title": "Sell {item}",
+    "sell_none": "❌ You have nothing to sell.",
+    "sell_placeholder": "💰 Select an item to sell",
     "title": "🎒 {user}'s Backpack"
   }
 }

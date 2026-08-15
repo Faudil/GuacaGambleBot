@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -70,9 +71,10 @@ func Open(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-// Migrate creates/updates all tables to match the model definitions.
+// Migrate creates/updates all tables to match the model definitions, then runs
+// any pending one-time data migrations.
 func Migrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Cooldown{},
 		&model.GameLimit{},
@@ -98,6 +100,7 @@ func Migrate(db *gorm.DB) error {
 		&model.UserQuestData{},
 		&model.QuestNotification{},
 		&model.JournalScene{},
+		&model.DataMigration{},
 		&model.UserNPCReputation{},
 		&model.UserNPCDailyRep{},
 		&model.UserNPCSecret{},
@@ -133,5 +136,86 @@ func Migrate(db *gorm.DB) error {
 		&model.VeilRaidHallOfFame{},
 		&model.UserJournalEntry{},
 		&model.UserJournalMastery{},
-	)
+	); err != nil {
+		return err
+	}
+	return runDataMigrations(db)
+}
+
+// DataMigration is a one-time, idempotent data fix applied after schema
+// migrations. Each entry is guarded by a marker row in the data_migrations
+// table so it runs exactly once, even across restarts.
+type DataMigration struct {
+	ID  string
+	Run func(tx *gorm.DB) error
+}
+
+// dataMigrations lists all registered data migrations in application order.
+var dataMigrations = []DataMigration{
+	{ID: "tutorial_step_reorder", Run: migrateTutorialSteps},
+}
+
+// runDataMigrations applies any data migrations not yet recorded.
+func runDataMigrations(db *gorm.DB) error {
+	for _, m := range dataMigrations {
+		var count int64
+		if err := db.Model(&model.DataMigration{}).Where("id = ?", m.ID).Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		err := db.Transaction(func(tx *gorm.DB) error {
+			if err := m.Run(tx); err != nil {
+				return err
+			}
+			return tx.Create(&model.DataMigration{ID: m.ID}).Error
+		})
+		if err != nil {
+			return fmt.Errorf("data migration %s: %w", m.ID, err)
+		}
+	}
+	return nil
+}
+
+// tutorialStepRemap maps the old tutorial step_index to the new order introduced
+// by the tutorial reorder (dig after hunting/pet care, housing after selling at
+// the market). Identity entries are omitted.
+var tutorialStepRemap = map[int]int{
+	7:  12, // dig
+	8:  13, // capsule
+	9:  16, // house requirement
+	10: 17, // deposit intro
+	11: 18, // deposit
+	12: 7,  // old egg grant step → new egg grant step (still grants the egg)
+	13: 8,  // hunt
+	14: 9,  // feed intro
+	15: 10, // feed
+	16: 11, // dig intro
+	17: 20, // casino
+	18: 14, // market intro → sell activity
+	19: 14, // sell activity
+	20: 15, // market done
+	21: 22, // community intro
+	22: 23, // community requirement
+	23: 24, // community done
+	24: 25, // delve intro
+	25: 26, // delve
+	26: 27, // vault key
+	27: 28, // guardian event
+	28: 29, // boss
+	29: 30, // boss transition
+	30: 31, // finale
+}
+
+// migrateTutorialSteps remaps the step_index of ACTIVE tutorial quests to the
+// reordered step layout. Completed quests are left untouched.
+func migrateTutorialSteps(tx *gorm.DB) error {
+	var stmt strings.Builder
+	stmt.WriteString("UPDATE user_quest_data SET step_index = CASE step_index")
+	for old, new := range tutorialStepRemap {
+		fmt.Fprintf(&stmt, " WHEN %d THEN %d", old, new)
+	}
+	stmt.WriteString(" ELSE step_index END WHERE quest_id = 'tutorial' AND EXISTS (SELECT 1 FROM user_quests uq WHERE uq.user_id = user_quest_data.user_id AND uq.quest_id = 'tutorial' AND uq.status = 'ACTIVE')")
+	return tx.Exec(stmt.String()).Error
 }
