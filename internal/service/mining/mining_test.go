@@ -112,6 +112,8 @@ func TestDescendLevelReducesRisk(t *testing.T) {
 	trials := 30
 
 	for i := 0; i < trials; i++ {
+		_ = s.ResetGameLimit(1, "mine_descend")
+		_ = s.ResetGameLimit(2, "mine_descend")
 		r1, err := svc.Descend(1, 15, nil, "", 0)
 		require.NoError(t, err)
 		r2, err := svc.Descend(2, 15, nil, "", 0)
@@ -134,6 +136,9 @@ func TestDescendHiddenChamber(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	found := false
 	for i := 0; i < 500; i++ {
+		// The daily descend limit (50) would stop the loop long before the rare
+		// event is found; reset it so the RNG-driven search can run to completion.
+		_ = s.ResetGameLimit(1, "mine_descend")
 		bag := []BagEntry{}
 		res, err := svc.Descend(1, 40, bag, "", 0)
 		require.NoError(t, err)
@@ -150,6 +155,7 @@ func TestDescendEventSpawn(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 20, XP: 0})
 	found := false
 	for i := 0; i < 100; i++ {
+		_ = s.ResetGameLimit(1, "mine_descend")
 		res, err := svc.Descend(1, 15, nil, "", 0)
 		require.NoError(t, err)
 		if res.NarrativeEvent != nil {

@@ -1,5 +1,6 @@
 {
   "common": {
-    "not_your_menu": "❌ This menu belongs to {user}. Run the command yourself to interact with your own menu."
+    "not_your_menu": "❌ This menu belongs to {user}. Run the command yourself to interact with your own menu.",
+    "internal_error": "⚠️ An internal error occurred. Please try again."
   }
 }

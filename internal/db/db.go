@@ -15,8 +15,8 @@ import (
 
 const (
 	busyTimeout  = 5000
-	maxOpenConns = 1
-	maxIdleConns = 1
+	maxOpenConns = 4
+	maxIdleConns = 2
 )
 
 // noNotFoundLogger wraps the default GORM logger so that ErrRecordNotFound is
@@ -44,6 +44,12 @@ func Open(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	db.Exec("PRAGMA journal_mode=WAL")
+	// synchronous=NORMAL keeps WAL durability (recovery-safe) while avoiding an
+	// fsync on every commit, drastically reducing write stalls. A hang in one
+	// commit can no longer freeze the whole bot on the single connection.
+	db.Exec("PRAGMA synchronous=NORMAL")
+	// Keep the WAL small so reads never have to scan a large log.
+	db.Exec("PRAGMA wal_autocheckpoint=512")
 	db.Exec(fmt.Sprintf("PRAGMA busy_timeout=%d", busyTimeout))
 
 	sqlDB, err := db.DB()
@@ -52,6 +58,11 @@ func Open(cfg *config.Config) (*gorm.DB, error) {
 	}
 	sqlDB.SetMaxOpenConns(maxOpenConns)
 	sqlDB.SetMaxIdleConns(maxIdleConns)
+	// Recycle pooled connections so a wedged or poisoned connection (e.g. a
+	// stuck file descriptor after an interrupted write) is eventually replaced
+	// instead of blocking the pool forever.
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 
 	if err := Migrate(db); err != nil {
 		return nil, err

@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -20,6 +21,7 @@ import (
 	"guacagamblebot/internal/universe/hoakhaven"
 	"guacagamblebot/internal/universe/scifi"
 	"guacagamblebot/internal/universe/scorch"
+	"guacagamblebot/internal/watchdog"
 
 	achievementscog "guacagamblebot/internal/cogs/achievements"
 	admincog "guacagamblebot/internal/cogs/admin"
@@ -191,6 +193,22 @@ func main() {
 		os.Exit(1)
 	}
 	defer dg.Close()
+
+	// Watchdog: monitors DB + Discord liveness and exits the process after
+	// MaxFailures consecutive unhealthy checks. restart: always in the compose
+	// file brings the bot back, so a hang becomes a bounded, automatic restart
+	// instead of an indefinite freeze.
+	if sqlDB, sqlErr := database.DB(); sqlErr != nil {
+		slog.Warn("watchdog: could not access sql.DB, DB liveness check disabled", "error", sqlErr)
+	} else {
+		go watchdog.New(sqlDB, dg, watchdog.Options{
+			Interval:      15 * time.Second,
+			DBPingTimeout: 3 * time.Second,
+			ProbeTimeout:  5 * time.Second,
+			MaxFailures:   2,
+			HeartbeatPath: "/tmp/bot.heartbeat",
+		}).Run(ctx)
+	}
 
 	slog.Info("GuacaGambleBot (Go) is online. Press CTRL-C to exit.")
 	stop := make(chan os.Signal, 1)

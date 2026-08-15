@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/components"
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/store"
 )
@@ -325,6 +326,21 @@ func (r *Router) recoverPanic(i *discordgo.InteractionCreate) {
 			"user", UserID(i),
 			"guild", i.GuildID,
 		)
+		// Never leave the user waiting on the 3s interaction window: send a
+		// generic ephemeral error so they get feedback instead of a timeout.
+		if r.bot != nil && r.bot.Session != nil && i.Interaction != nil {
+			lang := "en"
+			if r.store != nil {
+				lang = r.store.GetLanguage(ToInt64(i.GuildID))
+			}
+			_ = r.bot.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: i18n.T("common.internal_error", lang),
+					Flags:   discordgo.MessageFlagsEphemeral,
+				},
+			})
+		}
 	}
 }
 
