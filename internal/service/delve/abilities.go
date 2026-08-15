@@ -2,7 +2,9 @@ package delve
 
 import (
 	"fmt"
+	"strings"
 
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/store"
 	charsvc "guacagamblebot/internal/service/character"
 )
@@ -76,6 +78,15 @@ func GetWeaponDisplay(s *store.Store, userID int64) (emoji, name string) {
 	return "👊", "Punch"
 }
 
+func TranslateWeaponName(name, lang string) string {
+	key := "delve.weapon." + strings.ToLower(name)
+	tr := i18n.T(key, lang)
+	if tr == key {
+		return name
+	}
+	return tr
+}
+
 func EffectiveAtk(s *store.Store, userID int64) int {
 	stats, err := charsvc.GetEffectiveStats(s, userID)
 	if err != nil {
@@ -100,7 +111,7 @@ func EffectiveINT(s *store.Store, userID int64) int {
 	return stats.TotalINT()
 }
 
-func WeaponLabel(s *store.Store, userID int64) string {
+func WeaponLabel(s *store.Store, userID int64, lang string) string {
 	emoji, name := GetWeaponDisplay(s, userID)
-	return fmt.Sprintf("%s %s", emoji, name)
+	return fmt.Sprintf("%s %s", emoji, TranslateWeaponName(name, lang))
 }

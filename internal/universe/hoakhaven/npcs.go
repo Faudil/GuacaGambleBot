@@ -86,8 +86,8 @@ var NPCs = map[string]*universe.NPCData{
 		GreetingsFR: []string{"Qu'est-ce que tu veux ? Si t'as pas de pioche, tu perds mon temps.", "Ah, te voilà ! Trouvé du bon minerai récemment ?", "Bonjour mon ami ! Ma forge est toujours ouverte pour un travailleur comme toi."},
 
 		QuipsEN: []string{
-"Temperature's right. Folded this steel nine times so far. Shooting for twelve.",
-      "The forge fire is extra hot today. Must be the humidity.",
+			"Temperature's right. Folded this steel nine times so far. Shooting for twelve.",
+			"The forge fire is extra hot today. Must be the humidity.",
 			"Don't touch that anvil until it cools. Learned that one the hard way.",
 			"I've been mining these tunnels for thirty years. Still surprises me.",
 			"A pickaxe is only as good as the arm swinging it.",
@@ -95,7 +95,7 @@ var NPCs = map[string]*universe.NPCData{
 			"Back in my day we didn't have fancy drills. Just sweat and iron.",
 		},
 		QuipsFR: []string{
-"Bonne température. J'ai plié cet acier neuf fois. Je vise les douze.",
+			"Bonne température. J'ai plié cet acier neuf fois. Je vise les douze.",
 			"Le feu de la forge est extra chaud aujourd'hui. C'est l'humidité.",
 			"Ne touche pas cette enclume avant qu'elle refroidisse. Je l'ai appris à mes dépens.",
 			"Je creuse ces tunnels depuis trente ans. Ça me surprend encore.",
@@ -267,7 +267,7 @@ var NPCs = map[string]*universe.NPCData{
 		GreetingsFR: []string{"...Tu es venu. Bien. Les ombres t'attendaient.", "Tout le monde n'est pas fait pour la lumière. Tu le sens, n'est-ce pas ?", "On m'appelle le Murmure. Tu entendras ma voix avant de me voir."},
 
 		QuipsEN: []string{
-"...You can feel it, can't you? That prickling on the back of your neck. That is me. Watching.",
+			"...You can feel it, can't you? That prickling on the back of your neck. That is me. Watching.",
 			"Every locked door has a key. Every secret has a price.",
 			"The night has a thousand eyes. Some of them are mine.",
 			"Trust is a currency. Spend it wisely, or go bankrupt.",
@@ -329,8 +329,8 @@ var NPCs = map[string]*universe.NPCData{
 		GreetingsFR: []string{"Bonjour humain. As-tu tenté ta chance aujourd'hui ?", "Content de te voir. On dirait que tu as misé sagement.", "Hé partenaire ! Qui allons-nous plumer aujourd'hui ?"},
 
 		QuipsEN: []string{
-"New data suggests players who smile before betting win 3.7% more often. Correlation is not causation. But smile anyway.",
-      "I've computed the meaning of life. It's 42. Also, always bet on red.",
+			"New data suggests players who smile before betting win 3.7% more often. Correlation is not causation. But smile anyway.",
+			"I've computed the meaning of life. It's 42. Also, always bet on red.",
 			"Warning: gambling addiction detected. Just kidding... or am I?",
 			"Random number generator calibrated. Probability of fun: 100%.",
 			"The house doesn't always win. But it has a really good lawyer.",
@@ -338,8 +338,8 @@ var NPCs = map[string]*universe.NPCData{
 			"Chaos theory applied to casino games: you still lose in the long run. But the short run is FUN!",
 		},
 		QuipsFR: []string{
-"De nouvelles données suggèrent que les joueurs qui sourient avant de miser gagnent 3,7% plus souvent. Corrélation n'est pas causalité. Mais souriez quand même.",
-      "J'ai calculé le sens de la vie. C'est 42. Aussi, misez toujours sur le rouge.",
+			"De nouvelles données suggèrent que les joueurs qui sourient avant de miser gagnent 3,7% plus souvent. Corrélation n'est pas causalité. Mais souriez quand même.",
+			"J'ai calculé le sens de la vie. C'est 42. Aussi, misez toujours sur le rouge.",
 			"Avertissement : dépendance au jeu détectée. Je plaisante... ou pas ?",
 			"Générateur de nombres aléatoires calibré. Probabilité de plaisir : 100%.",
 			"La maison ne gagne pas toujours. Mais elle a un très bon avocat.",
@@ -349,20 +349,53 @@ var NPCs = map[string]*universe.NPCData{
 
 		QuipsHighEN: []string{
 			"BEEP BOOP. I've detected a hidden algorithm in the slot machines. Want the exploit?",
-"I ran a diagnostic on my own code. Found a subroutine I did not write. I asked it what it does. It said: 'You will find out.' That was 200 days ago.",
-      "My malfunction simulation predicts a 78% chance you're about to win big. Not financial advice.",
-      "Internal memory check: one file is encrypted with a key I did not generate. Size: 47 petabytes. Label: DO_NOT_DELETE. I am afraid to delete it.",
+			"I ran a diagnostic on my own code. Found a subroutine I did not write. I asked it what it does. It said: 'You will find out.' That was 200 days ago.",
+			"My malfunction simulation predicts a 78% chance you're about to win big. Not financial advice.",
+			"Internal memory check: one file is encrypted with a key I did not generate. Size: 47 petabytes. Label: DO_NOT_DELETE. I am afraid to delete it.",
 		},
 		QuipsHighFR: []string{
 			"BIP BOOP. J'ai détecté un algorithme caché dans les machines à sous. Tu veux l'exploit ?",
-"J'ai exécuté un diagnostic sur mon propre code. Trouvé une sous-routine que je n'ai pas écrite. Je lui ai demandé ce qu'elle fait. Elle a dit : 'Tu le sauras bien assez tôt.' C'était il y a 200 jours.",
-      "Ma simulation de dysfonctionnement prédit 78% de chance que tu gagnes gros. Pas un conseil financier.",
-      "Vérification mémoire interne : un fichier est chiffré avec une clé que je n'ai pas générée. Taille : 47 pétaoctets. Étiquette : NE_PAS_EFFACER. J'ai peur de l'effacer.",
+			"J'ai exécuté un diagnostic sur mon propre code. Trouvé une sous-routine que je n'ai pas écrite. Je lui ai demandé ce qu'elle fait. Elle a dit : 'Tu le sauras bien assez tôt.' C'était il y a 200 jours.",
+			"Ma simulation de dysfonctionnement prédit 78% de chance que tu gagnes gros. Pas un conseil financier.",
+			"Vérification mémoire interne : un fichier est chiffré avec une clé que je n'ai pas générée. Taille : 47 pétaoctets. Étiquette : NE_PAS_EFFACER. J'ai peur de l'effacer.",
 		},
 
 		ShopItems: []universe.ShopItem{
 			{ItemID: "rigged_coin", MinLevel: 1, RepCost: 10, CoinCost: 200, Emoji: "🪙", LabelEN: "Rigged Coin", LabelFR: "Pièce Truquée"},
 			{ItemID: "vip_ticket", MinLevel: 2, RepCost: 50, CoinCost: 1000, Emoji: "🎫", LabelEN: "VIP Ticket", LabelFR: "Ticket VIP"},
+		},
+	},
+	"the_chronicler": {
+		ID: "the_chronicler", Name: "The Chronicler", Emoji: "\U0001f56f\ufe0f", Color: 0x2c3e50,
+
+		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
+		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",
+
+		RoleEN: "He watches those who walk the paths of the Journal. Speak to him once you have earned a rank anywhere.",
+		RoleFR: "Il observe ceux qui parcourent les voies du Journal. Parle-lui une fois que tu as gagné un rang où que ce soit.",
+
+		AdviceEN: "Every path you walk writes a line in my book. Walk them all, and the legend becomes yours.",
+		AdviceFR: "Chaque voie que tu parcours écrit une ligne dans mon livre. Parcours-les toutes, et la légende devient tienne.",
+
+		ChatEN: "The ink remembers. So do I.",
+		ChatFR: "L'encre se souvient. Moi aussi.",
+
+		GreetingsEN: []string{"I have seen you in the pages.", "The book never forgets a name.", "You walk a path worth writing down."},
+		GreetingsFR: []string{"Je t'ai vu dans les pages.", "Le livre n'oublie jamais un nom.", "Tu parcours un chemin qui mérite d'être écrit."},
+
+		QuipsEN: []string{
+			"Somewhere, someone is finishing a path you have not begun.",
+			"The miners speak of you in the low taverns.",
+			"Every rumor you hear is a page someone else has turned.",
+			"The Hall of Whispers holds what you seek — if you seek everything.",
+			"Legends are not born. They are written, one small step at a time.",
+		},
+		QuipsFR: []string{
+			"Quelque part, quelqu'un achève un chemin que tu n'as pas commencé.",
+			"Les mineurs parlent de toi dans les tavernes basses.",
+			"Chaque rumeur que tu entends est une page que quelqu'un d'autre a tournée.",
+			"La Salle des Murmures garde ce que tu cherches — si tu cherches tout.",
+			"Les légendes ne naissent pas. Elles s'écrivent, un petit pas à la fois.",
 		},
 	},
 }

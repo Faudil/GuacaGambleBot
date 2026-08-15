@@ -208,10 +208,6 @@ var lockedDescs = []string{
 	"A reinforced door bars your way. Through a crack, you glimpse a glittering chamber beyond. The lock gleams, awaiting a key.",
 }
 
-func pickRandom[T any](items []T, rng *rand.Rand) T {
-	return items[rng.Intn(len(items))]
-}
-
 func weightedPick(rng *rand.Rand, weights []roomWeight) RoomType {
 	total := 0
 	for _, w := range weights {
@@ -238,7 +234,7 @@ func GenerateRoom(session *model.DelveSession, lang string) Room {
 	}
 	roomType := weightedPick(rng, weights)
 
-	desc := roomDescription(roomType, zone, rng)
+	desc := roomDescription(roomType, zone, rng, lang)
 	btns := roomButtons(roomType, rng)
 	eventData := roomEventData(roomType, zone, rng, session.Floor)
 
@@ -250,54 +246,54 @@ func GenerateRoom(session *model.DelveSession, lang string) Room {
 	}
 }
 
-func roomDescription(rt RoomType, zone string, rng *rand.Rand) string {
-	var desc string
+func roomDescription(rt RoomType, zone string, rng *rand.Rand, lang string) string {
+	var key string
 	switch rt {
 	case RoomMonster:
 		if zone == "crypt" {
-			desc = "Bones rattle in the corners as a shambling figure rises to block your path."
+			key = "crypt_monster"
 		} else {
-			desc = pickRandom(monsterDescs, rng)
+			key = fmt.Sprintf("monster_%d", rng.Intn(len(monsterDescs)))
 		}
 	case RoomTreasure:
-		desc = pickRandom(treasureDescs, rng)
+		key = fmt.Sprintf("treasure_%d", rng.Intn(len(treasureDescs)))
 	case RoomAltar:
-		desc = pickRandom(altarDescs, rng)
+		key = fmt.Sprintf("altar_%d", rng.Intn(len(altarDescs)))
 	case RoomMerchant:
-		desc = pickRandom(merchantDescs, rng)
+		key = fmt.Sprintf("merchant_%d", rng.Intn(len(merchantDescs)))
 	case RoomPuzzle:
-		desc = pickRandom(puzzleDescs, rng)
+		key = fmt.Sprintf("puzzle_%d", rng.Intn(len(puzzleDescs)))
 	case RoomRest:
-		desc = pickRandom(restDescs, rng)
+		key = fmt.Sprintf("rest_%d", rng.Intn(len(restDescs)))
 	case RoomTomb:
-		desc = pickRandom(tombDescs, rng)
+		key = fmt.Sprintf("tomb_%d", rng.Intn(len(tombDescs)))
 	case RoomGarden:
-		desc = pickRandom(gardenDescs, rng)
+		key = fmt.Sprintf("garden_%d", rng.Intn(len(gardenDescs)))
 	case RoomForge:
-		desc = pickRandom(anvilDescs, rng)
+		key = fmt.Sprintf("anvil_%d", rng.Intn(len(anvilDescs)))
 	case RoomRift:
-		desc = pickRandom(riftDescs, rng)
+		key = fmt.Sprintf("rift_%d", rng.Intn(len(riftDescs)))
 	case RoomShrine:
-		desc = pickRandom(shrineDescs, rng)
+		key = fmt.Sprintf("shrine_%d", rng.Intn(len(shrineDescs)))
 	case RoomLocked:
-		desc = pickRandom(lockedDescs, rng)
+		key = fmt.Sprintf("locked_%d", rng.Intn(len(lockedDescs)))
 	case RoomNPC:
-		desc = pickRandom(npcDescs, rng)
+		key = fmt.Sprintf("npc_%d", rng.Intn(len(npcDescs)))
 	default:
 		switch zone {
 		case "crypt":
-			desc = pickRandom(cryptDescs, rng)
+			key = fmt.Sprintf("crypt_%d", rng.Intn(len(cryptDescs)))
 		case "fungal_wilds":
-			desc = pickRandom(fungalDescs, rng)
+			key = fmt.Sprintf("fungal_wilds_%d", rng.Intn(len(fungalDescs)))
 		case "forge_district":
-			desc = pickRandom(forgeDescs, rng)
+			key = fmt.Sprintf("forge_district_%d", rng.Intn(len(forgeDescs)))
 		case "abyss":
-			desc = pickRandom(abyssDescs, rng)
+			key = fmt.Sprintf("abyss_%d", rng.Intn(len(abyssDescs)))
 		default:
-			desc = "The passage stretches ahead into darkness."
+			key = "passage_default"
 		}
 	}
-	return desc
+	return i18n.T("delve.room.desc."+key, lang)
 }
 
 func roomButtons(rt RoomType, rng *rand.Rand) []RoomButton {
@@ -412,15 +408,8 @@ func roomEventData(rt RoomType, zone string, rng *rand.Rand, floor int) string {
 }
 
 func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *Service) *discordgo.MessageEmbed {
-	zoneDisplay := map[string]string{
-		"crypt":          "Crypt",
-		"fungal_wilds":   "Fungal Wilds",
-		"forge_district": "Forge District",
-		"abyss":          "The Abyss",
-	}
-
-	zoneName := zoneDisplay[session.Zone]
-	if zoneName == "" {
+	zoneName := i18n.T("delve.room.zone."+session.Zone, lang)
+	if zoneName == "delve.room.zone."+session.Zone {
 		zoneName = session.Zone
 	}
 
@@ -431,8 +420,11 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 	}
 	danger := CalcDanger(session.Floor, playerLevel)
 
-	title := fmt.Sprintf("🧱 The Undercroft · Floor %d · %s", session.Floor, zoneName)
-	dangerLine := DescribeDanger(danger)
+	title := i18n.T("delve.room.title", lang, map[string]any{
+		"floor": fmt.Sprintf("%d", session.Floor),
+		"zone":  zoneName,
+	})
+	dangerLine := DescribeDanger(danger, lang)
 	desc := dangerLine + "\n\n" + room.Description
 
 	color := 0x2ecc71
@@ -451,26 +443,39 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 
 	warningLine := ""
 	if danger.IsPunished {
-		warningLine = "\n⚠️ The depths sense your weakness..."
+		warningLine = "\n⚠️ " + i18n.T("delve.handler.weakness_warning", lang)
 	}
 	if session.Torches == 0 {
 		if warningLine != "" {
-			warningLine += "\n🌑 You are shrouded in darkness!"
+			warningLine += "\n🌑 " + i18n.T("delve.combat.darkness_warning", lang)
 		} else {
-			warningLine = "\n🌑 You are shrouded in darkness!"
+			warningLine = "\n🌑 " + i18n.T("delve.combat.darkness_warning", lang)
 		}
 	}
 
-	potionDisplay := fmt.Sprintf("🧪 Potions: %d", session.Potions)
-	hpLine := fmt.Sprintf("⚔️ HP: %d/%d    🔥 Mana: %d/%d", session.HP, session.MaxHP, session.Mana, session.MaxMana)
-	itemsLine := fmt.Sprintf("🔦 Torches: %d    🗝️ Keys: %d    💰 Gold: %d", session.Torches, session.Keys, session.Gold)
+	potionDisplay := i18n.T("delve.room.potions_line", lang, map[string]any{"potions": fmt.Sprintf("%d", session.Potions)})
+	hpLine := i18n.T("delve.room.hp_line", lang, map[string]any{
+		"hp":      fmt.Sprintf("%d", session.HP),
+		"max_hp":  fmt.Sprintf("%d", session.MaxHP),
+		"mana":    fmt.Sprintf("%d", session.Mana),
+		"max_mana": fmt.Sprintf("%d", session.MaxMana),
+	})
+	itemsLine := i18n.T("delve.room.items_line", lang, map[string]any{
+		"torches": fmt.Sprintf("%d", session.Torches),
+		"keys":    fmt.Sprintf("%d", session.Keys),
+		"gold":    fmt.Sprintf("%d", session.Gold),
+	})
 	var effects []string
 	json.Unmarshal([]byte(session.StatusEffects), &effects)
 	statusLine := ""
 	if len(effects) > 0 {
 		var displayEffects []string
 		for _, e := range effects {
-			displayEffects = append(displayEffects, i18n.T("delve.status."+e, lang))
+			statusKey := e
+			if i := strings.Index(e, ":"); i > 0 {
+				statusKey = e[:i]
+			}
+			displayEffects = append(displayEffects, i18n.T("delve.status."+statusKey, lang))
 		}
 		statusLine = "\n⚠️ " + strings.Join(displayEffects, ", ")
 	}
@@ -478,7 +483,7 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 	pets := svc.DeployedPets(session)
 	petLine := ""
 	if len(pets) > 0 {
-		petLine = fmt.Sprintf("\n🐾 Pets deployed: %d", len(pets))
+		petLine = "\n" + i18n.T("delve.room.pets_line", lang, map[string]any{"pets": fmt.Sprintf("%d", len(pets))})
 	}
 
 	statBlock := hpLine + "\n" + potionDisplay + "  " + itemsLine + warningLine + petLine + statusLine
@@ -524,7 +529,11 @@ func CombatRoomButtons(lang string, abilities []AbilityStatus, weaponEmoji, weap
 
 		if a.ID == "slash" {
 			emoji = weaponEmoji
-			label = weaponName
+			label = TranslateWeaponName(weaponName, lang)
+		} else {
+			if tr := i18n.T("delve.abilities."+a.ID, lang); tr != "delve.abilities."+a.ID {
+				label = tr
+			}
 		}
 
 		style := discordgo.PrimaryButton
@@ -587,7 +596,7 @@ func MaybeAddRescueOverlay(room *Room, fallen []model.DelveSession, currentUserI
 	for _, f := range eligible {
 		btns = append(btns, RoomButton{
 			Emoji:  "🤝",
-			Label:  fmt.Sprintf("Rescue <@%d> (-1🔥)", f.UserID),
+			Label:  i18n.T("delve.room.rescue", lang, map[string]any{"user": fmt.Sprintf("<@%d>", f.UserID)}),
 			Action: "rescue",
 			Style:  discordgo.SuccessButton,
 			Data:   fmt.Sprintf("%d", f.UserID),
@@ -595,7 +604,7 @@ func MaybeAddRescueOverlay(room *Room, fallen []model.DelveSession, currentUserI
 	}
 	btns = append(btns, RoomButton{
 		Emoji:  "🚫",
-		Label:  "Ignore them",
+		Label:  i18n.T("delve.room.ignore", lang),
 		Action: "ignore_fallen",
 		Style:  discordgo.SecondaryButton,
 		Data:   "",

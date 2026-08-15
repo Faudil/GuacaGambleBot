@@ -1,5 +1,7 @@
 package delve
 
+import "guacagamblebot/internal/i18n"
+
 type FlagDef struct {
 	Sentence   string
 	Epithet    string
@@ -121,16 +123,26 @@ var FlagManifest = map[string]FlagDef{
 	},
 }
 
-func GetFlagSentence(flagID string) string {
+func GetFlagSentence(flagID, lang string) string {
 	if f, ok := FlagManifest[flagID]; ok {
-		return f.Sentence
+		key := "delve.flags." + flagID
+		tr := i18n.T(key, lang)
+		if tr == key {
+			return f.Sentence
+		}
+		return tr
 	}
 	return ""
 }
 
-func GetFlagEpithet(flagID string) string {
+func GetFlagEpithet(flagID, lang string) string {
 	if f, ok := FlagManifest[flagID]; ok {
-		return f.Epithet
+		key := "delve.flags.epithets." + flagID
+		tr := i18n.T(key, lang)
+		if tr == key {
+			return f.Epithet
+		}
+		return tr
 	}
 	return ""
 }

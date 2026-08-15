@@ -18,6 +18,7 @@ import (
 	"guacagamblebot/internal/model"
 	mktsvc "guacagamblebot/internal/service/market"
 	questssvc "guacagamblebot/internal/service/quests"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 )
 
@@ -437,6 +438,9 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			interaction.SendQuestNotification(b, i, n, lang)
 		}
 
+		if text, dm := jsvc.SceneLine(c.store, userID, "market", lang); text != "" {
+			interaction.SendJournalScene(b, i, text, dm)
+		}
 	default:
 		interaction.RespondError(b, i, lang, "market.error")
 		return
@@ -512,6 +516,10 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		sellMsg += "\n\n" + questssvc.QuestNotificationMsg(n, lang)
 	}
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "market", lang); text != "" {
+		interaction.SendJournalSceneMsg(sess, m.ChannelID, m.Author.ID, text, dm)
+	}
 	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
 
 	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
@@ -527,3 +535,9 @@ func currentWeekID() string {
 	y, w := time.Now().ISOWeek()
 	return fmt.Sprintf("%d-W%02d", y, w)
 }
+
+
+
+
+
+

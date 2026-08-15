@@ -8,9 +8,10 @@ func init() {
 		DescKey:  "journal.paths.champion.desc",
 		Steps: []Step{
 			{
-				TextKey: "journal.paths.champion.step1",
-				Check:   statCheck("pvp_wins", 5),
-				Reward:  Reward{Money: 100},
+				TextKey:  "journal.paths.champion.step1",
+				Check:    statCheck("pvp_wins", 5),
+				Discover: statCheck("pvp_wins", 1),
+				Reward:   Reward{Money: 100},
 			},
 			{
 				TextKey: "journal.paths.champion.step2",

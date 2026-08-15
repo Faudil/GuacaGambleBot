@@ -256,3 +256,120 @@ func TestEnsureTutorialEggSkipsWhenPetExists(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, granted)
 }
+
+// ─── Side quest lines (BossLossUnlocks) ───────────────────────
+
+func TestIrianTrainingQuestDef(t *testing.T) {
+	svc, _ := testService(t)
+	def := svc.GetQuestDef("irian_training")
+	require.NotNil(t, def)
+	assert.Equal(t, "side", def.Type)
+	assert.Equal(t, "irian", def.NPCID)
+	require.Len(t, def.Steps, 6)
+	assert.Equal(t, StepDialogue, def.Steps[0].Type)
+	assert.Equal(t, StepActivity, def.Steps[1].Type)
+	assert.Equal(t, StepDialogue, def.Steps[2].Type)
+	assert.Equal(t, StepActivity, def.Steps[3].Type)
+	assert.Equal(t, StepRequirement, def.Steps[4].Type)
+	assert.Equal(t, StepDialogue, def.Steps[5].Type)
+	// Activity steps target pets_fed and items_hunted.
+	assert.Equal(t, "pets_fed", def.Steps[1].Extra["target_stat"])
+	assert.Equal(t, "items_hunted", def.Steps[3].Extra["target_stat"])
+	// Requirement step requires pet level 10.
+	assert.Equal(t, 10, toInt(def.Steps[4].Extra["req_pet_level"]))
+	// Final step rewards stat-boosting food.
+	require.NotNil(t, def.Steps[5].Rewards)
+	assert.Equal(t, 500, def.Steps[5].Rewards.Money)
+	assert.Contains(t, def.Steps[5].Rewards.ItemIDs, "warrior_stew")
+}
+
+func TestUnlockOnBossLossStartsOnce(t *testing.T) {
+	svc, st := testService(t)
+	qid, newly := svc.UnlockOnBossLoss(1, 5)
+	assert.Equal(t, "irian_training", qid)
+	assert.True(t, newly)
+
+	// Second loss must not restart an already active quest.
+	qid, newly = svc.UnlockOnBossLoss(1, 5)
+	assert.Equal(t, "", qid)
+	assert.False(t, newly)
+
+	var uq model.UserQuest
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "irian_training").First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status)
+}
+
+func TestUnlockOnBossLossNoRegistry(t *testing.T) {
+	svc, _ := testService(t)
+	qid, newly := svc.UnlockOnBossLoss(1, 3)
+	assert.Equal(t, "", qid)
+	assert.False(t, newly)
+}
+
+func TestUnlockOnBossLossSkipsCompleted(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "irian_training", Status: "COMPLETED",
+	}).Error)
+
+	qid, newly := svc.UnlockOnBossLoss(1, 5)
+	assert.Equal(t, "", qid)
+	assert.False(t, newly)
+}
+
+// ─── req_pet_level requirement ─────────────────────────────────
+
+func TestCheckRequirementPetLevelFails(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "irian_training", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "irian_training", StepIndex: 4,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserPet{
+		UserID: 1, PetType: "Dragon", Nickname: "Draco", Level: 7, IsActive: true,
+	}).Error)
+
+	err := svc.CheckRequirement(1, "irian_training")
+	require.Error(t, err)
+	var reqErr *RequirementError
+	require.ErrorAs(t, err, &reqErr)
+	assert.Equal(t, 10, reqErr.PetLevelNeeded)
+	assert.Equal(t, 7, reqErr.PetLevelHave)
+}
+
+func TestCheckRequirementPetLevelPasses(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "irian_training", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "irian_training", StepIndex: 4,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserPet{
+		UserID: 1, PetType: "Dragon", Nickname: "Draco", Level: 12, IsActive: true,
+	}).Error)
+
+	assert.NoError(t, svc.CheckRequirement(1, "irian_training"))
+}
+
+func TestFulfillRequirementPetLevelAdvances(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "irian_training", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "irian_training", StepIndex: 4,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserPet{
+		UserID: 1, PetType: "Dragon", Nickname: "Draco", Level: 12, IsActive: true,
+	}).Error)
+
+	require.NoError(t, svc.FulfillRequirement(1, "irian_training"))
+
+	_, uqd, err := svc.GetQuestProgress(1, "irian_training")
+	require.NoError(t, err)
+	require.NotNil(t, uqd)
+	assert.Equal(t, 5, uqd.StepIndex)
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
@@ -608,6 +609,10 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if n, ok := c.store.PopQuestNotification(userID); ok {
 				interaction.SendQuestNotification(b, i, n, lang)
 			}
+
+			if text, dm := jsvc.SceneLine(c.store, userID, "fishing", lang); text != "" {
+				interaction.SendJournalScene(b, i, text, dm)
+			}
 			return
 		}
 
@@ -745,6 +750,10 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 		if n, ok := c.store.PopQuestNotification(userID); ok {
 			interaction.SendQuestNotification(b, i, n, lang)
+		}
+
+		if text, dm := jsvc.SceneLine(c.store, userID, "fishing", lang); text != "" {
+			interaction.SendJournalScene(b, i, text, dm)
 		}
 		return
 	}
@@ -987,3 +996,7 @@ func itoa(n int) string {
 	}
 	return s
 }
+
+
+
+

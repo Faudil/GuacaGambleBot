@@ -25,7 +25,8 @@
         "step6": "Contribuer 100 aux projets communautaires",
         "step7": "Terminer un projet de recherche",
         "step8": "Contribuer 1 000 aux projets communautaires",
-        "title": "Bâtisseur"
+        "title": "Bâtisseur",
+        "rumor": "L'intendant mentionne des terrains vides et des mains oisives."
       },
       "champion": {
         "desc": "Duels, chasses, familiers, boss, donjon.",
@@ -37,7 +38,8 @@
         "step6": "Terminer une run de donjon",
         "step7": "Atteindre le niveau de personnage 25",
         "step8": "Devenir Champion de la Ligue des Boss",
-        "title": "Champion"
+        "title": "Champion",
+        "rumor": "Le héraut de l'arène appelle les challengers."
       },
       "highroller": {
         "desc": "Coinflip, machines, blackjack, roulette, loto.",
@@ -49,7 +51,8 @@
         "step6": "Gagner un pari que tu as créé",
         "step7": "Gagner 2 wagers",
         "step8": "Gagner 10 000 au total au casino",
-        "title": "Gros Parieur"
+        "title": "Gros Parieur",
+        "rumor": "Le Club des Gros Parieurs observe les nouveaux venus."
       },
       "historian": {
         "desc": "Fragments de lore, fossiles, recherches et secrets.",
@@ -61,7 +64,8 @@
         "step6": "Découvrir 3 secrets de PNJ",
         "step7": "Atteindre le niveau de réputation 5 avec un PNJ",
         "step8": "Découvrir 45 fragments de lore",
-        "title": "Historien"
+        "title": "Historien",
+        "rumor": "L'archiviste murmure au sujet de fragments éparpillés à travers le pays."
       },
       "hunter": {
         "desc": "Zones de chasse, bosses de zone et trophées.",
@@ -73,7 +77,8 @@
         "step6": "Vaincre le Dragon de la Volcan",
         "step7": "Vaincre le boss de chaque zone de chasse",
         "step8": "Vaincre 100 bosses de zone",
-        "title": "Chasseur"
+        "title": "Chasseur",
+        "rumor": "Les chasseurs du repaire évoquent un gibier dangereux."
       },
       "merchant": {
         "desc": "Gagne, échange, banque et investis.",
@@ -85,7 +90,8 @@
         "step6": "Contribuer 500 aux projets communautaires",
         "step7": "Gagner 10 000 au total",
         "step8": "Détenir 100 000 en bourse",
-        "title": "Prince Marchand"
+        "title": "Prince Marchand",
+        "rumor": "Un marchand de la guilde a des propositions pour toi."
       },
       "prospector": {
         "desc": "Mine, pêche, culture, chasse et fouille.",
@@ -96,7 +102,8 @@
         "step5": "Miner 150 minerais, ou pêcher 100 poissons, ou récolter 100 cultures",
         "step6": "Déterrer 15 fossiles",
         "step7": "Miner 300 minerais, pêcher 200 poissons ET récolter 200 cultures",
-        "title": "Prospecteur"
+        "title": "Prospecteur",
+        "rumor": "Le contremaître des mines parle d'un filon prometteur."
       },
       "shadow": {
         "desc": "Vol, notoriété et infamie.",
@@ -107,7 +114,8 @@
         "step5": "Atteindre 50 d'infamie de voleur",
         "step6": "Réussir 30 vols",
         "step7": "Porter le Masque de Malveillance",
-        "title": "Ombre"
+        "title": "Ombre",
+        "rumor": "Une silhouette encapuchonnée te glisse un mot dans la ruelle."
       }
     },
     "ranks": {
@@ -121,6 +129,26 @@
       "crowns": "{amount}👑",
       "money": "{amount}💰"
     },
-    "title": "📖 Journal"
+    "title": "📖 Journal",
+    "rumors_title": "🗞️ Rumeurs",
+    "mystery": "Une rumeur gronde dans ce domaine... continue de jouer pour l'entendre.",
+    "hall_locked": "**La Salle des Murmures** — une légende attend ceux qui maîtrisent toutes les voies.",
+    "chronicler": {
+      "sighting": "🕯️ *L'air se fige. Au coin de ton œil — une silhouette encapuchonnée, là où personne ne se tenait il y a un instant. Son visage est ombre, ses mains tachées d'encre. Elle t'observe. Puis elle est simplement... partie.*\n\nUn nouveau nom attend dans la liste des PNJ : **Le Chroniqueur** (`!npc`).",
+      "locked": "Tu n'es pas encore écrit dans ces pages. Prouve-toi — où que ce soit — puis reviens.",
+      "intro": "*Le Chroniqueur ferme son livre. Les pages sont chaudes.*\n\n« Je t'ai observé. Tu parcours {paths} — l'encre connaît désormais ton nom. »\n\n*Il ouvre une page que tu ne peux pas lire. Sur elle, une porte faite de murmures.*\n\n« Il existe un lieu dont parle le livre — la Salle des Murmures. Elle ne s'ouvre qu'à ceux qui maîtrisent toutes les voies du Journal. On dit qu'une légende y attend. Un compagnon que nul autre ne peut réclamer. Dix mille échos de gloire. Et un médaillon qui ne pèse rien et signifie tout. »\n\n*Il sourit — ou semble le faire.* « Parcours toutes les voies, et la Salle connaîtra ton nom. »"
+    },
+    "rankup": "Le journal vibre. Ton rang s'élève — **rang {rank}** dans une voie. La plume du Chroniqueur gratte quelque part dans le noir.",
+    "ambient": {
+      "1": "*Une ombre se détache du mur de la ruelle et se fond dans la foule.*",
+      "2": "*Tu sens des yeux dans ton dos — doux comme de l'encre sur du parchemin.*",
+      "3": "*Quelqu'un est passé par ici. La poussière dessine des empreintes qui s'arrêtent au mur.*"
+    },
+    "recognition": {
+      "1": "*Ton nom est prononcé dans les cercles de {path}. Ton travail est remarqué.*",
+      "2": "*La nouvelle circule vite chez les gens de {path} — tu as gagné leur respect.*",
+      "3": "*Les maîtres de {path} parlent de toi à voix basse. Tu es proche de la légende.*",
+      "4": "*Ils t'appellent maître de {path}. L'encre du Chroniqueur bouge toute seule.*"
+    }
   }
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/battle"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -781,9 +782,13 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_ = c.store.RecordActivity(userID, "pets_fed", 1)
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
+
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
+	if text, dm := jsvc.SceneLine(c.store, userID, "pets", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 	c.tryInteraction(b, i, pet, "feed")
 }
 
@@ -2068,3 +2073,7 @@ func (c *Cog) weeklyHistoryEmbed(userID, serverID int64, lang string) *discordgo
 	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, 0x9b59b6)
 	return embed
 }
+
+
+
+

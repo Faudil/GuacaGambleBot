@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
+	"guacagamblebot/internal/i18n"
 )
 
 type ChronicleEntry struct {
@@ -28,7 +29,7 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 
 	if len(flags) == 0 && len(history) == 0 {
 		return []*discordgo.MessageEmbed{
-			components.Embed("📖 Personal Chronicle", "No chronicle entries yet. Begin your journey with `!delve start`!", 0x9b59b6),
+			components.Embed(i18n.T("delve.chronicle.title", lang), i18n.T("delve.chronicle.empty", lang), 0x9b59b6),
 		}, nil
 	}
 
@@ -39,11 +40,11 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 	seenEpithets := map[string]bool{}
 
 	for _, f := range flags {
-		sentence := GetFlagSentence(f.FlagID)
+		sentence := GetFlagSentence(f.FlagID, lang)
 		if sentence == "" {
 			continue
 		}
-		epithet := GetFlagEpithet(f.FlagID)
+		epithet := GetFlagEpithet(f.FlagID, lang)
 		if epithet != "" && !seenEpithets[epithet] {
 			epithets = append(epithets, epithet)
 			seenEpithets[epithet] = true
@@ -55,15 +56,15 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 
 	var pages []*discordgo.MessageEmbed
 
-	title := "📖 Personal Chronicle"
+	title := i18n.T("delve.chronicle.title", lang)
 	desc := &strings.Builder{}
-	desc.WriteString(fmt.Sprintf("*%d descent(s) into the Undercroft*\n\n", totalRuns))
+	desc.WriteString(i18n.T("delve.chronicle.runs", lang, map[string]any{"n": fmt.Sprintf("%d", totalRuns)}) + "\n\n")
 	if len(epithets) > 0 {
-		desc.WriteString(fmt.Sprintf("**Known as:** %s\n\n", strings.Join(epithets, ", ")))
+		desc.WriteString(i18n.T("delve.chronicle.known_as", lang, map[string]any{"names": strings.Join(epithets, ", ")}) + "\n\n")
 	}
 
 	if len(entries) == 0 {
-		desc.WriteString("*No notable events recorded yet. Venture deeper.*")
+		desc.WriteString(i18n.T("delve.chronicle.no_events", lang))
 	} else {
 		for _, e := range entries {
 			desc.WriteString(e + "\n\n")
@@ -74,7 +75,7 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 		Title:       title,
 		Description: desc.String(),
 		Color:       0x9b59b6,
-		Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Your legend grows with every descent.")},
+		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.chronicle.footer", lang)},
 	}
 	pages = append(pages, embed)
 

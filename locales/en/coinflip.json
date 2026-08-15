@@ -4,6 +4,8 @@
     "cheat_label": "🕵️ Use Rigged Coin (75%)",
     "cheat_swap": "🕵️ *You discreetly swap the coin...*",
     "choice_error": "❌ Choose **heads** or **tails**.",
+    "choose_prompt": "🎲 Heads or tails?",
+    "heads_label": "Heads",
     "invalid_bet": "❌ Invalid bet.",
     "legit_choice": "🎲 You decide to play fair.",
     "legit_label": "🎲 Play Fair (50%)",
@@ -13,6 +15,7 @@
     "no_money": "❌ Not enough money.",
     "spinning": "🪙 The coin is spinning in the air...",
     "start_msg": "🎲 Here we go! **{choice}** for **${amount}**...",
+    "tails_label": "Tails",
     "win_cheat": " (Thanks to cheating 😉)",
     "win_msg": "✨ **YOU WIN!** The coin lands on **{result}**.",
     "xp_gain": " You gained {xp} xp"

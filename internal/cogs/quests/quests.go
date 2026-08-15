@@ -53,6 +53,12 @@ func (c *Cog) requirementErrorDesc(reqErr *questssvc.RequirementError, lang stri
 			"needed": m.Needed,
 		}))
 	}
+	if reqErr.PetLevelNeeded > 0 {
+		lines = append(lines, i18n.T("quests.req_missing_pet_level", lang, map[string]any{
+			"level": reqErr.PetLevelNeeded,
+			"have":  reqErr.PetLevelHave,
+		}))
+	}
 	desc := strings.Join(lines, "\n")
 	desc += "\n\n" + i18n.T("quests.req_farm_hint", lang)
 	return desc

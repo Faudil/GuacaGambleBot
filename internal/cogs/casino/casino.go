@@ -17,6 +17,7 @@ import (
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	questssvc "guacagamblebot/internal/service/quests"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -63,6 +64,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("cas", c.onPrefixMenu)
 	r.Component("casino", "slots", c.onSlotsOpen)
 	r.Component("casino", "coinflip", c.onCoinflipOpen)
+	r.Component("casino", "coinflip_choice", c.onCoinflipChoice)
 	r.Component("casino", "slots_retry", c.onSlotsRetry)
 	r.Component("casino", "coinflip_retry", c.onCoinflipRetry)
 	r.Modal("casino", "slots_submit", c.onSlotsSubmit)
@@ -173,10 +175,39 @@ func (c *Cog) onSlotsOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onCoinflipOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	embed := components.Embed(i18n.T("slots.title", lang), i18n.T("coinflip.choose_prompt", lang), 0xf1c40f)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("coinflip.heads_label", lang), components.EncodeOwner(userID, "casino", "coinflip_choice", "heads"), discordgo.PrimaryButton),
+			components.Button(i18n.T("coinflip.tails_label", lang), components.EncodeOwner(userID, "casino", "coinflip_choice", "tails"), discordgo.PrimaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: comps,
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
+func (c *Cog) onCoinflipChoice(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		interaction.RespondError(b, i, lang, "coinflip.choice_error")
+		return
+	}
+	choice := rest[0]
+	if choice != "heads" && choice != "tails" && choice != "face" && choice != "pile" {
+		interaction.RespondError(b, i, lang, "coinflip.choice_error")
+		return
+	}
 	modal := components.ModalResponse(
-		components.EncodeOwner(userID, "casino", "coinflip_submit"),
+		components.EncodeOwner(userID, "casino", "coinflip_submit", choice),
 		i18n.T("coinflip.legit_label", lang),
-		components.TextInput("choice", i18n.T("coinflip.legit_label", lang), true, "heads/tails", discordgo.TextInputShort, 1, 10),
 		components.TextInput("amount", i18n.T("economy.quantity", lang), true, "100", discordgo.TextInputShort, 1, 12),
 	)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -198,14 +229,19 @@ func (c *Cog) onSlotsSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 func (c *Cog) onCoinflipSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
+	if len(rest) == 0 {
+		interaction.RespondError(b, i, lang, "coinflip.choice_error")
+		return
+	}
+	choice := rest[0]
 	values := interaction.ModalValues(i)
-	choice := strings.TrimSpace(strings.ToLower(values["choice"]))
 	amount, err := strconv.Atoi(strings.TrimSpace(values["amount"]))
 	if err != nil || amount <= 0 {
 		interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
 		return
 	}
-	c.playCoinflip(b, i, choice, amount, discordgo.InteractionResponseUpdateMessage)
+	c.playCoinflip(b, i, choice, amount, discordgo.InteractionResponseChannelMessageWithSource)
 }
 
 func (c *Cog) onSlotsRetry(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -255,6 +291,9 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang, userID)
@@ -331,12 +370,13 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	_, menuComps := c.menu(lang, userID)
 	blurple := 0x7289da
-
-	startMsg := i18n.T("coinflip.start_msg", lang, map[string]any{"choice": choice, "amount": amount})
-	embed := components.Embed(i18n.T("slots.title", lang), startMsg, blurple)
+	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(responseType, embed, menuComps))
 
@@ -393,6 +433,9 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalSceneMsg(s, m.ChannelID, m.Author.ID, text, dm)
+	}
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang, userID)
@@ -486,6 +529,9 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalSceneMsg(s, m.ChannelID, m.Author.ID, text, dm)
+	}
 
 	_, menuComps := c.menu(lang, userID)
 	blurple := 0x7289da
@@ -586,3 +632,6 @@ func (c *Cog) getSlotsFlavor(winType, symbol, lang string) string {
 	}
 	return i18n.T("slots.lose_generic", lang)
 }
+
+
+

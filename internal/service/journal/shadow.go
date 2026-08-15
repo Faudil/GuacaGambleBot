@@ -8,9 +8,10 @@ func init() {
 		DescKey:  "journal.paths.shadow.desc",
 		Steps: []Step{
 			{
-				TextKey: "journal.paths.shadow.step1",
-				Check:   theftCheck(1),
-				Reward:  Reward{Money: 100},
+				TextKey:  "journal.paths.shadow.step1",
+				Check:    theftCheck(1),
+				Discover: countRowsCheck("theft_records", "thief_id = ?", 1),
+				Reward:   Reward{Money: 100},
 			},
 			{
 				TextKey: "journal.paths.shadow.step2",

@@ -9,9 +9,10 @@ func init() {
 		DescKey:  "journal.paths.highroller.desc",
 		Steps: []Step{
 			{
-				TextKey: "journal.paths.highroller.step1",
-				Check:   sumStatsCheck([]string{"coinflip_won", "coinflip_lost"}, 15),
-				Reward:  Reward{Money: 50},
+				TextKey:  "journal.paths.highroller.step1",
+				Check:    sumStatsCheck([]string{"coinflip_won", "coinflip_lost"}, 15),
+				Discover: sumStatsCheck([]string{"coinflip_won", "coinflip_lost"}, 3),
+				Reward:   Reward{Money: 50},
 			},
 			{
 				TextKey: "journal.paths.highroller.step2",

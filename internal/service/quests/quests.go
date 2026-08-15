@@ -36,10 +36,12 @@ type MissingItem struct {
 // RequirementError carries structured information about which quest
 // requirements are not yet satisfied, so handlers can show helpful guidance.
 type RequirementError struct {
-	MoneyNeeded  int
-	MoneyHave    int
-	MissingItems []MissingItem
-	NeedsHouse   bool
+	MoneyNeeded    int
+	MoneyHave      int
+	MissingItems   []MissingItem
+	NeedsHouse     bool
+	PetLevelNeeded int
+	PetLevelHave   int
 }
 
 func (e *RequirementError) Error() string {
@@ -169,6 +171,56 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.boss_league.step10_victory"},
 		},
 	},
+	// --- Optional side quests, unlocked by in-game events ---
+	// Unlocked when the player loses to the tutorial's final boss (stage 5,
+	// The Vault Guardian). Irian mentors the player and trains their pet so
+	// the rematch is winnable. Template for future NPC quest lines: add the
+	// quest here, link it to an NPC via NPCID, and register its unlock event
+	// in BossLossUnlocks (or start it from wherever the event is detected).
+	"irian_training": {
+		ID: "irian_training", Type: "side", NPCID: "irian",
+		TitleKey: "quests.irian_training.title", DescKey: "quests.irian_training.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.irian_training.step0_intro", Rewards: &QuestReward{Money: 150}},
+			{Type: StepActivity, TextKey: "quests.irian_training.step1_feed", Extra: map[string]any{"target_stat": "pets_fed", "target_count": 3}},
+			{Type: StepDialogue, TextKey: "quests.irian_training.step2_feed_dialogue"},
+			{Type: StepActivity, TextKey: "quests.irian_training.step3_hunt", Extra: map[string]any{"target_stat": "items_hunted", "target_count": 3}},
+			{Type: StepRequirement, TextKey: "quests.irian_training.step4_level_req", Extra: map[string]any{"req_pet_level": 10}},
+			{Type: StepDialogue, TextKey: "quests.irian_training.step5_reward", Rewards: &QuestReward{Money: 500, ItemIDs: []string{"warrior_stew", "stonebread", "zephyr_berries"}}},
+		},
+	},
+}
+
+// BossLossUnlock maps a boss stage to the side quest offered when the player
+// loses against it. New character quest lines triggered by a boss defeat just
+// need one entry here plus a QuestDef with a matching ID.
+type BossLossUnlock struct {
+	BossStage int
+	QuestID   string
+}
+
+// BossLossUnlocks lists the quest lines unlocked by losing to a boss.
+var BossLossUnlocks = []BossLossUnlock{
+	// The Vault Guardian (stage 5) is the tutorial's final boss; losing to it
+	// unlocks Irian's training quest line.
+	{BossStage: 5, QuestID: "irian_training"},
+}
+
+// UnlockOnBossLoss starts the side quest registered for this boss stage if the
+// player doesn't already have it active or completed. It returns the quest ID
+// and whether it was newly started (false when nothing is registered or the
+// player already has the quest).
+func (s *Service) UnlockOnBossLoss(userID int64, bossStage int) (string, bool) {
+	for _, u := range BossLossUnlocks {
+		if u.BossStage != bossStage {
+			continue
+		}
+		if err := s.StartQuest(userID, u.QuestID); err != nil {
+			return "", false
+		}
+		return u.QuestID, true
+	}
+	return "", false
 }
 
 type QuestInfo struct {
@@ -522,6 +574,90 @@ func toInt(v any) int {
 	}
 }
 
+// RequirementChecker validates one requirement declared in a step's Extra map
+// (keyed by the extra key, e.g. "req_pet_level") and records what is missing
+// into reqErr. New requirement types = add one checker here plus a line in
+// the display code (see internal/cogs/quests/quests.go).
+type RequirementChecker func(s *Service, userID int64, extra map[string]any, reqErr *RequirementError)
+
+var requirementCheckers = map[string]RequirementChecker{
+	"req_money":      checkMoneyRequirement,
+	"req_items":      checkItemsRequirement,
+	"req_owns_house": checkHouseRequirement,
+	"req_pet_level":  checkPetLevelRequirement,
+}
+
+func checkMoneyRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	money := toInt(extra["req_money"])
+	if money <= 0 {
+		return
+	}
+	var user model.User
+	if err := s.store.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		return
+	}
+	if user.Balance < money {
+		reqErr.MoneyNeeded = money
+		reqErr.MoneyHave = user.Balance
+	}
+}
+
+func checkItemsRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	items, ok := extra["req_items"].(map[string]any)
+	if !ok {
+		return
+	}
+	for itemID, qtyAny := range items {
+		qty := toInt(qtyAny)
+		if qty <= 0 {
+			continue
+		}
+		var inv model.Inventory
+		err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
+		have := 0
+		if err == nil {
+			have = inv.Quantity
+		}
+		if have < qty {
+			reqErr.MissingItems = append(reqErr.MissingItems, MissingItem{
+				ItemID: itemID,
+				Needed: qty,
+				Have:   have,
+			})
+		}
+	}
+}
+
+func checkHouseRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	ownsHouse, ok := extra["req_owns_house"].(bool)
+	if !ok || !ownsHouse {
+		return
+	}
+	var housing model.UserHousing
+	if err := s.store.DB.Where("user_id = ?", userID).First(&housing).Error; err != nil {
+		reqErr.NeedsHouse = true
+	}
+}
+
+// checkPetLevelRequirement verifies the level of the player's active pet
+// against the "req_pet_level" extra value. The level is not consumed by
+// FulfillRequirement — it acts as a training milestone.
+func checkPetLevelRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	needed := toInt(extra["req_pet_level"])
+	if needed <= 0 {
+		return
+	}
+	var pet model.UserPet
+	if err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&pet).Error; err != nil {
+		reqErr.PetLevelNeeded = needed
+		return
+	}
+	if pet.Level < needed {
+		reqErr.PetLevelNeeded = needed
+		reqErr.PetLevelHave = pet.Level
+	}
+}
+
 func (s *Service) CheckRequirement(userID int64, questID string) error {
 	def := QuestRegistry[questID]
 	if def == nil {
@@ -545,52 +681,13 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 	}
 
 	reqErr := &RequirementError{}
-
-	// Check money requirement
-	if money := toInt(extra["req_money"]); money > 0 {
-		var user model.User
-		if err := s.store.DB.Where("user_id = ?", userID).First(&user).Error; err != nil {
-			return errors.New("user not found")
-		}
-		if user.Balance < money {
-			reqErr.MoneyNeeded = money
-			reqErr.MoneyHave = user.Balance
+	for key, checker := range requirementCheckers {
+		if _, ok := extra[key]; ok {
+			checker(s, userID, extra, reqErr)
 		}
 	}
 
-	// Check item requirements
-	if items, ok := extra["req_items"].(map[string]any); ok {
-		for itemID, qtyAny := range items {
-			qty := toInt(qtyAny)
-			if qty <= 0 {
-				continue
-			}
-			var inv model.Inventory
-			err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
-			have := 0
-			if err == nil {
-				have = inv.Quantity
-			}
-			if have < qty {
-				reqErr.MissingItems = append(reqErr.MissingItems, MissingItem{
-					ItemID: itemID,
-					Needed: qty,
-					Have:   have,
-				})
-			}
-		}
-	}
-
-	// Check house ownership
-	if ownsHouse, ok := extra["req_owns_house"].(bool); ok && ownsHouse {
-		var housing model.UserHousing
-		err := s.store.DB.Where("user_id = ?", userID).First(&housing).Error
-		if err != nil {
-			reqErr.NeedsHouse = true
-		}
-	}
-
-	if reqErr.MoneyNeeded > 0 || len(reqErr.MissingItems) > 0 || reqErr.NeedsHouse {
+	if reqErr.MoneyNeeded > 0 || len(reqErr.MissingItems) > 0 || reqErr.NeedsHouse || reqErr.PetLevelNeeded > 0 {
 		return reqErr
 	}
 

@@ -90,6 +90,47 @@ func SendQuestNotification(b *Bot, i *discordgo.InteractionCreate, n store.Quest
 	})
 }
 
+// SendJournalScene delivers an atmospheric journal scene: as a private message
+// when dm is set (falling back to an ephemeral follow-up when DMs fail or are
+// blocked), otherwise as an ephemeral follow-up visible only to the player.
+func SendJournalScene(b *Bot, i *discordgo.InteractionCreate, text string, dm bool) {
+	if text == "" || b.Session == nil {
+		return
+	}
+	if dm {
+		uid := UserID(i)
+		if uid != "" {
+			if ch, err := b.Session.UserChannelCreate(uid); err == nil {
+				if _, err := b.Session.ChannelMessageSend(ch.ID, text); err == nil {
+					return
+				}
+			}
+		}
+	}
+	embed := components.Embed("🕯️", text, 0x2c3e50)
+	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+		Embeds: []*discordgo.MessageEmbed{embed},
+		Flags:  discordgo.MessageFlagsEphemeral,
+	})
+}
+
+// SendJournalSceneMsg delivers a journal scene in a prefix flow: a private
+// message when dm is set (falling back to the channel), otherwise a direct
+// channel message.
+func SendJournalSceneMsg(s *discordgo.Session, channelID, userID, text string, dm bool) {
+	if text == "" || s == nil {
+		return
+	}
+	if dm && userID != "" {
+		if ch, err := s.UserChannelCreate(userID); err == nil {
+			if _, err := s.ChannelMessageSend(ch.ID, text); err == nil {
+				return
+			}
+		}
+	}
+	_, _ = s.ChannelMessageSend(channelID, text)
+}
+
 // Mention formats a Discord user mention from a numeric user id.
 func Mention(id int64) string {
 	return "<@" + strconv.FormatInt(id, 10) + ">"

@@ -15,8 +15,8 @@ import (
 )
 
 type DailyRepCap struct {
-	Flat      int
-	PerLevel  int
+	Flat     int
+	PerLevel int
 }
 
 func GetDailyRepCap() DailyRepCap {
@@ -24,15 +24,15 @@ func GetDailyRepCap() DailyRepCap {
 }
 
 type NPCInfo struct {
-	ID          string
-	Name        string
-	Emoji       string
-	Color       int
-	Level       int
-	Reputation  int
-	NextLevel   int
-	RankName    string
-	Data        *universe.NPCData
+	ID         string
+	Name       string
+	Emoji      string
+	Color      int
+	Level      int
+	Reputation int
+	NextLevel  int
+	RankName   string
+	Data       *universe.NPCData
 }
 
 type Service struct {
@@ -179,12 +179,12 @@ func RankName(level int) string {
 }
 
 type NPCBonus struct {
-	ShopDiscount          float64
-	GamblePayout          float64
-	XPBoost               float64
-	MiningRiskReduction   int
-	FarmingSpeedBoost     float64
-	FishingTimeBonus      float64
+	ShopDiscount        float64
+	GamblePayout        float64
+	XPBoost             float64
+	MiningRiskReduction int
+	FarmingSpeedBoost   float64
+	FishingTimeBonus    float64
 }
 
 func (s *Service) GetBonuses(userID int64) *NPCBonus {

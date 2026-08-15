@@ -22,6 +22,7 @@ import (
 	petsvc "guacagamblebot/internal/service/pets"
 	huntsvc "guacagamblebot/internal/service/hunt"
 	questssvc "guacagamblebot/internal/service/quests"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -261,6 +262,10 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if n, ok := c.store.PopQuestNotification(userID); ok {
 			interaction.SendQuestNotification(b, i, n, lang)
 		}
+
+		if text, dm := jsvc.SceneLine(c.store, userID, "hunt", lang); text != "" {
+			interaction.SendJournalScene(b, i, text, dm)
+		}
 		return
 	}
 
@@ -319,9 +324,13 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(final, back))
 
 			if n, ok := c.store.PopQuestNotification(userID); ok {
+
 				interaction.SendQuestNotification(b, i, n, lang)
 			}
 
+			if text, dm := jsvc.SceneLine(c.store, userID, "hunt", lang); text != "" {
+				interaction.SendJournalScene(b, i, text, dm)
+			}
 			c.maybePetInteraction(b, i, pet, lang)
 			unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
 			if uerr == nil && len(unlocks) > 0 {
@@ -495,3 +504,7 @@ func sortedZoneKeys() []string {
 	})
 	return keys
 }
+
+
+
+

@@ -376,7 +376,7 @@ func (s *Store) CheckGameLimit(userID int64, gameName string, maxUsage int) (boo
 func (s *Store) IncrementGameLimit(userID int64, gameName string) error {
 	today := time.Now().Format("2006-01-02")
 	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "game_name"}, {Name: "date_str"}},
+		Columns: []clause.Column{{Name: "user_id"}, {Name: "game_name"}, {Name: "date_str"}},
 		DoUpdates: clause.Assignments(map[string]any{
 			"count":    gorm.Expr("count + 1"),
 			"date_str": today,
@@ -425,6 +425,55 @@ func (s *Store) GetLanguage(serverID int64) string {
 	return ss.Language
 }
 
+// JournalScene is a queued atmospheric scene (Chronicler intro, rank-up moment,
+// recognition line). Key is an i18n key, Params its replacements. DM requests
+// private-message delivery with a fallback to the activity result.
+type JournalScene struct {
+	Key    string
+	Params map[string]any
+	DM     bool
+}
+
+// PushJournalScene queues a scene for the user, surfaced after their next
+// activity.
+func (s *Store) PushJournalScene(userID int64, sc JournalScene) {
+	params := "{}"
+	if b, err := json.Marshal(sc.Params); err == nil {
+		params = string(b)
+	}
+	if err := s.DB.Create(&model.JournalScene{
+		UserID: userID, Key: sc.Key, Params: params, DM: sc.DM,
+	}).Error; err != nil {
+		slog.Error("failed to store journal scene", "user_id", userID, "error", err)
+	}
+}
+
+// PopJournalScene returns the oldest pending scene for the user, consuming it.
+// Scenes older than 24 hours are purged.
+func (s *Store) PopJournalScene(userID int64) (JournalScene, bool) {
+	var rows []model.JournalScene
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ? AND created_at < ?", userID, time.Now().Add(-24*time.Hour)).
+			Delete(&model.JournalScene{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).
+			Order("id asc").Limit(1).Find(&rows).Error; err != nil {
+			return err
+		}
+		if len(rows) == 0 {
+			return nil
+		}
+		return tx.Delete(&model.JournalScene{}, rows[0].ID).Error
+	})
+	if err != nil || len(rows) == 0 {
+		return JournalScene{}, false
+	}
+	var params map[string]any
+	_ = json.Unmarshal([]byte(rows[0].Params), &params)
+	return JournalScene{Key: rows[0].Key, Params: params, DM: rows[0].DM}, true
+}
+
 // GetServerSetting returns the guild settings row, or nil when none exists.
 func (s *Store) GetServerSetting(serverID int64) (*model.ServerSetting, error) {
 	var ss model.ServerSetting
@@ -441,7 +490,7 @@ func (s *Store) GetServerSetting(serverID int64) (*model.ServerSetting, error) {
 // SaveServerSetting upserts a guild settings row keyed by server_id.
 func (s *Store) SaveServerSetting(ss *model.ServerSetting) error {
 	return s.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "server_id"}},
+		Columns: []clause.Column{{Name: "server_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"announcement_channel_id", "channel_id", "language", "prefix", "enabled", "onboarded_at", "universe",
 		}),

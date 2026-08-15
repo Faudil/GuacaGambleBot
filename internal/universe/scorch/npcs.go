@@ -89,4 +89,38 @@ var NPCs = map[string]*universe.NPCData{
 		GreetingsEN: []string{"Pyke. You want to go somewhere dangerous? Good. Let's talk price.", "Keep your voice down. Some things hunt by sound.", "Back alive. That's more than most people manage."},
 		GreetingsFR: []string{"Pyke. Tu veux aller quelque part de dangereux ? Bien. Parlons prix.", "Baisse la voix. Certaines choses chassent au son.", "De retour vivant. C'est plus que ce que la plupart des gens arrivent à faire."},
 	},
+
+	"the_chronicler": {
+		ID: "the_chronicler", Name: "The Chronicler", Emoji: "\U0001f56f\ufe0f", Color: 0x2c3e50,
+
+		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
+		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",
+
+		RoleEN: "He watches those who walk the paths of the Journal. Speak to him once you have earned a rank anywhere.",
+		RoleFR: "Il observe ceux qui parcourent les voies du Journal. Parle-lui une fois que tu as gagné un rang où que ce soit.",
+
+		AdviceEN: "Every path you walk writes a line in my book. Walk them all, and the legend becomes yours.",
+		AdviceFR: "Chaque voie que tu parcours écrit une ligne dans mon livre. Parcours-les toutes, et la légende devient tienne.",
+
+		ChatEN: "The ink remembers. So do I.",
+		ChatFR: "L'encre se souvient. Moi aussi.",
+
+		GreetingsEN: []string{"I have seen you in the pages.", "The book never forgets a name.", "You walk a path worth writing down."},
+		GreetingsFR: []string{"Je t'ai vu dans les pages.", "Le livre n'oublie jamais un nom.", "Tu parcours un chemin qui mérite d'être écrit."},
+
+		QuipsEN: []string{
+			"Somewhere, someone is finishing a path you have not begun.",
+			"The miners speak of you in the low taverns.",
+			"Every rumor you hear is a page someone else has turned.",
+			"The Hall of Whispers holds what you seek — if you seek everything.",
+			"Legends are not born. They are written, one small step at a time.",
+		},
+		QuipsFR: []string{
+			"Quelque part, quelqu'un achève un chemin que tu n'as pas commencé.",
+			"Les mineurs parlent de toi dans les tavernes basses.",
+			"Chaque rumeur que tu entends est une page que quelqu'un d'autre a tournée.",
+			"La Salle des Murmures garde ce que tu cherches — si tu cherches tout.",
+			"Les légendes ne naissent pas. Elles s'écrivent, un petit pas à la fois.",
+		},
+	},
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -378,9 +379,13 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
+
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
+	if text, dm := jsvc.SceneLine(c.store, userID, "archeology", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
 	if uerr == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
@@ -719,3 +724,7 @@ func userID(id string) int64 {
 	n, _ := strconv.ParseInt(id, 10, 64)
 	return n
 }
+
+
+
+

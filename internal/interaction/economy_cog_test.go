@@ -17,9 +17,9 @@ import (
 	"guacagamblebot/internal/cogs/economy"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )

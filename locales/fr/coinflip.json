@@ -4,6 +4,8 @@
     "cheat_label": "🕵️ Utiliser la Pièce Truquée (75%)",
     "cheat_swap": "🕵️ *Tu échanges discrètement la pièce...*",
     "choice_error": "❌ Choisis **pile** ou **face**.",
+    "choose_prompt": "🎲 Pile ou face ?",
+    "heads_label": "Face",
     "invalid_bet": "❌ Mise invalide.",
     "legit_choice": "🎲 Tu décides de jouer à la loyal.",
     "legit_label": "🎲 Jouer loyal (50%)",
@@ -13,6 +15,7 @@
     "no_money": "❌ Pas assez d'argent.",
     "spinning": "🪙 La pièce tourne dans les airs...",
     "start_msg": "🎲 C'est parti ! **{choice}** pour **${amount}**...",
+    "tails_label": "Pile",
     "win_cheat": " (Merci la triche 😉)",
     "win_msg": "✨ **GAGNÉ !** La pièce tombe sur **{result}**.",
     "xp_gain": " Tu as gagné {xp} xp"

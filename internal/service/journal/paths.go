@@ -20,10 +20,15 @@ type Reward struct {
 }
 
 // Step is a single milestone on a path. Steps are completed in order.
+// Discover, when set, gates when the step surfaces as a rumor: until the
+// check passes the step is hidden (a mystery). When nil the step surfaces as
+// soon as the previous step is completed. Discovery is presentation only —
+// completion checks always run.
 type Step struct {
-	TextKey string // i18n key describing the milestone
-	Check   Check
-	Reward  Reward
+	TextKey  string // i18n key describing the milestone
+	Check    Check
+	Discover Check // when this step surfaces as a rumor (nil = auto)
+	Reward   Reward
 }
 
 // Path is one progression track (Prospector, High Roller, ...).

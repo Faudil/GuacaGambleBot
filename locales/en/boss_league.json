@@ -16,6 +16,8 @@
     "stage_info": "Stage {stage}/5 - **{name}**",
     "stats_label": "Level: {level}\nSpecies: {species}\nHP: {hp} | Atk: {atk} | Def: {defense} | Speed: {speed}",
     "title": "🏆 Boss League 🏆",
+    "talk_to_npc": "Talk to {npc}",
+    "training_unlocked": "🌊 **{npc} saw the fight.** \"That machine won't forgive a weak companion. Come see me — I'll train you both.\"",
     "try_again": "Train your pet and try again!",
     "victory": "🎉 **Victory!** **{boss_name}** has been defeated!"
   }

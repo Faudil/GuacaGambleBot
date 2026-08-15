@@ -256,3 +256,152 @@ func TestMasteryNotUnlocked(t *testing.T) {
 	require.NoError(t, s.DB.Model(&model.UserJournalMastery{}).Where("user_id = ?", 1).Count(&m).Error)
 	assert.Equal(t, int64(0), m, "no mastery row while a path is incomplete")
 }
+
+// pathView returns the view for a single path ID.
+func pathView(t *testing.T, v *JournalView, id string) *PathView {
+	for i := range v.Paths {
+		if v.Paths[i].PathID == id {
+			return &v.Paths[i]
+		}
+	}
+	t.Fatalf("path %s not found", id)
+	return nil
+}
+
+// TestStepHiddenUntilDiscover verifies the first step stays a mystery until
+// its Discover check passes, then surfaces with progress.
+func TestStepHiddenUntilDiscover(t *testing.T) {
+	s := testStore(t)
+	svc := New(s)
+
+	// No activity yet: the prospector rumor has not been heard.
+	v, err := svc.View(1)
+	require.NoError(t, err)
+	pv := pathView(t, v, "prospector")
+	assert.False(t, pv.HasRumor, "rumor hidden before any mining")
+	assert.False(t, pv.Steps[0].Discovered)
+	assert.Equal(t, 0, pv.Steps[0].Progress, "no progress leaks from a hidden rumor")
+
+	// Below the discover threshold: still a mystery.
+	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 3}).Error)
+	v, err = svc.View(1)
+	require.NoError(t, err)
+	pv = pathView(t, v, "prospector")
+	assert.False(t, pv.HasRumor, "still hidden at 3 ores mined")
+
+	// Threshold crossed: the rumor surfaces with progress.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).Update("items_mined", 5).Error)
+	v, err = svc.View(1)
+	require.NoError(t, err)
+	pv = pathView(t, v, "prospector")
+	assert.True(t, pv.HasRumor, "rumor surfaced at 5 ores mined")
+	assert.True(t, pv.Steps[0].Discovered)
+	assert.Equal(t, 5, pv.Steps[0].Progress)
+	assert.Equal(t, 25, pv.Steps[0].Target)
+}
+
+// TestNextRumorSurfacesOnCompletion verifies the following step surfaces
+// automatically once the previous one is done (no Discover gate).
+func TestNextRumorSurfacesOnCompletion(t *testing.T) {
+	s := testStore(t)
+	svc := New(s)
+
+	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 25}).Error)
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	v, err := svc.View(1)
+	require.NoError(t, err)
+	pv := pathView(t, v, "prospector")
+	assert.Equal(t, 1, pv.Completed, "first step done")
+	assert.True(t, pv.Steps[0].Done)
+	assert.True(t, pv.HasRumor, "second step surfaces without a discover gate")
+	assert.True(t, pv.Steps[1].Discovered)
+	assert.Equal(t, 25, pv.Steps[1].Target)
+}
+
+// TestRankUpQueuesSighting verifies the first rank ever queues the Chronicler
+// sighting scene (DM preferred), exactly once.
+func TestRankUpQueuesSighting(t *testing.T) {
+	s := testStore(t)
+	New(s)
+
+	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 25}).Error)
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	sc, ok := s.PopJournalScene(1)
+	require.True(t, ok, "sighting scene queued on first rank")
+	assert.Equal(t, "journal.chronicler.sighting", sc.Key)
+	assert.True(t, sc.DM, "sighting prefers DM delivery")
+
+	// A later rank-up queues a lighter rankup scene instead.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).Update("items_fished", 25).Error)
+	require.NoError(t, s.RecordActivity(1, "items_fished", 1))
+
+	sc, ok = s.PopJournalScene(1)
+	require.True(t, ok)
+	assert.Equal(t, "journal.rankup", sc.Key)
+	assert.False(t, sc.DM)
+
+	// No more scenes queued by a repeated check.
+	_, ok = s.PopJournalScene(1)
+	assert.False(t, ok)
+}
+
+// TestSceneLinePopsQueued verifies queued scenes surface first.
+func TestSceneLinePopsQueued(t *testing.T) {
+	s := testStore(t)
+	New(s)
+
+	s.PushJournalScene(1, store.JournalScene{Key: "journal.rankup", Params: map[string]any{"rank": 2}})
+	text, _ := SceneLine(s, 1, "mining", "en")
+	assert.Contains(t, text, "rank")
+	_, ok := s.PopJournalScene(1)
+	assert.False(t, ok, "queued scene consumed")
+}
+
+// TestSceneLineAmbientBeforeMeeting verifies eerie sightings appear before the
+// Chronicler is met and are throttled by cooldown.
+func TestSceneLineAmbientBeforeMeeting(t *testing.T) {
+	s := testStore(t)
+	New(s)
+	oldRoll := sceneRoll
+	sceneRoll = func(int) bool { return true }
+	defer func() { sceneRoll = oldRoll }()
+
+	text, dm := SceneLine(s, 1, "mining", "en")
+	assert.NotEmpty(t, text, "ambient sighting surfaces for unmet players")
+	assert.False(t, dm)
+
+	// Cooldown throttles the next sighting.
+	text, _ = SceneLine(s, 1, "mining", "en")
+	assert.Empty(t, text)
+}
+
+// TestSceneLineRecognitionAfterMeeting verifies recognition lines appear only
+// for players ranked in the domain's path.
+func TestSceneLineRecognitionAfterMeeting(t *testing.T) {
+	s := testStore(t)
+	New(s)
+	oldRoll := sceneRoll
+	sceneRoll = func(int) bool { return true }
+	defer func() { sceneRoll = oldRoll }()
+
+	// Meet the Chronicler.
+	require.NoError(t, s.DB.Create(&model.UserNPCSecret{
+		UserID: 1, NPCID: ChroniclerID, SecretID: ChroniclerIntroSecret, Seen: true,
+	}).Error)
+
+	// No rank yet: no recognition anywhere.
+	text, _ := SceneLine(s, 1, "mining", "en")
+	assert.Empty(t, text, "no recognition without a rank in the domain path")
+
+	// Rank 1 in prospector: recognition in mining.
+	require.NoError(t, s.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "prospector", StepIndex: 1}).Error)
+	text, _ = SceneLine(s, 1, "mining", "en")
+	assert.NotEmpty(t, text, "recognition surfaces for a ranked player")
+	assert.Contains(t, text, "recognition")
+
+	// Unrelated domain stays silent.
+	text, _ = SceneLine(s, 1, "lotto", "en")
+	assert.Empty(t, text, "no recognition in an unrelated domain")
+}

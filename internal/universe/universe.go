@@ -41,10 +41,10 @@ type ShopItem struct {
 }
 
 type NPCData struct {
-	ID          string
-	Name        string
-	Emoji       string
-	Color       int
+	ID    string
+	Name  string
+	Emoji string
+	Color int
 
 	DescriptionEN string
 	DescriptionFR string
@@ -59,11 +59,11 @@ type NPCData struct {
 	GreetingsEN   []string
 	GreetingsFR   []string
 
-	QuipsEN      []string
-	QuipsFR      []string
-	QuipsHighEN  []string
-	QuipsHighFR  []string
-	ShopItems    []ShopItem
+	QuipsEN     []string
+	QuipsFR     []string
+	QuipsHighEN []string
+	QuipsHighFR []string
+	ShopItems   []ShopItem
 
 	// LinkedActivities are the player activities (e.g. "mining", "fishing",
 	// "gambling") that award small reputation points with this NPC.
@@ -127,9 +127,9 @@ func (n *NPCData) QuipsHigh(lang string) []string {
 }
 
 type Definition struct {
-	ID   string
-	Name string
-	Emoji string
+	ID          string
+	Name        string
+	Emoji       string
 	Description string
 
 	Fragments []Fragment

@@ -20,6 +20,16 @@
       "step9_battle": "⚔️ **Boss 5/5. The Phoenix Emperor**\nThe final challenge. A majestic, burning phoenix whose flames can reduce steel to ash. Only the strongest may face it.",
       "title": "Boss League"
     },
+    "irian_training": {
+      "description": "Irian offers to train your pet so it can defeat the Vault Guardian.",
+      "step0_intro": "You limp back to the docks, your pet bruised and defeated. Irian is waiting by the water, arms crossed.\n\n\"That old machine doesn't pull its punches. I saw the whole fight.\"\n\nHe kneels beside your pet and looks it over. \"Your pet isn't weak. It's untrained. Food builds strength. The hunt builds instincts. Do both, and that Guardian won't know what hit it.\"\n\nHe hands you a small pouch of credits. \"Start with the bowl. `!pets` — feed your companion. I'll be here when you're done.\"",
+      "step1_feed": "Goal: Feed your pet 3 times using `!pets`.",
+      "step2_feed_dialogue": "Irian watches the feeding with a satisfied nod.\n\n\"Good. A fed pet is a strong pet — every meal makes it tougher.\"\n\nHe points toward the treeline. \"Now for the second lesson. Instincts are earned in the wild, not at the bowl. Take your pet hunting. `!hunt` until you've both earned your keep.\"",
+      "step3_hunt": "Goal: Hunt 3 times using `!hunt` — your pet gains XP with every victory.",
+      "step4_level_req": "Goal: Raise your pet to **level 10** — feed it, hunt with it, and it will grow stronger.",
+      "step5_reward": "Irian studies your pet with the eye of a veteran. Then, for the first time, he smiles.\n\n\"Level 10. Now *that's* a hunter's companion.\"\n\nHe packs a bundle of provisions for the road — warrior's stew, stonebread, wind-touched berries. \"Feed it these before the fight. Every bit of strength counts.\"\n\nHe claps your shoulder. \"Now go. Show that Guardian what a trained pet can do.\"",
+      "title": "The Mentor's Lesson"
+    },
     "boss_lose_taunt": "💀 The boss laughs at you: 'Is that all you got? Train your pet and come back!'",
     "boss_no_pet": "❌ You must have an active pet to fight the boss.",
     "boss_win": "🏆 Your pet defeated the boss!",
@@ -49,9 +59,9 @@
       "description": "Mining and the depths below.",
       "step0_dialogue": "Thorek studies the journal in silence. His expression hardens.\n\n\"Merrik's handwriting. Council engineer. The blueprints are in a vault on Level 7 of the old mine. Nobody's been down there in decades. Tunnels are probably half collapsed.\"\n\nHe pulls a pickaxe off the wall and holds it out.\n\n\"Hit some rock. `!mine` a couple of times. See if the old lift shafts still hold. If they don't, we're wasting our time.\"",
       "step1_activity": "Goal: Mine 2 times using `!mine`.",
-      "step2_transition": "You step out of the mine covered in dust. A woman at the docks waves you over.\n\n\"Long day underground? Come try the water. Clears the head.\"\n\nShe tosses you a fishing rod and a tin of worms. \"`!fish` to cast a line. Pick a spot, pick your bait, wait for a bite. Nothing to it.\"",
-      "step3_activity": "Goal: Fish 2 times using `!fish`.",
-      "step4_dialogue": "You pull in your second catch. The woman nods.\n\n\"Not bad. You should talk to Elara next. Village gardener, spends her time near the old gardens. She found something strange out there.\"\n\nShe presses a small pouch into your hand. **Wheat seeds**. \"You'll need these. Go see what Elara's found.\"",
+      "step2_transition": "You step out of the mine covered in dust. A woman at the docks waves you over.\n\n\"Long day underground? Come try the water. Clears the head.\"\n\nShe sizes you up. \"No tackle on you, I bet. Rod and a tin of worms — my treat.\"\n\n\"Once you've got the gear, `!fish` to cast a line. Pick a spot, pick your bait, wait for a bite. Nothing to it.\"",
+      "step3_activity": "Goal: Fish 1 time using `!fish`.",
+      "step4_dialogue": "You pull in your catch. The woman nods.\n\n\"Not bad. You should talk to Elara next. Village gardener, spends her time near the old gardens. She found something strange out there.\"\n\nShe sets a small pouch of **Wheat seeds** on the rail beside you. \"Take them with you. You'll need them at Elara's.\"",
       "title": "Day 1: The Forge"
     },
     "day2_alchemy": {
@@ -60,7 +70,7 @@
       "step1_activity": "Goal: Plant 2 crops using `!farm`.",
       "step2_transition": "The mechanism hums. The grooves pulse with pale light. Elara studies a readout on her tablet.\n\n\"It's responding. But the data is incomplete. There's another layer buried underneath the village. Try `!dig` in the excavation pits. The Ancients buried something down there.\"",
       "step3_activity": "Goal: Dig 2 times using `!dig`.",
-      "step4_dialogue": "Your shovel strikes metal. You pull a small capsule from the dirt, sealed tight against time. Inside: old seeds, perfectly preserved, and a fragment of a holographic map.\n\nElara stares at it. \"They weren't just storing power. They were storing life itself. Seeds that don't exist anywhere else.\"\n\nShe hands you the **Wheat** you grew. \"Keep it. And get yourself a place in town. `!house shop` has starter cabins. You'll need somewhere to work from.\"",
+      "step4_dialogue": "Your shovel strikes metal. You pull a small capsule from the dirt, sealed tight against time. Inside: old seeds, perfectly preserved, and a fragment of a holographic map.\n\nElara stares at it. \"They weren't just storing power. They were storing life itself. Seeds that don't exist anywhere else.\"\n\nShe nods at the **Wheat** you grew. \"Take it — you'll need it before this is over. And get yourself a place in town. `!house shop` has starter cabins. You'll need somewhere to work from.\"",
       "title": "Day 2: The Lock"
     },
     "day3_base": {
@@ -68,13 +78,13 @@
       "step0_req": "GambleBot runs the capsule data through the terminal. A partial schematic flickers onto the screen.\n\n\"Strata Blueprints, section one. Need a stationary terminal to decode the rest. Buy a Starter Shack via `!house shop`. Cost: 500 credits and 2 Iron Ore.\"",
       "step1_transition": "The shack terminal powers on. GambleBot's voice crackles through the speaker.\n\n\"Good. Now protect your coins. `!deposit` one time. If you lose it all gambling, at least your savings stay safe.\"",
       "step2_activity": "Goal: Make 1 deposit using `!deposit`.",
-      "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\"\n\nIrian meets you at the edge of town with a gift: a **Forest Egg** cradled in moss, warm to the touch. \"A wild seed of the woods. Use `!hatch` to open it. Could be anything inside.\"",
+      "step3_dialogue": "Deposit registered.\n\nThe blueprints reveal something unexpected. The Vault uses a biological lock that needs a DNA sample from local wildlife. GambleBot pauses.\n\n\"The forest outside town. There's a ranger named **Irian** who knows those woods. She's at the treeline. Don't take too long.\"\n\nIrian meets you at the edge of town and holds out a **Forest Egg**, cradled in moss, warm to the touch. \"A wild seed of the woods. Take it. When you're ready, `!hatch` to open it. Could be anything inside.\"",
       "title": "Day 3: Home Base"
     },
     "day4_will": {
       "description": "Hunting and the mystery egg.",
       "step0_dialogue": "Irian waits at the treeline. She gets straight to it.\n\n\"The woods aren't safe. Old experiments still run loose. But the Vault needs a DNA sample from local wildlife. So we hunt. Use `!hunt` a couple times. Your pet does the fighting.\"",
-      "step1_activity": "Goal: Hunt 2 times using `!hunt`.",
+      "step1_activity": "Goal: `!hatch` your egg, then hunt 2 times using `!hunt`.",
       "step2_dialogue": "Your pet drags the DNA sample out of the brush. Irian examines it and nods. \"That's what we needed.\"\n\nShe glances at the egg you carry. \"When it hatches, feed the new one with `!pets`. A hungry pet is a dead pet.\"",
       "step3_activity": "Goal: Feed your pet 1 time using `!pets`.",
       "step4_dialogue": "Your companion settles down after feeding. Irian watches for a moment.\n\n\"Take care of it. Whatever's ahead, you'll need something at your side.\"\n\nShe looks toward the Casino. \"GambleBot found something under his floorboards. Go see for yourself.\"",
@@ -123,6 +133,7 @@
     "req_missing_house": "🏠 You don't own a house yet — buy one with `/house`!",
     "req_missing_item": "🎒 {item}: {have} / {needed}",
     "req_missing_money": "💰 You need **${needed}** (you have ${have}).",
+    "req_missing_pet_level": "🐾 Your active pet must reach **level {level}** (currently level {have}). Feed it and hunt with it to level up!",
     "req_money_status": "💰 Money: ${current} / ${required}",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objective complete!\n🎯 **Next:** {next}\n\nType `/quest` to see your progress.",

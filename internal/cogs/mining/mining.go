@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
@@ -469,6 +470,10 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		if n, ok := c.store.PopQuestNotification(userID); ok {
 			interaction.SendQuestNotification(b, i, n, lang)
 		}
+
+		if text, dm := jsvc.SceneLine(c.store, userID, "mining", lang); text != "" {
+			interaction.SendJournalScene(b, i, text, dm)
+		}
 		if len(res.Unlocks) > 0 {
 			interaction.SendAchievements(b, i, lang, res.Unlocks)
 		}
@@ -510,9 +515,13 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.respond(b, i, components.Embed("✅ Expedition Complete!", title, color), nil)
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
+
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
+	if text, dm := jsvc.SceneLine(c.store, userID, "mining", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)
 	}
@@ -570,3 +579,7 @@ func progressBar(value, max, segments int) string {
 	}
 	return strings.Repeat("█", filled) + strings.Repeat("░", segments-filled)
 }
+
+
+
+

@@ -23,10 +23,11 @@ type Completion struct {
 
 // StepView is the per-step rendering data.
 type StepView struct {
-	TextKey  string
-	Progress int
-	Target   int
-	Done     bool
+	TextKey    string
+	Progress   int
+	Target     int
+	Done       bool
+	Discovered bool
 }
 
 // PathView is the per-path rendering data.
@@ -41,6 +42,7 @@ type PathView struct {
 	Rank      int
 	Tracked   bool
 	AllDone   bool
+	HasRumor  bool // current step is surfaced
 }
 
 // JournalView is the full journal state for a player.
@@ -86,9 +88,11 @@ func (s *Service) OnActivity(userID int64, _ string, _ int) {
 }
 
 // CheckAndAdvance re-evaluates all paths for the user, advancing and rewarding
-// every step whose check now passes. It returns the newly completed steps.
+// every step whose check now passes. It returns the newly completed steps and
+// queues atmospheric scenes on rank-ups.
 func (s *Service) CheckAndAdvance(userID int64) ([]Completion, error) {
 	var completions []Completion
+	oldRank := HighestRank(s.store, userID)
 	for _, p := range GetPaths() {
 		entry, err := s.ensureEntry(userID, p.ID)
 		if err != nil {
@@ -116,7 +120,26 @@ func (s *Service) CheckAndAdvance(userID int64) ([]Completion, error) {
 				"step", entry.StepIndex, "target", target)
 		}
 	}
+	newRank := HighestRank(s.store, userID)
+	s.queueRankUpScenes(userID, oldRank, newRank)
 	return completions, nil
+}
+
+// queueRankUpScenes pushes the Chronicler's introduction on the player's first
+// rank, and a lighter rank-up moment on later ranks.
+func (s *Service) queueRankUpScenes(userID int64, oldRank, newRank int) {
+	if newRank <= oldRank {
+		return
+	}
+	if oldRank == 0 {
+		s.store.PushJournalScene(userID, store.JournalScene{
+			Key: "journal.chronicler.sighting", DM: true,
+		})
+		return
+	}
+	s.store.PushJournalScene(userID, store.JournalScene{
+		Key: "journal.rankup", Params: map[string]any{"rank": newRank},
+	})
 }
 
 // View returns the journal with fresh progress. It also advances any steps
@@ -153,12 +176,24 @@ func (s *Service) View(userID int64) (*JournalView, error) {
 			switch {
 			case i < entry.StepIndex:
 				sv.Done = true
+				sv.Discovered = true
 				pv.Completed++
 			case i == entry.StepIndex:
-				sv.Progress, sv.Target, _ = step.Check(s.store, userID)
-				if sv.Progress >= sv.Target {
-					sv.Done = true
+				// The current step surfaces as a rumor once its Discover check
+				// passes (or when it has none); before that it stays a mystery.
+				if step.Discover == nil {
+					sv.Discovered = true
+				} else {
+					_, _, ok := step.Discover(s.store, userID)
+					sv.Discovered = ok
 				}
+				if sv.Discovered {
+					sv.Progress, sv.Target, _ = step.Check(s.store, userID)
+					if sv.Progress >= sv.Target {
+						sv.Done = true
+					}
+				}
+				pv.HasRumor = sv.Discovered
 			}
 			pv.Steps = append(pv.Steps, sv)
 		}
@@ -272,6 +307,52 @@ func (s *Service) AllPathsDone(userID int64) bool {
 		}
 	}
 	return true
+}
+
+// RankOf returns the player's rank (0-4) on a single path.
+func RankOf(st *store.Store, userID int64, pathID string) int {
+	p := GetPath(pathID)
+	if p == nil {
+		return 0
+	}
+	var entry model.UserJournalEntry
+	if err := st.DB.Where("user_id = ? AND path_id = ?", userID, pathID).First(&entry).Error; err != nil {
+		return 0
+	}
+	return RankFor(entry.StepIndex, len(p.Steps))
+}
+
+// HighestRank returns the player's best rank across all paths (0 = none).
+func HighestRank(st *store.Store, userID int64) int {
+	best := 0
+	for _, p := range GetPaths() {
+		if r := RankOf(st, userID, p.ID); r > best {
+			best = r
+		}
+	}
+	return best
+}
+
+// RankedPaths returns the IDs of every path in which the player holds at
+// least rank 1, in registry order.
+func RankedPaths(st *store.Store, userID int64) []string {
+	var out []string
+	for _, p := range GetPaths() {
+		if RankOf(st, userID, p.ID) >= 1 {
+			out = append(out, p.ID)
+		}
+	}
+	return out
+}
+
+// MetChronicler reports whether the player already spoke with the Chronicler
+// (his one-time intro was revealed).
+func MetChronicler(st *store.Store, userID int64) bool {
+	var n int64
+	st.DB.Table("user_npc_secrets").
+		Where("user_id = ? AND npc_id = ? AND secret_id = ?", userID, ChroniclerID, ChroniclerIntroSecret).
+		Count(&n)
+	return n > 0
 }
 
 // IsMasteryUnlocked reports whether the secret Mastery legend was earned.

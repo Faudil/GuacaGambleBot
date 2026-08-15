@@ -23,6 +23,23 @@ type Enemy struct {
 	Emoji    string `json:"emoji"`
 }
 
+func DelveName(namespace, name, lang string) string {
+	key := "delve." + namespace + "." + name
+	tr := i18n.T(key, lang)
+	if tr == key {
+		return name
+	}
+	return tr
+}
+
+func EnemyName(name, lang string) string {
+	return DelveName("enemy", name, lang)
+}
+
+func BossName(name, lang string) string {
+	return DelveName("enemy", name, lang)
+}
+
 var enemyTemplates = []Enemy{
 	{Name: "Shambling Corpse", Atk: 8, Def: 2, MinFloor: 1, Zone: "crypt", Emoji: "🧟"},
 	{Name: "Skeletal Archer", Atk: 10, Def: 1, MinFloor: 1, Zone: "crypt", Emoji: "💀"},
@@ -122,12 +139,13 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 
 	enemy := cs.Enemy
 	res.EnemyName = enemy.Name
+	enemyName := EnemyName(enemy.Name, lang)
 
 	if cs.Turn == 0 && cs.EnemyFirstStrike {
 		firstDmg := enemy.Atk + rand.Intn(4)
 		session.HP -= firstDmg
 		res.EnemyDamage = firstDmg
-		res.Log = append(res.Log, i18n.T("delve.combat.first_strike", lang, map[string]any{"enemy": enemy.Name, "damage": firstDmg}))
+		res.Log = append(res.Log, i18n.T("delve.combat.first_strike", lang, map[string]any{"enemy": enemyName, "damage": firstDmg}))
 		cs.EnemyFirstStrike = false
 		cs.Turn++
 		if session.HP <= 0 {
@@ -153,7 +171,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 		}
 		enemy.HP -= netDmg
 		res.PlayerDamage = netDmg
-		res.Log = append(res.Log, i18n.T("delve.combat.slash", lang, map[string]any{"enemy": enemy.Name, "damage": netDmg}))
+		res.Log = append(res.Log, i18n.T("delve.combat.slash", lang, map[string]any{"enemy": enemyName, "damage": netDmg}))
 	case "fireball":
 		manaCost = 15
 		if session.Mana >= manaCost {
@@ -161,7 +179,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 			dmg := atk + 10 + intVal*2 + rand.Intn(8)
 			enemy.HP -= dmg
 			res.PlayerDamage = dmg
-			res.Log = append(res.Log, i18n.T("delve.combat.fireball", lang, map[string]any{"enemy": enemy.Name, "damage": dmg}))
+			res.Log = append(res.Log, i18n.T("delve.combat.fireball", lang, map[string]any{"enemy": enemyName, "damage": dmg}))
 		} else {
 			res.Log = append(res.Log, i18n.T("delve.combat.no_mana", lang))
 		}
@@ -263,7 +281,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 
 	if enemy.HP <= 0 {
 		res.EnemyDefeated = true
-		res.Log = append(res.Log, i18n.T("delve.combat.enemy_defeated", lang, map[string]any{"enemy": enemy.Name}))
+		res.Log = append(res.Log, i18n.T("delve.combat.enemy_defeated", lang, map[string]any{"enemy": enemyName}))
 
 		if enemy.Name == "Spore Host" {
 			res.AppliedPoison = true
@@ -361,7 +379,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 	if res.WasCrit {
 		critTag = i18n.T("delve.combat.crit_tag", lang)
 	}
-	res.Log = append(res.Log, i18n.T("delve.combat.strikes_back", lang, map[string]any{"enemy": enemy.Name, "damage": enemyDmg, "crit": critTag}))
+	res.Log = append(res.Log, i18n.T("delve.combat.strikes_back", lang, map[string]any{"enemy": enemyName, "damage": enemyDmg, "crit": critTag}))
 
 	if session.HP <= 0 {
 		session.HP = 0
@@ -373,7 +391,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 
 	cs.Turn++
 	res.Log = append(res.Log, i18n.T("delve.combat.turn_status", lang, map[string]any{
-		"turn": cs.Turn, "enemy": enemy.Name, "ehp": enemy.HP, "emhp": enemy.MaxHP,
+		"turn": cs.Turn, "enemy": enemyName, "ehp": enemy.HP, "emhp": enemy.MaxHP,
 		"php": session.HP, "pmhp": session.MaxHP,
 	}))
 	return res
@@ -382,7 +400,7 @@ func (svc *Service) ResolveCombatRound(session *model.DelveSession, action strin
 func RenderCombatEmbed(session *model.DelveSession, cs *CombatState, svc *Service, lang string) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title: i18n.T("delve.combat.encounter_title", lang, map[string]any{
-			"enemy": cs.Enemy.Name, "hp": cs.Enemy.HP, "max_hp": cs.Enemy.MaxHP,
+			"enemy": EnemyName(cs.Enemy.Name, lang), "hp": cs.Enemy.HP, "max_hp": cs.Enemy.MaxHP,
 		}),
 		Color: 0xe74c3c,
 	}
@@ -430,19 +448,19 @@ func RenderCombatEmbed(session *model.DelveSession, cs *CombatState, svc *Servic
 	return embed
 }
 
-func ResolveFlee(session *model.DelveSession) (string, int) {
+func ResolveFlee(session *model.DelveSession, lang string) (string, int) {
 	lostGold := session.Gold / 2
 	session.Gold -= lostGold
 	session.HP -= 10
 	if session.HP < 0 {
 		session.HP = 0
 	}
-	return i18n.T("delve.combat.flee_description", "en", map[string]any{"gold": lostGold}), lostGold
+	return i18n.T("delve.combat.flee_description", lang, map[string]any{"gold": lostGold}), lostGold
 }
 
-func DescribeDanger(d DangerInfo) string {
+func DescribeDanger(d DangerInfo, lang string) string {
 	skulls := strings.Repeat("💀", d.Skulls)
-	lvl := fmt.Sprintf("Rec. Lv %d", d.RecLevel)
+	lvl := i18n.T("delve.room.rec_level", lang, map[string]any{"level": fmt.Sprintf("%d", d.RecLevel)})
 	out := skulls + " " + lvl
 	if d.IsPunished {
 		out += " ⚠️"

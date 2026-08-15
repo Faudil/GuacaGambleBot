@@ -19,6 +19,7 @@ import (
 	petsvc "guacagamblebot/internal/service/pets"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
@@ -375,8 +376,38 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 		o.final.Title = i18n.T("boss_league.defeat", lang, map[string]any{"pet_name": o.petD.Name, "boss_name": o.bossD.Name})
 		o.final.Color = 0xe74c3c
 		o.final.Description += "\n\n" + i18n.T("boss_league.try_again", lang)
+
+		// A defeat may unlock an optional side quest line with an NPC mentor
+		// (see questssvc.BossLossUnlocks). Notify the player and offer a
+		// button that opens the mentor's NPC menu directly.
+		if startedQuest, newly := c.qsvc.UnlockOnBossLoss(userID, bossStage); newly {
+			if qDef := c.qsvc.GetQuestDef(startedQuest); qDef != nil && qDef.NPCID != "" {
+				npcName := c.npcName(qDef.NPCID)
+				o.final.Description += "\n\n" + i18n.T("boss_league.training_unlocked", lang, map[string]any{"npc": npcName})
+				o.comps = append(o.comps, components.ActionRow(
+					components.Button("💬 "+i18n.T("boss_league.talk_to_npc", lang, map[string]any{"npc": npcName}),
+						components.EncodeOwner(userID, "npc", qDef.NPCID),
+						discordgo.SuccessButton),
+				))
+			}
+		}
 	}
 	return o, nil, nil
+}
+
+// npcName resolves an NPC's display name for the configured universe, falling
+// back to the NPC id when the universe is unknown.
+func (c *Cog) npcName(npcID string) string {
+	def := universe.Get(c.cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	if def != nil {
+		if n, ok := def.NPCs[npcID]; ok {
+			return n.Name
+		}
+	}
+	return npcID
 }
 
 // animateFight replays the fight turns with live HP bars. When msgID is empty

@@ -13,9 +13,10 @@ func init() {
 		DescKey:  "journal.paths.historian.desc",
 		Steps: []Step{
 			{
-				TextKey: "journal.paths.historian.step1",
-				Check:   countRowsCheck("user_lore", "user_id = ?", 5),
-				Reward:  Reward{Money: 50},
+				TextKey:  "journal.paths.historian.step1",
+				Check:    countRowsCheck("user_lore", "user_id = ?", 5),
+				Discover: countRowsCheck("user_lore", "user_id = ?", 1),
+				Reward:   Reward{Money: 50},
 			},
 			{
 				TextKey: "journal.paths.historian.step2",

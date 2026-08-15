@@ -53,6 +53,9 @@ type DelveItem struct {
 	IsCursed    bool   `json:"cursed"`
 	IsSoulbound bool   `json:"soulbound"`
 	Quantity    int    `json:"qty"`
+	PrefixID    string `json:"prefix_id,omitempty"`
+	BaseID      string `json:"base_id,omitempty"`
+	SuffixID    string `json:"suffix_id,omitempty"`
 }
 
 type CombatState struct {

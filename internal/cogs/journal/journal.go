@@ -157,11 +157,15 @@ func (c *Cog) buildEmbed(sess *discordgo.Session, lang string, guildID, userID i
 
 	var desc strings.Builder
 	desc.WriteString(i18n.T("journal.desc", lang) + "\n")
+	desc.WriteString("\n**" + i18n.T("journal.rumors_title", lang) + "**")
 
 	// The secret Mastery legend, revealed only to those who earned it.
 	if v.MasteryUnlocked {
 		desc.WriteString("\n**" + i18n.T("journal.mastery.title", lang) + "**\n" +
 			i18n.T("journal.mastery.desc", lang) + "\n")
+	} else if jsvc.HighestRank(c.store, userID) >= 1 {
+		// The locked door: a tease for players who earned their first rank.
+		desc.WriteString("\n🔒 " + i18n.T("journal.hall_locked", lang) + "\n")
 	}
 
 	// Fresh completions banner.
@@ -192,20 +196,32 @@ func (c *Cog) buildEmbed(sess *discordgo.Session, lang string, guildID, userID i
 	writePath := func(p jsvc.PathView) {
 		desc.WriteString("\n**" + p.Emoji + " " + i18n.T(p.TitleKey, lang) + "** — " +
 			rankName(p.Rank, lang) + " (" + strconv.Itoa(p.Completed) + "/" + strconv.Itoa(p.Total) + ")\n")
-		for _, st := range p.Steps {
-			line := i18n.T(st.TextKey, lang)
-			switch {
-			case st.Done:
-				desc.WriteString("  ✅ " + line + "\n")
-			case st.Target > 0:
-				bar := progressBar(st.Progress, st.Target)
-				desc.WriteString("  🔸 " + line + " — " + strconv.Itoa(st.Progress) + "/" + strconv.Itoa(st.Target))
-				if bar != "" {
-					desc.WriteString(" `" + bar + "`")
+		if p.AllDone {
+			desc.WriteString("  ✅ " + i18n.T("journal.path_complete", lang) + "\n")
+		} else if p.HasRumor {
+			// The surfaced rumor: opener + objective + progress.
+			desc.WriteString("  🗞️ " + i18n.T("journal.paths."+p.PathID+".rumor", lang) + "\n")
+			for _, st := range p.Steps {
+				line := i18n.T(st.TextKey, lang)
+				switch {
+				case st.Done:
+					desc.WriteString("  ✅ " + line + "\n")
+				case st.Discovered && st.Target > 0:
+					bar := progressBar(st.Progress, st.Target)
+					desc.WriteString("  🔸 " + line + " — " + strconv.Itoa(st.Progress) + "/" + strconv.Itoa(st.Target))
+					if bar != "" {
+						desc.WriteString(" `" + bar + "`")
+					}
+					desc.WriteString("\n")
 				}
-				desc.WriteString("\n")
-			default:
-				desc.WriteString("  🔸 " + line + "\n")
+			}
+		} else {
+			// The current step has not surfaced yet: keep it a mystery.
+			desc.WriteString("  🔒 " + i18n.T("journal.mystery", lang) + "\n")
+			for _, st := range p.Steps {
+				if st.Done {
+					desc.WriteString("  ✅ " + i18n.T(st.TextKey, lang) + "\n")
+				}
 			}
 		}
 	}

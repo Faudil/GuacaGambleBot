@@ -16,6 +16,8 @@
     "stage_info": "Étape {stage}/5 - **{name}**",
     "stats_label": "Niveau : {level}\nEspèce : {species}\nPV : {hp} | Atk : {atk} | Déf : {defense} | Vitesse : {speed}",
     "title": "🏆 Ligue des Boss 🏆",
+    "talk_to_npc": "Parler à {npc}",
+    "training_unlocked": "🌊 **{npc} a vu le combat.** \"Cette machine ne pardonnera pas un compagnon faible. Viens me voir — je vais vous entraîner tous les deux.\"",
     "try_again": "Entraîne ton familier et réessaie !",
     "victory": "🎉 **Victoire !** **{boss_name}** a été vaincu !"
   }

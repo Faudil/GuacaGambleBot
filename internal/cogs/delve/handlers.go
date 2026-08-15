@@ -11,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
@@ -23,7 +24,7 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -53,7 +54,7 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			c.svc.StartCombat(s, enemy)
 			cs := c.svc.GetCombat(userID)
 			embed := delvesvc.RenderCombatEmbed(s, cs, c.svc, lang)
-			embed.Title = i18n.T("delve.handler.boss_gate_title", lang, map[string]any{"emoji": bossData.Emoji, "name": bossData.Name})
+			embed.Title = i18n.T("delve.handler.boss_gate_title", lang, map[string]any{"emoji": bossData.Emoji, "name": delvesvc.BossName(bossData.Name, lang)})
 			embed.Description = i18n.T("delve.handler.boss_gate_desc", lang, map[string]any{"floor": s.Floor + 1})
 			abilities := delvesvc.GetCombatAbilities(playerLevel)
 			weaponEmoji, weaponName := delvesvc.GetWeaponDisplay(c.store, userID)
@@ -87,7 +88,7 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -97,6 +98,10 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	desc := i18n.T("delve.left_voluntarily", lang)
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
+	}
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
 	}
 	embed := &discordgo.MessageEmbed{
 		Title:       "🌅 " + i18n.T("delve.floor_leave", lang),
@@ -110,7 +115,7 @@ func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve. Start one with `/delve`!")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -289,7 +294,7 @@ func (c *Cog) onFight(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -320,8 +325,8 @@ func (c *Cog) onFight(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		c.svc.StartCombat(s, enemy)
 		cs := c.svc.GetCombat(userID)
 		embed := delvesvc.RenderCombatEmbed(s, cs, c.svc, lang)
-		embed.Title = "💀 Boss: Gravewarden Morvain"
-		embed.Description = "The air grows cold. A figure of bone and shadow rises before you, ancient armor creaking with each movement. The Gravewarden has been waiting."
+		embed.Title = i18n.T("delve.handler.gravewarden_title", lang)
+		embed.Description = i18n.T("delve.handler.gravewarden_desc", lang)
 		comps := delvesvc.CombatRoomButtons(lang, abilities, weaponEmoji, weaponName)
 		c.respond(b, i, embed, comps)
 		return
@@ -340,7 +345,7 @@ func (c *Cog) onDefendStart(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -444,7 +449,7 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -502,13 +507,13 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 			xpLine = "\n✨ " + i18n.T("delve.handler.xp_gain", lang, map[string]any{"xp": xpEarned})
 		}
 
-		desc := i18n.T("delve.handler.victory", lang, map[string]any{"enemy": res.EnemyName}) + "\n💰 +" + fmt.Sprintf("%d", gold) + " gold\n"
+		desc := i18n.T("delve.handler.victory", lang, map[string]any{"enemy": delvesvc.EnemyName(res.EnemyName, lang)}) + "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)}) + "\n"
 		desc += xpLine
 		if veilKey != nil {
 			desc += "\n" + i18n.T("veil.delve_veil_key", lang) + "\n"
 		}
 		if artLeveled {
-			desc += "\n💠 **Artifact leveled up!** Use `/artifact` to assign your new stat point.\n"
+			desc += "\n" + i18n.T("delve.handler.artifact_leveled", lang) + "\n"
 		}
 		for _, log := range res.Log {
 			desc += "\n" + log
@@ -533,7 +538,7 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 		if bossData != nil {
 			flag := fmt.Sprintf("boss_f%d", bossData.Floor)
 			c.svc.AddFlag(s, flag)
-			desc += "\n\n" + i18n.T("delve.handler.boss_victory", lang, map[string]any{"name": bossData.Name})
+			desc += "\n\n" + i18n.T("delve.handler.boss_victory", lang, map[string]any{"name": delvesvc.BossName(bossData.Name, lang)})
 		}
 
 		embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -578,11 +583,12 @@ func (c *Cog) onCombatPotion(b *interaction.Bot, i *discordgo.InteractionCreate)
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	if s.Potions <= 0 {
-		c.errorMsg(b, i, "You have no potions left!")
+		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		c.errorMsg(b, i, i18n.T("delve.handler.no_potions", lang))
 		return
 	}
 	s.Potions--
@@ -599,7 +605,7 @@ func (c *Cog) onCombatFlee(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -617,7 +623,7 @@ func (c *Cog) onCombatFlee(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if s.Gold < 0 {
 			s.Gold = 0
 		}
-		msg := fmt.Sprintf("You slip away from combat, leaving %d gold behind.", lostGold)
+		msg := i18n.T("delve.handler.flee_combat_success", lang, map[string]any{"gold": fmt.Sprintf("%d", lostGold)})
 		c.svc.AddFlag(s, "fled_from_depths")
 		c.saveSession(s)
 
@@ -632,7 +638,10 @@ func (c *Cog) onCombatFlee(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			c.applyFallenPenalties(b, i, s, userID, lang)
 			return
 		}
-		msg := fmt.Sprintf("You stumble! The %s lands a free hit for %d damage!", c.svc.GetCombat(userID).Enemy.Name, freeDmg)
+		msg := i18n.T("delve.handler.flee_combat_fail", lang, map[string]any{
+			"enemy":  delvesvc.EnemyName(c.svc.GetCombat(userID).Enemy.Name, lang),
+			"damage": fmt.Sprintf("%d", freeDmg),
+		})
 		cs := c.svc.GetCombat(userID)
 		embed := delvesvc.RenderCombatEmbed(s, cs, c.svc, lang)
 		embed.Description = msg
@@ -651,7 +660,7 @@ func (c *Cog) onFlee(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -663,7 +672,7 @@ func (c *Cog) onFlee(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	roll := rand.Intn(20) + dex
 	if roll >= dc {
-		msg := "You slip away before the enemy can react, retreating to the safety of the passage."
+		msg := i18n.T("delve.handler.flee_success", lang)
 		c.svc.AddFlag(s, "fled_room")
 		c.saveSession(s)
 		c.svc.EndCombat(userID)
@@ -698,7 +707,7 @@ func (c *Cog) onDisarm(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -710,6 +719,7 @@ func (c *Cog) onDisarm(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	roll := rand.Intn(20) + dex
 	success := roll >= dc
 
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	var desc string
 	if success {
 		char, _ := c.store.EnsureCharacter(userID)
@@ -717,16 +727,16 @@ func (c *Cog) onDisarm(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if char != nil {
 			luk = char.LUK
 		}
-		desc = "With steady hands, you disarm the trap. The treasure is yours!"
+		desc = i18n.T("delve.handler.disarm_success", lang)
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, float64(luk)*0.01)
 		if loot != nil {
 			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
+			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 			c.svc.AddFlag(s, "disarmed_treasure")
 		}
 	} else {
 		dmg := delvesvc.TrapDamage(s.Floor)
-		desc = fmt.Sprintf("You slip! A trap triggers for %d damage.", dmg)
+		desc = i18n.T("delve.handler.disarm_fail", lang, map[string]any{"damage": fmt.Sprintf("%d", dmg)})
 		s.HP -= dmg
 		if s.HP < 0 {
 			s.HP = 0
@@ -734,7 +744,6 @@ func (c *Cog) onDisarm(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	c.saveSession(s)
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	if s.HP <= 0 {
 		c.applyFallenPenalties(b, i, s, userID, lang)
 		return
@@ -747,16 +756,17 @@ func (c *Cog) onOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	mimicChance := delvesvc.MimicChance(s.Floor)
 	roll := rand.Intn(100)
 	var desc string
 	if roll < mimicChance {
 		dmg := delvesvc.MimicDamage(s.Floor)
-		desc = fmt.Sprintf("The chest is a mimic! It bites you for %d damage before scuttling away.", dmg)
+		desc = i18n.T("delve.handler.mimic", lang, map[string]any{"damage": fmt.Sprintf("%d", dmg)})
 		s.HP -= dmg
 		if s.HP < 0 {
 			s.HP = 0
@@ -766,17 +776,16 @@ func (c *Cog) onOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
 		if loot != nil {
 			c.svc.AddItem(s, loot.Item)
-			desc = "You throw the chest open! Inside, a treasure awaits.\n\n" + delvesvc.LootRewardText(loot.Item)
+			desc = i18n.T("delve.handler.chest_open", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 			c.svc.AddFlag(s, "opened_treasure_trap")
 		}
 	} else {
 		gold := delvesvc.GoldReward(s.Zone, s.Floor) * 3
 		s.Gold += gold
-		desc = fmt.Sprintf("The chest is packed with coins! +%d gold!", gold)
+		desc = i18n.T("delve.handler.chest_gold", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 	}
 
 	c.saveSession(s)
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	if s.HP <= 0 {
 		c.applyFallenPenalties(b, i, s, userID, lang)
 		return
@@ -789,12 +798,12 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	c.saveSession(s)
-	embed, comps := c.buildFloorTransition(s, "You step away from the opportunity.", lang)
+	embed, comps := c.buildFloorTransition(s, i18n.T("delve.handler.leave_room", lang), lang)
 	c.respond(b, i, embed, comps)
 }
 
@@ -802,13 +811,14 @@ func (c *Cog) onSacrifice(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
 	hpCost := 15 + s.Floor*5
 	if s.MaxHP <= hpCost+10 {
-		c.errorMsg(b, i, "You are too frail to make such a sacrifice.")
+		c.errorMsg(b, i, i18n.T("delve.too_frail", lang))
 		return
 	}
 
@@ -823,11 +833,13 @@ func (c *Cog) onSacrifice(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	c.saveSession(s)
 
-	desc := fmt.Sprintf("You offer a piece of your vitality to the altar. Max HP reduced by %d.\n", hpCost)
-	desc += fmt.Sprintf("In return, a %s item appears: **%s**\n\n", loot.Item.Rarity.String(), loot.Item.Name)
-	desc += delvesvc.LootRewardText(loot.Item)
+	desc := i18n.T("delve.handler.sacrifice_desc", lang, map[string]any{"cost": fmt.Sprintf("%d", hpCost)}) + "\n"
+	desc += i18n.T("delve.handler.sacrifice_reward", lang, map[string]any{
+		"rarity": delvesvc.RarityName(loot.Item.Rarity, lang),
+		"item":   delvesvc.DelveItemName(loot.Item, lang),
+	}) + "\n\n"
+	desc += delvesvc.LootRewardText(loot.Item, lang)
 
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -836,7 +848,7 @@ func (c *Cog) onDesecrate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -851,7 +863,7 @@ func (c *Cog) onDesecrate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.saveSession(s)
 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	desc := fmt.Sprintf("You defile the altar and take its gold. (+%d gold)\nA dark mark settles over your soul... Enemies will hit harder.", gold)
+	desc := i18n.T("delve.handler.desecrate_desc", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -860,7 +872,7 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -884,17 +896,25 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	c.mu.Unlock()
 
 	basePrice := delvesvc.MerchantPriceBase(s.Floor)
-	desc := "\"Take a look, take a look! Fine wares from the deep!\"\n\n"
+	desc := i18n.T("delve.handler.merchant_welcome", lang) + "\n\n"
 	var comps []discordgo.MessageComponent
 
 	for idx, item := range items {
 		p := (int(item.Rarity) + 1) * basePrice
-		desc += fmt.Sprintf("**%d.** %s %s — 💰 %d gold\n", idx+1, delvesvc.RarityEmoji[item.Rarity], item.Name, p)
+		desc += i18n.T("delve.handler.merchant_item_line", lang, map[string]any{
+			"n":     fmt.Sprintf("%d", idx+1),
+			"emoji": delvesvc.RarityEmoji[item.Rarity],
+			"item":  delvesvc.DelveItemName(item, lang),
+			"price": fmt.Sprintf("%d", p),
+		}) + "\n"
 	}
-	desc += fmt.Sprintf("**4.** 💎 Depth Shard — 💰 %d gold\n", basePrice*4)
-	desc += fmt.Sprintf("**5.** 🧪 Potion (heals 30 HP) — 💰 %d gold\n", potionPrice)
-	desc += fmt.Sprintf("**6.** 🔦 Torch — 💰 %d gold\n", torchPrice)
-	desc += fmt.Sprintf("**7.** 🎁 Mystery Cache (random item!) — 💰 %d gold\n", cachePrice)
+	desc += i18n.T("delve.handler.merchant_shard_line", lang, map[string]any{
+		"item":  i18n.T("delve.loot.depth_shard", lang),
+		"price": fmt.Sprintf("%d", basePrice*4),
+	}) + "\n"
+	desc += i18n.T("delve.handler.merchant_potion_line", lang, map[string]any{"price": fmt.Sprintf("%d", potionPrice)}) + "\n"
+	desc += i18n.T("delve.handler.merchant_torch_line", lang, map[string]any{"price": fmt.Sprintf("%d", torchPrice)}) + "\n"
+	desc += i18n.T("delve.handler.merchant_cache_line", lang, map[string]any{"price": fmt.Sprintf("%d", cachePrice)})
 
 	// Store extra items for buy handler
 	c.mu.Lock()
@@ -906,25 +926,25 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	c.mu.Unlock()
 
 	comps = append(comps, components.ActionRow(
-		components.Button("1️⃣ Buy 1", components.Encode("delve", "merchant_buy", "0"), discordgo.PrimaryButton),
-		components.Button("2️⃣ Buy 2", components.Encode("delve", "merchant_buy", "1"), discordgo.SuccessButton),
-		components.Button("3️⃣ Buy 3", components.Encode("delve", "merchant_buy", "2"), discordgo.DangerButton),
+		components.Button(i18n.T("delve.merchant.buy1", lang), components.Encode("delve", "merchant_buy", "0"), discordgo.PrimaryButton),
+		components.Button(i18n.T("delve.merchant.buy2", lang), components.Encode("delve", "merchant_buy", "1"), discordgo.SuccessButton),
+		components.Button(i18n.T("delve.merchant.buy3", lang), components.Encode("delve", "merchant_buy", "2"), discordgo.DangerButton),
 	))
 	comps = append(comps, components.ActionRow(
-		components.Button("💎 Shard", components.Encode("delve", "merchant_buy", "3"), discordgo.PrimaryButton),
-		components.Button("🧪 Potion", components.Encode("delve", "merchant_buy", "4"), discordgo.SuccessButton),
-		components.Button("🔦 Torch", components.Encode("delve", "merchant_buy", "5"), discordgo.SecondaryButton),
+		components.Button(i18n.T("delve.merchant.shard", lang), components.Encode("delve", "merchant_buy", "3"), discordgo.PrimaryButton),
+		components.Button(i18n.T("delve.merchant.potion", lang), components.Encode("delve", "merchant_buy", "4"), discordgo.SuccessButton),
+		components.Button(i18n.T("delve.merchant.torch", lang), components.Encode("delve", "merchant_buy", "5"), discordgo.SecondaryButton),
 	))
 	comps = append(comps, components.ActionRow(
-		components.Button("🎁 Mystery", components.Encode("delve", "merchant_buy", "6"), discordgo.DangerButton),
+		components.Button(i18n.T("delve.merchant.mystery", lang), components.Encode("delve", "merchant_buy", "6"), discordgo.DangerButton),
 		components.Button("🚪 "+i18n.T("delve.buttons.leave", lang), components.Encode("delve", "leave"), discordgo.SecondaryButton),
 	))
 
 	embed := &discordgo.MessageEmbed{
-		Title:       "🛒 Wandering Merchant",
+		Title:       i18n.T("delve.handler.merchant_title", lang),
 		Description: desc,
 		Color:       0xf1c40f,
-		Footer:      &discordgo.MessageEmbedFooter{Text: fmt.Sprintf("Your gold: %d 🪙", s.Gold)},
+		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.handler.merchant_gold", lang, map[string]any{"gold": fmt.Sprintf("%d", s.Gold)})},
 	}
 	c.respond(b, i, embed, comps)
 }
@@ -940,7 +960,7 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -948,12 +968,13 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	offers := c.merchantOffers[userID]
 	c.mu.RUnlock()
 
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
 	if idx < 0 || idx >= len(offers) {
-		c.errorMsg(b, i, "Invalid selection.")
+		c.errorMsg(b, i, i18n.T("delve.handler.invalid_selection", lang))
 		return
 	}
 
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	basePrice := delvesvc.MerchantPriceBase(s.Floor)
 
 	var price int
@@ -964,17 +985,17 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		item := offers[idx]
 		price = (int(item.Rarity) + 1) * basePrice
 		if s.Gold < price {
-			c.errorMsg(b, i, "Not enough gold!")
+			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
 		}
 		s.Gold -= price
 		c.svc.AddItem(s, item)
-		desc = fmt.Sprintf("You purchased **%s** for %d gold!", item.Name, price)
+		desc = i18n.T("delve.handler.purchase", lang, map[string]any{"item": delvesvc.DelveItemName(item, lang), "gold": fmt.Sprintf("%d", price)})
 
 	case 3: // Depth Shard
 		price = basePrice * 4
 		if s.Gold < price {
-			c.errorMsg(b, i, "Not enough gold!")
+			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
 		}
 		s.Gold -= price
@@ -982,12 +1003,12 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			ID: "depth_shard", Name: "Depth Shard", Emoji: "💎", Rarity: delvesvc.Rare, Quantity: 1,
 		}
 		c.svc.AddItem(s, shard)
-		desc = fmt.Sprintf("You purchased **Depth Shard** for %d gold!", price)
+		desc = i18n.T("delve.handler.purchase", lang, map[string]any{"item": i18n.T("delve.loot.depth_shard", lang), "gold": fmt.Sprintf("%d", price)})
 
 	case 4: // Potion
 		price = delvesvc.PotionPrice(s.Floor)
 		if s.Gold < price {
-			c.errorMsg(b, i, "Not enough gold!")
+			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
 		}
 		s.Gold -= price
@@ -995,22 +1016,26 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		if s.Potions > 3 {
 			s.Potions = 3
 		}
-		desc = fmt.Sprintf("You purchased a **Potion** for %d gold! (%d/%d)", price, s.Potions, 3)
+		desc = i18n.T("delve.handler.purchase_potion", lang, map[string]any{
+			"gold": fmt.Sprintf("%d", price), "p": fmt.Sprintf("%d", s.Potions), "m": "3",
+		})
 
 	case 5: // Torch
 		price = delvesvc.TorchPrice(s.Floor)
 		if s.Gold < price {
-			c.errorMsg(b, i, "Not enough gold!")
+			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
 		}
 		s.Gold -= price
 		s.Torches++
-		desc = fmt.Sprintf("You purchased a **Torch** for %d gold! (%d)", price, s.Torches)
+		desc = i18n.T("delve.handler.purchase_torch", lang, map[string]any{
+			"gold": fmt.Sprintf("%d", price), "t": fmt.Sprintf("%d", s.Torches),
+		})
 
 	case 6: // Mystery Cache
 		price = delvesvc.MysteryCachePrice(s.Floor)
 		if s.Gold < price {
-			c.errorMsg(b, i, "Not enough gold!")
+			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
 		}
 		s.Gold -= price
@@ -1022,13 +1047,16 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, luk)
 		if loot != nil {
 			c.svc.AddItem(s, loot.Item)
-			desc = fmt.Sprintf("You crack open the Mystery Cache! Inside: %s\n%s", loot.Item.Name, delvesvc.LootRewardText(loot.Item))
+			desc = i18n.T("delve.handler.cache_open", lang, map[string]any{
+				"item": delvesvc.DelveItemName(loot.Item, lang),
+				"text": delvesvc.LootRewardText(loot.Item, lang),
+			})
 		} else {
-			desc = "The cache is empty... Bad luck."
+			desc = i18n.T("delve.handler.cache_empty", lang)
 		}
 
 	default:
-		c.errorMsg(b, i, "Invalid selection.")
+		c.errorMsg(b, i, i18n.T("delve.handler.invalid_selection", lang))
 		return
 	}
 
@@ -1044,7 +1072,7 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	c.mu.RUnlock()
 
 	if s.Gold < price {
-		c.errorMsg(b, i, "Not enough gold!")
+		c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 		return
 	}
 	s.Gold -= price
@@ -1065,11 +1093,12 @@ func (c *Cog) onPuzzleSolve(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
-	riddle := riddlePool[rand.Intn(len(riddlePool))]
+	riddle := riddleEntry{ID: riddlePool[rand.Intn(len(riddlePool))]}
 	c.mu.Lock()
 	c.riddles[userID] = riddle
 	c.mu.Unlock()
@@ -1078,8 +1107,8 @@ func (c *Cog) onPuzzleSolve(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		Type: discordgo.InteractionResponseModal,
 		Data: components.ModalResponse(
 			components.Encode("delve", "puzzle_answer"),
-			"🧩 Solve the Riddle",
-			components.TextInput("answer", riddle.Question, true, "Type your answer...", discordgo.TextInputShort, 1, 100),
+			i18n.T("delve.riddle.modal_title", lang),
+			components.TextInput("answer", i18n.T("delve.riddle."+riddle.ID+".question", lang), true, i18n.T("delve.riddle.placeholder", lang), discordgo.TextInputShort, 1, 100),
 		),
 	})
 }
@@ -1088,18 +1117,19 @@ func (c *Cog) onPuzzleAnswer(b *interaction.Bot, i *discordgo.InteractionCreate)
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
 	data := i.ModalSubmitData()
-	answer := strings.TrimSpace(strings.ToLower(data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value))
+	answer := normalizeAnswer(data.Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value)
 
 	c.mu.RLock()
 	riddle, ok := c.riddles[userID]
 	c.mu.RUnlock()
 	if !ok {
-		c.errorMsg(b, i, "No active riddle.")
+		c.errorMsg(b, i, i18n.T("delve.no_riddle", lang))
 		return
 	}
 	c.mu.Lock()
@@ -1107,55 +1137,56 @@ func (c *Cog) onPuzzleAnswer(b *interaction.Bot, i *discordgo.InteractionCreate)
 	c.mu.Unlock()
 
 	var desc string
-	if answer == riddle.Answer {
+	if answer == normalizeAnswer(i18n.T("delve.riddle."+riddle.ID+".answer", lang)) {
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.1)
 		c.svc.AddItem(s, loot.Item)
 		c.svc.AddFlag(s, "solved_riddle")
-		desc = "Correct! The door swings open, revealing a hidden chamber.\n\n" + delvesvc.LootRewardText(loot.Item)
+		desc = i18n.T("delve.handler.riddle_correct", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 	} else {
 		s.HP -= 10
 		if s.HP < 0 {
 			s.HP = 0
 		}
-		desc = `"Wrong," groans the statue. A dart hits you from the darkness. (-10 HP)`
+		desc = i18n.T("delve.handler.riddle_wrong", lang)
 	}
 
 	c.saveSession(s)
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 type riddleEntry struct {
-	Question string
-	Answer   string
+	ID string
 }
 
-var riddlePool = []riddleEntry{
-	{Question: "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?", Answer: "echo"},
-	{Question: "The more you take, the more you leave behind. What am I?", Answer: "footsteps"},
-	{Question: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?", Answer: "map"},
-	{Question: "What can run but never walks, has a mouth but never talks, has a head but never weeps, has a bed but never sleeps?", Answer: "river"},
-	{Question: "I am not alive, but I grow; I don't have lungs, but I need air. What am I?", Answer: "fire"},
-	{Question: "What has keys but can't open locks?", Answer: "piano"},
-	{Question: "I can be cracked, made, told, and played. What am I?", Answer: "joke"},
-	{Question: "Forward I am heavy, backward I am not. What am I?", Answer: "ton"},
-	{Question: "I have a neck but no head, two arms but no hands. What am I?", Answer: "shirt"},
-	{Question: "What can you catch but not throw?", Answer: "cold"},
-	{Question: "I have a face but no eyes, hands but no arms. What am I?", Answer: "clock"},
+var riddlePool = []string{"echo", "footsteps", "map", "river", "fire", "piano", "joke", "ton", "shirt", "cold", "clock"}
+
+var diacritics = strings.NewReplacer(
+	"à", "a", "â", "a", "ä", "a",
+	"é", "e", "è", "e", "ê", "e", "ë", "e",
+	"î", "i", "ï", "i",
+	"ô", "o", "ö", "o",
+	"ù", "u", "û", "u", "ü", "u",
+	"ç", "c",
+	"œ", "oe",
+)
+
+func normalizeAnswer(s string) string {
+	return strings.TrimSpace(strings.ToLower(diacritics.Replace(s)))
 }
 
 func (c *Cog) onRestTorch(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
 	if s.Torches <= 0 {
-		c.errorMsg(b, i, "You have no torches left!")
+		c.errorMsg(b, i, i18n.T("delve.no_torches", lang))
 		return
 	}
 	s.Torches--
@@ -1171,8 +1202,9 @@ func (c *Cog) onRestTorch(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	c.svc.AddFlag(s, "used_torch")
 	c.saveSession(s)
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	desc := fmt.Sprintf("You light a torch and rest. Recovered %d HP and %d Mana.", heal, manaRestore)
+	desc := i18n.T("delve.handler.rest_torch", lang, map[string]any{
+		"hp": fmt.Sprintf("%d", heal), "mana": fmt.Sprintf("%d", manaRestore),
+	})
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -1181,7 +1213,7 @@ func (c *Cog) onRestSleep(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -1192,7 +1224,7 @@ func (c *Cog) onRestSleep(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		s.Mana = s.MaxMana
 		c.svc.AddFlag(s, "slept_unprotected")
 		c.saveSession(s)
-		embed, comps := c.buildFloorTransition(s, "You sleep deeply and wake fully restored. HP and Mana at maximum!", lang)
+		embed, comps := c.buildFloorTransition(s, i18n.T("delve.handler.sleep_restored", lang), lang)
 		c.respond(b, i, embed, comps)
 	} else {
 		dmg := delvesvc.AmbushDamage(s.Floor)
@@ -1210,7 +1242,7 @@ func (c *Cog) onRestSleep(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			c.applyFallenPenalties(b, i, s, userID, lang)
 			return
 		}
-		embed, comps := c.buildFloorTransition(s, fmt.Sprintf("You are ambushed in your sleep! Take %d damage and scramble to your feet.", dmg), lang)
+		embed, comps := c.buildFloorTransition(s, i18n.T("delve.handler.sleep_ambush", lang, map[string]any{"damage": fmt.Sprintf("%d", dmg)}), lang)
 		c.respond(b, i, embed, comps)
 	}
 }
@@ -1219,7 +1251,7 @@ func (c *Cog) onNpcHelp(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
@@ -1231,8 +1263,8 @@ func (c *Cog) onNpcHelp(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.saveSession(s)
 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	desc := fmt.Sprintf("You free the captive. They press a gift into your hands before disappearing into the shadows.\n+%d gold\n", gold)
-	desc += "\n" + delvesvc.LootRewardText(loot.Item)
+	desc := i18n.T("delve.handler.npc_help", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)}) + "\n"
+	desc += "\n" + delvesvc.LootRewardText(loot.Item, lang)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -1241,7 +1273,7 @@ func (c *Cog) onNpcBetray(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1273,7 +1305,7 @@ func (c *Cog) onNpcBetray(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.AddFlag(s, "betrayed_npc")
 	c.saveSession(s)
 
-	desc := fmt.Sprintf("You sell them out for %d gold. Their betrayed eyes follow you as you walk away.", gold)
+	desc := i18n.T("delve.handler.npc_betray", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -1285,21 +1317,22 @@ func (c *Cog) onRescue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	victimID := interaction.ToInt64(rest[0])
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	if userID == victimID {
-		c.errorMsg(b, i, "You cannot rescue yourself!")
+		c.errorMsg(b, i, i18n.T("delve.rescue_self", lang))
 		return
 	}
 
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 
 	if s.Torches < 1 {
 		s.HP -= 10
 		if s.HP <= 0 {
-			c.errorMsg(b, i, "You're too weak to rescue anyone!")
+			c.errorMsg(b, i, i18n.T("delve.rescue_no_torches_hp", lang))
 			return
 		}
 		c.saveSession(s)
@@ -1310,11 +1343,11 @@ func (c *Cog) onRescue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	victimSession, _ := c.svc.GetSession(victimID)
 	if victimSession == nil || victimSession.Status != "fallen" {
-		c.errorMsg(b, i, "That player is no longer fallen.")
+		c.errorMsg(b, i, i18n.T("delve.rescue_already_gone", lang))
 		return
 	}
 	if victimSession.GuildID != s.GuildID || victimSession.Floor != s.Floor {
-		c.errorMsg(b, i, "That player is not on your floor.")
+		c.errorMsg(b, i, i18n.T("delve.handler.rescue_wrong_floor", lang))
 		return
 	}
 
@@ -1329,11 +1362,10 @@ func (c *Cog) onRescue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	dmChannel, err := b.Session.UserChannelCreate(fmt.Sprintf("%d", victimID))
 	if err == nil {
 		mention := fmt.Sprintf("<@%d>", userID)
-		b.Session.ChannelMessageSend(dmChannel.ID, fmt.Sprintf("🆘 **You've been rescued!**\n%s found you in the depths of The Undercroft and pulled you to safety! You may now delve again.", mention))
+		b.Session.ChannelMessageSend(dmChannel.ID, i18n.T("delve.handler.rescue_dm", lang, map[string]any{"rescuer": mention}))
 	}
 
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	desc := fmt.Sprintf("🤝 You rescued <@%d> from the darkness!", victimID)
+	desc := i18n.T("delve.handler.rescue_done", lang, map[string]any{"user": fmt.Sprintf("<@%d>", victimID)})
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -1342,11 +1374,11 @@ func (c *Cog) onIgnoreFallen(b *interaction.Bot, i *discordgo.InteractionCreate)
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.buildFloorTransition(s, "You turn away from the cries in the darkness and press on.", lang)
+	embed, comps := c.buildFloorTransition(s, i18n.T("delve.ignore_fallen", lang), lang)
 	c.respond(b, i, embed, comps)
 }
 
@@ -1356,7 +1388,7 @@ func (c *Cog) onShrinePray(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1397,13 +1429,13 @@ func (c *Cog) onShrineDonate(b *interaction.Bot, i *discordgo.InteractionCreate)
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	cost := delvesvc.ShrineDonateCost(s.Floor)
 	if s.Gold < cost {
-		c.errorMsg(b, i, "Not enough gold!")
+		c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 		return
 	}
 	s.Gold -= cost
@@ -1423,7 +1455,7 @@ func (c *Cog) onShrineDefile(b *interaction.Bot, i *discordgo.InteractionCreate)
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1446,7 +1478,7 @@ func (c *Cog) onTombOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1458,7 +1490,7 @@ func (c *Cog) onTombOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			delvesvc.AssignSetName(&loot.Item, s.Zone)
 			c.svc.AddItem(s, loot.Item)
 			c.svc.AddFlag(s, "tomb_raider")
-			desc = i18n.T("delve.handler.tomb_open_success", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item)
+			desc = i18n.T("delve.handler.tomb_open_success", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 		} else {
 			desc = i18n.T("delve.handler.tomb_open_empty", lang)
 		}
@@ -1490,7 +1522,7 @@ func (c *Cog) onTombRespect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1510,7 +1542,7 @@ func (c *Cog) onGardenHarvest(b *interaction.Bot, i *discordgo.InteractionCreate
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1541,7 +1573,7 @@ func (c *Cog) onGardenHarvest(b *interaction.Bot, i *discordgo.InteractionCreate
 			seedName = it.Name
 			seedEmoji = it.Emoji
 		}
-		desc += "\n\n" + fmt.Sprintf("%s You found a **%s**!", seedEmoji, seedName)
+		desc += "\n\n" + i18n.T("delve.handler.garden_seed_found", lang, map[string]any{"emoji": seedEmoji, "item": seedName})
 	}
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -1552,7 +1584,7 @@ func (c *Cog) onGardenBurn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1572,7 +1604,7 @@ func (c *Cog) onGardenBurn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if loot != nil {
 		delvesvc.AssignSetName(&loot.Item, s.Zone)
 		c.svc.AddItem(s, loot.Item)
-		desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
+		desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 	}
 	if rand.Float64() < 0.30 {
 		seed := randomGardenSeed()
@@ -1584,7 +1616,7 @@ func (c *Cog) onGardenBurn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			seedName = it.Name
 			seedEmoji = it.Emoji
 		}
-		desc += "\n\n" + fmt.Sprintf("%s You also found a **%s**!", seedEmoji, seedName)
+		desc += "\n\n" + i18n.T("delve.handler.garden_seed_found_also", lang, map[string]any{"emoji": seedEmoji, "item": seedName})
 	}
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -1604,7 +1636,7 @@ func (c *Cog) onForgeTemper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1629,7 +1661,7 @@ func (c *Cog) onForgeScavenge(b *interaction.Bot, i *discordgo.InteractionCreate
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1651,7 +1683,7 @@ func (c *Cog) onRiftGaze(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1687,7 +1719,7 @@ func (c *Cog) onRiftDisturb(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1719,7 +1751,7 @@ func (c *Cog) onLockedKey(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1736,8 +1768,8 @@ func (c *Cog) onLockedKey(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		s.Gold += gold
 		c.svc.AddItem(s, loot.Item)
 		c.svc.AddFlag(s, "key_master")
-		desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
-		desc += fmt.Sprintf("\n💰 +%d gold", gold)
+		desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		desc += "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 	}
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -1748,7 +1780,7 @@ func (c *Cog) onLockedForce(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1767,8 +1799,8 @@ func (c *Cog) onLockedForce(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			gold := delvesvc.GoldReward(s.Zone, s.Floor)
 			s.Gold += gold
 			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
-			desc += fmt.Sprintf("\n💰 +%d gold", gold)
+			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc += "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 		}
 	} else {
 		dmg := delvesvc.TrapDamage(s.Floor)
@@ -1791,7 +1823,7 @@ func (c *Cog) onNpcIntimidate(b *interaction.Bot, i *discordgo.InteractionCreate
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1807,7 +1839,7 @@ func (c *Cog) onNpcIntimidate(b *interaction.Bot, i *discordgo.InteractionCreate
 		desc := i18n.T("delve.handler.npc_intimidate_success", lang)
 		if loot != nil {
 			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item)
+			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 		}
 		c.saveSession(s)
 		embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -1821,7 +1853,7 @@ func (c *Cog) onMerchantHaggle(b *interaction.Bot, i *discordgo.InteractionCreat
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1859,7 +1891,7 @@ func (c *Cog) onRestBandage(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
 	if s == nil {
-		c.errorMsg(b, i, "No active delve.")
+		c.errorMsg(b, i, c.noSessionMsg(i))
 		return
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -1878,3 +1910,7 @@ func (c *Cog) onRestBandage(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
+
+
+
+

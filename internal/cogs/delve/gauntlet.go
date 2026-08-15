@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 )
@@ -21,13 +22,13 @@ func (c *Cog) currentWeekStart() string {
 	return monday.Format("2006-01-02")
 }
 
-func (c *Cog) gauntletLeaderboard(guildID int64) *discordgo.MessageEmbed {
+func (c *Cog) gauntletLeaderboard(guildID int64, lang string) *discordgo.MessageEmbed {
 	weekStart := c.currentWeekStart()
 	scores, err := c.store.GetDelveGauntletLeaderboard(guildID, weekStart, 10)
 	if err != nil || len(scores) == 0 {
 		return &discordgo.MessageEmbed{
-			Title:       "🏆 Weekly Gauntlet",
-			Description: "No scores yet this week. Use `!gauntlet start` to begin your run!",
+			Title:       i18n.T("delve.gauntlet.title", lang),
+			Description: i18n.T("delve.gauntlet.empty", lang),
 			Color:       0xf1c40f,
 		}
 	}
@@ -45,14 +46,17 @@ func (c *Cog) gauntletLeaderboard(guildID int64) *discordgo.MessageEmbed {
 		default:
 			medal = fmt.Sprintf("#%d", i+1)
 		}
-		desc += fmt.Sprintf("%s <@%d> — Floor %d (Score: %d)\n", medal, s.UserID, s.Floor, s.Score)
+		desc += i18n.T("delve.gauntlet.line", lang, map[string]any{
+			"medal": medal, "user": fmt.Sprintf("%d", s.UserID),
+			"floor": fmt.Sprintf("%d", s.Floor), "score": fmt.Sprintf("%d", s.Score),
+		}) + "\n"
 	}
 
 	return &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("🏆 Weekly Gauntlet · %s", weekStart),
+		Title:       i18n.T("delve.gauntlet.title_date", lang, map[string]any{"date": weekStart}),
 		Description: desc,
 		Color:       0xf1c40f,
-		Footer:      &discordgo.MessageEmbedFooter{Text: "Everyone gets the same seed — pure skill!"},
+		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.gauntlet.footer", lang)},
 	}
 }
 
@@ -74,21 +78,23 @@ func (c *Cog) gauntletStart(userID, guildID int64) error {
 }
 
 func (c *Cog) onPrefixGauntlet(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	guildID := interaction.ToInt64(m.GuildID)
+	lang := c.store.GetLanguage(guildID)
 	parts := strings.Fields(m.Content)
 	if len(parts) > 1 && parts[1] == "start" {
 		userID := interaction.ToInt64(m.Author.ID)
 		if c.loadSession(userID) != nil {
-			_, _ = s.ChannelMessageSend(m.ChannelID, "You already have an active run!")
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("delve.gauntlet.active", lang))
 			return
 		}
-		if err := c.gauntletStart(userID, interaction.ToInt64(m.GuildID)); err != nil {
-			_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to start gauntlet: %v", err))
+		if err := c.gauntletStart(userID, guildID); err != nil {
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("delve.gauntlet.failed", lang, map[string]any{"err": err.Error()}))
 			return
 		}
-		_, _ = s.ChannelMessageSend(m.ChannelID, "⚔️ **Weekly Gauntlet started!** Use `!delve` commands to navigate. Your seed is fixed for the week.")
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("delve.gauntlet.started", lang))
 		return
 	}
-	embed := c.gauntletLeaderboard(interaction.ToInt64(m.GuildID))
+	embed := c.gauntletLeaderboard(guildID, lang)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds: []*discordgo.MessageEmbed{embed},
 	})

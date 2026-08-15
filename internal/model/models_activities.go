@@ -28,7 +28,7 @@ type UserFarming struct {
 }
 
 type UserAchievement struct {
-	UserID        int64 `gorm:"primaryKey;column:user_id"`
+	UserID        int64  `gorm:"primaryKey;column:user_id"`
 	AchievementID string `gorm:"primaryKey;column:achievement_id"`
 }
 
@@ -59,10 +59,23 @@ type QuestNotification struct {
 	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
-func (UserCropHarvest) TableName() string  { return "user_crop_harvests" }
+// JournalScene is a queued atmospheric scene (Chronicler intro, rank-up moment,
+// recognition line). Key is an i18n key, Params its replacements. DM requests
+// private-message delivery with a fallback to the activity result.
+type JournalScene struct {
+	ID        uint      `gorm:"primaryKey;column:id;autoIncrement"`
+	UserID    int64     `gorm:"index:idx_js_user_created;column:user_id"`
+	Key       string    `gorm:"column:key"`
+	Params    string    `gorm:"column:params;type:text"`
+	DM        bool      `gorm:"column:dm;default:false"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+}
+
+func (UserCropHarvest) TableName() string   { return "user_crop_harvests" }
 func (UserFossilHarvest) TableName() string { return "user_fossil_harvests" }
-func (UserFarming) TableName() string      { return "user_farming" }
-func (UserAchievement) TableName() string  { return "user_achievements" }
-func (UserQuest) TableName() string        { return "user_quests" }
-func (UserQuestData) TableName() string    { return "user_quest_data" }
+func (UserFarming) TableName() string       { return "user_farming" }
+func (UserAchievement) TableName() string   { return "user_achievements" }
+func (UserQuest) TableName() string         { return "user_quests" }
+func (UserQuestData) TableName() string     { return "user_quest_data" }
 func (QuestNotification) TableName() string { return "quest_notifications" }
+func (JournalScene) TableName() string      { return "journal_scenes" }

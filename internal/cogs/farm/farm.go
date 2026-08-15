@@ -9,6 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -753,9 +754,13 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
+
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
+	if text, dm := jsvc.SceneLine(c.store, userID, "farm", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
 	if uerr == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
@@ -1199,3 +1204,7 @@ func dailyTip() string {
 	day := time.Now().UTC().YearDay()
 	return tips[day%len(tips)]
 }
+
+
+
+

@@ -21,27 +21,27 @@ const rateLimitCooldown = 500 * time.Millisecond
 // components may only be operated by the user who created the embed. Their
 // custom_ids carry the owner id as the final element (see components.EncodeOwner).
 var ownerGatedDomains = map[string]struct{}{
-	"character":     {},
-	"farm":          {},
-	"pets":          {},
-	"sanctuary":     {},
-	"housing":       {},
-	"economy":       {},
-	"bank":          {},
-	"casino":        {},
-	"mine":          {},
-	"fish":          {},
-	"arch":          {},
-	"hunt":          {},
-	"jobs":          {},
-	"skills":        {},
-	"quest":         {},
-	"achievements":  {},
-	"journal":       {},
-	"loan":          {},
-	"start":         {},
-	"npc":           {},
-	"boss":          {},
+	"character":    {},
+	"farm":         {},
+	"pets":         {},
+	"sanctuary":    {},
+	"housing":      {},
+	"economy":      {},
+	"bank":         {},
+	"casino":       {},
+	"mine":         {},
+	"fish":         {},
+	"arch":         {},
+	"hunt":         {},
+	"jobs":         {},
+	"skills":       {},
+	"quest":        {},
+	"achievements": {},
+	"journal":      {},
+	"loan":         {},
+	"start":        {},
+	"npc":          {},
+	"boss":         {},
 }
 
 // ownerGatedExemptions lists (domain, action) pairs inside owner-gated domains
@@ -84,13 +84,13 @@ type ModalHandler func(b *Bot, i *discordgo.InteractionCreate)
 // giving every cog both a slash command and a `!prefix` entry point that open
 // the same embed interface.
 type Router struct {
-	bot        *Bot
-	store      *store.Store
-	slash      map[string]SlashHandler
-	slashDefs  []*discordgo.ApplicationCommand
-	prefix     map[string]PrefixHandler
-	component  map[string]ComponentHandler
-	modal      map[string]ModalHandler
+	bot       *Bot
+	store     *store.Store
+	slash     map[string]SlashHandler
+	slashDefs []*discordgo.ApplicationCommand
+	prefix    map[string]PrefixHandler
+	component map[string]ComponentHandler
+	modal     map[string]ModalHandler
 
 	rateLimitMu    sync.Mutex
 	rateLimitTimes map[string]time.Time

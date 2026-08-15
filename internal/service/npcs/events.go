@@ -9,8 +9,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/universe"
 )
 
@@ -60,6 +62,12 @@ func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, err
 	npcData := s.GetNPCData(npcID)
 	if npcData == nil {
 		return nil, errors.New("npc not found")
+	}
+
+	// The Chronicler: locked until the player earns a first journal rank, then
+	// a one-time cinematic introduction. Neither burns the chat cooldown.
+	if npcID == jsvc.ChroniclerID {
+		return s.chroniclerChat(userID, lang)
 	}
 
 	cooldown := time.Duration(s.cfg.NPCChatCooldownHours) * time.Hour
@@ -117,13 +125,54 @@ func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, err
 	return &ChatEvent{ID: eventID, Text: text, RepBonus: added}, nil
 }
 
+// chroniclerChat handles the mysterious Chronicler: locked until the player
+// earns a first journal rank, then a one-time cinematic introduction, then
+// short quips that deepen with rank. None of these consume the chat cooldown
+// or grant reputation.
+func (s *Service) chroniclerChat(userID int64, lang string) (*ChatEvent, error) {
+	rank := jsvc.HighestRank(s.store, userID)
+	if rank == 0 {
+		return &ChatEvent{ID: "chronicler_locked", Text: i18n.T("journal.chronicler.locked", lang)}, nil
+	}
+	seen, err := s.HasSeenSecret(userID, jsvc.ChroniclerID, jsvc.ChroniclerIntroSecret)
+	if err != nil {
+		return nil, err
+	}
+	if !seen {
+		if err := s.MarkSecretSeen(userID, jsvc.ChroniclerID, jsvc.ChroniclerIntroSecret); err != nil {
+			return nil, err
+		}
+		var titles []string
+		for _, pid := range jsvc.RankedPaths(s.store, userID) {
+			if p := jsvc.GetPath(pid); p != nil {
+				titles = append(titles, i18n.T(p.TitleKey, lang))
+			}
+		}
+		return &ChatEvent{ID: "chronicler_intro",
+			Text: i18n.T("journal.chronicler.intro", lang, map[string]any{"paths": strings.Join(titles, ", ")})}, nil
+	}
+	npcData := s.GetNPCData(jsvc.ChroniclerID)
+	if npcData == nil {
+		return &ChatEvent{ID: "regular", Text: i18n.T("journal.chronicler.locked", lang)}, nil
+	}
+	quips := npcData.Quips(lang)
+	if rank >= 4 {
+		quips = npcData.QuipsHigh(lang)
+	}
+	text := pickRandom(quips)
+	if text == "" {
+		text = npcData.Chat(lang)
+	}
+	return &ChatEvent{ID: "regular", Text: text}, nil
+}
+
 var secretMap = map[string]string{
-	"elara":        "secret_elara",
-	"thorek":       "secret_thorek",
-	"irian":        "secret_irian",
+	"elara":         "secret_elara",
+	"thorek":        "secret_thorek",
+	"irian":         "secret_irian",
 	"sheriff_vance": "secret_vance",
-	"the_whisper":  "secret_whisper",
-	"gamblebot":    "secret_gamblebot",
+	"the_whisper":   "secret_whisper",
+	"gamblebot":     "secret_gamblebot",
 }
 
 // chatDailyBonus returns the diminishing reputation reward for today's chat

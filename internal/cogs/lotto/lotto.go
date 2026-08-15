@@ -7,6 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/components"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
@@ -113,6 +114,9 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
+	if text, dm := jsvc.SceneLine(c.store, userID, "lotto", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	var embed *discordgo.MessageEmbed
 	if res.Win {
@@ -171,3 +175,6 @@ func (c *Cog) onJackpot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onRefresh(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.onJackpot(b, i)
 }
+
+
+

@@ -25,7 +25,8 @@
         "step6": "Contribute 100 to community projects",
         "step7": "Complete a research project",
         "step8": "Contribute 1,000 to community projects",
-        "title": "Builder"
+        "title": "Builder",
+        "rumor": "The quartermaster mentions empty plots and idle hands."
       },
       "champion": {
         "desc": "Duels, hunts, pets, bosses, delve.",
@@ -37,7 +38,8 @@
         "step6": "Complete a delve run",
         "step7": "Reach character level 25",
         "step8": "Become Boss League Champion",
-        "title": "Champion"
+        "title": "Champion",
+        "rumor": "The arena herald is calling for challengers."
       },
       "highroller": {
         "desc": "Coinflip, slots, blackjack, roulette, lotto.",
@@ -49,7 +51,8 @@
         "step6": "Win a bet you placed",
         "step7": "Win 2 wagers",
         "step8": "Win 10,000 total from casino games",
-        "title": "High Roller"
+        "title": "High Roller",
+        "rumor": "The High Roller's Club is watching the newcomers."
       },
       "historian": {
         "desc": "Lore fragments, fossils, research and secrets.",
@@ -61,7 +64,8 @@
         "step6": "Discover 3 NPC secrets",
         "step7": "Reach reputation level 5 with any NPC",
         "step8": "Discover 45 lore fragments",
-        "title": "Historian"
+        "title": "Historian",
+        "rumor": "The archivist mutters about fragments scattered across the land."
       },
       "hunter": {
         "desc": "Hunt zones, zone bosses and trophies.",
@@ -73,7 +77,8 @@
         "step6": "Defeat the Volcano Dragon",
         "step7": "Slay the boss of every hunt zone",
         "step8": "Defeat 100 zone bosses",
-        "title": "Hunter"
+        "title": "Hunter",
+        "rumor": "Hunters at the lodge gossip about dangerous game."
       },
       "merchant": {
         "desc": "Earn, trade, bank and invest.",
@@ -85,7 +90,8 @@
         "step6": "Contribute 500 to community projects",
         "step7": "Earn 10,000 in total",
         "step8": "Hold 100,000 in your wallet",
-        "title": "Merchant Prince"
+        "title": "Merchant Prince",
+        "rumor": "A guild merchant has business proposals for you."
       },
       "prospector": {
         "desc": "Miner, fish, farm, hunt and dig.",
@@ -96,7 +102,8 @@
         "step5": "Mine 150 ores, or catch 100 fish, or harvest 100 crops",
         "step6": "Dig up 15 fossils",
         "step7": "Mine 300 ores, catch 200 fish AND harvest 200 crops",
-        "title": "Prospector"
+        "title": "Prospector",
+        "rumor": "The foreman at the mines speaks of a rich vein."
       },
       "shadow": {
         "desc": "Theft, notoriety and infamy.",
@@ -107,7 +114,8 @@
         "step5": "Reach 50 thief infamy",
         "step6": "Complete 30 successful thefts",
         "step7": "Wear the Mask of Malveillance",
-        "title": "Shadow"
+        "title": "Shadow",
+        "rumor": "A hooded figure slips you a note in the alley."
       }
     },
     "ranks": {
@@ -121,6 +129,26 @@
       "crowns": "{amount}👑",
       "money": "{amount}💰"
     },
-    "title": "📖 Journal"
+    "title": "📖 Journal",
+    "rumors_title": "🗞️ Rumors",
+    "mystery": "A rumor stirs in this domain... keep playing to hear it.",
+    "hall_locked": "**The Hall of Whispers** — a legend awaits those who master every path.",
+    "chronicler": {
+      "sighting": "🕯️ *The air grows still. In the corner of your eye — a robed figure, standing where no one stood a breath ago. His face is shadow, his hands are ink-stained. He watches you. Then he is simply... gone.*\n\nA new name now waits in the NPC list: **The Chronicler** (`!npc`).",
+      "locked": "You are not yet written in these pages. Prove yourself — anywhere — then return.",
+      "intro": "*The Chronicler closes his book. The pages are warm.*\n\n\"I have been watching. You walk {paths} — the ink knows your name now.\"\n\n*He opens a page you cannot read. On it, a door made of whispers.*\n\n\"There is a place the book speaks of — the Hall of Whispers. It opens only to those who master every path of the Journal. They say a legend waits inside. A companion no one else can claim. Ten thousand echoes of glory. And a medallion that weighs nothing and means everything.\"\n\n*He smiles — or seems to.* \"Walk every path, and the Hall will know your name.\""
+    },
+    "rankup": "The journal hums. Your standing rises — **rank {rank}** in a path. The Chronicler's quill scratches somewhere in the dark.",
+    "ambient": {
+      "1": "*A shadow detaches from the alley wall and melts into the crowd.*",
+      "2": "*You feel eyes on your back — soft as ink on parchment.*",
+      "3": "*Someone has been here. The dust settles in the shape of footprints that stop at the wall.*"
+    },
+    "recognition": {
+      "1": "*Your name is spoken in {path} circles now. The work is noticed.*",
+      "2": "*Word travels fast among {path} folk — you have earned their respect.*",
+      "3": "*The {path} masters talk about you in quiet voices. You are close to legend.*",
+      "4": "*They call you a master of {path}. The Chronicler's ink moves on its own.*"
+    }
   }
 }

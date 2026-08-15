@@ -174,8 +174,8 @@ func TestGetBonuses(t *testing.T) {
 	}).Error)
 
 	b := svc.GetBonuses(1)
-	assert.Equal(t, 6.0, b.ShopDiscount)       // level 3 * 2
-	assert.Equal(t, 4, b.MiningRiskReduction)   // level 2 * 2
+	assert.Equal(t, 6.0, b.ShopDiscount)      // level 3 * 2
+	assert.Equal(t, 4, b.MiningRiskReduction) // level 2 * 2
 }
 
 func TestRankName(t *testing.T) {
@@ -296,4 +296,36 @@ func TestAddActivityReputation(t *testing.T) {
 	added, err = svc.AddActivityReputation(1, "unknown", 3)
 	require.NoError(t, err)
 	assert.Equal(t, 0, added)
+}
+
+func TestChroniclerLockedWithoutRank(t *testing.T) {
+	svc, _ := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	event, err := svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "chronicler_locked", event.ID)
+	assert.Equal(t, 0, event.RepBonus)
+
+	// Chatting with another NPC still works and is independent.
+	event, err = svc.Chat(1, "elara", "en")
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+}
+
+func TestChroniclerIntroOnceThenQuips(t *testing.T) {
+	svc, st := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	// Give the player a first journal rank (Apprentice on the champion path).
+	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 1}).Error)
+
+	event, err := svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "chronicler_intro", event.ID)
+
+	// Second chat: a regular quip, never the intro again.
+	event, err = svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "regular", event.ID)
 }

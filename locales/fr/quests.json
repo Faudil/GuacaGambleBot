@@ -20,6 +20,16 @@
       "step9_battle": "⚔️ **Boss 5/5 , L'Empereur Phénix**\nLe défi final. Un phénix majestueux et brûlant dont les flammes réduisent l'acier en cendres. Seul le plus fort peut l'affronter.",
       "title": "Ligue des Boss"
     },
+    "irian_training": {
+      "description": "Irian propose d'entraîner ton familier pour vaincre le Gardien du Coffre.",
+      "step0_intro": "Tu reviens péniblement aux quais, ton familier meurtri et vaincu. Irian t'attend près de l'eau, bras croisés.\n\n\"Cette vieille machine ne fait pas de cadeaux. J'ai vu tout le combat.\"\n\nIl s'accroupit près de ton familier et l'examine. \"Ton familier n'est pas faible. Il est inentraîné. La nourriture forge la force. La chasse forge l'instinct. Fais les deux, et ce Gardien ne saura pas ce qui l'a frappé.\"\n\nIl te tend une petite bourse de crédits. \"Commence par l'écuelle. `!pets` — nourris ton compagnon. Je serai là quand tu auras fini.\"",
+      "step1_feed": "Objectif : Nourris ton familier 3 fois avec `!pets`.",
+      "step2_feed_dialogue": "Irian observe le repas avec un hochement de tête satisfait.\n\n\"Bien. Un familier nourri est un familier fort — chaque repas le rend plus coriace.\"\n\nIl pointe la lisière des bois. \"Maintenant, la deuxième leçon. L'instinct se gagne dans la nature, pas à l'écuelle. Emmène ton familier chasser. `!hunt` jusqu'à ce que vous ayez gagné votre pain tous les deux.\"",
+      "step3_hunt": "Objectif : Chasse 3 fois avec `!hunt` — ton familier gagne de l'XP à chaque victoire.",
+      "step4_level_req": "Objectif : Amène ton familier au **niveau 10** — nourris-le, chasse avec lui, et il deviendra plus fort.",
+      "step5_reward": "Irian étudie ton familier avec l'œil d'un vétéran. Puis, pour la première fois, il sourit.\n\n\"Niveau 10. Ça, c'est un compagnon de chasseur.\"\n\nIl prépare un paquet de provisions pour la route — ragoût de guerrier, pain de pierre, baies touchées par le vent. \"Nourris-le avec ça avant le combat. Chaque point de force compte.\"\n\nIl te frappe l'épaule. \"Allez. Montre à ce Gardien ce que sait faire un familier entraîné.\"",
+      "title": "La Leçon du Mentor"
+    },
     "boss_lose_taunt": "💀 Le boss se moque de toi : 'C'est tout ce que tu as ? Entraîne ton familier et reviens !'",
     "boss_no_pet": "❌ Tu dois avoir un familier actif pour combattre ce boss.",
     "boss_win": "🏆 Ton familier a vaincu le boss !",
@@ -49,9 +59,9 @@
       "description": "Le minage et les profondeurs.",
       "step0_dialogue": "Thorek étudie le journal en silence. Son visage se durcit.\n\n\"L'écriture de Merrik. L'ingénieur du Conseil. Les plans sont dans un coffre au Niveau 7 de la vieille mine. Personne n'y est descendu depuis des décennies. Les tunnels sont sûrement à moitié effondrés.\"\n\nIl attrape une pioche au mur et la tend vers toi.\n\n\"Va taper du caillou. `!mine` deux ou trois fois. On verra si les vieux ascenseurs tiennent encore. Sinon, on perd notre temps.\"",
       "step1_activity": "Objectif : Mine 2 fois avec `!mine`.",
-      "step2_transition": "Tu sors de la mine couvert de poussière. Une femme sur les quais te fait signe.\n\n\"Longue journée sous terre ? Viens essayer l'eau. Ça nettoie la tête.\"\n\nElle te lance une canne et une boîte de vers. \"`!fish` pour lancer ta ligne. Choisis un coin, un appât, et attends la touche. Rien de compliqué.\"",
-      "step3_activity": "Objectif : Pêche 2 fois avec `!fish`.",
-      "step4_dialogue": "Tu remontes ton deuxième poisson. La femme hoche la tête.\n\n\"Pas mal. Tu devrais parler à Elara. La jardinière du village. Elle traîne près des vieux jardins. Elle a trouvé quelque chose de bizarre là-bas.\"\n\nElle glisse une petite pochette dans ta main. **Graines de blé**. \"Tu en auras besoin. Va voir ce qu'Elara a trouvé.\"",
+      "step2_transition": "Tu sors de la mine couvert de poussière. Une femme sur les quais te fait signe.\n\n\"Longue journée sous terre ? Viens essayer l'eau. Ça nettoie la tête.\"\n\nElle te détaille du regard. \"Pas de matériel sur toi, je parie. Une canne et une boîte de vers — c'est moi qui régale.\"\n\n\"Une fois que tu as l'équipement, `!fish` pour lancer ta ligne. Choisis un coin, un appât, et attends la touche. Rien de compliqué.\"",
+      "step3_activity": "Objectif : Pêche 1 fois avec `!fish`.",
+      "step4_dialogue": "Tu remontes ton poisson. La femme hoche la tête.\n\n\"Pas mal. Tu devrais parler à Elara. La jardinière du village. Elle traîne près des vieux jardins. Elle a trouvé quelque chose de bizarre là-bas.\"\n\nElle pose une petite pochette de **Graines de blé** sur la rambarde à côté de toi. \"Prends-les avec toi. Tu en auras besoin chez Elara.\"",
       "title": "Jour 1 : La Forge"
     },
     "day2_alchemy": {
@@ -60,7 +70,7 @@
       "step1_activity": "Objectif : Plante 2 cultures avec `!farm`.",
       "step2_transition": "Le mécanisme vibre. Les rainures palpitent d'une lumière pâle. Elara étudie les données qui s'affichent.\n\n\"Ça répond. Mais les données sont incomplètes. Il y a une autre couche enfouie sous le village. Essaie `!dig` dans les fosses de fouille. Les Anciens ont enterré quelque chose là-dessous.\"",
       "step3_activity": "Objectif : Creuse 2 fois avec `!dig`.",
-      "step4_dialogue": "Ta pelle heurte du métal. Tu dégages une capsule scellée. À l'intérieur : des graines anciennes et un fragment de carte holographique.\n\nElara contemple la capsule. \"Ils stockaient la vie elle-même. Des graines qui n'existent nulle part ailleurs.\"\n\nElle te tend le **Blé** que tu as cultivé. \"Garde-le. Trouve-toi un toit. `!house shop` propose des cabanes de départ.\"",
+      "step4_dialogue": "Ta pelle heurte du métal. Tu dégages une capsule scellée. À l'intérieur : des graines anciennes et un fragment de carte holographique.\n\nElara contemple la capsule. \"Ils stockaient la vie elle-même. Des graines qui n'existent nulle part ailleurs.\"\n\nElle hoche la tête vers le **Blé** que tu as cultivé. \"Prends-le — tu en auras besoin avant la fin. Et trouve-toi un toit. `!house shop` propose des cabanes de départ.\"",
       "title": "Jour 2 : La Serrure"
     },
     "day3_base": {
@@ -68,13 +78,13 @@
       "step0_req": "GambleBot analyse les données de la capsule. Un schéma partiel apparaît à l'écran.\n\n\"Plans Strata, section une. Besoin d'un terminal fixe pour décoder le reste. Achète une Cabane de Départ avec `!house shop`. Coût : 500 crédits et 2 Minerais de Fer.\"",
       "step1_transition": "Le terminal de la cabane s'allume. La voix de GambleBot grésille.\n\n\"Bien. Maintenant protège tes pièces. `!deposit` une fois. Si tu perds tout au casino, au moins tes économies sont en sécurité.\"",
       "step2_activity": "Objectif : Fais 1 dépôt avec `!deposit`.",
-      "step3_dialogue": "Dépôt enregistré.\n\nLes plans révèlent que le Coffre utilise un verrou biologique. Il faut un échantillon ADN de la faune locale.\n\n\"La forêt hors de la ville. Une ranger nommée **Irian** la connaît. Elle campe à la lisière. Ne traîne pas trop.\"\n\nIrian te rejoint à la sortie de la ville avec un cadeau : un **Œuf de Forêt** niché dans de la mousse, chaud au toucher. \"Une graine sauvage des bois. Utilise `!hatch` pour l'ouvrir. Ça peut être n'importe quoi.\"",
+      "step3_dialogue": "Dépôt enregistré.\n\nLes plans révèlent que le Coffre utilise un verrou biologique. Il faut un échantillon ADN de la faune locale.\n\n\"La forêt hors de la ville. Une ranger nommée **Irian** la connaît. Elle campe à la lisière. Ne traîne pas trop.\"\n\nIrian te rejoint à la sortie de la ville et te tend un **Œuf de Forêt**, niché dans de la mousse, chaud au toucher. \"Une graine sauvage des bois. Prends-le. Quand tu es prêt, `!hatch` pour l'ouvrir. Ça peut être n'importe quoi.\"",
       "title": "Jour 3 : Le Logement"
     },
     "day4_will": {
       "description": "Chasse et œuf mystère.",
       "step0_dialogue": "Irian t'attend à la lisière. Elle va droit au but.\n\n\"La forêt n'est pas sûre. De vieilles expériences y traînent encore. Mais le Coffre a besoin d'un échantillon ADN de la faune locale. Alors on chasse. Utilise `!hunt` deux ou trois fois. Ton familier se bat.\"",
-      "step1_activity": "Objectif : Chasse 2 fois avec `!hunt`.",
+      "step1_activity": "Objectif : Fais éclore ton œuf avec `!hatch`, puis chasse 2 fois avec `!hunt`.",
       "step2_dialogue": "Ton familier ramène l'échantillon ADN de la broussaille. Irian l'examine et hoche la tête. \"C'est exactement ce qu'il nous faut.\"\n\nElle jette un œil à l'œuf que tu portes. \"Quand il éclora, nourris le nouveau avec `!pets`. Un familier affamé est un familier mort.\"",
       "step3_activity": "Objectif : Nourris ton familier 1 fois avec `!pets`.",
       "step4_dialogue": "Ton compagnon se calme après le repas. Irian l'observe un instant.\n\n\"Prends-en soin. Peu importe ce qui nous attend, tu auras besoin de quelqu'un à tes côtés.\"\n\nElle regarde le Casino. \"GambleBot a trouvé quelque chose sous son plancher. Va voir par toi-même.\"",
@@ -123,6 +133,7 @@
     "req_missing_house": "🏠 Tu ne possèdes pas encore de maison — achètes-en une avec `/house` !",
     "req_missing_item": "🎒 {item} : {have} / {needed}",
     "req_missing_money": "💰 Il te faut **{needed}$** (tu as {have}$).",
+    "req_missing_pet_level": "🐾 Ton familier actif doit atteindre le **niveau {level}** (niveau actuel : {have}). Nourris-le et chasse avec lui pour monter de niveau !",
     "req_money_status": "💰 Argent : ${current} / ${required}",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objectif accompli !\n🎯 **Suite :** {next}\n\nTape `/quest` pour voir ta progression.",

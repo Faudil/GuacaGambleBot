@@ -217,7 +217,7 @@ func (c *Cog) buildFloorTransition(session *model.DelveSession, summary string, 
 	danger := delvesvc.CalcDanger(session.Floor, playerLevel)
 
 	title := i18n.T("delve.floor_title", lang, map[string]any{"floor": fmt.Sprintf("%d", session.Floor)})
-	dangerLine := delvesvc.DescribeDanger(danger)
+	dangerLine := delvesvc.DescribeDanger(danger, lang)
 	hpLine := i18n.T("delve.floor_summary_hp", lang, map[string]any{
 		"hp":       fmt.Sprintf("%d", session.HP),
 		"max_hp":   fmt.Sprintf("%d", session.MaxHP),
@@ -230,13 +230,13 @@ func (c *Cog) buildFloorTransition(session *model.DelveSession, summary string, 
 		"gold":    fmt.Sprintf("%d", session.Gold),
 	})
 	desc := dangerLine + "\n\n" + summary + "\n\n" + hpLine + "\n" + itemsLine
-	potionLine := fmt.Sprintf("🧪 Potions: %d", session.Potions)
+	potionLine := i18n.T("delve.room.potions_line", lang, map[string]any{"potions": fmt.Sprintf("%d", session.Potions)})
 	desc += "\n" + potionLine
 
 	var pets []int64
 	json.Unmarshal([]byte(session.DeployedPets), &pets)
 	if len(pets) > 0 {
-		desc += fmt.Sprintf("\n🐾 **Pets deployed:** %d", len(pets))
+		desc += "\n🐾 " + i18n.T("delve.room.pets_line", lang, map[string]any{"pets": fmt.Sprintf("%d", len(pets))})
 	}
 
 	var effects []string
@@ -244,7 +244,11 @@ func (c *Cog) buildFloorTransition(session *model.DelveSession, summary string, 
 	if len(effects) > 0 {
 		var displayEffects []string
 		for _, e := range effects {
-			displayEffects = append(displayEffects, i18n.T("delve.status."+e, lang))
+			statusKey := e
+			if i := strings.Index(e, ":"); i > 0 {
+				statusKey = e[:i]
+			}
+			displayEffects = append(displayEffects, i18n.T("delve.status."+statusKey, lang))
 		}
 		desc += "\n⚠️ " + strings.Join(displayEffects, ", ")
 	}
@@ -299,6 +303,11 @@ func (c *Cog) errorMsg(b *interaction.Bot, i *discordgo.InteractionCreate, msg s
 	})
 }
 
+func (c *Cog) noSessionMsg(i *discordgo.InteractionCreate) string {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	return i18n.T("delve.no_session", lang, map[string]any{"prefix": "/"})
+}
+
 func (c *Cog) startDelve(b *interaction.Bot, userID, guildID, channelID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent, *model.DelveSession, error) {
 	s, err := c.svc.StartSession(userID, guildID, channelID)
 	if err != nil {
@@ -313,7 +322,7 @@ func (c *Cog) startDelve(b *interaction.Bot, userID, guildID, channelID int64) (
 
 const staleSessionTimeout = 2 * time.Hour
 
-func (c *Cog) canStartDelve(userID int64) (bool, string) {
+func (c *Cog) canStartDelve(userID int64, lang string) (bool, string) {
 	raw := c.loadSessionRaw(userID)
 	if raw != nil {
 		if raw.Status == "active" {
@@ -321,7 +330,7 @@ func (c *Cog) canStartDelve(userID int64) (bool, string) {
 				c.svc.EndSession(raw, "abandoned")
 				c.deleteSession(userID)
 			} else {
-				return false, "You already have an active delve! Use the flee button to escape."
+				return false, i18n.T("delve.already_active", lang)
 			}
 		}
 		if raw.Status == "fallen" {
@@ -332,25 +341,26 @@ func (c *Cog) canStartDelve(userID int64) (bool, string) {
 					c.svc.EndSession(raw, "automatically rescued")
 					c.store.ClearCooldown(userID, "delve_death")
 					c.deleteSession(userID)
-					return false, "🆘 **You've been rescued!**\nYour loyal **" + raw.AutoRescuePet + "** dragged you from the darkness! You're free to delve again."
+					return false, i18n.T("delve.auto_rescued", lang, map[string]any{"pet": raw.AutoRescuePet})
 				}
 				remaining := 5*time.Minute - elapsed
-				return false, fmt.Sprintf("⏳ Your **%s** is working to free you. Check back in %d minute(s).", raw.AutoRescuePet, int(remaining.Minutes())+1)
+				return false, i18n.T("delve.auto_rescue_wait", lang, map[string]any{"pet": raw.AutoRescuePet, "minutes": fmt.Sprintf("%d", int(remaining.Minutes())+1)})
 			}
-			return false, fmt.Sprintf("💀 You fell on floor %d. Your pets couldn't reach you. Another adventurer may find you there, or try again tomorrow.", raw.Floor)
+			return false, i18n.T("delve.fallen_wait", lang, map[string]any{"floor": fmt.Sprintf("%d", raw.Floor)})
 		}
 	}
 	midnight := time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour)
 	ok, _ := c.store.CheckCooldown(userID, "delve_death", time.Until(midnight))
 	if !ok {
-		return false, "You cannot delve again today. Wait for rescue or until tomorrow."
+		return false, i18n.T("delve.cooldown_death", lang)
 	}
 	return true, ""
 }
 
 func (c *Cog) onSlashDelve(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
-	allowed, msg := c.canStartDelve(userID)
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	allowed, msg := c.canStartDelve(userID, lang)
 	if !allowed {
 		if strings.HasPrefix(msg, "🆘") || strings.HasPrefix(msg, "⏳") {
 			_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -368,7 +378,7 @@ func (c *Cog) onSlashDelve(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	embed, comps, _, err := c.startDelve(b, userID, interaction.ToInt64(i.GuildID), interaction.ToInt64(i.ChannelID))
 	if err != nil {
-		c.errorMsg(b, i, fmt.Sprintf("Failed to start delve: %v", err))
+		c.errorMsg(b, i, i18n.T("delve.failed_start", lang, map[string]any{"err": err.Error()}))
 		return
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -377,14 +387,15 @@ func (c *Cog) onSlashDelve(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onPrefixDelve(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	userID := interaction.ToInt64(m.Author.ID)
-	allowed, msg := c.canStartDelve(userID)
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	allowed, msg := c.canStartDelve(userID, lang)
 	if !allowed {
 		_, _ = s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
 	embed, comps, _, err := c.startDelve(b, userID, interaction.ToInt64(m.GuildID), interaction.ToInt64(m.ChannelID))
 	if err != nil {
-		_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Failed to start delve: %v", err))
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("delve.failed_start", lang, map[string]any{"err": err.Error()}))
 		return
 	}
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -398,13 +409,13 @@ func (c *Cog) onSlashJourney(b *interaction.Bot, i *discordgo.InteractionCreate)
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	pages, err := delvesvc.BuildChronicle(userID, c.svc, lang)
 	if err != nil {
-		c.errorMsg(b, i, fmt.Sprintf("Failed to load chronicle: %v", err))
+		c.errorMsg(b, i, i18n.T("delve.failed_chronicle", lang, map[string]any{"err": err.Error()}))
 		return
 	}
 	if len(pages) == 0 {
 		pages = append(pages, &discordgo.MessageEmbed{
-			Title:       "📖 Personal Chronicle",
-			Description: "No chronicle entries yet. Begin your journey with `/delve`!",
+			Title:       i18n.T("delve.chronicle.title", lang),
+			Description: i18n.T("delve.chronicle.empty", lang),
 			Color:       0x9b59b6,
 		})
 	}
@@ -417,13 +428,13 @@ func (c *Cog) onPrefixJourney(b *interaction.Bot, s *discordgo.Session, m *disco
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	pages, err := delvesvc.BuildChronicle(userID, c.svc, lang)
 	if err != nil {
-		_, _ = s.ChannelMessageSend(m.ChannelID, "Failed to load chronicle.")
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("delve.failed_chronicle", lang, map[string]any{"err": err.Error()}))
 		return
 	}
 	if len(pages) == 0 {
 		pages = append(pages, &discordgo.MessageEmbed{
-			Title:       "📖 Personal Chronicle",
-			Description: "No chronicle entries yet. Begin your journey with `!delve`!",
+			Title:       i18n.T("delve.chronicle.title", lang),
+			Description: i18n.T("delve.chronicle.empty", lang),
 			Color:       0x9b59b6,
 		})
 	}
