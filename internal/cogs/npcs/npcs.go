@@ -55,27 +55,23 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang, b, i)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed := components.Embed(i18n.T("npcs.list_title", lang), "", 0x3498db)
-	allNPCs := c.svc.GetAllNPCMeta()
-	var desc string
-	for _, npc := range allNPCs {
-		desc += fmt.Sprintf("%s **%s**\n", npc.Emoji, npc.Name)
-	}
-	embed.Description = desc
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-		Embeds: []*discordgo.MessageEmbed{embed},
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: comps,
 	})
 }
 
-func (c *Cog) menu(lang string, b *interaction.Bot, i *discordgo.InteractionCreate) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	userID := interaction.ToInt64(interaction.UserID(i))
+func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(i18n.T("npcs.list_title", lang), "", 0x3498db)
 	var desc string
 	allReps, _ := c.svc.GetAllReputations(userID)
@@ -563,7 +559,8 @@ func (c *Cog) onShopBuy(npcID string, itemID string) func(b *interaction.Bot, i 
 
 func (c *Cog) onBack(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang, b, i)
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
