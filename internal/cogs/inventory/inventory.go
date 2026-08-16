@@ -230,7 +230,6 @@ func (c *Cog) onSellModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
-			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
 

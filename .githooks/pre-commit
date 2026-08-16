@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Block the commit when gofmt, go vet, or go test fail.
+# Bypass with: git commit --no-verify
+exec "$(git rev-parse --show-toplevel)/.githooks/run-checks.sh" commit

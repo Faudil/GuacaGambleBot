@@ -62,6 +62,7 @@ func (c *Cog) embed() *discordgo.MessageEmbed {
 				true),
 			components.Field("\U0001f43e Pets",
 				"`"+prefix+"pets` / `/pets` — Manage pets\n"+
+					"`"+prefix+"play` / `/play` — Play with your pet\n"+
 					"`"+prefix+"hatch` / `/hatch` — Hatch a mystery egg\n"+
 					"`"+prefix+"hunt` / `/hunt` — Pet expedition\n"+
 					"`"+prefix+"expedition` / `/expedition` — Send pet exploring\n"+

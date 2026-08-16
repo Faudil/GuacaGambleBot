@@ -37,7 +37,7 @@ type ChoiceReward struct {
 
 var interactionPool = []InteractionDef{
 	{
-		ID: "play_time", Triggers: []string{"feed", "idle"}, Chance: 0.15, CooldownM: 180,
+		ID: "play_time", Triggers: []string{"play", "feed", "idle"}, Chance: 0.15, CooldownM: 180,
 		Choices: []InteractionChoice{
 			{ID: "fetch", Emoji: "🎾", BondReward: 3, XPReward: 10},
 			{ID: "tug", Emoji: "🪢", BondReward: 4, XPReward: 15, ItemReward: "pebble"},

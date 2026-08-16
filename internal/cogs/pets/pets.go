@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -64,6 +65,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Slash("heal", "Soigner ton familier actif", c.onHealCommand)
 	r.Prefix("heal", c.onHealPrefix)
 	r.Component("pets", "heal", c.onHealButton)
+	r.Slash("play", "Jouer avec ton familier actif", c.onPlayCommand)
+	r.Prefix("play", c.onPlayPrefix)
+	r.Prefix("jouer", c.onPlayPrefix)
 	r.Slash("artifact", "Gérer votre artefact de familier", c.onArtifactMenu)
 	r.Slash("weekly", "Classement hebdomadaire des familiers", c.onWeeklyLeaderboard)
 	r.Prefix("weekly", c.onWeeklyPrefix)
@@ -485,6 +489,69 @@ func (c *Cog) onHealButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Content: i18n.T("pets.heal.success", lang, map[string]any{"name": pet.Nickname, "hp": healed, "price": cost}),
 	})
+}
+
+// ─── Playing ───────────────────────────────────────────────────
+
+func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	pet, err := c.svc.GetActivePet(userID)
+	if err != nil || pet == nil {
+		interaction.RespondError(b, i, lang, "pets.play.no_pet")
+		return
+	}
+	if pet.OnExpedition {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: i18n.T("pets.play.on_expedition", lang, map[string]any{"name": pet.Nickname}),
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+	content := c.playWithPet(pet, lang)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: content,
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	c.tryInteraction(b, i, pet, "play")
+}
+
+func (c *Cog) onPlayPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+	pet, err := c.svc.GetActivePet(userID)
+	if err != nil || pet == nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.play.no_pet", lang))
+		return
+	}
+	if pet.OnExpedition {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.play.on_expedition", lang, map[string]any{"name": pet.Nickname}))
+		return
+	}
+	content := c.playWithPet(pet, lang)
+	_, _ = s.ChannelMessageSend(m.ChannelID, content)
+}
+
+func (c *Cog) playWithPet(pet *model.UserPet, lang string) string {
+	xpGain := rand.Intn(16) + 10
+	lvlRes := c.svc.AddXP(pet, xpGain)
+	c.svc.AddBond(pet, 2)
+	c.svc.RecordHistory(pet, "played",
+		"🎾 **"+pet.Nickname+"** had a great play session! (+"+itoa2(xpGain)+" XP)")
+	if err := c.svc.UpdatePet(pet); err != nil {
+		slog.Error("pets: failed to save pet after play", "user", pet.UserID, "pet", pet.ID, "error", err)
+	}
+	content := i18n.T("pets.play.success", lang, map[string]any{"name": pet.Nickname, "xp": xpGain})
+	if lvlRes.Leveled {
+		content += "\n" + i18n.T("pets.play.level_up", lang, map[string]any{"name": pet.Nickname, "level": pet.Level})
+	}
+	return content
 }
 
 func buildBondBar(level int) string {
@@ -1246,13 +1313,13 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		personality = i18n.T("pets.personality."+pet.Personality, lang)
 	}
 
-	// Step 1 — suspense: the egg trembles (rarity-colored glow).
+	// Step 1 — suspense: the egg trembles.
 	step1 := components.Embed(
 		i18n.T("pets.hatch.hatching_title", lang),
 		i18n.T("pets.hatch.step1", lang, map[string]any{"egg": eggName}),
-		color,
+		hatchEggColor,
 	)
-	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step_footer", lang, map[string]any{"egg": eggName})}
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, step1, nil))
@@ -1264,9 +1331,9 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		step2 := components.Embed(
 			i18n.T("pets.hatch.hatching_title", lang),
 			i18n.T("pets.hatch.step2", lang)+"\n\n"+i18n.T("pets.hatch.step2_personality", lang, map[string]any{"personality": personality}),
-			color,
+			hatchEggColor,
 		)
-		step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+		step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step_footer", lang, map[string]any{"egg": eggName})}
 		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(step2, nil))
 
 		time.Sleep(1500 * time.Millisecond)
@@ -1329,9 +1396,9 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	step1 := components.Embed(
 		i18n.T("pets.hatch.hatching_title", lang),
 		i18n.T("pets.hatch.step1", lang, map[string]any{"egg": eggName}),
-		color,
+		hatchEggColor,
 	)
-	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+	step1.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step_footer", lang, map[string]any{"egg": eggName})}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, step1)
 
 	time.Sleep(1500 * time.Millisecond)
@@ -1340,9 +1407,9 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	step2 := components.Embed(
 		i18n.T("pets.hatch.hatching_title", lang),
 		i18n.T("pets.hatch.step2", lang)+"\n\n"+i18n.T("pets.hatch.step2_personality", lang, map[string]any{"personality": personality}),
-		color,
+		hatchEggColor,
 	)
-	step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step1_footer", lang, map[string]any{"rarity": rarityName})}
+	step2.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("pets.hatch.step_footer", lang, map[string]any{"egg": eggName})}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, step2)
 
 	time.Sleep(1500 * time.Millisecond)
@@ -1703,6 +1770,8 @@ func petTypeRarityValue(p model.UserPet) string {
 	}
 	return "common"
 }
+
+const hatchEggColor = 0xF1E3C8
 
 func rarityHatchColor(rarity string) int {
 	switch rarity {

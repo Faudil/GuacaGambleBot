@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Block the push when gofmt, go vet, or go test (race, same as CI) fail.
+# Bypass with: git push --no-verify
+exec "$(git rev-parse --show-toplevel)/.githooks/run-checks.sh" push

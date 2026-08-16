@@ -101,7 +101,7 @@
       "no_egg": "❌ You don't have a biome egg in your inventory! Hunt for one or buy at the `!shop`.",
       "no_slots": "❌ You don't have enough pet slots! You can only have {max} pets at once.",
       "step1": "The **{egg}** trembles...\n*Crack...*",
-      "step1_footer": "✨ Rarity: {rarity}",
+      "step_footer": "🥚 {egg}",
       "step2": "The shell breaks!\n*CRACK CRACK...*",
       "step2_personality": "A **{personality}** presence stirs inside...",
       "success_desc": "{emoji} A **{egg}** hatches!\n**{emoji} {pet}** emerges!\n{biome} | {type} | Lvl 1 | {personality}\n\n🌟 **Rarity:** {rarity}\n\nUse `/pets` to see your new companion!",
@@ -316,6 +316,7 @@
     "play": {
       "level_up": "🎉 **LEVEL UP!** {name} is now level {level} and gains stats!",
       "no_pet": "❌ You have no active pet!",
+      "on_expedition": "❌ **{name}** is on an expedition! Wait for it to return before playing.",
       "success": "🎾 You played with **{name}**. It gains +{xp} XP."
     },
     "rename": {

@@ -101,7 +101,7 @@
       "no_egg": "❌ Tu n'as pas d'œuf de biome dans ton inventaire ! Chasse pour en trouver ou achètes-en au `!shop`.",
       "no_slots": "❌ Tu n'as pas assez de places pour un nouveau familier ! Tu ne peux en avoir que {max} à la fois.",
       "step1": "Le **{egg}** tremble...\n*Crac...*",
-      "step1_footer": "✨ Rareté : {rarity}",
+      "step_footer": "🥚 {egg}",
       "step2": "La coquille se brise !\n*CRAC CRAC...*",
       "step2_personality": "Une présence **{personality}** s'agite à l'intérieur...",
       "success_desc": "{emoji} Un **{egg}** éclot !\n**{emoji} {pet}** émerge !\n{biome} | {type} | Niveau 1 | {personality}\n\n🌟 **Rareté :** {rarity}\n\nUtilise `/pets` pour voir ton nouveau compagnon !",
@@ -316,6 +316,7 @@
     "play": {
       "level_up": "🎉 **NIVEAU SUPÉRIEUR !** {name} passe au niveau {level} et gagne des stats !",
       "no_pet": "❌ Tu n'as pas de familier actif !",
+      "on_expedition": "❌ **{name}** est en expédition ! Attends son retour pour jouer avec lui.",
       "success": "🎾 Tu as joué avec **{name}**. Il gagne +{xp} XP."
     },
     "rename": {
