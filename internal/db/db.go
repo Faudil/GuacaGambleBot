@@ -153,6 +153,7 @@ type DataMigration struct {
 // dataMigrations lists all registered data migrations in application order.
 var dataMigrations = []DataMigration{
 	{ID: "tutorial_step_reorder", Run: migrateTutorialSteps},
+	{ID: "tutorial_rewind_skipped_hunt", Run: migrateTutorialRewindSkippedHunt},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -218,4 +219,22 @@ func migrateTutorialSteps(tx *gorm.DB) error {
 	}
 	stmt.WriteString(" ELSE step_index END WHERE quest_id = 'tutorial' AND EXISTS (SELECT 1 FROM user_quests uq WHERE uq.user_id = user_quest_data.user_id AND uq.quest_id = 'tutorial' AND uq.status = 'ACTIVE')")
 	return tx.Exec(stmt.String()).Error
+}
+
+// migrateTutorialRewindSkippedHunt rewinds ACTIVE tutorial players who sit past
+// the reordered hunting/pet-care block (step index >= 11) without ever having
+// hunted (no pve_wins recorded) back to the egg-grant step, so nobody skips the
+// new content. Hunting always records a win, so legitimate fresh players who
+// progressed through the block are never touched.
+func migrateTutorialRewindSkippedHunt(tx *gorm.DB) error {
+	return tx.Exec(`
+		UPDATE user_quest_data
+		SET step_index = 7, progress_value = 0, custom_data = '{}'
+		WHERE quest_id = 'tutorial'
+		  AND step_index >= 11
+		  AND EXISTS (SELECT 1 FROM user_quests uq
+		              WHERE uq.user_id = user_quest_data.user_id
+		                AND uq.quest_id = 'tutorial' AND uq.status = 'ACTIVE')
+		  AND NOT EXISTS (SELECT 1 FROM user_stats us
+		                  WHERE us.user_id = user_quest_data.user_id AND us.pve_wins > 0)`).Error
 }
