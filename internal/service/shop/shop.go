@@ -34,8 +34,34 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
-func (s *Service) DailyOffers(count int) []ShopOffer {
+// shopOfferable reports whether an item may be offered by the daily shop.
+// Free, collectible and award-only items, legendary set pieces and items that
+// are exclusive to their dedicated activity (criminality, boss leagues, ...)
+// are never sold here.
+func shopOfferable(it items.Item) bool {
+	if it.Price <= 0 || it.EffectType == "collectible" {
+		return false
+	}
+	if it.ShopExcluded || it.SetID != "" {
+		return false
+	}
+	return true
+}
+
+// OfferableItems returns every item that may appear in the daily shop.
+func OfferableItems() []items.Item {
 	all := items.AllItems()
+	out := make([]items.Item, 0, len(all))
+	for _, it := range all {
+		if shopOfferable(it) {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+func (s *Service) DailyOffers(count int) []ShopOffer {
+	all := OfferableItems()
 	seed := time.Now().Format("2006-01-02")
 	rng := rand.New(rand.NewSource(hashSeed(seed)))
 	n := count

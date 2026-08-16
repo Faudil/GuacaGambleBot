@@ -66,6 +66,11 @@ type Item struct {
 	StatLUK     int
 	SetID       string // set identifier for set items, empty if none
 	SetName     string // human-readable set name
+
+	// ShopExcluded marks items that are obtained only through their dedicated
+	// activity (criminality, boss leagues, etc.) and must never be offered by
+	// the daily shop.
+	ShopExcluded bool
 }
 
 // MinLevelForRarity maps a rarity tier to the minimum character level required
@@ -279,30 +284,30 @@ var all = []Item{
 	{ID: "arcane_weaver_orb", Name: "Arcane Weaver Orb", Emoji: "🔮", Price: 0, Description: "A sphere of pure arcane energy. Part of the Arcane Weaver set.", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 20, EquipSlot: "trinket", StatINT: 8, StatDEX: 4, SetID: "arcane_weaver", SetName: "Arcane Weaver"},
 
 	// --- Criminality items ---
-	{ID: "mask_of_malveillance", Name: "Mask of Malveillance", Emoji: "🎭", Price: 50000, Description: "An ancient mask that awakens the underworld. Those who wear it gain access to the shadows.", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 25, EquipSlot: "trinket", StatDEX: 5, StatLUK: 5},
-	{ID: "hounds_cloak", Name: "Hound's Cloak", Emoji: "🧥", Price: 1, Description: "The ceremonial cloak of the Iron Lodge. A symbol of the hunt. (+6 VIT, +2 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "armor", StatVIT: 6, StatSTR: 2},
-	{ID: "shadow_cowl", Name: "Shadow Cowl", Emoji: "🕶️", Price: 1, Description: "A dark hood worn by those who walk the Silent Path. (+4 DEX, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "armor", StatDEX: 4, StatVIT: 2},
+	{ID: "mask_of_malveillance", Name: "Mask of Malveillance", Emoji: "🎭", Price: 50000, Description: "An ancient mask that awakens the underworld. Those who wear it gain access to the shadows.", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityLegendary, MinLevel: 25, EquipSlot: "trinket", StatDEX: 5, StatLUK: 5, ShopExcluded: true},
+	{ID: "hounds_cloak", Name: "Hound's Cloak", Emoji: "🧥", Price: 1, Description: "The ceremonial cloak of the Iron Lodge. A symbol of the hunt. (+6 VIT, +2 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "armor", StatVIT: 6, StatSTR: 2, ShopExcluded: true},
+	{ID: "shadow_cowl", Name: "Shadow Cowl", Emoji: "🕶️", Price: 1, Description: "A dark hood worn by those who walk the Silent Path. (+4 DEX, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "armor", StatDEX: 4, StatVIT: 2, ShopExcluded: true},
 
 	// --- Bounty Hunter gear (Sheriff Vance) ---
-	{ID: "iron_shackles", Name: "Iron Shackles", Emoji: "⛓️", Price: 100, Description: "Rusty but reliable manacles. (+3 VIT, +1 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatVIT: 3, StatSTR: 1},
-	{ID: "wanted_poster", Name: "Wanted Poster", Emoji: "📜", Price: 500, Description: "Every outlaw's face eventually ends up here. (+4 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatLUK: 4},
-	{ID: "reinforced_badge", Name: "Reinforced Badge", Emoji: "⭐", Price: 3000, Description: "A badge that has stopped a knife or two. (+6 VIT, +2 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatVIT: 6, StatSTR: 2},
-	{ID: "bounty_scope", Name: "Bounty Scope", Emoji: "🔭", Price: 12000, Description: "It never loses a trail. (+6 DEX, +4 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 6, StatLUK: 4},
-	{ID: "lawbringer_seal", Name: "Lawbringer's Seal", Emoji: "📯", Price: 40000, Description: "The authority of the Iron Lodge itself. (+8 VIT, +4 STR, +2 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatVIT: 8, StatSTR: 4, StatLUK: 2},
+	{ID: "iron_shackles", Name: "Iron Shackles", Emoji: "⛓️", Price: 100, Description: "Rusty but reliable manacles. (+3 VIT, +1 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatVIT: 3, StatSTR: 1, ShopExcluded: true},
+	{ID: "wanted_poster", Name: "Wanted Poster", Emoji: "📜", Price: 500, Description: "Every outlaw's face eventually ends up here. (+4 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatLUK: 4, ShopExcluded: true},
+	{ID: "reinforced_badge", Name: "Reinforced Badge", Emoji: "⭐", Price: 3000, Description: "A badge that has stopped a knife or two. (+6 VIT, +2 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatVIT: 6, StatSTR: 2, ShopExcluded: true},
+	{ID: "bounty_scope", Name: "Bounty Scope", Emoji: "🔭", Price: 12000, Description: "It never loses a trail. (+6 DEX, +4 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 6, StatLUK: 4, ShopExcluded: true},
+	{ID: "lawbringer_seal", Name: "Lawbringer's Seal", Emoji: "📯", Price: 40000, Description: "The authority of the Iron Lodge itself. (+8 VIT, +4 STR, +2 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatVIT: 8, StatSTR: 4, StatLUK: 2, ShopExcluded: true},
 
 	// --- Thieves' Guild tools (The Whisper) ---
-	{ID: "lockpick_set", Name: "Lockpick Set", Emoji: "🔓", Price: 100, Description: "Every lock has a secret. This finds it. (+3 DEX, +1 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 3, StatLUK: 1},
-	{ID: "smoke_pellet", Name: "Smoke Pellet", Emoji: "💨", Price: 500, Description: "A quick getaway in a tiny ball. (+4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 4},
-	{ID: "shadow_cloak", Name: "Shadow Cloak", Emoji: "🌑", Price: 3000, Description: "Woven from the night itself. (+6 VIT, +4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor", StatVIT: 6, StatDEX: 4},
-	{ID: "silent_steps", Name: "Silenced Footsteps", Emoji: "👣", Price: 12000, Description: "Boots that never make a sound. (+6 DEX, +4 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatDEX: 6, StatVIT: 4},
-	{ID: "master_key", Name: "Master Key", Emoji: "🗝️", Price: 40000, Description: "It opens doors that don't exist. (+8 LUK, +4 DEX, +2 INT)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatLUK: 8, StatDEX: 4, StatINT: 2},
+	{ID: "lockpick_set", Name: "Lockpick Set", Emoji: "🔓", Price: 100, Description: "Every lock has a secret. This finds it. (+3 DEX, +1 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 3, StatLUK: 1, ShopExcluded: true},
+	{ID: "smoke_pellet", Name: "Smoke Pellet", Emoji: "💨", Price: 500, Description: "A quick getaway in a tiny ball. (+4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatDEX: 4, ShopExcluded: true},
+	{ID: "shadow_cloak", Name: "Shadow Cloak", Emoji: "🌑", Price: 3000, Description: "Woven from the night itself. (+6 VIT, +4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "armor", StatVIT: 6, StatDEX: 4, ShopExcluded: true},
+	{ID: "silent_steps", Name: "Silenced Footsteps", Emoji: "👣", Price: 12000, Description: "Boots that never make a sound. (+6 DEX, +4 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "accessory", StatDEX: 6, StatVIT: 4, ShopExcluded: true},
+	{ID: "master_key", Name: "Master Key", Emoji: "🗝️", Price: 40000, Description: "It opens doors that don't exist. (+8 LUK, +4 DEX, +2 INT)", EffectType: "equipment", Droppable: false, Category: Equipment, EquipSlot: "trinket", StatLUK: 8, StatDEX: 4, StatINT: 2, ShopExcluded: true},
 
 	// --- Trinkets (Boss League rewards, Lv 15 Epic) ---
-	{ID: "spark_shard", Name: "Spark Shard", Emoji: "⚡", Price: 0, Description: "A crackling fragment of Vezir's lightning. (+5 STR, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatSTR: 5, StatVIT: 2},
-	{ID: "stone_heart", Name: "Stone Heart", Emoji: "🪨", Price: 0, Description: "Tal'Rok's core, dense with resolve. (+4 DEX, +4 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatDEX: 4, StatVIT: 4},
-	{ID: "storm_core", Name: "Storm Core", Emoji: "🌪️", Price: 0, Description: "Kael's fury, captured in crystal. (+5 DEX, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatDEX: 5, StatLUK: 3},
-	{ID: "abyss_pearl", Name: "Abyss Pearl", Emoji: "🫧", Price: 0, Description: "Vorgath's gift from the deep. (+6 INT, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatINT: 6, StatLUK: 3},
-	{ID: "phoenix_crest", Name: "Phoenix Crest", Emoji: "🔥", Price: 0, Description: "Solaris' flame, now yours. (+5 STR, +4 INT, +3 VIT, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatSTR: 5, StatINT: 4, StatVIT: 3, StatLUK: 3},
+	{ID: "spark_shard", Name: "Spark Shard", Emoji: "⚡", Price: 0, Description: "A crackling fragment of Vezir's lightning. (+5 STR, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatSTR: 5, StatVIT: 2, ShopExcluded: true},
+	{ID: "stone_heart", Name: "Stone Heart", Emoji: "🪨", Price: 0, Description: "Tal'Rok's core, dense with resolve. (+4 DEX, +4 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatDEX: 4, StatVIT: 4, ShopExcluded: true},
+	{ID: "storm_core", Name: "Storm Core", Emoji: "🌪️", Price: 0, Description: "Kael's fury, captured in crystal. (+5 DEX, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatDEX: 5, StatLUK: 3, ShopExcluded: true},
+	{ID: "abyss_pearl", Name: "Abyss Pearl", Emoji: "🫧", Price: 0, Description: "Vorgath's gift from the deep. (+6 INT, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatINT: 6, StatLUK: 3, ShopExcluded: true},
+	{ID: "phoenix_crest", Name: "Phoenix Crest", Emoji: "🔥", Price: 0, Description: "Solaris' flame, now yours. (+5 STR, +4 INT, +3 VIT, +3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityEpic, MinLevel: 15, EquipSlot: "trinket", StatSTR: 5, StatINT: 4, StatVIT: 3, StatLUK: 3, ShopExcluded: true},
 
 	// --- Veil Rift Legendary Set (Lv 25) ---
 	{ID: "rift_blade", Name: "Rift-Tempered Blade", Emoji: "⚔️", Price: 8000, Description: "A blade forged in the space between worlds. Part of the Rift Walker set.", EffectType: "equipment", Droppable: false, Category: Equipment, MinLevel: 25, EquipSlot: "weapon", StatSTR: 16, StatDEX: 10, SetID: "rift_walker", SetName: "Rift Walker"},

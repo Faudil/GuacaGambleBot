@@ -12,7 +12,6 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
-	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/store"
 )
 
@@ -34,7 +33,32 @@ func TestDailyOffersReturnsCorrectCount(t *testing.T) {
 func TestDailyOffersReturnsAllItemsWhenCountExceeds(t *testing.T) {
 	svc, _ := testService(t)
 	offers := svc.DailyOffers(999)
-	assert.Len(t, offers, len(items.AllItems()))
+	assert.Len(t, offers, len(OfferableItems()))
+}
+
+// TestDailyOffersOnlyOfferableItems guards against free, collectible or
+// activity-exclusive items (legendary sets, criminality gear, boss trinkets,
+// quest items) being offered by the daily shop.
+func TestDailyOffersOnlyOfferableItems(t *testing.T) {
+	svc, _ := testService(t)
+	for _, offer := range svc.DailyOffers(999) {
+		it := offer.Item
+		assert.True(t, it.Price > 0, "%s must have a positive price", it.ID)
+		assert.NotEqual(t, "collectible", it.EffectType, "%s must not be collectible", it.ID)
+		assert.False(t, it.ShopExcluded, "%s must not be shop-excluded", it.ID)
+		assert.Empty(t, it.SetID, "%s is a set piece and must not be offered", it.ID)
+	}
+
+	// Explicitly verify the previously-offered exclusive items are gone.
+	for _, id := range []string{
+		"dragon_slayer_ring", "dragon_slayer_sword", "shadow_stalker_blade",
+		"arcane_weaver_staff", "rift_blade", "hounds_cloak", "shadow_cowl",
+		"mask_of_malveillance", "spark_shard", "phoenix_crest",
+		"mysterious_seed", "rotten_plant", "boss_trophy", "mastery_medallion",
+	} {
+		_, ok := svc.OfferForItem(id)
+		assert.False(t, ok, "%s must not be offered by the daily shop", id)
+	}
 }
 
 func TestBuyItemSuccess(t *testing.T) {
