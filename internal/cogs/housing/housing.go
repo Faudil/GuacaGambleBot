@@ -1,6 +1,7 @@
 package housing
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -41,6 +42,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("house", "show", c.onShow)
 	r.Component("house", "buy", c.onBuy)
 	r.Component("house", "collect", c.onCollect)
+	r.Component("house", "houses", c.onHouses)
+	r.Component("house", "switch", c.onSwitch)
+	r.Component("house", "shop", c.onShop)
 	r.Component("house", "tree", c.onTree)
 	r.Component("house", "upgrade", c.onUpgrade)
 	r.Component("house", "furniture", c.onFurniture)
@@ -95,14 +99,27 @@ func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, [
 			components.Button("🪑 Furniture", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
 			components.Button("🏡 Sanctuary", components.EncodeOwner(userID, "house", "sanctuary"), discordgo.SuccessButton),
 		),
+		components.ActionRow(
+			components.Button(i18n.T("housing.btn_houses", lang), components.EncodeOwner(userID, "house", "houses"), discordgo.SecondaryButton),
+			components.Button(i18n.T("housing.btn_shop", lang), components.EncodeOwner(userID, "house", "shop"), discordgo.PrimaryButton),
+		),
 	}
 	return embed, comps
 }
 
 func (c *Cog) shopMenu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	owned := map[string]bool{}
+	houses, _ := c.hsvc.ListHouses(userID)
+	for _, h := range houses {
+		owned[h.HouseType] = true
+	}
 	desc := ""
 	for _, ht := range housingsvc.Houses {
-		desc += fmt.Sprintf("**%s** — $%d\n", i18n.T("housing.types."+ht.ID, lang), ht.Price)
+		name := i18n.T("housing.types."+ht.ID, lang)
+		if owned[ht.ID] {
+			name = "✅ " + name + " " + i18n.T("housing.owned", lang)
+		}
+		desc += fmt.Sprintf("**%s** — $%d\n", name, ht.Price)
 		for _, buff := range ht.Buffs {
 			desc += fmt.Sprintf("  └ %s\n", buff)
 		}
@@ -116,7 +133,7 @@ func (c *Cog) shopMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 	for _, ht := range housingsvc.Houses {
-		row = append(row, components.Button(i18n.T("housing.types."+ht.ID, lang), components.EncodeOwner(userID, "house", "buy", ht.ID), discordgo.PrimaryButton))
+		row = append(row, components.ButtonDisabled(i18n.T("housing.types."+ht.ID, lang), components.EncodeOwner(userID, "house", "buy", ht.ID), discordgo.PrimaryButton, owned[ht.ID]))
 		if len(row) == 5 {
 			comps = append(comps, components.ActionRow(row...))
 			row = nil
@@ -125,7 +142,93 @@ func (c *Cog) shopMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 	if len(row) > 0 {
 		comps = append(comps, components.ActionRow(row...))
 	}
+	if len(owned) > 0 {
+		comps = append(comps, components.ActionRow(
+			components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+		))
+	}
 	return embed, comps
+}
+
+// onShop shows the real estate agency so an existing owner can buy another house.
+func (c *Cog) onShop(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.shopMenu(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// onHouses lists every owned house with buttons to switch the active one.
+func (c *Cog) onHouses(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	houses, err := c.hsvc.ListHouses(userID)
+	if err != nil || len(houses) == 0 {
+		interaction.RespondError(b, i, lang, "housing.no_house")
+		return
+	}
+	desc := ""
+	for _, h := range houses {
+		houseName := h.HouseType
+		if ht := housingsvc.Houses[h.HouseType]; ht != nil {
+			houseName = i18n.T("housing.types."+h.HouseType, lang)
+		}
+		badge := ""
+		if h.IsActive {
+			badge = " " + i18n.T("housing.active", lang)
+		}
+		desc += fmt.Sprintf("%s **%s** (Lvl %d)%s\n", "🏠", houseName, h.Level, badge)
+	}
+	embed := components.Embed(
+		i18n.T("housing.houses_title", lang),
+		i18n.T("housing.houses_desc", lang)+"\n\n"+desc,
+		0xB9936C,
+	)
+	var comps []discordgo.MessageComponent
+	row := []discordgo.MessageComponent{
+		components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+	}
+	for _, h := range houses {
+		houseName := h.HouseType
+		if ht := housingsvc.Houses[h.HouseType]; ht != nil {
+			houseName = i18n.T("housing.types."+h.HouseType, lang)
+		}
+		row = append(row, components.ButtonDisabled("🏠 "+houseName, components.EncodeOwner(userID, "house", "switch", h.HouseType), discordgo.PrimaryButton, h.IsActive))
+		if len(row) == 5 {
+			comps = append(comps, components.ActionRow(row...))
+			row = nil
+		}
+	}
+	if len(row) > 0 {
+		comps = append(comps, components.ActionRow(row...))
+	}
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("housing.btn_shop", lang), components.EncodeOwner(userID, "house", "shop"), discordgo.PrimaryButton),
+	))
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// onSwitch makes another owned house the active one.
+func (c *Cog) onSwitch(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 1 {
+		return
+	}
+	houseType := rest[0]
+	if err := c.hsvc.SwitchHouse(userID, houseType); err != nil {
+		interaction.RespondError(b, i, lang, "housing.no_house")
+		return
+	}
+	houseName := i18n.T("housing.types."+houseType, lang)
+	embed := components.Embed("🏠", i18n.T("housing.switch_success", lang, map[string]any{"house": houseName}), 0x2ecc71)
+	_, comps := c.menuForUser(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -249,11 +352,16 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	houseType := rest[0]
 	if err := c.hsvc.BuyHouse(userID, houseType); err != nil {
-		price := 0
-		if ht := housingsvc.Houses[houseType]; ht != nil {
-			price = ht.Price
+		msg := i18n.T("housing.no_money", lang, map[string]any{"price": 0})
+		if errors.Is(err, housingsvc.ErrAlreadyOwned) {
+			msg = i18n.T("housing.already_owned", lang)
+		} else if errors.Is(err, housingsvc.ErrNotEnoughMoney) {
+			price := 0
+			if ht := housingsvc.Houses[houseType]; ht != nil {
+				price = ht.Price
+			}
+			msg = i18n.T("housing.no_money", lang, map[string]any{"price": price})
 		}
-		msg := i18n.T("housing.no_money", lang, map[string]any{"price": price})
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{

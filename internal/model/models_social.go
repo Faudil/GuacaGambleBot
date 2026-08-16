@@ -22,9 +22,10 @@ type ServerLottoState struct {
 
 type UserHousing struct {
 	UserID            int64      `gorm:"primaryKey;column:user_id"`
-	HouseType         string     `gorm:"column:house_type"`
+	HouseType         string     `gorm:"primaryKey;column:house_type"`
 	Level             int        `gorm:"column:level;default:1"`
 	LastCollected     *time.Time `gorm:"column:last_collected"`
+	IsActive          bool       `gorm:"column:is_active;default:false"`
 	CustomName        *string    `gorm:"column:custom_name"`
 	CustomColor       *string    `gorm:"column:custom_color"`
 	UnderConstruction *string    `gorm:"column:under_construction"`

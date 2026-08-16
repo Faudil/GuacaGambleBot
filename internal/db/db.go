@@ -155,6 +155,7 @@ type DataMigration struct {
 var dataMigrations = []DataMigration{
 	{ID: "tutorial_step_reorder", Run: migrateTutorialSteps},
 	{ID: "tutorial_rewind_skipped_hunt", Run: migrateTutorialRewindSkippedHunt},
+	{ID: "housing_activate_existing", Run: migrateHousingActivateExisting},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -238,4 +239,14 @@ func migrateTutorialRewindSkippedHunt(tx *gorm.DB) error {
 		                AND uq.quest_id = 'tutorial' AND uq.status = 'ACTIVE')
 		  AND NOT EXISTS (SELECT 1 FROM user_stats us
 		                  WHERE us.user_id = user_quest_data.user_id AND us.pve_wins > 0)`).Error
+}
+
+// migrateHousingActivateExisting marks every existing housing row as the active
+// house. Before multiple houses per user existed, each user had exactly one row,
+// so promoting them all is correct. Fresh databases have no rows and are a no-op.
+func migrateHousingActivateExisting(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.UserHousing{}) {
+		return nil
+	}
+	return tx.Exec("UPDATE user_housing SET is_active = 1").Error
 }

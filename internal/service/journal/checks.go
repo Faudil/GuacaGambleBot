@@ -65,7 +65,7 @@ func houseLevelCheck(level int) Check {
 	return func(s *store.Store, userID int64) (int, int, bool) {
 		v := 0
 		var h int
-		if err := s.DB.Raw("SELECT level FROM user_housing WHERE user_id = ?", userID).Scan(&h).Error; err == nil {
+		if err := s.DB.Raw("SELECT COALESCE(MAX(level), 0) FROM user_housing WHERE user_id = ?", userID).Scan(&h).Error; err == nil {
 			v = h
 		}
 		return v, level, v >= level

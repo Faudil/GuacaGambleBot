@@ -2,6 +2,7 @@ package housing
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -89,17 +90,38 @@ type Service struct {
 	cfg   *config.Config
 }
 
+var (
+	ErrInvalidHouseType = errors.New("invalid house type")
+	ErrNotEnoughMoney   = errors.New("not enough money")
+	ErrAlreadyOwned     = errors.New("already owned")
+)
+
 func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
+// GetHousing returns the user's currently active house.
 func (s *Service) GetHousing(userID int64) (*model.UserHousing, error) {
 	var h model.UserHousing
-	err := s.store.DB.Where("user_id = ?", userID).First(&h).Error
+	err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h).Error
 	if err != nil {
 		return nil, err
 	}
 	return &h, nil
+}
+
+// ListHouses returns every house the user owns.
+func (s *Service) ListHouses(userID int64) ([]model.UserHousing, error) {
+	var houses []model.UserHousing
+	err := s.store.DB.Where("user_id = ?", userID).Order("house_type").Find(&houses).Error
+	return houses, err
+}
+
+// HasHouse reports whether the user already owns the given house type.
+func (s *Service) HasHouse(userID int64, houseType string) bool {
+	var count int64
+	s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND house_type = ?", userID, houseType).Count(&count)
+	return count > 0
 }
 
 func (s *Service) applyHousingBonuses(userID int64, ht *HouseType) {
@@ -110,32 +132,64 @@ func (s *Service) applyHousingBonuses(userID int64, ht *HouseType) {
 		})
 }
 
+// BuyHouse purchases a new house type and moves in immediately. Each house
+// type can only be owned once.
 func (s *Service) BuyHouse(userID int64, houseType string) error {
 	ht, ok := Houses[houseType]
 	if !ok {
-		return fmt.Errorf("invalid house type")
+		return ErrInvalidHouseType
+	}
+	if s.HasHouse(userID, houseType) {
+		return ErrAlreadyOwned
 	}
 	bal, err := s.store.GetBalance(userID)
 	if err != nil {
 		return err
 	}
 	if bal < ht.Price {
-		return fmt.Errorf("not enough money")
+		return ErrNotEnoughMoney
 	}
 	if _, err := s.store.UpdateBalance(userID, -ht.Price); err != nil {
 		return err
 	}
 	now := time.Now()
-	if err := s.store.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"house_type": houseType, "level": 1, "last_collected": now}),
-	}).Create(&model.UserHousing{
-		UserID: userID, HouseType: houseType, Level: 1, LastCollected: &now,
-		StoredItems: "{}",
-	}).Error; err != nil {
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+			Update("is_active", false).Error; err != nil {
+			return err
+		}
+		return tx.Create(&model.UserHousing{
+			UserID: userID, HouseType: houseType, Level: 1, LastCollected: &now, IsActive: true,
+			StoredItems: "{}",
+		}).Error
+	})
+	if err != nil {
 		return err
 	}
 	s.applyHousingBonuses(userID, ht)
+	return nil
+}
+
+// SwitchHouse makes another owned house the active one.
+func (s *Service) SwitchHouse(userID int64, houseType string) error {
+	if _, ok := Houses[houseType]; !ok {
+		return ErrInvalidHouseType
+	}
+	if !s.HasHouse(userID, houseType) {
+		return ErrAlreadyOwned
+	}
+	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+			Update("is_active", false).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.UserHousing{}).Where("user_id = ? AND house_type = ?", userID, houseType).
+			Update("is_active", true).Error
+	})
+	if err != nil {
+		return err
+	}
+	s.applyHousingBonuses(userID, Houses[houseType])
 	return nil
 }
 
@@ -162,7 +216,7 @@ func (s *Service) UpgradeLevel(userID int64) error {
 	if _, err := s.store.UpdateBalance(userID, -cost); err != nil {
 		return err
 	}
-	if err := s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	if err := s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		UpdateColumn("level", gorm.Expr("level + 1")).Error; err != nil {
 		return err
 	}
@@ -171,12 +225,12 @@ func (s *Service) UpgradeLevel(userID int64) error {
 }
 
 func (s *Service) Rename(userID int64, name string) error {
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		Update("custom_name", name).Error
 }
 
 func (s *Service) SetColor(userID int64, hex string) error {
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		Update("custom_color", hex).Error
 }
 
@@ -227,7 +281,7 @@ func (s *Service) Collect(userID int64) (int, []string, error) {
 			return 0, nil, err
 		}
 	}
-	tx.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	tx.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		Update("last_collected", now)
 	tx.Commit()
 
@@ -282,14 +336,14 @@ func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
 
 func (s *Service) StartConstruction(userID, upgradeID string, timeHours int) error {
 	finish := time.Now().Add(time.Duration(timeHours) * time.Hour)
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		Updates(map[string]any{"under_construction": upgradeID, "finish_time": finish}).Error
 }
 
 func (s *Service) CompleteConstruction(userID string) error {
 	var upg model.UserHousingUpgrade
 	var h model.UserHousing
-	s.store.DB.Where("user_id = ?", userID).First(&h)
+	s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h)
 	if h.UnderConstruction == nil {
 		return fmt.Errorf("no construction")
 	}
@@ -297,13 +351,13 @@ func (s *Service) CompleteConstruction(userID string) error {
 	if err := s.store.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&upg).Error; err != nil {
 		return err
 	}
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
 		Updates(map[string]any{"under_construction": nil, "finish_time": nil}).Error
 }
 
 func (s *Service) GetStoredItems(userID int64) (map[string]int, error) {
 	var h model.UserHousing
-	if err := s.store.DB.Where("user_id = ?", userID).First(&h).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h).Error; err != nil {
 		return nil, err
 	}
 	var items map[string]int
