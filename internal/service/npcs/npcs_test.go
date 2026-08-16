@@ -317,9 +317,12 @@ func TestChroniclerIntroOnceThenQuips(t *testing.T) {
 	svc, st := testService(t)
 	svc.cfg.NPCChatCooldownHours = 0
 
-	// Give the player rank 2 on the champion path (the Chronicler's reveal
-	// threshold).
-	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 4}).Error)
+	// Give the player rank 2 on the champion path and the tutorial's final
+	// boss beaten (the Chronicler's reveal threshold).
+	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 3}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
 
 	event, err := svc.Chat(1, "the_chronicler", "en")
 	require.NoError(t, err)
@@ -329,4 +332,23 @@ func TestChroniclerIntroOnceThenQuips(t *testing.T) {
 	event, err = svc.Chat(1, "the_chronicler", "en")
 	require.NoError(t, err)
 	assert.Equal(t, "regular", event.ID)
+}
+
+func TestChroniclerLockedUntilTutorialAndRank(t *testing.T) {
+	svc, st := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	// Rank 2 but the tutorial's final boss not beaten: still locked.
+	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 3}).Error)
+	event, err := svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "chronicler_locked", event.ID)
+
+	// Tutorial completed but no rank 2: still locked.
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 2, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
+	event, err = svc.Chat(2, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "chronicler_locked", event.ID)
 }

@@ -122,25 +122,84 @@ func (s *Service) CheckAndAdvance(userID int64) ([]Completion, error) {
 	}
 	newRank := HighestRank(s.store, userID)
 	s.queueRankUpScenes(userID, oldRank, newRank)
+	s.queueChroniclerReveal(userID, newRank)
 	return completions, nil
 }
 
-// queueRankUpScenes pushes the Chronicler's introduction once the player
-// reaches rank 2 on a path (his reveal only lands on players genuinely
-// engaged with the Journal), and a lighter rank-up moment on other rank-ups.
+// queueRankUpScenes pushes a lighter rank-up moment on every rank-up — except
+// the one that triggers the Chronicler's reveal, which only queues the
+// sighting (the reveal replaces the rank-up moment).
 func (s *Service) queueRankUpScenes(userID int64, oldRank, newRank int) {
 	if newRank <= oldRank {
 		return
 	}
-	if oldRank < 2 && newRank >= 2 {
-		s.store.PushJournalScene(userID, store.JournalScene{
-			Key: "journal.chronicler.sighting", DM: true,
-		})
+	if s.revealReady(userID, newRank) && s.queueSighting(userID) {
 		return
 	}
 	s.store.PushJournalScene(userID, store.JournalScene{
 		Key: "journal.rankup", Params: map[string]any{"rank": newRank},
 	})
+}
+
+// queueChroniclerReveal pushes the sighting when the reveal conditions hold
+// outside of a rank-up — e.g. the player already held rank 2 when the
+// tutorial's final boss fell. Idempotent thanks to queueSighting's pending
+// guard, so it can run after every activity check.
+func (s *Service) queueChroniclerReveal(userID int64, rank int) {
+	if !s.revealReady(userID, rank) {
+		return
+	}
+	s.queueSighting(userID)
+}
+
+// revealReady reports whether the Chronicler may reveal himself: the player
+// reached rank 2 on a path and defeated the tutorial's final boss, and has
+// not spoken with him yet.
+func (s *Service) revealReady(userID int64, rank int) bool {
+	return rank >= 2 && TutorialFinalBossDone(s.store, userID) && !MetChronicler(s.store, userID)
+}
+
+// queueSighting pushes the Chronicler sighting scene and reports whether it
+// was queued. Nothing is queued when it was already delivered or one is
+// already pending (the pending guard prevents re-queueing it on every
+// activity until it is popped; the delivered marker prevents it from ever
+// being sent again).
+func (s *Service) queueSighting(userID int64) bool {
+	if SightingDelivered(s.store, userID) {
+		return false
+	}
+	var pending int64
+	s.store.DB.Model(&model.JournalScene{}).
+		Where("user_id = ? AND key = ?", userID, chroniclerSightingKey).
+		Count(&pending)
+	if pending > 0 {
+		return false
+	}
+	s.store.PushJournalScene(userID, store.JournalScene{
+		Key: chroniclerSightingKey, DM: true,
+	})
+	return true
+}
+
+// SightingDelivered reports whether the Chronicler's reveal DM was already
+// handed to the player (see markSightingDelivered).
+func SightingDelivered(st *store.Store, userID int64) bool {
+	var n int64
+	st.DB.Table("user_npc_secrets").
+		Where("user_id = ? AND npc_id = ? AND secret_id = ?", userID, ChroniclerID, ChroniclerSightingSecret).
+		Count(&n)
+	return n > 0
+}
+
+// markSightingDelivered records that the reveal DM was delivered, so it is
+// never queued or sent twice.
+func markSightingDelivered(st *store.Store, userID int64) {
+	_ = st.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "npc_id"}, {Name: "secret_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"seen": true}),
+	}).Create(&model.UserNPCSecret{
+		UserID: userID, NPCID: ChroniclerID, SecretID: ChroniclerSightingSecret, Seen: true,
+	}).Error
 }
 
 // View returns the journal with fresh progress. It also advances any steps
@@ -352,6 +411,18 @@ func MetChronicler(st *store.Store, userID int64) bool {
 	var n int64
 	st.DB.Table("user_npc_secrets").
 		Where("user_id = ? AND npc_id = ? AND secret_id = ?", userID, ChroniclerID, ChroniclerIntroSecret).
+		Count(&n)
+	return n > 0
+}
+
+// TutorialFinalBossDone reports whether the player defeated the Vault
+// Guardian, the tutorial's final boss. The tutorial quest only reaches
+// COMPLETED past that battle (and its closing dialogues), so completion is a
+// safe proxy for the boss falling.
+func TutorialFinalBossDone(st *store.Store, userID int64) bool {
+	var n int64
+	st.DB.Table("user_quests").
+		Where("user_id = ? AND quest_id = ? AND status = ?", userID, "tutorial", "COMPLETED").
 		Count(&n)
 	return n > 0
 }

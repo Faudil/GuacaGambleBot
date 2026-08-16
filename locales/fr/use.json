@@ -2,6 +2,9 @@
   "use": {
     "not_owned": "❌ Vous ne possédez pas cet objet.",
     "not_usable": "❌ Cet objet ne peut pas être utilisé. Essayez `/shop` ou `/inventory`.",
+    "none": "🧰 Vous n'avez aucun objet utilisable dans votre inventaire.",
+    "choose": "Choisissez un objet de votre inventaire à utiliser.",
+    "select_placeholder": "Choisissez un objet à utiliser…",
     "title": "🧰 Objet Utilisé"
   }
 }

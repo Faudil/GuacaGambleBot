@@ -27,6 +27,12 @@ const (
 	SellImpact = 0.01
 	BuyImpact  = 0.007
 
+	// BuySpread is the fraction above the quoted price that buyers pay for each
+	// unit; SellSpread is the fraction below it that sellers receive. The
+	// combined round-trip cost prevents pump-and-dump flipping.
+	BuySpread  = 0.02
+	SellSpread = 0.02
+
 	DailyDecayRate = 0.10
 	PriceFloorMult = 0.20
 	PriceCeilMult  = 5.0
@@ -310,7 +316,11 @@ func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, i
 		return 0, false, 0, ErrNotActive
 	}
 
-	totalCost := st.CurrentPrice * amount
+	buyStep := maxInt(1, int(float64(it.Price)*BuyImpact))
+	minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
+	maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
+	totalCost, newPrice := ladderedBuy(st.CurrentPrice, amount, buyStep, minP, maxP)
+
 	bal, err := s.store.GetBalance(userID)
 	if err != nil {
 		return 0, false, 0, err
@@ -318,12 +328,6 @@ func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, i
 	if bal < totalCost {
 		return 0, false, 0, ErrNoMoney
 	}
-
-	priceDelta := maxInt(1, int(float64(it.Price)*BuyImpact)) * amount
-	newPrice := st.CurrentPrice + priceDelta
-	minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
-	maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
-	newPrice = clampInt(newPrice, minP, maxP)
 
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
@@ -392,7 +396,14 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 		return 0, false, 0, ErrNoItem
 	}
 
+	newPrice := 0
 	totalGain := unitPrice * amount
+	if inRotation {
+		sellStep := maxInt(1, int(float64(it.Price)*SellImpact))
+		minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
+		maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
+		totalGain, newPrice = ladderedSell(st.CurrentPrice, amount, sellStep, minP, maxP)
+	}
 	if charsvc.HasPassive(s.store, userID, "perk_trader") {
 		totalGain = totalGain * 105 / 100
 	}
@@ -403,15 +414,6 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 	if charsvc.HasBuff(s.store, userID, "insider_trading") {
 		totalGain = totalGain * 15 / 10
 		charsvc.ConsumeBuff(s.store, userID, "insider_trading")
-	}
-
-	newPrice := 0
-	if inRotation {
-		priceDelta := maxInt(1, int(float64(it.Price)*SellImpact)) * amount
-		newPrice = st.CurrentPrice - priceDelta
-		minP := maxInt(1, int(float64(it.Price)*PriceFloorMult))
-		maxP := maxInt(minP+1, int(float64(it.Price)*PriceCeilMult))
-		newPrice = clampInt(newPrice, minP, maxP)
 	}
 
 	// Ensure user row exists before the transaction
@@ -491,6 +493,40 @@ func (s *Service) SellPricesFor(itemIDs []string) map[string]int {
 // weekly rotation.
 func vendorPrice(base int) int {
 	return maxInt(1, int(float64(base)*VendorSellMult))
+}
+
+// buyBid is the amount a buyer pays for one unit at the quoted price.
+func buyBid(price int) int {
+	return price + maxInt(1, int(math.Ceil(float64(price)*BuySpread)))
+}
+
+// sellAsk is the amount a seller receives for one unit at the quoted price.
+func sellAsk(price int) int {
+	return maxInt(1, price-maxInt(1, int(math.Ceil(float64(price)*SellSpread))))
+}
+
+// ladderedBuy simulates buying amount units one at a time so the price moves
+// during the trade instead of a single jump at the end. It returns the total
+// cost (the sum of the bid paid for each unit) and the final market price.
+func ladderedBuy(price, amount, step, minP, maxP int) (cost, final int) {
+	final = price
+	for i := 0; i < amount; i++ {
+		cost += buyBid(final)
+		final = clampInt(final+step, minP, maxP)
+	}
+	return cost, final
+}
+
+// ladderedSell simulates selling amount units one at a time so the price moves
+// during the trade. It returns the total gain (the sum of the ask received for
+// each unit) and the final market price.
+func ladderedSell(price, amount, step, minP, maxP int) (gain, final int) {
+	final = price
+	for i := 0; i < amount; i++ {
+		gain += sellAsk(final)
+		final = clampInt(final-step, minP, maxP)
+	}
+	return gain, final
 }
 
 func hashSeed(s string) int64 {

@@ -111,6 +111,36 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.respond(b, i, embed, nil)
 }
 
+// onKeyTake handles taking the Vault Key in the tutorial's special chamber:
+// the run ends immediately, which records the delve completion and advances
+// the tutorial quest, and the player is told to come back stronger.
+func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	c.svc.AddFlag(s, "vault_key_found")
+	c.svc.EndSession(s, "vault key")
+	c.deleteSession(userID)
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
+	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
+
+	embed := &discordgo.MessageEmbed{
+		Title:       "🔑 " + i18n.T("delve.vault_key_title", lang),
+		Description: i18n.T("delve.vault_key_taken", lang),
+		Color:       0x2ecc71,
+	}
+	c.respond(b, i, embed, nil)
+}
+
 func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)

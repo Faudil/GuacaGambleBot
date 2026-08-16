@@ -126,12 +126,13 @@ func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, err
 }
 
 // chroniclerChat handles the mysterious Chronicler: locked until the player
-// earns a rank 2 on any journal path (matching his rank-2 reveal), then a
-// one-time cinematic introduction, then short quips that deepen with rank.
-// None of these consume the chat cooldown or grant reputation.
+// reaches rank 2 on a journal path AND defeats the tutorial's final boss
+// (matching his reveal conditions), then a one-time cinematic introduction,
+// then short quips that deepen with rank. None of these consume the chat
+// cooldown or grant reputation.
 func (s *Service) chroniclerChat(userID int64, lang string) (*ChatEvent, error) {
 	rank := jsvc.HighestRank(s.store, userID)
-	if rank < 2 {
+	if rank < 2 || !jsvc.TutorialFinalBossDone(s.store, userID) {
 		return &ChatEvent{ID: "chronicler_locked", Text: i18n.T("journal.chronicler.locked", lang)}, nil
 	}
 	seen, err := s.HasSeenSecret(userID, jsvc.ChroniclerID, jsvc.ChroniclerIntroSecret)

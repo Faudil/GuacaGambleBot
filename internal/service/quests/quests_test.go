@@ -38,6 +38,34 @@ func TestGetQuestDefMissing(t *testing.T) {
 	assert.Nil(t, svc.GetQuestDef("nonexistent"))
 }
 
+func TestIsTutorialOnDelveStep(t *testing.T) {
+	svc, st := testService(t)
+	delveIdx := tutorialStepIdx(t, "quests.day7_delve.step1_activity")
+
+	// No quest at all.
+	assert.False(t, svc.IsTutorialOnDelveStep(1))
+
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "tutorial", StepIndex: delveIdx,
+	}).Error)
+	assert.True(t, svc.IsTutorialOnDelveStep(1), "on the delve step")
+
+	// A different tutorial step is not the delve step.
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = 1 AND quest_id = 'tutorial'").
+		Update("step_index", tutorialStepIdx(t, "quests.day1_strata.step1_activity")).Error)
+	assert.False(t, svc.IsTutorialOnDelveStep(1))
+
+	// A completed tutorial is not on the delve step.
+	require.NoError(t, st.DB.Model(&model.UserQuest{}).
+		Where("user_id = 1 AND quest_id = 'tutorial'").
+		Update("status", "COMPLETED").Error)
+	assert.False(t, svc.IsTutorialOnDelveStep(1))
+}
+
 func tutorialStepIdx(t *testing.T, key string) int {
 	def := QuestRegistry["tutorial"]
 	require.NotNil(t, def)

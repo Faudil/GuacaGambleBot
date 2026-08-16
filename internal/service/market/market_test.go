@@ -158,7 +158,8 @@ func TestBuyItemSuccess(t *testing.T) {
 
 	cost, _, _, err := svc.BuyItem(1, "coal", 3)
 	require.NoError(t, err)
-	assert.Equal(t, 15, cost)
+	// Laddered: bids 6 + 7 + 8 (coal base 5, buy step 1, 2% spread)
+	assert.Equal(t, 21, cost)
 
 	var inv model.Inventory
 	err = st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error
@@ -166,7 +167,11 @@ func TestBuyItemSuccess(t *testing.T) {
 	assert.Equal(t, 3, inv.Quantity)
 
 	bal, _ := st.GetBalance(1)
-	assert.Equal(t, 85, bal)
+	assert.Equal(t, 79, bal)
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, 8, st2.CurrentPrice)
 }
 
 func TestBuyItemInsufficientFunds(t *testing.T) {
@@ -207,7 +212,8 @@ func TestSellItemSuccess(t *testing.T) {
 
 	gain, _, _, err := svc.SellItem(1, "coal", 3)
 	require.NoError(t, err)
-	assert.Greater(t, gain, 0)
+	// Laddered: asks 4 + 3 + 2 (coal base 5, sell step 1, 2% spread)
+	assert.Equal(t, 9, gain)
 
 	var inv model.Inventory
 	st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv)
@@ -335,12 +341,16 @@ func TestBuyItemAdjustsPriceUp(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, _, _, err := svc.BuyItem(1, "coal", 10)
+	_, err := st.UpdateBalance(1, 1000)
 	require.NoError(t, err)
+
+	cost, _, _, err := svc.BuyItem(1, "coal", 10)
+	require.NoError(t, err)
+	assert.Equal(t, 105, cost)
 
 	var st2 model.MarketState
 	st.DB.Where("item_id = ?", "coal").First(&st2)
-	assert.Greater(t, st2.CurrentPrice, 5)
+	assert.Equal(t, 15, st2.CurrentPrice)
 	assert.Equal(t, 10, st2.DailyBought)
 }
 
@@ -355,13 +365,122 @@ func TestSellItemAdjustsPriceDown(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
 	})
 
-	_, _, _, err := svc.SellItem(1, "coal", 10)
+	gain, _, _, err := svc.SellItem(1, "coal", 10)
+	require.NoError(t, err)
+	assert.Equal(t, 16, gain)
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, 1, st2.CurrentPrice)
+	assert.Equal(t, 10, st2.DailySold)
+}
+
+func TestBuyThenSellRoundTripLosesMoney(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+	start, err := st.GetBalance(1)
+	require.NoError(t, err)
+
+	cost, _, _, err := svc.BuyItem(1, "coal", 50)
+	require.NoError(t, err)
+	gain, _, _, err := svc.SellItem(1, "coal", 50)
+	require.NoError(t, err)
+
+	bal, _ := st.GetBalance(1)
+	assert.Equal(t, start-cost+gain, bal)
+	assert.Less(t, gain, cost, "selling back immediately must not cover the buy cost")
+	assert.Less(t, bal, start, "a pump-and-dump round trip must lose money")
+}
+
+func TestPumpAndDump999LosesMoney(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+	start, _ := st.GetBalance(1)
+
+	cost, _, _, err := svc.BuyItem(1, "coal", 999)
+	require.NoError(t, err)
+	gain, _, _, err := svc.SellItem(1, "coal", 999)
+	require.NoError(t, err)
+
+	bal, _ := st.GetBalance(1)
+	assert.Less(t, gain, cost)
+	assert.Less(t, bal, start, "999-unit pump-and-dump must lose money")
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, 1, st2.CurrentPrice, "sellback should crash the price back to the floor")
+}
+
+func TestLargeBuyClampsAtCeiling(t *testing.T) {
+	svc, st := testService(t)
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+
+	cost, _, _, err := svc.BuyItem(1, "coal", 999)
 	require.NoError(t, err)
 
 	var st2 model.MarketState
 	st.DB.Where("item_id = ?", "coal").First(&st2)
-	assert.Less(t, st2.CurrentPrice, 5)
-	assert.Equal(t, 10, st2.DailySold)
+	assert.Equal(t, 25, st2.CurrentPrice)
+	// 20 units climb 5->25 (bids 6..25) plus 979 units at bid 26
+	assert.Equal(t, 25764, cost)
+}
+
+func TestLargeSellClampsAtFloor(t *testing.T) {
+	svc, st := testService(t)
+
+	seedInventory(t, st, 1, "coal", 999)
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+
+	gain, _, _, err := svc.SellItem(1, "coal", 999)
+	require.NoError(t, err)
+
+	var st2 model.MarketState
+	st.DB.Where("item_id = ?", "coal").First(&st2)
+	assert.Equal(t, 1, st2.CurrentPrice)
+	// asks 4 + 3 + 2 then 996 units at 1
+	assert.Equal(t, 1005, gain)
+}
+
+func TestSpreadEdgesAtFloor(t *testing.T) {
+	assert.Equal(t, 2, buyBid(1))
+	assert.Equal(t, 6, buyBid(5))
+	assert.Equal(t, 26, buyBid(25))
+	assert.Equal(t, 1, sellAsk(1))
+	assert.Equal(t, 4, sellAsk(5))
+	assert.Equal(t, 24, sellAsk(25))
+	assert.Equal(t, 1, sellAsk(2))
 }
 
 func TestBuyItemInvalidQuantity(t *testing.T) {

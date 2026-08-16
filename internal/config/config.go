@@ -30,6 +30,8 @@ type Config struct {
 	HuntMaxPerDay       int
 	HuntCooldownSeconds int
 
+	PlayCooldownMinutes int
+
 	NPCChatCooldownHours int
 
 	Criminality CriminalityConfig
@@ -71,6 +73,7 @@ func Load() *Config {
 		BaseJackpot:          getInt("BASE_JACKPOT", 500),
 		HuntMaxPerDay:        getInt("HUNT_MAX_PER_DAY", 10),
 		HuntCooldownSeconds:  getInt("HUNT_COOLDOWN_SECONDS", 10),
+		PlayCooldownMinutes:  getInt("PLAY_COOLDOWN_MINUTES", 60),
 		NPCChatCooldownHours: getInt("NPC_CHAT_COOLDOWN_HOURS", 6),
 		Criminality: CriminalityConfig{
 			StealMaxGoldPercent:    0.05,

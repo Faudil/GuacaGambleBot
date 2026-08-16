@@ -30,6 +30,7 @@
       "leave": "Passer",
       "locked_force": "Forcer la Porte",
       "locked_key": "Utiliser une Clé",
+      "key_take": "Prendre la Clé du Coffre",
       "merchant_browse": "Marchander",
       "merchant_buy": "Acheter",
       "merchant_haggle": "Marchander",
@@ -290,9 +291,12 @@
         "locked_1": "Des barreaux rouillés scellent un couloir prometteur. Le mécanisme de la serrure semble complexe mais fonctionnel — une clé le ferait tourner en douceur.",
         "locked_2": "Une porte renforcée barre votre route. Par une fissure, vous entrevoyez une chambre scintillante. La serrure luit, attendant une clé.",
         "crypt_monster": "Des os cliquettent dans les coins tandis qu'une silhouette chancelante se lève pour bloquer votre chemin.",
-        "passage_default": "Le passage s'étend devant vous dans l'obscurité."
+        "passage_default": "Le passage s'étend devant vous dans l'obscurité.",
+        "vault_key": "Une salle scellée plus vieille que le village. En son centre, un piédestal d'acier noir porte un unique objet : une **Clé du Coffre**, incrustée de lumière bleue, qui bourdonne doucement.\n\nL'air est immobile. Rien ne bouge. Les Anciens ont gardé cette pièce sans gardiens — quoi que rôde dans les Souterrains, ce n'est pas ici.\n\n**Prends la clé et sors. Les profondeurs ne sont pas encore pour toi.**"
       }
     },
+    "vault_key_title": "La Clé du Coffre",
+    "vault_key_taken": "Tu prends la **Clé du Coffre** — acier noir incrusté de lumière bleue, qui bourdonne contre ta paume.\n\n« Verrou de porte : clé présente. » La voix mécanique du Coffre semble presque satisfaite.\n\nLa voix de Thorek grésille sur ton communicator : **« Bien joué. Maintenant sors de là — les étages profonds vont te déchiqueter à ce niveau. Pars, deviens plus fort, et reviens quand tu seras prêt. »**",
     "weapon": {
       "punch": "Coup de poing",
       "swing": "Frappe"

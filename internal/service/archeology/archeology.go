@@ -200,15 +200,17 @@ type EventChoice struct {
 }
 
 type EventResult struct {
-	TitleID     string
-	DescID      string
-	CoinChange  int
-	ActionsLost int
-	IntLoss     int
-	ItemGiven   string
-	ItemQty     int
-	DepthGain   int
-	BackToDig   bool
+	TitleID       string
+	DescID        string
+	CoinChange    int
+	ActionsLost   int
+	IntLoss       int
+	ItemGiven     string
+	ItemQty       int
+	DepthGain     int
+	RevealedTool  string
+	RevealedLayer LayerType
+	BackToDig     bool
 }
 
 type Service struct {
@@ -504,18 +506,28 @@ func (s *Service) addArcheologistXP(userID int64, xp int) {
 	var job model.Job
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			s.store.DB.Create(&model.Job{UserID: userID, JobName: "archeologist", Level: 1, XP: xp})
+			job = model.Job{UserID: userID, JobName: "archeologist", Level: 1, XP: xp}
+			s.levelUpJob(&job)
+			if err := s.store.DB.Create(&job).Error; err != nil {
+				return
+			}
 		}
 		return
 	}
 	job.XP += xp
-	next := 50 + job.Level*25
-	if job.XP >= next {
-		job.XP -= next
-		job.Level++
-	}
+	s.levelUpJob(&job)
 	s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "archeologist").
 		Updates(map[string]any{"xp": job.XP, "level": job.Level})
+}
+
+// levelUpJob applies as many level-ups as the job's XP warrants.
+func (s *Service) levelUpJob(job *model.Job) {
+	next := 50 + job.Level*25
+	for job.XP >= next {
+		job.XP -= next
+		job.Level++
+		next = 50 + job.Level*25
+	}
 }
 
 type SiteInfo struct {
@@ -601,18 +613,18 @@ func (s *Service) trackFossilHarvest(userID int64, fossilID string, quantity int
 	}
 }
 
-func (s *Service) SellResult(userID int64, res *DigResult) (int, error) {
-	price := int(float64(res.Value) * 1.2)
-	newBal, err := s.store.UpdateBalance(userID, price)
+func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, err error) {
+	price = int(float64(res.Value) * 1.2)
+	newBal, err = s.store.UpdateBalance(userID, price)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	semiXP := res.XP / 2
 	if semiXP > 0 {
 		s.addArcheologistXP(userID, semiXP)
 	}
-	return newBal, nil
+	return price, newBal, nil
 }
 
 func (s *Service) Reanimate(userID int64, rarity string) (petName string, success bool, err error) {

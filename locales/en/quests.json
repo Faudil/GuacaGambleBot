@@ -109,7 +109,7 @@
     "day7_delve": {
       "description": "Find the key to the Vault.",
       "step0_dialogue": "The party gathers before the Vault. Where the door should stand: a wall of black steel, seamless, sealed. A single slot glows in its center.\n\n\"Gate lock: detected. Key: absent.\"\n\nThorek grunts. \"Of course there's a key. The old builders never did anything simple.\"\n\nGambleBot's voice hums. \"The tunnels beneath the village. The Undercroft. The Ancients stored their secrets down there. Use `/delve` to descend. Find the key.\"",
-      "step1_activity": "Goal: Complete 1 delve using `/delve`.",
+      "step1_activity": "Goal: Descend into the Undercroft with `/delve` and take the **Vault Key**.",
       "step2_dialogue": "Deep in the Undercroft, in a sealed chamber older than the village, you find it: a **Vault Key**, black steel inlaid with blue light. It hums against your palm.\n\nYou climb back to the surface. The key slides into the gate's slot. Somewhere beyond, something shifts.",
       "title": "Day 7: The Undercroft"
     },

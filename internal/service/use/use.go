@@ -13,6 +13,28 @@ var (
 	ErrNotOwned  = errors.New("you don't own this item")
 )
 
+// usableItems lists the consumable items that the /use command can apply.
+var usableItems = map[string]struct{}{
+	"beer":            {},
+	"hook":            {},
+	"coffee":          {},
+	"bow":             {},
+	"rigged_coin":     {},
+	"vip_ticket":      {},
+	"casino_token":    {},
+	"scratch_ticket":  {},
+	"fortune_cookie":  {},
+	"rusty_magnet":    {},
+	"magnet":          {},
+	"electric_magnet": {},
+}
+
+// IsUsable reports whether the item can be consumed with the use command.
+func IsUsable(itemID string) bool {
+	_, ok := usableItems[itemID]
+	return ok
+}
+
 // apply applies the effect of a usable item and returns a description of what
 // happened. The caller is responsible for checking ownership and consuming the
 // item from inventory.

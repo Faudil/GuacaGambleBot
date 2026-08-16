@@ -43,6 +43,7 @@ var ownerGatedDomains = map[string]struct{}{
 	"start":        {},
 	"npc":          {},
 	"boss":         {},
+	"use":          {},
 }
 
 // ownerGatedExemptions lists (domain, action) pairs inside owner-gated domains

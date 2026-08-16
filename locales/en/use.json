@@ -2,6 +2,9 @@
   "use": {
     "not_owned": "❌ You don't own that item.",
     "not_usable": "❌ That item can't be used. Try `/shop` or `/inventory`.",
+    "none": "🧰 You don't have any usable items in your inventory.",
+    "choose": "Pick an item from your inventory to use it.",
+    "select_placeholder": "Choose an item to use…",
     "title": "🧰 Item Used"
   }
 }

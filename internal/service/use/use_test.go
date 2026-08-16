@@ -35,6 +35,14 @@ func TestUseNotUsable(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotUsable)
 }
 
+func TestIsUsable(t *testing.T) {
+	assert.True(t, IsUsable("beer"))
+	assert.True(t, IsUsable("electric_magnet"))
+	assert.False(t, IsUsable("coal"))
+	assert.False(t, IsUsable("diamond_sword"))
+	assert.False(t, IsUsable(""))
+}
+
 func TestUseBeerConsumesItem(t *testing.T) {
 	svc, st := testService(t)
 	require.NoError(t, st.AddItemRaw(st.DB, 1, "beer", 1))

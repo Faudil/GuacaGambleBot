@@ -325,6 +325,7 @@ func TestNextRumorSurfacesOnCompletion(t *testing.T) {
 func TestRankUpQueuesSighting(t *testing.T) {
 	s := testStore(t)
 	New(s)
+	markTutorialDone(t, s)
 
 	// First rank (0 -> 1): just a rank-up scene, no reveal yet.
 	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 25}).Error)
@@ -337,7 +338,53 @@ func TestRankUpQueuesSighting(t *testing.T) {
 	_, ok = s.PopJournalScene(1)
 	assert.False(t, ok, "no sighting at first rank")
 
-	// Reaching rank 2 (4 completed prospector steps) reveals the Chronicler.
+	// Reaching rank 2 (2 completed prospector steps) reveals the Chronicler.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("items_fished", 25).Error)
+	require.NoError(t, s.RecordActivity(1, "items_fished", 1))
+
+	sc, ok = s.PopJournalScene(1)
+	require.True(t, ok, "sighting scene queued on rank 2")
+	assert.Equal(t, "journal.chronicler.sighting", sc.Key)
+	assert.True(t, sc.DM, "sighting prefers DM delivery")
+
+	// Re-queue so SceneLine (the real delivery path) pops and marks it sent.
+	s.PushJournalScene(1, sc)
+	text, dm := SceneLine(s, 1, "mining", "en")
+	assert.NotEmpty(t, text, "sighting surfaces on the next activity")
+	assert.True(t, dm, "sighting delivered as a DM")
+	assert.True(t, SightingDelivered(s, 1), "sighting marked as delivered")
+
+	// A later rank-up (2 -> 3, 4 completed steps) queues a lighter rankup
+	// scene instead of a second sighting.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("items_farmed", 25).Error)
+	require.NoError(t, s.RecordActivity(1, "items_farmed", 1))
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("pve_wins", 10).Error)
+	require.NoError(t, s.RecordActivity(1, "pve_wins", 1))
+
+	sc, ok = s.PopJournalScene(1)
+	require.True(t, ok)
+	assert.Equal(t, "journal.rankup", sc.Key)
+	assert.False(t, sc.DM)
+
+	// No more scenes queued by a repeated check.
+	_, ok = s.PopJournalScene(1)
+	assert.False(t, ok)
+}
+
+// TestRevealRequiresTutorialFinalBoss verifies the sighting only fires once
+// the player both reached rank 2 and completed the tutorial (whose final boss
+// is the Vault Guardian) — and that it fires exactly once.
+func TestRevealRequiresTutorialFinalBoss(t *testing.T) {
+	s := testStore(t)
+	New(s)
+
+	// Rank 2 with the tutorial unfinished: no sighting, only rank-up scenes
+	// (0 -> 1, 1 -> 2, 2 -> 3 across the four completed steps).
+	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 25}).Error)
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
 	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
 		Update("items_fished", 25).Error)
 	require.NoError(t, s.RecordActivity(1, "items_fished", 1))
@@ -348,24 +395,44 @@ func TestRankUpQueuesSighting(t *testing.T) {
 		Update("pve_wins", 10).Error)
 	require.NoError(t, s.RecordActivity(1, "pve_wins", 1))
 
-	sc, ok = s.PopJournalScene(1)
-	require.True(t, ok, "sighting scene queued on rank 2")
-	assert.Equal(t, "journal.chronicler.sighting", sc.Key)
-	assert.True(t, sc.DM, "sighting prefers DM delivery")
-
-	// A later rank-up (2 -> 3) queues a lighter rankup scene instead.
-	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
-		Update("items_farmed", 100).Error)
-	require.NoError(t, s.RecordActivity(1, "items_farmed", 1))
-
-	sc, ok = s.PopJournalScene(1)
-	require.True(t, ok)
-	assert.Equal(t, "journal.rankup", sc.Key)
-	assert.False(t, sc.DM)
-
-	// No more scenes queued by a repeated check.
+	var sc store.JournalScene
+	var ok bool
+	for i := 0; i < 3; i++ {
+		sc, ok = s.PopJournalScene(1)
+		require.True(t, ok, "rank-up scene queued")
+		assert.Equal(t, "journal.rankup", sc.Key)
+	}
 	_, ok = s.PopJournalScene(1)
-	assert.False(t, ok)
+	assert.False(t, ok, "no sighting without the tutorial final boss")
+
+	// Defeating the tutorial's final boss (quest COMPLETED) reveals him on the
+	// next check, even without a concurrent rank-up.
+	markTutorialDone(t, s)
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+
+	sc, ok = s.PopJournalScene(1)
+	require.True(t, ok, "sighting queued after the tutorial final boss")
+	assert.Equal(t, "journal.chronicler.sighting", sc.Key)
+	assert.True(t, sc.DM)
+
+	// Delivering the sighting marks it as sent; a repeated check then queues
+	// nothing more.
+	s.PushJournalScene(1, sc)
+	text, _ := SceneLine(s, 1, "mining", "en")
+	assert.NotEmpty(t, text, "sighting surfaces once delivered")
+	assert.True(t, SightingDelivered(s, 1))
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+	_, ok = s.PopJournalScene(1)
+	assert.False(t, ok, "sighting queued only once")
+}
+
+// markTutorialDone flags the player's tutorial quest as completed (the quest
+// reaches COMPLETED only past its final boss battle).
+func markTutorialDone(t *testing.T, s *store.Store) {
+	t.Helper()
+	require.NoError(t, s.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
 }
 
 // TestSceneLinePopsQueued verifies queued scenes surface first.

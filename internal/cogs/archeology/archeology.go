@@ -287,7 +287,15 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	evt := &archsvc.DigEvent{Type: archsvc.EventType(evtType)}
 	result := c.svc.ResolveEvent(sess.state, evt, actionVal)
 
-	desc := i18n.T(result.DescID, lang)
+	var desc string
+	if result.RevealedTool != "" {
+		desc = i18n.T(result.DescID, lang, map[string]any{
+			"tool":  i18n.T("arch_tool_"+result.RevealedTool, lang),
+			"layer": i18n.T(archsvc.GetLayerNameID(result.RevealedLayer), lang),
+		})
+	} else {
+		desc = i18n.T(result.DescID, lang)
+	}
 	if result.CoinChange > 0 {
 		desc += "\n\n" + i18n.T("arch.coins_gained", lang, map[string]any{"coins": result.CoinChange})
 		c.store.UpdateBalance(userID, result.CoinChange)
@@ -352,14 +360,14 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	var embed *discordgo.MessageEmbed
 	switch action {
 	case "sell":
-		bal, err := c.svc.SellResult(userID, res)
+		price, _, err := c.svc.SellResult(userID, res)
 		if err != nil {
 			interaction.RespondError(b, i, lang, "arch.error")
 			return
 		}
 		embed = components.Embed(
 			i18n.T("arch.sold_title", lang),
-			i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": bal}),
+			i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": price}),
 			0xF1C40F,
 		)
 
@@ -435,8 +443,9 @@ func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, l
 	layerName := i18n.T(layerNameID, lang)
 
 	desc := i18n.T("arch.dig_desc", lang, map[string]any{
-		"site":  i18n.T(state.Site.NameID, lang),
-		"layer": layerEmoji + " " + layerName,
+		"site":      i18n.T(state.Site.NameID, lang),
+		"layer":     layerEmoji + " " + layerName,
+		"site_desc": i18n.T(state.Site.DescID, lang),
 	})
 
 	if state.RevealedLayer {

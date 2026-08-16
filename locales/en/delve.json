@@ -30,6 +30,7 @@
       "leave": "Leave",
       "locked_force": "Force Door",
       "locked_key": "Use Key",
+      "key_take": "Take the Vault Key",
       "merchant_browse": "Browse",
       "merchant_buy": "Buy",
       "merchant_haggle": "Haggle",
@@ -290,9 +291,12 @@
         "locked_1": "Rusted bars seal a promising corridor. The lock mechanism looks complex but functional — a key would turn it smoothly.",
         "locked_2": "A reinforced door bars your way. Through a crack, you glimpse a glittering chamber beyond. The lock gleams, awaiting a key.",
         "crypt_monster": "Bones rattle in the corners as a shambling figure rises to block your path.",
-        "passage_default": "The passage stretches ahead into darkness."
+        "passage_default": "The passage stretches ahead into darkness.",
+        "vault_key": "A sealed chamber older than the village. In the center, a black steel pedestal holds a single object: a **Vault Key**, inlaid with blue light, humming softly.\n\nThe air is still. Nothing stirs. The Ancients kept this room free of guardians — whatever else roams the Undercroft, it is not here.\n\n**Take the key and leave. The depths are not for you yet.**"
       }
     },
+    "vault_key_title": "The Vault Key",
+    "vault_key_taken": "You take the **Vault Key** — black steel inlaid with blue light, humming against your palm.\n\n\"Gate lock: key present.\" The machine-voice of the Vault is almost satisfied.\n\nThorek's voice crackles over your comms: **\"Good work. Now get out of there — the deeper floors will tear you apart at this level. Leave, grow stronger, and come back when you're ready.\"**",
     "weapon": {
       "punch": "Punch",
       "swing": "Swing"

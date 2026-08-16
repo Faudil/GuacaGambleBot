@@ -31,29 +31,31 @@ func (s *Service) RollEvent(state *GameState) *DigEvent {
 }
 
 func (s *Service) rollFossilWhisper(state *GameState) *DigEvent {
-	layerName := GetLayerNameID(state.CurrentLayer)
-	bestTool := "brush"
-	switch state.CurrentLayer {
-	case LayerSoftSoil:
-		bestTool = "brush"
-	case LayerHardRock:
-		bestTool = "hammer"
-	case LayerGravel:
-		bestTool = "hammer"
-	case LayerClay:
-		bestTool = "brush"
-	case LayerBedrock:
-		bestTool = "dynamite"
-	}
 	return &DigEvent{
 		Type:    EventFossilWhisper,
 		TitleID: "arch.event_whisper_title",
 		DescID:  "arch.event_whisper_desc",
-		Data:    map[string]any{"layer": layerName, "tool": bestTool},
+		Data:    map[string]any{"layer": GetLayerNameID(state.CurrentLayer), "tool": bestToolForLayer(state.CurrentLayer)},
 		Choices: []EventChoice{
 			{LabelID: "arch.event_whisper_accept", Value: "accept", Style: 3},
 		},
 	}
+}
+
+func bestToolForLayer(layer LayerType) string {
+	switch layer {
+	case LayerSoftSoil:
+		return "brush"
+	case LayerHardRock:
+		return "hammer"
+	case LayerGravel:
+		return "hammer"
+	case LayerClay:
+		return "brush"
+	case LayerBedrock:
+		return "dynamite"
+	}
+	return "hammer"
 }
 
 func (s *Service) rollCaveIn() *DigEvent {
@@ -110,10 +112,13 @@ func (s *Service) rollFossilEgg() *DigEvent {
 func (s *Service) ResolveEvent(state *GameState, evt *DigEvent, choice string) *EventResult {
 	switch evt.Type {
 	case EventFossilWhisper:
+		state.RevealedLayer = true
 		return &EventResult{
-			TitleID:   "arch.event_whisper_result_title",
-			DescID:    "arch.event_whisper_result_desc",
-			BackToDig: true,
+			TitleID:       "arch.event_whisper_result_title",
+			DescID:        "arch.event_whisper_result_desc",
+			RevealedTool:  bestToolForLayer(state.CurrentLayer),
+			RevealedLayer: state.CurrentLayer,
+			BackToDig:     true,
 		}
 	case EventCaveIn:
 		return s.resolveCaveIn(state, choice)

@@ -481,6 +481,25 @@ func (s *Service) IsActivityComplete(userID int64, questID string) bool {
 	return uqd.ProgressValue >= int(targetCount)
 }
 
+// IsTutorialOnDelveStep reports whether the user is currently on the tutorial's
+// delve activity step (quests.day7_delve.step1_activity). The delve cog uses it
+// to offer the special Vault Key chamber instead of a random first room, so
+// weak players are not thrown into lethal combat.
+func (s *Service) IsTutorialOnDelveStep(userID int64) bool {
+	def := QuestRegistry["tutorial"]
+	if def == nil {
+		return false
+	}
+	uq, uqd, err := s.GetQuestProgress(userID, "tutorial")
+	if err != nil || uq == nil || uq.Status != "ACTIVE" || uqd == nil {
+		return false
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return false
+	}
+	return def.Steps[uqd.StepIndex].TextKey == "quests.day7_delve.step1_activity"
+}
+
 func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) error {
 	def := QuestRegistry[questID]
 	if def == nil {

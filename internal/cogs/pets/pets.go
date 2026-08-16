@@ -496,6 +496,9 @@ func (c *Cog) onHealButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	if c.playCooldownActive(b, i, userID, lang) {
+		return
+	}
 	pet, err := c.svc.GetActivePet(userID)
 	if err != nil || pet == nil {
 		interaction.RespondError(b, i, lang, "pets.play.no_pet")
@@ -512,11 +515,11 @@ func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 	content := c.playWithPet(pet, lang)
+	_ = c.store.SetCooldown(userID, "pet_play")
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
-			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
 	c.tryInteraction(b, i, pet, "play")
@@ -525,6 +528,14 @@ func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) 
 func (c *Cog) onPlayPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
+	if remaining := c.playCooldownRemaining(userID); remaining > 0 {
+		minutes := int(remaining.Minutes())
+		if minutes < 1 {
+			minutes = 1
+		}
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.play.cooldown", lang, map[string]any{"minutes": minutes}))
+		return
+	}
 	pet, err := c.svc.GetActivePet(userID)
 	if err != nil || pet == nil {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.play.no_pet", lang))
@@ -535,7 +546,46 @@ func (c *Cog) onPlayPrefix(b *interaction.Bot, s *discordgo.Session, m *discordg
 		return
 	}
 	content := c.playWithPet(pet, lang)
+	_ = c.store.SetCooldown(userID, "pet_play")
 	_, _ = s.ChannelMessageSend(m.ChannelID, content)
+}
+
+// playCooldownRemaining returns the remaining cooldown for /play, or 0 when ready.
+func (c *Cog) playCooldownRemaining(userID int64) time.Duration {
+	if c.cfg.PlayCooldownMinutes <= 0 {
+		return 0
+	}
+	var cd model.Cooldown
+	err := c.store.DB.Where("user_id = ? AND activity_name = ?", userID, "pet_play").First(&cd).Error
+	if err != nil {
+		return 0
+	}
+	cooldown := time.Duration(c.cfg.PlayCooldownMinutes) * time.Minute
+	elapsed := time.Since(cd.LastUsed)
+	if elapsed >= cooldown {
+		return 0
+	}
+	return cooldown - elapsed
+}
+
+// playCooldownActive replies with the cooldown message when the player must wait.
+func (c *Cog) playCooldownActive(b *interaction.Bot, i *discordgo.InteractionCreate, userID int64, lang string) bool {
+	remaining := c.playCooldownRemaining(userID)
+	if remaining <= 0 {
+		return false
+	}
+	minutes := int(remaining.Minutes())
+	if minutes < 1 {
+		minutes = 1
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: i18n.T("pets.play.cooldown", lang, map[string]any{"minutes": minutes}),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
+	return true
 }
 
 func (c *Cog) playWithPet(pet *model.UserPet, lang string) string {

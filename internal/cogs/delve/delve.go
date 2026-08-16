@@ -17,6 +17,7 @@ import (
 	"guacagamblebot/internal/model"
 	crimsvc "guacagamblebot/internal/service/criminality"
 	delvesvc "guacagamblebot/internal/service/delve"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -25,6 +26,7 @@ type Cog struct {
 	cfg            *config.Config
 	svc            *delvesvc.Service
 	crimsvc        *crimsvc.Service
+	qsvc           *questssvc.Service
 	sessions       map[int64]*model.DelveSession
 	mu             sync.RWMutex
 	merchantOffers map[int64][]delvesvc.DelveItem
@@ -38,6 +40,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		cfg:            cfg,
 		svc:            delvesvc.New(s, cfg),
 		crimsvc:        crimsvc.New(s, cfg),
+		qsvc:           questssvc.New(s, cfg),
 		sessions:       make(map[int64]*model.DelveSession),
 		merchantOffers: make(map[int64][]delvesvc.DelveItem),
 		merchantExtra:  make(map[int64]map[string]int),
@@ -92,6 +95,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		"rift_disturb":      c.onRiftDisturb,
 		"locked_key":        c.onLockedKey,
 		"locked_force":      c.onLockedForce,
+		"key_take":          c.onKeyTake,
 		"npc_intimidate":    c.onNpcIntimidate,
 		"merchant_haggle":   c.onMerchantHaggle,
 		"rest_bandage":      c.onRestBandage,
@@ -316,6 +320,11 @@ func (c *Cog) startDelve(b *interaction.Bot, userID, guildID, channelID int64) (
 	lang := c.store.GetLanguage(guildID)
 	c.saveSession(s)
 	room := delvesvc.GenerateRoom(s, lang)
+	// Tutorial: while the player is on the delve step, the first room is the
+	// Vault Key chamber instead of a random (possibly lethal) room.
+	if c.qsvc.IsTutorialOnDelveStep(userID) {
+		room = delvesvc.VaultKeyRoom(lang)
+	}
 	embed, comps := c.renderRoom(s, &room, lang)
 	return embed, comps, s, nil
 }

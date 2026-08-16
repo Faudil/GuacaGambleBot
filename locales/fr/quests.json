@@ -109,7 +109,7 @@
     "day7_delve": {
       "description": "Trouve la clé du Coffre.",
       "step0_dialogue": "Le groupe se rassemble devant le Coffre. Là où devrait se trouver la porte : un mur d'acier noir, sans soudure, scellé. Une seule fente brille en son centre.\n\n\"Verrou de porte : détecté. Clé : absente.\"\n\nThorek grogne. \"Évidemment qu'il y a une clé. Les anciens bâtisseurs ne faisaient jamais rien de simple.\"\n\nLa voix de GambleBot bourdonne. \"Les tunnels sous le village. Les Souterrains. Les Anciens y ont caché leurs secrets. Utilise `/delve` pour descendre. Trouve la clé.\"",
-      "step1_activity": "Objectif : Complète 1 exploration avec `/delve`.",
+      "step1_activity": "Objectif : Descends dans les Souterrains avec `/delve` et prends la **Clé du Coffre**.",
       "step2_dialogue": "Au fond des Souterrains, dans une salle scellée plus vieille que le village, tu la trouves : une **Clé du Coffre**, en acier noir incrusté de lumière bleue. Elle bourdonne contre ta paume.\n\nTu remontes à la surface. La clé glisse dans la fente de la porte. Quelque part au-delà, quelque chose bouge.",
       "title": "Jour 7 : Les Souterrains"
     },

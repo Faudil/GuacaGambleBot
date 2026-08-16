@@ -314,6 +314,7 @@
       "timid": "😰 Timide"
     },
     "play": {
+      "cooldown": "⏳ Ton familier a besoin de repos ! Réessaie de jouer dans {minutes} minute(s).",
       "level_up": "🎉 **NIVEAU SUPÉRIEUR !** {name} passe au niveau {level} et gagne des stats !",
       "no_pet": "❌ Tu n'as pas de familier actif !",
       "on_expedition": "❌ **{name}** est en expédition ! Attends son retour pour jouer avec lui.",

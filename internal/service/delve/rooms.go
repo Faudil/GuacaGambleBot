@@ -31,6 +31,7 @@ const (
 	RoomRift     RoomType = "rift"
 	RoomShrine   RoomType = "shrine"
 	RoomLocked   RoomType = "locked"
+	RoomVaultKey RoomType = "vault_key"
 )
 
 type Room struct {
@@ -243,6 +244,20 @@ func GenerateRoom(session *model.DelveSession, lang string) Room {
 		Description: desc,
 		Buttons:     btns,
 		EventData:   eventData,
+	}
+}
+
+// VaultKeyRoom builds the tutorial's Vault Key chamber: the first room shown to
+// a player who descends while on the tutorial's delve step. It lets them take
+// the Vault Key and leave without risking combat in the depths.
+func VaultKeyRoom(lang string) Room {
+	return Room{
+		Type:        RoomVaultKey,
+		Description: i18n.T("delve.room.desc.vault_key", lang),
+		Buttons: []RoomButton{
+			{Emoji: "🔑", Label: "Take the Vault Key", Action: "key_take", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "🚪", Label: "Leave the Depths", Action: "floor_leave", Style: discordgo.SecondaryButton, Data: ""},
+		},
 	}
 }
 

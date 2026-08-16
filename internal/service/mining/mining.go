@@ -319,7 +319,7 @@ var eventPool = func() []EventDef {
 			}},
 		{ID: "lantern", Stage: StageShallow, Rarity: EventCommon, MinDepth: 4,
 			Options: []NarrativeOption{
-				o("mining.ev_lantern_o1", "mining.ev_lantern_o1d", efr("mining.ev_lantern_r1", -5, 99)),
+				o("mining.ev_lantern_o1", "mining.ev_lantern_o1d", efr("mining.ev_lantern_r1", -5, 10)),
 				o("mining.ev_lantern_o2", "mining.ev_lantern_o2d", efi("mining.ev_lantern_r2", BagEntry{Name: "coal", Count: 2})),
 				o("mining.ev_lantern_o3", "mining.ev_lantern_o3d", ef("mining.ev_lantern_r3")),
 			}},
@@ -351,7 +351,7 @@ var eventPool = func() []EventDef {
 			Options: []NarrativeOption{
 				o("mining.ev_camp_rare_o1", "mining.ev_camp_rare_o1d",
 					efi("mining.ev_camp_rare_r1", BagEntry{Name: "gold_nugget", Count: 1}, BagEntry{Name: "copper_ore", Count: 2})),
-				o("mining.ev_camp_rare_o2", "mining.ev_camp_rare_o2d", efr("mining.ev_camp_rare_r2", -30, 3)),
+				o("mining.ev_camp_rare_o2", "mining.ev_camp_rare_o2d", efr("mining.ev_camp_rare_r2", -30, 2)),
 			}},
 		{ID: "cart_rare", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
 			Options: []NarrativeOption{

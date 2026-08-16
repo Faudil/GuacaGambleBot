@@ -314,6 +314,7 @@
       "timid": "😰 Timid"
     },
     "play": {
+      "cooldown": "⏳ Your pet needs a rest! Try playing again in {minutes} minute(s).",
       "level_up": "🎉 **LEVEL UP!** {name} is now level {level} and gains stats!",
       "no_pet": "❌ You have no active pet!",
       "on_expedition": "❌ **{name}** is on an expedition! Wait for it to return before playing.",

@@ -125,6 +125,28 @@ func TestApplyActionScan(t *testing.T) {
 	assert.False(t, outcome.Finished)
 }
 
+func TestWhisperRevealsBestTool(t *testing.T) {
+	cases := []struct {
+		layer LayerType
+		tool  string
+	}{
+		{LayerSoftSoil, "brush"},
+		{LayerHardRock, "hammer"},
+		{LayerGravel, "hammer"},
+		{LayerClay, "brush"},
+		{LayerBedrock, "dynamite"},
+	}
+	for _, tc := range cases {
+		state := &GameState{CurrentLayer: tc.layer, Actions: 4}
+		result := (&Service{}).ResolveEvent(state, &DigEvent{Type: EventFossilWhisper}, "accept")
+		assert.Equal(t, "arch.event_whisper_result_title", result.TitleID)
+		assert.Equal(t, tc.tool, result.RevealedTool)
+		assert.Equal(t, tc.layer, result.RevealedLayer)
+		assert.True(t, result.BackToDig)
+		assert.True(t, state.RevealedLayer)
+	}
+}
+
 func TestResolveDisaster(t *testing.T) {
 	state := &GameState{Integrity: 0, Depth: 30, Actions: 2}
 	res := (&Service{}).Resolve(state)
@@ -172,6 +194,32 @@ func TestGetArcheologistXP(t *testing.T) {
 	assert.Equal(t, 50, next)
 }
 
+func TestAddArcheologistXPMultiLevelUp(t *testing.T) {
+	svc, s := testService(t)
+	svc.addArcheologistXP(1, 1000)
+	var job model.Job
+	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
+	// 1000 XP from level 1: consumes 75+100+125+150+175+200 = 825 across 6 level-ups.
+	assert.Equal(t, 7, job.Level)
+	assert.Equal(t, 175, job.XP)
+	xp, next := svc.GetArcheologistXP(1)
+	assert.Equal(t, 175, xp)
+	assert.Equal(t, 225, next)
+}
+
+func TestAddArcheologistXPCreationLevelsUp(t *testing.T) {
+	svc, s := testService(t)
+	// First award creates the record at level 1 and must still apply level-ups.
+	svc.addArcheologistXP(1, 200)
+	var job model.Job
+	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
+	assert.Equal(t, 3, job.Level) // 75 -> L2 (125 left), 100 -> L3 (25 left)
+	assert.Equal(t, 25, job.XP)
+	xp, next := svc.GetArcheologistXP(1)
+	assert.Equal(t, 25, xp)
+	assert.Equal(t, 125, next)
+}
+
 func TestAwardResult(t *testing.T) {
 	svc, s := testService(t)
 	err := svc.AwardResult(1, &DigResult{ItemName: "common_fossil", Value: 150, XP: 50, Quality: "common"})
@@ -187,9 +235,10 @@ func TestSellResult(t *testing.T) {
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 1})
 	bal, err := s.GetBalance(1)
 	require.NoError(t, err)
-	newBal, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common"})
+	price, newBal, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common"})
 	require.NoError(t, err)
-	assert.Greater(t, newBal, bal)
+	assert.Equal(t, 180, price)
+	assert.Equal(t, bal+180, newBal)
 }
 
 func TestReanimate(t *testing.T) {

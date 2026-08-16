@@ -316,15 +316,12 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "farmer").First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			job = model.Job{UserID: userID, JobName: "farmer", Level: 1, XP: xp}
+			levelUpJob(&job)
 			s.store.DB.Create(&job)
 		}
 	} else {
 		job.XP += xp
-		next := 50 + job.Level*25
-		if job.XP >= next {
-			job.XP -= next
-			job.Level++
-		}
+		levelUpJob(&job)
 		s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "farmer").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level})
 	}
@@ -510,6 +507,16 @@ func (s *Service) GetNextHarvest(userID int64) (string, int) {
 
 func (s *Service) GetFarmerLevel(userID int64) int {
 	return s.getFarmerLevel(userID)
+}
+
+// levelUpJob applies as many level-ups as the job's XP warrants.
+func levelUpJob(job *model.Job) {
+	next := 50 + job.Level*25
+	for job.XP >= next {
+		job.XP -= next
+		job.Level++
+		next = 50 + job.Level*25
+	}
 }
 
 func (s *Service) GetFarmerXP(userID int64) (int, int) {

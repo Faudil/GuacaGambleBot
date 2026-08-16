@@ -14,6 +14,13 @@ import (
 const (
 	ChroniclerID          = "the_chronicler"
 	ChroniclerIntroSecret = "secret_chronicler_intro"
+
+	// chroniclerSightingKey is the queued scene key for the reveal DM.
+	chroniclerSightingKey = "journal.chronicler.sighting"
+
+	// ChroniclerSightingSecret marks that the reveal DM was delivered, so it
+	// is never queued or sent twice.
+	ChroniclerSightingSecret = "secret_chronicler_sighting"
 )
 
 // domainPaths maps activity domains (used by the activity cogs) to the journal
@@ -57,6 +64,9 @@ func randPct(n int) bool {
 func SceneLine(st *store.Store, userID int64, domain, lang string) (text string, dm bool) {
 	// 1. Queued scenes first.
 	if sc, ok := st.PopJournalScene(userID); ok {
+		if sc.Key == chroniclerSightingKey {
+			markSightingDelivered(st, userID)
+		}
 		return i18n.T(sc.Key, lang, sc.Params), sc.DM
 	}
 	// 2. Ambient sightings until the first meeting.

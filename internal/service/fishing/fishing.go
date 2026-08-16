@@ -511,6 +511,7 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "fisher").First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			job = model.Job{UserID: userID, JobName: "fisher", Level: 1, XP: xp}
+			levelUpJob(&job)
 			if err := s.store.DB.Create(&job).Error; err != nil {
 				return nil, err
 			}
@@ -519,11 +520,7 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 		}
 	} else {
 		job.XP += xp
-		next := jobXPForLevel(job.Level)
-		if job.XP >= next {
-			job.XP -= next
-			job.Level++
-		}
+		levelUpJob(&job)
 		if err := s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "fisher").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error; err != nil {
 			return nil, err
@@ -550,11 +547,7 @@ func (s *Service) ResolveEscape(userID int64) (*FightResolve, error) {
 	var job model.Job
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "fisher").First(&job).Error; err == nil {
 		job.XP += xp
-		next := jobXPForLevel(job.Level)
-		if job.XP >= next {
-			job.XP -= next
-			job.Level++
-		}
+		levelUpJob(&job)
 		_ = s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "fisher").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error
 	}
@@ -597,11 +590,7 @@ func (s *Service) ResolveBottle(userID int64) (*FightResolve, error) {
 	var job model.Job
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "fisher").First(&job).Error; err == nil {
 		job.XP += xp
-		next := jobXPForLevel(job.Level)
-		if job.XP >= next {
-			job.XP -= next
-			job.Level++
-		}
+		levelUpJob(&job)
 		_ = s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "fisher").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error
 	}
@@ -666,4 +655,14 @@ func tierWeight(t BaitTier) int {
 
 func jobXPForLevel(level int) int {
 	return 50 + level*25
+}
+
+// levelUpJob applies as many level-ups as the job's XP warrants.
+func levelUpJob(job *model.Job) {
+	next := jobXPForLevel(job.Level)
+	for job.XP >= next {
+		job.XP -= next
+		job.Level++
+		next = jobXPForLevel(job.Level)
+	}
 }
