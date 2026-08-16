@@ -3,6 +3,7 @@ package mining
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -229,6 +230,56 @@ func TestDescendDoesNotConsumeEntry(t *testing.T) {
 		require.NoError(t, rerr)
 		assert.Equal(t, dailyDescendLimit, r, "digging must not consume the expedition quota")
 	}
+}
+
+func TestPersistSessionRoundTrip(t *testing.T) {
+	svc, _ := testService(t)
+	ps := &PersistedSession{
+		Depth:          12,
+		ToolID:         "steel_pickaxe",
+		GhostVeilTurns: 3,
+		RiskMod:        -10,
+		RiskTurns:      5,
+		Bag:            []BagEntry{{Name: "coal", Count: 3}, {Name: "emerald", Count: 1}},
+	}
+	require.NoError(t, svc.SaveSession(1, ps))
+
+	got, err := svc.LoadSession(1)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, ps.Depth, got.Depth)
+	assert.Equal(t, ps.ToolID, got.ToolID)
+	assert.Equal(t, ps.GhostVeilTurns, got.GhostVeilTurns)
+	assert.Equal(t, ps.RiskMod, got.RiskMod)
+	assert.Equal(t, ps.RiskTurns, got.RiskTurns)
+	assert.Equal(t, ps.Bag, got.Bag)
+}
+
+func TestLoadSessionStaleAutoGrants(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, svc.SaveSession(1, &PersistedSession{
+		Depth:  5,
+		ToolID: "",
+		Bag:    []BagEntry{{Name: "coal", Count: 3}, {Name: "iron_ore", Count: 2}},
+	}))
+	require.NoError(t, s.DB.Model(&model.MiningSession{}).
+		Where("user_id = ?", 1).
+		Update("updated_at", time.Now().Add(-3*time.Hour)).Error)
+
+	got, err := svc.LoadSession(1)
+	require.NoError(t, err)
+	assert.Nil(t, got, "stale session must be removed and not resumed")
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error)
+	assert.Equal(t, 3, inv.Quantity)
+	var iron model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "iron_ore").First(&iron).Error)
+	assert.Equal(t, 2, iron.Quantity)
+
+	stored, err := svc.LoadSession(1)
+	require.NoError(t, err)
+	assert.Nil(t, stored, "stale row must be gone after auto-grant")
 }
 
 func TestLeaveMine(t *testing.T) {

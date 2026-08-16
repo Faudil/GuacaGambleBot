@@ -67,6 +67,11 @@ func Button(label, customID string, style discordgo.ButtonStyle) discordgo.Messa
 	return discordgo.Button{Label: label, CustomID: customID, Style: style}
 }
 
+// ButtonDisabled builds a button component with an explicit disabled state.
+func ButtonDisabled(label, customID string, style discordgo.ButtonStyle, disabled bool) discordgo.MessageComponent {
+	return discordgo.Button{Label: label, CustomID: customID, Style: style, Disabled: disabled}
+}
+
 // ActionRow wraps one or more components in an action row.
 func ActionRow(components ...discordgo.MessageComponent) discordgo.MessageComponent {
 	return discordgo.ActionsRow{Components: components}

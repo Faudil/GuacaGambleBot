@@ -1,8 +1,10 @@
 package mining
 
 import (
+	"encoding/json"
 	"errors"
 	"math/rand"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -964,3 +966,84 @@ func LoreDisplayName(loreID string) string {
 func GhostVeilBuffID() string        { return ghostVeilBuff }
 func LoreKethariID() string          { return loreKethari }
 func AncientCoreShardItemID() string { return ancientCoreShardItem }
+
+// StaleSessionTimeout is how long a persisted expedition may stay idle before
+// it is considered abandoned. Abandoned bags are auto-granted so loot is never
+// silently lost across restarts.
+const StaleSessionTimeout = 2 * time.Hour
+
+// PersistedSession is the session state that survives bot restarts. The bag is
+// serialized to JSON inside the DB row.
+type PersistedSession struct {
+	Depth          int
+	ToolID         string
+	GhostVeilTurns int
+	RiskMod        int
+	RiskTurns      int
+	Bag            []BagEntry
+}
+
+// SaveSession persists an in-progress expedition for the user.
+func (s *Service) SaveSession(userID int64, ps *PersistedSession) error {
+	bagJSON, err := json.Marshal(ps.Bag)
+	if err != nil {
+		return err
+	}
+	return s.store.SaveMiningSession(&model.MiningSession{
+		UserID:         userID,
+		Depth:          ps.Depth,
+		ToolID:         ps.ToolID,
+		GhostVeilTurns: ps.GhostVeilTurns,
+		RiskMod:        ps.RiskMod,
+		RiskTurns:      ps.RiskTurns,
+		Bag:            string(bagJSON),
+		UpdatedAt:      time.Now(),
+	})
+}
+
+// LoadSession restores a persisted expedition, or returns nil when there is
+// none. A session idle for longer than StaleSessionTimeout is considered
+// abandoned: its loot is granted through LeaveMine (STR/scavenger bonuses, XP
+// and tool consumption all apply) and the row is removed.
+func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
+	m, err := s.store.GetMiningSession(userID)
+	if err != nil || m == nil {
+		return nil, err
+	}
+	if time.Since(m.UpdatedAt) > StaleSessionTimeout {
+		// Delete the row first so two concurrent loads cannot double-grant
+		// the abandoned bag.
+		if err := s.store.DeleteMiningSession(userID); err != nil {
+			return nil, err
+		}
+		var bag []BagEntry
+		if m.Bag != "" {
+			if err := json.Unmarshal([]byte(m.Bag), &bag); err != nil {
+				return nil, err
+			}
+		}
+		if _, err := s.LeaveMine(userID, bag, m.ToolID); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	var bag []BagEntry
+	if m.Bag != "" {
+		if err := json.Unmarshal([]byte(m.Bag), &bag); err != nil {
+			return nil, err
+		}
+	}
+	return &PersistedSession{
+		Depth:          m.Depth,
+		ToolID:         m.ToolID,
+		GhostVeilTurns: m.GhostVeilTurns,
+		RiskMod:        m.RiskMod,
+		RiskTurns:      m.RiskTurns,
+		Bag:            bag,
+	}, nil
+}
+
+// DeleteSession removes the persisted expedition for the user.
+func (s *Service) DeleteSession(userID int64) error {
+	return s.store.DeleteMiningSession(userID)
+}

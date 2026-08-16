@@ -124,6 +124,7 @@ func Migrate(db *gorm.DB) error {
 		&model.UserDelveFlag{},
 		&model.DelveRunHistory{},
 		&model.DelveGauntletScore{},
+		&model.MiningSession{},
 		&model.UserSanctuary{},
 		&model.UserCriminality{},
 		&model.WorldCriminalityState{},

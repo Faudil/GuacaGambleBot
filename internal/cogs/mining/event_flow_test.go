@@ -180,3 +180,55 @@ func TestConcurrentSessionAccess(t *testing.T) {
 	sessionsMu.Unlock()
 	delete(sessions, 42)
 }
+
+// TestSessionSurvivesRestart simulates a bot restart: the session is persisted,
+// the in-memory map is wiped, and loadSession must restore the full expedition
+// (depth, tool, effects and loot) from the DB.
+func TestSessionSurvivesRestart(t *testing.T) {
+	if err := i18n.Load("../../../locales"); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "m.db")), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Migrate(d))
+	cfg := &config.Config{StartingBalance: 100}
+	st := store.New(d, cfg)
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	inv := invsvc.New(st, cfg)
+	npc := npcsvc.New(st, cfg, def, inv)
+	svc := miningsvc.New(st, cfg, npc)
+	c := &Cog{store: st, cfg: cfg, svc: svc}
+
+	sessionsMu.Lock()
+	sessions[42] = &userSession{
+		depth:          9,
+		toolID:         "steel_pickaxe",
+		ghostVeilTurns: 2,
+		riskMod:        -10,
+		riskTurns:      3,
+		bag:            []miningsvc.BagEntry{{Name: "coal", Count: 3}, {Name: "emerald", Count: 1}},
+	}
+	sessionsMu.Unlock()
+	c.persistSession(42)
+
+	sessionsMu.Lock()
+	delete(sessions, 42)
+	sessionsMu.Unlock()
+
+	restored := c.loadSession(42)
+	require.NotNil(t, restored, "session must be restored from the DB after a restart")
+	require.Equal(t, 9, restored.depth)
+	require.Equal(t, "steel_pickaxe", restored.toolID)
+	require.Equal(t, 2, restored.ghostVeilTurns)
+	require.Equal(t, -10, restored.riskMod)
+	require.Equal(t, 3, restored.riskTurns)
+	require.Equal(t, []miningsvc.BagEntry{{Name: "coal", Count: 3}, {Name: "emerald", Count: 1}}, restored.bag)
+
+	_ = c.svc.DeleteSession(42)
+	sessionsMu.Lock()
+	delete(sessions, 42)
+	sessionsMu.Unlock()
+}

@@ -64,6 +64,91 @@ func (c *Cog) respond(b *interaction.Bot, i *discordgo.InteractionCreate, embed 
 	}
 }
 
+// loadSession returns the in-memory session for userID, restoring it from the
+// DB after a bot restart. It never charges an entry.
+func (c *Cog) loadSession(userID int64) *userSession {
+	sessionsMu.Lock()
+	sess, ok := sessions[userID]
+	sessionsMu.Unlock()
+	if ok {
+		return sess
+	}
+	ps, err := c.svc.LoadSession(userID)
+	if err != nil || ps == nil {
+		return nil
+	}
+	sess = &userSession{
+		depth:          ps.Depth,
+		bag:            ps.Bag,
+		toolID:         ps.ToolID,
+		ghostVeilTurns: ps.GhostVeilTurns,
+		riskMod:        ps.RiskMod,
+		riskTurns:      ps.RiskTurns,
+	}
+	sessionsMu.Lock()
+	if current, exists := sessions[userID]; exists {
+		sessionsMu.Unlock()
+		return current
+	}
+	sessions[userID] = sess
+	sessionsMu.Unlock()
+	return sess
+}
+
+// ensureSession returns the player's active session (resuming persisted state
+// after a restart) or starts a fresh expedition, charging one daily entry.
+func (c *Cog) ensureSession(userID int64, toolID string) (*userSession, error) {
+	if sess := c.loadSession(userID); sess != nil {
+		return sess, nil
+	}
+	sessionsMu.Lock()
+	if sess, active := sessions[userID]; active {
+		sessionsMu.Unlock()
+		return sess, nil
+	}
+	if err := c.svc.EnterMine(userID); err != nil {
+		sessionsMu.Unlock()
+		return nil, err
+	}
+	sess := &userSession{depth: 1, toolID: toolID}
+	sessions[userID] = sess
+	sessionsMu.Unlock()
+	c.persistSession(userID)
+	return sess, nil
+}
+
+// persistSession writes the current in-memory session to the DB so a restart
+// cannot lose the expedition.
+func (c *Cog) persistSession(userID int64) {
+	sessionsMu.Lock()
+	sess, ok := sessions[userID]
+	var ps *miningsvc.PersistedSession
+	if ok {
+		ps = &miningsvc.PersistedSession{
+			Depth:          sess.depth,
+			ToolID:         sess.toolID,
+			GhostVeilTurns: sess.ghostVeilTurns,
+			RiskMod:        sess.riskMod,
+			RiskTurns:      sess.riskTurns,
+			Bag:            append([]miningsvc.BagEntry(nil), sess.bag...),
+		}
+	}
+	sessionsMu.Unlock()
+	if ps == nil {
+		return
+	}
+	_ = c.svc.SaveSession(userID, ps)
+}
+
+func (c *Cog) sessionError(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64, err error) {
+	if errors.Is(err, miningsvc.ErrMineLimit) {
+		interaction.RespondError(b, i, lang, "mining.limit_reached")
+	} else {
+		slog.Error("mining session failed", "user", userID, "error", err)
+		interaction.RespondError(b, i, lang, "mining.error")
+	}
+}
+
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -166,22 +251,10 @@ func (c *Cog) onToolSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(rest) > 0 {
 		toolID = rest[0]
 	}
-	sessionsMu.Lock()
-	_, active := sessions[userID]
-	if !active {
-		if err := c.svc.EnterMine(userID); err != nil {
-			sessionsMu.Unlock()
-			if errors.Is(err, miningsvc.ErrMineLimit) {
-				interaction.RespondError(b, i, lang, "mining.limit_reached")
-			} else {
-				slog.Error("mining entry failed", "user", userID, "error", err)
-				interaction.RespondError(b, i, lang, "mining.error")
-			}
-			return
-		}
+	if _, err := c.ensureSession(userID, toolID); err != nil {
+		c.sessionError(b, i, lang, userID, err)
+		return
 	}
-	sessions[userID] = &userSession{depth: 1, toolID: toolID}
-	sessionsMu.Unlock()
 	embed, comps := c.mineEmbed(lang, userID, "")
 	c.respond(b, i, embed, comps)
 }
@@ -367,6 +440,11 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
+	if _, err := c.ensureSession(userID, ""); err != nil {
+		c.sessionError(b, i, lang, userID, err)
+		return
+	}
+
 	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
@@ -378,18 +456,15 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.toolID, gvt)
 	if err != nil {
 		sessionsMu.Unlock()
-		if errors.Is(err, miningsvc.ErrMineLimit) {
-			interaction.RespondError(b, i, lang, "mining.limit_reached")
-		} else {
-			slog.Error("mining descend failed", "user", userID, "error", err)
-			interaction.RespondError(b, i, lang, "mining.error")
-		}
+		slog.Error("mining descend failed", "user", userID, "error", err)
+		interaction.RespondError(b, i, lang, "mining.error")
 		return
 	}
 
 	if res.Collapsed {
 		delete(sessions, userID)
 		sessionsMu.Unlock()
+		_ = c.svc.DeleteSession(userID)
 		bagStr := c.bagString(res.Bag, lang)
 		msg := i18n.T("mining.collapse_msg", lang, map[string]any{"items": bagStr})
 		if len(res.Bag) == 0 {
@@ -408,6 +483,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		sess.ghostVeilTurns = 3
 	}
 	sessionsMu.Unlock()
+	c.persistSession(userID)
 
 	eventMsg := c.buildEasterEggText(res.Event, lang)
 	if res.LoreID != "" {
@@ -442,6 +518,11 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	eventID := rest[0]
 	optionIdx := 0
 	fmt.Sscanf(rest[1], "%d", &optionIdx)
+
+	if _, err := c.ensureSession(userID, ""); err != nil {
+		c.sessionError(b, i, lang, userID, err)
+		return
+	}
 
 	sessionsMu.Lock()
 	sess, ok := sessions[userID]
@@ -502,6 +583,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		delete(sessions, userID)
 		res, err := c.svc.LeaveMine(userID, sess.bag, sess.toolID)
 		sessionsMu.Unlock()
+		_ = c.svc.DeleteSession(userID)
 		if err != nil {
 			slog.Error("mining leave after event failed", "user", userID, "error", err)
 			interaction.RespondError(b, i, lang, "mining.error")
@@ -530,6 +612,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 	sessionsMu.Unlock()
+	c.persistSession(userID)
 
 	embed, comps := c.mineEmbed(lang, userID, msg)
 	c.respond(b, i, embed, comps)
@@ -538,12 +621,12 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	sessionsMu.Lock()
-	sess, ok := sessions[userID]
-	if !ok {
+	sess := c.loadSession(userID)
+	if sess == nil {
 		sess = &userSession{}
 	}
 
+	sessionsMu.Lock()
 	res, err := c.svc.LeaveMine(userID, sess.bag, sess.toolID)
 	if err != nil {
 		sessionsMu.Unlock()
@@ -553,6 +636,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	delete(sessions, userID)
 	sessionsMu.Unlock()
+	_ = c.svc.DeleteSession(userID)
 
 	title := i18n.T("mining.empty_msg", lang)
 	color := 0xC0C0C0

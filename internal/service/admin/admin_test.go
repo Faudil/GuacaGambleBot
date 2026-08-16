@@ -76,6 +76,57 @@ func TestAirdropAll(t *testing.T) {
 	assert.Equal(t, 200, b2)
 }
 
+func TestGiveItem(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 0) // ensure user exists
+	require.NoError(t, err)
+
+	require.NoError(t, svc.GiveItem(1, "coal", 3))
+	require.NoError(t, svc.GiveItem(1, "coal", 2))
+
+	var inv model.Inventory
+	err = st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error
+	require.NoError(t, err)
+	assert.Equal(t, 5, inv.Quantity)
+}
+
+func TestGiveItemUnknown(t *testing.T) {
+	svc, _ := testService(t)
+	err := svc.GiveItem(1, "does_not_exist", 1)
+	require.ErrorIs(t, err, ErrItemNotFound)
+}
+
+func TestGiveItemBadQuantity(t *testing.T) {
+	svc, _ := testService(t)
+	err := svc.GiveItem(1, "coal", 0)
+	require.Error(t, err)
+}
+
+func TestAirdropItemAll(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 0)
+	require.NoError(t, err)
+	_, err = st.UpdateBalance(2, 0)
+	require.NoError(t, err)
+
+	count, err := svc.AirdropItemAll("coal", 4)
+	require.NoError(t, err)
+	assert.Equal(t, 2, count)
+
+	for _, uid := range []int64{1, 2} {
+		var inv model.Inventory
+		err := st.DB.Where("user_id = ? AND item_id = ?", uid, "coal").First(&inv).Error
+		require.NoError(t, err)
+		assert.Equal(t, 4, inv.Quantity)
+	}
+}
+
+func TestAirdropItemAllUnknown(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.AirdropItemAll("does_not_exist", 1)
+	require.ErrorIs(t, err, ErrItemNotFound)
+}
+
 func TestResetEconomy(t *testing.T) {
 	svc, st := testService(t)
 	_, err := st.UpdateBalance(1, 1000)
