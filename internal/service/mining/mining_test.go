@@ -136,8 +136,8 @@ func TestDescendHiddenChamber(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	found := false
 	for i := 0; i < 500; i++ {
-	// The daily descend limit would stop the loop long before the rare
-	// event is found; reset it so the RNG-driven search can run to completion.
+		// The daily descend limit would stop the loop long before the rare
+		// event is found; reset it so the RNG-driven search can run to completion.
 		_ = s.ResetGameLimit(1, "mine_descend")
 		bag := []BagEntry{}
 		res, err := svc.Descend(1, 40, bag, "", 0)
