@@ -657,6 +657,8 @@ func (c *Cog) handleOrderError(b *interaction.Bot, i *discordgo.InteractionCreat
 		interaction.RespondError(b, i, lang, "market.no_money")
 	case mktsvc.ErrInvalidQty:
 		interaction.RespondError(b, i, lang, "market.invalid_amount")
+	case store.ErrInventoryFull:
+		interaction.RespondError(b, i, lang, "inventory.full")
 	default:
 		interaction.RespondError(b, i, lang, "market.error")
 	}

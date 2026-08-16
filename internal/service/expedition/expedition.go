@@ -2,6 +2,7 @@ package expedition
 
 import (
 	"encoding/json"
+	"errors"
 	"math/rand"
 	"strings"
 	"time"
@@ -22,18 +23,28 @@ type Service struct {
 	cfg   *config.Config
 }
 
+var ErrPetKO = errors.New("pet is knocked out")
+
 func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
 func (s *Service) DB() *gorm.DB { return s.store.DB }
 
+// ExpeditionEvent is one entry of the adventure log. Structured fields
+// (Location, Enemy, Item, CombatResult) let cogs render a localized log;
+// Text is kept as a fallback for rows created before the structured format.
 type ExpeditionEvent struct {
-	Time int    `json:"time"`
-	Type string `json:"type"`
-	Text string `json:"text"`
-	XP   int    `json:"xp,omitempty"`
-	Loot string `json:"loot,omitempty"`
+	Time         int    `json:"time"`
+	Type         string `json:"type"`
+	Text         string `json:"text"`
+	XP           int    `json:"xp,omitempty"`
+	Loot         string `json:"loot,omitempty"`
+	Location     string `json:"location,omitempty"`
+	Enemy        string `json:"enemy,omitempty"`
+	EnemyLevel   int    `json:"enemy_level,omitempty"`
+	Item         string `json:"item,omitempty"`
+	CombatResult string `json:"combat_result,omitempty"`
 }
 
 type ExpeditionResult struct {
@@ -44,9 +55,9 @@ type ExpeditionResult struct {
 }
 
 func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionResult {
-	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato", "wheat_seed", "carrot_seed"}
-	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry", "potato_seed", "tomato_seed", "pumpkin_seed"}
-	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed",
+	commonLoot := []string{"pebble", "coal", "sardine", "wheat", "tomato", "wheat_seed", "carrot_seed", "worm"}
+	rareLoot := []string{"iron_ore", "salmon", "corn", "strawberry", "potato_seed", "tomato_seed", "pumpkin_seed", "crayfish"}
+	epicLoot := []string{"gold_nugget", "shark", "star_fruit", "emerald", "coffee_seed", "cocoa_seed", "strawberry_seed", "golden_lure",
 		"miner_helmet", "hunters_bow", "golden_ring", "ancient_amulet"}
 	locations := []string{"forest", "desert", "cave", "plains", "mountain", "swamp", "valley", "coral", "volcano"}
 
@@ -88,8 +99,9 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			loc := locations[rand.Intn(len(locations))]
 			xp := (10 + rand.Intn(21)) * pet.Level
 			totalXP += xp
-			ev.Text = "🐾 **" + pet.Nickname + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
+			ev.Location = loc
 			ev.XP = xp
+			ev.Text = "🐾 **" + pet.Nickname + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
 		case "combat":
 			if petHP <= 0 {
 				ev.Text = "😵 **" + pet.Nickname + "** is K.O. and cannot fight for now."
@@ -97,6 +109,8 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			}
 			enemySpecies := randomPetSpecies()
 			enemyLvl := max(1, pet.Level-2+rand.Intn(5))
+			ev.Enemy = enemySpecies
+			ev.EnemyLevel = enemyLvl
 
 			petBP := s.petBattlePet(pet)
 			petBP.HP = petHP
@@ -120,8 +134,9 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			case petBP.IsAlive() && !enemyBP.IsAlive():
 				xp := (40 + rand.Intn(41)) * enemyLvl
 				totalXP += xp
-				ev.Text = "⚔️ **" + pet.Nickname + "** defeated a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")! (+" + itoa(xp) + " XP)"
+				ev.CombatResult = "win"
 				ev.XP = xp
+				ev.Text = "⚔️ **" + pet.Nickname + "** defeated a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")! (+" + itoa(xp) + " XP)"
 				if rand.Float64() < 0.3 {
 					var item string
 					if rand.Float64() < 0.8 {
@@ -133,9 +148,11 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 					ev.Loot = item
 				}
 			case !petBP.IsAlive():
+				ev.CombatResult = "loss"
 				ev.Text = "💀 **" + pet.Nickname + "** was knocked out by a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")!"
 				totalXP += 10
 			default:
+				ev.CombatResult = "stalemate"
 				ev.Text = "🤕 **" + pet.Nickname + "** fought a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ") to a stalemate and withdrew."
 				totalXP += 10
 			}
@@ -151,6 +168,8 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 				item = commonLoot[rand.Intn(len(commonLoot))]
 			}
 			items = append(items, item)
+			ev.Item = item
+			ev.Loot = item
 			ev.Text = "🎁 **" + pet.Nickname + "** found a **" + item + "**!"
 			ev.Loot = item
 		case "rest":
@@ -210,6 +229,20 @@ func wildBattlePet(species string, level int) *battle.BattlePet {
 }
 
 func (s *Service) Start(userID, petID int64, durationHours int, result *ExpeditionResult) (*model.PetExpedition, error) {
+	var pet model.UserPet
+	if err := s.store.DB.First(&pet, petID).Error; err != nil {
+		return nil, err
+	}
+	if pet.HP <= 0 {
+		return nil, ErrPetKO
+	}
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
 	now := time.Now()
 	duration := time.Duration(durationHours) * time.Hour
 
@@ -226,7 +259,7 @@ func (s *Service) Start(userID, petID int64, durationHours int, result *Expediti
 		Log:         string(logJSON),
 		IsClaimed:   false,
 	}
-	err := s.store.DB.Create(&exp).Error
+	err = s.store.DB.Create(&exp).Error
 	if err != nil {
 		return nil, err
 	}

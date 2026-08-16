@@ -34,6 +34,7 @@ var ownerGatedDomains = map[string]struct{}{
 	"fish":         {},
 	"arch":         {},
 	"hunt":         {},
+	"expedition":   {},
 	"jobs":         {},
 	"skills":       {},
 	"quest":        {},
@@ -389,8 +390,34 @@ func (r *Router) checkRateLimit(userID string) bool {
 	return true
 }
 
+// RegisterCommands publishes all slash commands to Discord and purges the
+// opposite scope so commands never show up twice. BulkOverwrite only replaces
+// commands in the scope it targets; without the purge, switching between
+// global and guild-scoped registration leaves stale duplicates behind.
 func (r *Router) RegisterCommands(guildID string) error {
 	appID := r.bot.Session.State.User.ID
 	_, err := r.bot.Session.ApplicationCommandBulkOverwrite(appID, guildID, r.slashDefs)
-	return err
+	if err != nil {
+		return err
+	}
+	if guildID != "" {
+		// Guild-scoped registration: drop stale global copies.
+		_, purgeErr := r.bot.Session.ApplicationCommandBulkOverwrite(appID, "", []*discordgo.ApplicationCommand{})
+		if purgeErr != nil {
+			logger.Log().Warn("could not purge global slash commands", "error", purgeErr)
+		} else {
+			logger.Log().Info("purged stale global slash commands")
+		}
+		return nil
+	}
+	// Global registration: drop stale guild-scoped copies in every guild.
+	for _, g := range r.bot.Session.State.Guilds {
+		_, purgeErr := r.bot.Session.ApplicationCommandBulkOverwrite(appID, g.ID, []*discordgo.ApplicationCommand{})
+		if purgeErr != nil {
+			logger.Log().Warn("could not purge guild slash commands", "error", purgeErr, "guild", g.ID)
+		} else {
+			logger.Log().Info("purged stale guild slash commands", "guild", g.ID)
+		}
+	}
+	return nil
 }

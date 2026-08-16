@@ -141,9 +141,12 @@ func (c *Cog) persistSession(userID int64) {
 }
 
 func (c *Cog) sessionError(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64, err error) {
-	if errors.Is(err, miningsvc.ErrMineLimit) {
+	switch {
+	case errors.Is(err, miningsvc.ErrMineLimit):
 		interaction.RespondError(b, i, lang, "mining.limit_reached")
-	} else {
+	case errors.Is(err, store.ErrInventoryFull):
+		interaction.RespondError(b, i, lang, "inventory.full")
+	default:
 		slog.Error("mining session failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
 	}
@@ -585,6 +588,10 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		sessionsMu.Unlock()
 		_ = c.svc.DeleteSession(userID)
 		if err != nil {
+			if errors.Is(err, store.ErrInventoryFull) {
+				interaction.RespondError(b, i, lang, "inventory.full")
+				return
+			}
 			slog.Error("mining leave after event failed", "user", userID, "error", err)
 			interaction.RespondError(b, i, lang, "mining.error")
 			return
@@ -630,6 +637,10 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	res, err := c.svc.LeaveMine(userID, sess.bag, sess.toolID)
 	if err != nil {
 		sessionsMu.Unlock()
+		if errors.Is(err, store.ErrInventoryFull) {
+			interaction.RespondError(b, i, lang, "inventory.full")
+			return
+		}
 		slog.Error("mining leave failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
 		return

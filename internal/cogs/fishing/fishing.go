@@ -1,6 +1,7 @@
 package fishing
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -600,6 +601,10 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			delete(sessions, userID)
 			sessionsMu.Unlock()
 			if err != nil {
+				if errors.Is(err, store.ErrInventoryFull) {
+					interaction.RespondError(b, i, lang, "inventory.full")
+					return
+				}
 				interaction.RespondError(b, i, lang, "fishing.error")
 				return
 			}
@@ -739,6 +744,10 @@ func (c *Cog) onFightAction(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if result.Caught {
 		res, err := c.svc.ResolveCatch(userID, state)
 		if err != nil {
+			if errors.Is(err, store.ErrInventoryFull) {
+				interaction.RespondError(b, i, lang, "inventory.full")
+				return
+			}
 			interaction.RespondError(b, i, lang, "fishing.error")
 			return
 		}

@@ -3,6 +3,7 @@ package archeology
 import (
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -22,6 +23,7 @@ import (
 )
 
 var digSessions = map[int64]*digSession{}
+var digSessionsMu sync.Mutex
 
 type digSession struct {
 	state   *archsvc.GameState
@@ -57,7 +59,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
+	digSessionsMu.Lock()
 	delete(digSessions, userID)
+	digSessionsMu.Unlock()
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.bureau(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -66,7 +70,9 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	userID := interaction.ToInt64(m.Author.ID)
+	digSessionsMu.Lock()
 	delete(digSessions, userID)
+	digSessionsMu.Unlock()
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	embed, comps := c.bureau(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -77,7 +83,9 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
+	digSessionsMu.Lock()
 	delete(digSessions, userID)
+	digSessionsMu.Unlock()
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.bureau(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -188,12 +196,16 @@ func (c *Cog) onSiteSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			errKey = "arch.no_money"
 		case archsvc.ErrLocked:
 			errKey = "arch.site_locked"
+		case store.ErrInventoryFull:
+			errKey = "inventory.full"
 		}
 		interaction.RespondError(b, i, lang, errKey)
 		return
 	}
 
+	digSessionsMu.Lock()
 	digSessions[userID] = &digSession{state: state}
+	digSessionsMu.Unlock()
 	c.showDigEmbed(b, i, lang, state)
 }
 
@@ -203,9 +215,11 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
 
+	digSessionsMu.Lock()
 	sess, ok := digSessions[userID]
+	digSessionsMu.Unlock()
 	if !ok || sess.state == nil || sess.state.Finished {
-		interaction.RespondError(b, i, lang, "arch.error")
+		interaction.RespondError(b, i, lang, "arch.session_expired")
 		return
 	}
 
@@ -248,7 +262,9 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	evt := c.svc.RollEvent(sess.state)
 	if evt != nil {
+		digSessionsMu.Lock()
 		digSessions[userID] = &digSession{state: &outcome.State}
+		digSessionsMu.Unlock()
 		c.showEventEmbed(b, i, lang, evt, &outcome.State)
 		return
 	}
@@ -269,7 +285,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
 
+	digSessionsMu.Lock()
 	sess, ok := digSessions[userID]
+	digSessionsMu.Unlock()
 	if !ok || sess.state == nil {
 		c.onMenu(b, i)
 		return
@@ -315,7 +333,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 				components.Button(i18n.T("arch.back_dig", lang), components.EncodeOwner(userID, "arch", "action", "continue"), discordgo.SecondaryButton),
 			),
 		}
+		digSessionsMu.Lock()
 		digSessions[userID] = &digSession{state: sess.state}
+		digSessionsMu.Unlock()
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 		return
@@ -334,7 +354,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
 		),
 	}
+	digSessionsMu.Lock()
 	delete(digSessions, userID)
+	digSessionsMu.Unlock()
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -345,9 +367,12 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
 
+	digSessionsMu.Lock()
 	sess, ok := digSessions[userID]
+	delete(digSessions, userID)
+	digSessionsMu.Unlock()
 	if !ok || sess.pending == nil {
-		interaction.RespondError(b, i, lang, "arch.error")
+		interaction.RespondError(b, i, lang, "arch.session_expired")
 		return
 	}
 
@@ -400,7 +425,6 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		interaction.SendAchievements(b, i, lang, unlocks)
 	}
 
-	delete(digSessions, userID)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),

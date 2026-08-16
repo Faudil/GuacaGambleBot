@@ -1,9 +1,11 @@
 package farm
 
 import (
+	"errors"
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -23,6 +25,7 @@ import (
 )
 
 var eventSessions = map[int64]*activeEvent{}
+var eventSessionsMu sync.Mutex
 
 type activeEvent struct {
 	Event   *farmsvc.Event
@@ -68,7 +71,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	eventSessionsMu.Lock()
 	delete(eventSessions, userID)
+	eventSessionsMu.Unlock()
 	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
@@ -77,7 +82,9 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
+	eventSessionsMu.Lock()
 	delete(eventSessions, userID)
+	eventSessionsMu.Unlock()
 	embed, comps := c.menu(lang, userID)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
@@ -87,7 +94,9 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
+	eventSessionsMu.Lock()
 	delete(eventSessions, userID)
+	eventSessionsMu.Unlock()
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	embed, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -222,11 +231,13 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	evt := c.svc.RollEvent(userID, zoneKey, plots)
 	if evt != nil {
+		eventSessionsMu.Lock()
 		delete(eventSessions, userID)
 		eventSessions[userID] = &activeEvent{
 			Event:   evt,
 			ZoneKey: zoneKey,
 		}
+		eventSessionsMu.Unlock()
 		c.showEvent(b, i, lang, userID, evt)
 		return
 	}
@@ -338,7 +349,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	cid := i.MessageComponentData().CustomID
 	parts := strings.Split(cid, "::")
 
+	eventSessionsMu.Lock()
 	session, ok := eventSessions[userID]
+	eventSessionsMu.Unlock()
 	if !ok || session.Event == nil {
 		c.onMenu(b, i)
 		return
@@ -376,7 +389,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		),
 	}
 
+	eventSessionsMu.Lock()
 	delete(eventSessions, userID)
+	eventSessionsMu.Unlock()
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -701,6 +716,10 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	res, err := c.svc.Harvest(userID, zoneKey, plotIdx)
 	if err != nil {
+		if errors.Is(err, store.ErrInventoryFull) {
+			interaction.RespondError(b, i, lang, "inventory.full")
+			return
+		}
 		interaction.RespondError(b, i, lang, "farm.error")
 		return
 	}

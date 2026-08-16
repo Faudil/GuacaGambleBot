@@ -104,6 +104,9 @@ func (s *Store) GetFallenPlayersOnFloor(guildID, floor int64, limit int) ([]mode
 }
 
 func (s *Store) AddItemRaw(db *gorm.DB, userID int64, itemID string, quantity int) error {
+	if quantity <= 0 {
+		return nil
+	}
 	return db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)}),

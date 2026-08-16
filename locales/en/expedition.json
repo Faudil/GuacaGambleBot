@@ -1,9 +1,18 @@
 {
   "expedition": {
     "already_active": "❌ You already have an active expedition. Finish it first.",
-    "claim_ready": "Expedition finished! Claim your rewards.",
-    "claim_success": "✨ **{pet}** is back! It gained **{xp} XP**.\n\n**Loot found:**{items}",
-    "claim_title": "🎁 Expedition Return",
+    "artifact_leveled": "💠 **Artifact leveled up!** Use `/artifact` to assign your new stat point.",
+    "claim_desc": "✨ **{pet}** is back! It gained **{xp} XP**.",
+    "claim_field_loot": "🎒 Loot Found",
+    "claim_label": "🎁 Claim Rewards",
+    "claim_title": "🎁 Expedition Complete",
+    "duration": {
+      "epic": "🗺️ Epic Journey (24h)",
+      "long": "🧭 Long Expedition (8h)",
+      "quick": "🌿 Quick Walk (1h)",
+      "trip": "🛤️ Day Trip (4h)"
+    },
+    "error": "❌ Something went wrong during the expedition. Please try again.",
     "events": {
       "combat_loss": "🤕 **{pet}** encountered a wild **{enemy}** and had to flee...",
       "combat_win": "⚔️ **{pet}** defeated a wild **{enemy}**! (+{xp} XP)",
@@ -11,13 +20,9 @@
       "loot": "🎁 **{pet}** found a **{item}**!",
       "rest": "💤 **{pet}** takes a short nap by a stream."
     },
-    "help_benefits": "**Benefits:**",
-    "help_benefits_list": "✨ XP for the pet\n🎁 Rare items\n📜 A detailed adventure log",
-    "help_commands": "**Commands:**",
-    "help_commands_list": "`!expedition start \u003c1/4/8/24\u003e` : Start an expedition\n`!expedition status` : View the logbook\n`!expedition claim` : Collect rewards",
-    "help_desc": "Send your pet to explore the world!",
-    "help_title": "Expedition Details",
     "invalid_duration": "❌ Invalid duration. Choose: 1, 4, 8, or 24 hours.",
+    "ko_warning": "⚠️ **{name}** is K.O. and cannot leave. Heal it first!",
+    "level_up": "🎉 **{pet}** reached level **{level}**!",
     "locations": {
       "cave": "the Crystal Cave",
       "coral": "the Coral Coast",
@@ -29,14 +34,26 @@
       "valley": "the Valley of Echoes",
       "volcano": "the Active Volcano"
     },
-    "log_header": "Adventure Log",
+    "menu_desc": "Send **{pet}** to explore the world! It will earn XP, find rare items and live a memorable adventure.",
+    "menu_footer": "Your pet may fight along the way and come back tired.",
+    "menu_label": "🏠 Menu",
+    "menu_no_pet": "Send your pet to explore the world! It will earn XP, find rare items and live a memorable adventure.",
+    "menu_title": "🚀 Pet Expeditions",
     "no_active": "❌ You don't have an active expedition.",
     "no_events": "Nothing to report yet...",
     "no_items": "No items found.",
     "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
     "not_finished": "🕒 Your pet hasn't returned yet! **{remaining}** left.",
-    "start_success": "🚀 **{pet}** left on an expedition for **{duration}h**!",
-    "status_desc": "Progress: **{progress}%** (Estimated return at **{end_time}**)",
+    "pet_card": "{emoji} **{name}** · Lvl {level} · {rarity}\n{hp_bar} {hp}/{max_hp} HP",
+    "pet_ko": "❌ **{name}** is K.O.! Heal it first using `!heal`.",
+    "refresh_label": "🔄 Refresh",
+    "rewards_line": "**{xp} XP** · **{items}** item(s) found",
+    "status_eta": "🕑 Returns at **{end_time}** · **{remaining}** left",
+    "status_field_log": "📜 Adventure Log",
+    "status_field_pet": "🐾 Pet",
+    "status_field_rewards": "🎁 Expected Rewards",
+    "status_progress": "{bar} **{progress}%**",
+    "status_ready": "✨ The expedition is over — claim the rewards!",
     "status_title": "🚀 {pet}'s Expedition",
     "time_format": "{hours}h {minutes}m"
   }

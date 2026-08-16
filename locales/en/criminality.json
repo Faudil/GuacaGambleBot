@@ -33,6 +33,7 @@
       "level_too_low": "You must be at least level {level} to burgle.",
       "need_rank": "You need to be at least a Burglar (Thief Rank 1) to burgle homes.",
       "nothing_worth": "Your mark has nothing worth taking.",
+      "bag_full": "Your inventory is full! Sell or use items before going burglary.",
       "nothing_worth_alt": "Nothing was worth the risk.",
       "pacifist_protected": "This player is protected by the Pacifist's Blessing.",
       "result_item": "📦 Stolen Item",

@@ -7,10 +7,8 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
-	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -35,14 +33,14 @@ func New(s *store.Store, cfg *config.Config) *Service {
 }
 
 // shopOfferable reports whether an item may be offered by the daily shop.
-// Free, collectible and award-only items, legendary set pieces and items that
-// are exclusive to their dedicated activity (criminality, boss leagues, ...)
-// are never sold here.
+// Free, collectible and award-only items, legendary set pieces, legendary
+// activity drops and items that are exclusive to their dedicated activity
+// (criminality, boss leagues, ...) are never sold here.
 func shopOfferable(it items.Item) bool {
 	if it.Price <= 0 || it.EffectType == "collectible" {
 		return false
 	}
-	if it.ShopExcluded || it.SetID != "" {
+	if it.ShopExcluded || it.SetID != "" || it.IsLegendaryDrop() {
 		return false
 	}
 	return true
@@ -115,6 +113,18 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity, unitPrice int
 		return ErrNoMoney
 	}
 
+	need := quantity
+	if it.EquipSlot != "" {
+		need = 1
+	}
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return err
+	}
+	if free < need {
+		return store.ErrInventoryFull
+	}
+
 	if it.EquipSlot != "" {
 		// Equipment item: create a UserEquipment instance with rolled affixes
 		rar := it.Rarity
@@ -161,9 +171,7 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity, unitPrice int
 		if err := s.store.UpdateBalanceTx(tx, userID, -totalCost); err != nil {
 			return err
 		}
-		return tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)})}).Create(&model.Inventory{UserID: userID, ItemID: itemName, Quantity: quantity}).Error
+		return s.store.AddItemRaw(tx, userID, itemName, quantity)
 	})
 }
 

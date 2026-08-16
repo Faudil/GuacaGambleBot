@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
@@ -57,11 +56,10 @@ func (s *Service) GetInventory(userID int64) (*InvResult, error) {
 	if _, err := s.store.GetBalance(userID); err != nil {
 		return nil, err
 	}
-	var u model.User
-	if err := s.store.DB.Where("user_id = ?", userID).First(&u).Error; err != nil {
+	limit, err := s.store.InventoryLimit(s.store.DB, userID)
+	if err != nil {
 		return nil, err
 	}
-	limit := 50 + u.ExtraInvSlots
 
 	// Stackable items from Inventory table
 	var inv []model.Inventory
@@ -128,7 +126,5 @@ func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemID string, quantity 
 }
 
 func (s *Service) AddItem(db *gorm.DB, userID int64, itemID string, quantity int) error {
-	return db.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)})}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
+	return s.store.AddItemRaw(db, userID, itemID, quantity)
 }

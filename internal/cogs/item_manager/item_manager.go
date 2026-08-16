@@ -194,6 +194,8 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			key = "item_manager.no_money"
 		case tradesvc.TradeNoItem:
 			key = "item_manager.no_item"
+		case tradesvc.TradeNoSpace:
+			key = "inventory.full"
 		default:
 			key = "item_manager.unknown_error"
 		}

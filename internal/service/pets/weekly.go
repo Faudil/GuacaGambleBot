@@ -199,11 +199,7 @@ func (s *Service) PerformWeeklyReset(serverID int64) (int, error) {
 			}
 		}
 		if tier.ItemID != "" {
-			if err := s.store.DB.Exec(
-				`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-				 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-				r.UserID, tier.ItemID,
-			).Error; err != nil {
+			if err := s.store.AddItemRaw(s.store.DB, r.UserID, tier.ItemID, 1); err != nil {
 				slog.Error("weekly: failed to award item", "user", r.UserID, "item", tier.ItemID, "error", err)
 			}
 		}

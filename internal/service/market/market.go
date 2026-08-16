@@ -34,7 +34,11 @@ const (
 	SellSpread = 0.02
 
 	DailyDecayRate = 0.10
-	PriceFloorMult = 0.20
+	// PriceFloorMult is the lowest a market price can fall. It is kept equal
+	// to VendorSellMult so buying below the guaranteed vendor price is
+	// impossible: any floor below the vendor rate would make "buy cheap,
+	// vendor after rotation" a risk-free money printer.
+	PriceFloorMult = 0.50
 	PriceCeilMult  = 5.0
 
 	// VendorSellMult is the fraction of the base price paid for items that
@@ -330,14 +334,18 @@ func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, i
 	}
 
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		free, err := s.store.FreeSlots(tx, userID)
+		if err != nil {
+			return err
+		}
+		if free < amount {
+			return store.ErrInventoryFull
+		}
 		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
 			UpdateColumn("balance", gorm.Expr("balance - ?", totalCost)).Error; err != nil {
 			return err
 		}
-		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", amount)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: amount}).Error; err != nil {
+		if err := s.store.AddItemRaw(tx, userID, itemID, amount); err != nil {
 			return err
 		}
 		if err := tx.Model(&model.MarketState{}).
@@ -375,7 +383,7 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 	if it == nil {
 		return 0, false, 0, ErrNotFound
 	}
-	if it.Price <= 0 {
+	if !it.IsSellable() {
 		return 0, false, 0, ErrNotSellable
 	}
 

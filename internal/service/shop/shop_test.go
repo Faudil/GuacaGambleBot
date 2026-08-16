@@ -59,6 +59,13 @@ func TestDailyOffersOnlyOfferableItems(t *testing.T) {
 		_, ok := svc.OfferForItem(id)
 		assert.False(t, ok, "%s must not be offered by the daily shop", id)
 	}
+
+	// Legendary drops must be earned by playing their activity — never sold
+	// in the shop.
+	for _, id := range []string{"nova_fruit", "shadow_fossil", "resonance_core"} {
+		_, ok := svc.OfferForItem(id)
+		assert.False(t, ok, "%s must not be offered by the daily shop", id)
+	}
 }
 
 func TestBuyItemSuccess(t *testing.T) {
@@ -80,6 +87,20 @@ func TestBuyItemInsufficientFunds(t *testing.T) {
 	svc, _ := testService(t)
 	err := svc.BuyItem(1, "coal", 1000, 1)
 	assert.ErrorIs(t, err, ErrNoMoney)
+}
+
+func TestBuyItemFullInventoryRejected(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+	require.NoError(t, st.AddItemRaw(st.DB, 1, "coal", store.BaseInventoryLimit))
+
+	bal, _ := st.GetBalance(1)
+	err = svc.BuyItem(1, "coal", 1, 1)
+	assert.ErrorIs(t, err, store.ErrInventoryFull)
+
+	newBal, _ := st.GetBalance(1)
+	assert.Equal(t, bal, newBal, "a rejected purchase must not charge the player")
 }
 
 // TestBuyItemSingleConnPool guards against the connection-pool deadlock that

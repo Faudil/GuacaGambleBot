@@ -144,6 +144,8 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		switch err {
 		case shop.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "shop.too_broke_item")
+		case store.ErrInventoryFull:
+			interaction.RespondError(b, i, lang, "inventory.full")
 		default:
 			interaction.RespondError(b, i, lang, "shop.error")
 		}

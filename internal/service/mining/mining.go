@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
@@ -27,27 +26,27 @@ type MineItem struct {
 func lootAtDepth(depth int) []MineItem {
 	switch {
 	case depth <= 1:
-		return []MineItem{{"pebble", 1}, {"coal", 5}}
+		return []MineItem{{"pebble", 1}, {"coal", 5}, {"worm", 5}}
 	case depth <= 3:
-		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}}
+		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}, {"worm", 5}}
 	case depth == 4:
-		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}}
+		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}, {"crayfish", 25}}
 	case depth == 5:
-		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}}
+		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}, {"crayfish", 25}}
 	case depth <= 7:
-		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}}
+		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}, {"crayfish", 25}}
 	case depth <= 9:
-		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}}
+		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}, {"golden_lure", 100}}
 	case depth <= 14:
-		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}}
+		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}, {"golden_lure", 100}}
 	case depth <= 19:
-		return []MineItem{{"rough_diamond", 300}, {"ancient_alloy", 500}, {"kethari_crystal", 1000}}
+		return []MineItem{{"rough_diamond", 300}, {"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"golden_lure", 100}}
 	case depth <= 24:
-		return []MineItem{{"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"primordial_geode", 2000}}
+		return []MineItem{{"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"golden_lure", 100}}
 	case depth <= 29:
-		return []MineItem{{"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"resonance_core", 5000}}
+		return []MineItem{{"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"resonance_core", 5000}, {"golden_lure", 100}}
 	default:
-		return []MineItem{{"primordial_geode", 2000}, {"resonance_core", 5000}}
+		return []MineItem{{"primordial_geode", 2000}, {"resonance_core", 5000}, {"golden_lure", 100}}
 	}
 }
 
@@ -647,10 +646,7 @@ func (s *Service) GrantLore(userID int64, loreID string) error {
 }
 
 func (s *Service) GrantItem(userID int64, itemID string, quantity int) error {
-	return s.store.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
+	return s.store.AddItemRaw(s.store.DB, userID, itemID, quantity)
 }
 
 func (s *Service) HasItem(userID int64, itemID string) (bool, error) {
@@ -698,6 +694,14 @@ func (s *Service) RemainingEntries(userID int64) (int, error) {
 }
 
 func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns int) (*DescendResult, error) {
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
+
 	ml, err := s.GetMinerLevel(userID)
 	if err != nil {
 		return nil, err
@@ -895,10 +899,7 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*Leave
 	}
 
 	for _, e := range bag {
-		if err := s.store.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", e.Count)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: e.Name, Quantity: e.Count}).Error; err != nil {
+		if err := s.store.AddItemRaw(s.store.DB, userID, e.Name, e.Count); err != nil {
 			return nil, err
 		}
 	}

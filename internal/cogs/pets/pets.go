@@ -1682,11 +1682,7 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 	}
 
 	if reward.ItemReward != "" {
-		if err := c.store.DB.Exec(
-			`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-			 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-			pet.UserID, reward.ItemReward,
-		).Error; err != nil {
+		if err := c.store.AddItemRaw(c.store.DB, pet.UserID, reward.ItemReward, 1); err != nil {
 			slog.Error("pets: failed to award interaction item", "user", pet.UserID, "item", reward.ItemReward, "error", err)
 		}
 	}

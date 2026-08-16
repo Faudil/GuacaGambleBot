@@ -101,6 +101,7 @@
     "scan_btn": "📡 Scanner",
     "scan_result": "━━ ⚡ Efficacité des Outils ━━\n🧨 Dynamite : {dynamite_depth}cm (Risque {dynamite_risk}%)\n🔨 Marteau : {hammer_depth}cm (Risque {hammer_risk}%)\n🖌️ Pinceau : {brush_depth}cm (Risque {brush_risk}%)",
     "sell_btn": "💰 Vendre (1.2x)",
+    "session_expired": "❌ Ta session de fouille a expiré. Lance une nouvelle excavation avec /dig !",
     "shadow_msg": "🖤 **Fossile d'Ombre !** Un fossile d'obscurité pure émerge de la roche. Il pulse d'une énergie surnaturelle !",
     "site_cliffside_desc": "🟧 **Falaise (Gratuit)** , Profondeur modérée. Types de roches mélangés. Fossiles rares à épiques.",
     "site_cliffside_name": "🏔️ Falaise",

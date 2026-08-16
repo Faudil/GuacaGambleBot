@@ -52,12 +52,12 @@ type biomeLootTable struct {
 
 var biomeLootTables = map[string]biomeLootTable{
 	"forest": {
-		Basic: []lootEntry{{"tomato", 0.30}, {"wheat", 0.25}, {"pebble", 0.20}, {"wheat_seed", 0.15}},
+		Basic: []lootEntry{{"tomato", 0.30}, {"wheat", 0.25}, {"pebble", 0.20}, {"wheat_seed", 0.15}, {"worm", 0.10}},
 		Mid:   []lootEntry{{"coal", 0.10}, {"iron_ore", 0.10}},
 		Rare:  []lootEntry{{"golden_apple", 0.03}, {"emerald", 0.02}},
 	},
 	"cave": {
-		Basic: []lootEntry{{"coal", 0.30}, {"pebble", 0.25}, {"iron_ore", 0.20}, {"potato_seed", 0.15}},
+		Basic: []lootEntry{{"coal", 0.30}, {"pebble", 0.25}, {"iron_ore", 0.20}, {"potato_seed", 0.15}, {"worm", 0.10}},
 		Mid:   []lootEntry{{"copper_ore", 0.10}, {"silver_ore", 0.10}},
 		Rare:  []lootEntry{{"rough_diamond", 0.03}, {"emerald", 0.02}},
 	},
@@ -72,18 +72,18 @@ var biomeLootTables = map[string]biomeLootTable{
 		Rare:  []lootEntry{{"emerald", 0.03}, {"golden_apple", 0.01}, {"rough_diamond", 0.01}},
 	},
 	"ocean": {
-		Basic: []lootEntry{{"sardine", 0.30}, {"old_boot", 0.25}, {"trout", 0.20}, {"carrot_seed", 0.10}},
-		Mid:   []lootEntry{{"salmon", 0.10}, {"swordfish", 0.10}},
-		Rare:  []lootEntry{{"shark", 0.02}, {"whale", 0.01}, {"kraken_tentacle", 0.02}},
+		Basic: []lootEntry{{"sardine", 0.30}, {"old_boot", 0.25}, {"trout", 0.20}, {"carrot_seed", 0.10}, {"worm", 0.10}},
+		Mid:   []lootEntry{{"salmon", 0.10}, {"swordfish", 0.10}, {"crayfish", 0.05}},
+		Rare:  []lootEntry{{"shark", 0.02}, {"whale", 0.01}, {"kraken_tentacle", 0.02}, {"golden_lure", 0.01}},
 	},
 	"tundra": {
 		Basic: []lootEntry{{"coal", 0.30}, {"iron_ore", 0.25}, {"pebble", 0.20}, {"pumpkin_seed", 0.10}},
-		Mid:   []lootEntry{{"silver_ore", 0.10}, {"platinum", 0.10}},
+		Mid:   []lootEntry{{"silver_ore", 0.10}, {"platinum", 0.10}, {"crayfish", 0.05}},
 		Rare:  []lootEntry{{"emerald", 0.02}, {"rough_diamond", 0.02}, {"star_fruit", 0.01}},
 	},
 	"volcano": {
 		Basic: []lootEntry{{"coal", 0.30}, {"gold_nugget", 0.25}, {"copper_ore", 0.20}, {"tomato_seed", 0.10}},
-		Mid:   []lootEntry{{"platinum", 0.10}, {"rough_diamond", 0.05}, {"magma_carp", 0.05}},
+		Mid:   []lootEntry{{"platinum", 0.10}, {"rough_diamond", 0.05}, {"magma_carp", 0.05}, {"crayfish", 0.05}},
 		Rare:  []lootEntry{{"emerald", 0.02}, {"lava_serpent", 0.02}, {"star_fruit", 0.01}},
 	},
 }
@@ -334,11 +334,7 @@ func (s *Service) CollectResources(userID int64) ([]string, int, error) {
 		return nil, 0, nil
 	}
 	for _, item := range items {
-		s.store.DB.Exec(
-			`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-			 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-			userID, item,
-		)
+		s.store.AddItemRaw(s.store.DB, userID, item, 1)
 	}
 	now2 := time.Now()
 	san.LastCollect = &now2

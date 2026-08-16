@@ -43,6 +43,43 @@ func TestGenerateExpedition(t *testing.T) {
 	assert.GreaterOrEqual(t, res.PetHP, 0)
 }
 
+func TestGenerateStructuredEvents(t *testing.T) {
+	svc, _ := testService(t)
+	pet := testPet()
+	res := svc.Generate(pet, 1)
+	require.NotEmpty(t, res.Log)
+
+	for _, ev := range res.Log {
+		require.Contains(t, []string{"exploration", "combat", "loot", "rest"}, ev.Type, "event type must be one of the known categories")
+		switch ev.Type {
+		case "exploration":
+			assert.NotEmpty(t, ev.Location, "exploration events must carry the location key")
+			assert.NotEmpty(t, ev.Text, "exploration events must keep a fallback text")
+		case "combat":
+			assert.NotEmpty(t, ev.Enemy, "combat events must carry the enemy species")
+			assert.Greater(t, ev.EnemyLevel, 0, "combat events must carry the enemy level")
+			assert.Contains(t, []string{"win", "loss", "stalemate"}, ev.CombatResult)
+		case "loot":
+			assert.NotEmpty(t, ev.Item, "loot events must carry the item id")
+		}
+	}
+}
+
+func TestStartRejectsKOPet(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.User{UserID: 1}).Error)
+	ko := testPet()
+	require.NoError(t, st.DB.Create(ko).Error)
+	// KO pets are persisted via column updates (GORM skips zero values on
+	// CREATE because of the hp default), mirroring the real heal/expedition flow.
+	require.NoError(t, st.DB.Model(&model.UserPet{}).Where("id = ?", ko.ID).Update("hp", 0).Error)
+
+	res := svc.Generate(testPet(), 1)
+	exp, err := svc.Start(1, ko.ID, 1, res)
+	assert.ErrorIs(t, err, ErrPetKO)
+	assert.Nil(t, exp, "no expedition must be started for a K.O. pet")
+}
+
 func TestStartAndGetActive(t *testing.T) {
 	svc, st := testService(t)
 	require.NoError(t, st.DB.Create(&model.User{UserID: 1}).Error)

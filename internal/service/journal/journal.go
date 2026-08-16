@@ -327,10 +327,7 @@ func (s *Service) grantReward(userID int64, r Reward) error {
 		}
 	}
 	for _, itemID := range r.ItemIDs {
-		if err := s.store.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1}).Error; err != nil {
+		if err := s.store.AddItemRaw(s.store.DB, userID, itemID, 1); err != nil {
 			return err
 		}
 	}

@@ -88,6 +88,7 @@ var Zones = map[string]Zone{
 			{Item: "wheat_seed", Chance: 0.25, MaxQty: 2},
 			{Item: "wheat", Chance: 0.25, MaxQty: 2},
 			{Item: "tomato_seed", Chance: 0.10, MaxQty: 1},
+			{Item: "worm", Chance: 0.15, MaxQty: 2},
 			{Item: "forest_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
@@ -104,6 +105,8 @@ var Zones = map[string]Zone{
 			{Item: "sardine", Chance: 0.20, MaxQty: 1},
 			{Item: "potato_seed", Chance: 0.15, MaxQty: 2},
 			{Item: "carrot_seed", Chance: 0.12, MaxQty: 1},
+			{Item: "worm", Chance: 0.20, MaxQty: 2},
+			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
 			{Item: "cave_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
@@ -121,6 +124,7 @@ var Zones = map[string]Zone{
 			{Item: "corn_seed", Chance: 0.15, MaxQty: 2},
 			{Item: "corn", Chance: 0.15, MaxQty: 2},
 			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
+			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
 			{Item: "desert_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -138,6 +142,7 @@ var Zones = map[string]Zone{
 			{Item: "oat_seed", Chance: 0.15, MaxQty: 2},
 			{Item: "oat", Chance: 0.15, MaxQty: 2},
 			{Item: "coffee_seed", Chance: 0.08, MaxQty: 1},
+			{Item: "crayfish", Chance: 0.04, MaxQty: 1},
 			{Item: "mountain_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -154,6 +159,9 @@ var Zones = map[string]Zone{
 			{Item: "old_boot", Chance: 0.15, MaxQty: 1},
 			{Item: "carrot_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "cocoa_seed", Chance: 0.08, MaxQty: 1},
+			{Item: "worm", Chance: 0.20, MaxQty: 2},
+			{Item: "crayfish", Chance: 0.08, MaxQty: 1},
+			{Item: "golden_lure", Chance: 0.02, MaxQty: 1},
 			{Item: "ocean_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
@@ -170,6 +178,7 @@ var Zones = map[string]Zone{
 			{Item: "rough_diamond", Chance: 0.15, MaxQty: 1},
 			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "golden_apple_seed", Chance: 0.04, MaxQty: 1},
+			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
 			{Item: "tundra_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
@@ -186,6 +195,8 @@ var Zones = map[string]Zone{
 			{Item: "magma_carp", Chance: 0.20, MaxQty: 2},
 			{Item: "coffee_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "star_fruit_seed", Chance: 0.04, MaxQty: 1},
+			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
+			{Item: "golden_lure", Chance: 0.02, MaxQty: 1},
 			{Item: "volcano_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
@@ -342,6 +353,14 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		return nil, ErrHuntCooldown
 	}
 
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
+
 	zone, ok := Zones[zoneKey]
 	if !ok {
 		return nil, errors.New("invalid zone")
@@ -491,13 +510,10 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 			if rand.Float64() < loot.Chance {
 				qty := rand.Intn(loot.MaxQty) + 1
 				for i := 0; i < qty; i++ {
-					if err := s.store.DB.Exec(
-						`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-						 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-						userID, loot.Item,
-					).Error; err == nil {
-						lootItems = append(lootItems, loot.Item)
+					if err := s.store.AddItemRaw(s.store.DB, userID, loot.Item, 1); err != nil {
+						return nil, err
 					}
+					lootItems = append(lootItems, loot.Item)
 				}
 			}
 		}
@@ -513,7 +529,9 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 			charLvl = char.Level
 		}
 		if gear, ok := s.rollHuntGear(userID, charLvl, dropChance); ok {
-			s.grantGearInstance(userID, gear)
+			if err := s.grantGearInstance(userID, gear); err != nil {
+				return nil, err
+			}
 			lootItems = append(lootItems, gear.ID)
 		}
 	} else if enemyWon {
@@ -534,11 +552,9 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 			if rand.Float64() < loot.Chance {
 				qty := rand.Intn(loot.MaxQty) + 1
 				for i := 0; i < qty; i++ {
-					s.store.DB.Exec(
-						`INSERT INTO inventory (user_id, item_id, quantity) VALUES (?, ?, 1)
-						 ON CONFLICT(user_id, item_id) DO UPDATE SET quantity = quantity + 1`,
-						userID, loot.Item,
-					)
+					if err := s.store.AddItemRaw(s.store.DB, userID, loot.Item, 1); err != nil {
+						return nil, err
+					}
 					lootItems = append(lootItems, loot.Item)
 				}
 			}
@@ -602,7 +618,7 @@ func (s *Service) rollHuntGear(userID int64, charLevel int, chance float64) (ite
 
 // grantGearInstance turns a catalog gear item into an equipment instance with
 // rolled affixes for the player.
-func (s *Service) grantGearInstance(userID int64, it items.Item) {
+func (s *Service) grantGearInstance(userID int64, it items.Item) error {
 	rar := it.Rarity
 	affixes := items.RollAffixes(rar, it.EquipSlot)
 	var applied []items.AppliedAffix
@@ -614,8 +630,9 @@ func (s *Service) grantGearInstance(userID int64, it items.Item) {
 			Value: items.RollAffixValue(a),
 		})
 	}
-	_, _ = s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
+	_, err := s.store.CreateEquipmentFromAffixes(userID, it.ID, it.Name, it.Emoji,
 		string(rar), it.EquipSlot, it.MinLevel,
 		it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
 		applied, it.SetID)
+	return err
 }

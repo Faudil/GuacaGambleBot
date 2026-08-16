@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
@@ -25,6 +24,7 @@ const (
 	TradeSuccess TradeResult = "SUCCESS"
 	TradeNoMoney TradeResult = "NO_MONEY"
 	TradeNoItem  TradeResult = "NO_ITEM"
+	TradeNoSpace TradeResult = "NO_SPACE"
 	TradeUnknown TradeResult = "UNKNOWN"
 )
 
@@ -43,6 +43,13 @@ func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price i
 	if buyerBal < price {
 		return TradeNoMoney
 	}
+	free, err := s.store.FreeSlots(s.store.DB, buyerID)
+	if err != nil {
+		return TradeUnknown
+	}
+	if free < 1 {
+		return TradeNoSpace
+	}
 
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := s.store.UpdateBalanceTx(tx, sellerID, price); err != nil {
@@ -56,13 +63,7 @@ func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price i
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", 1)).Error; err != nil {
 			return err
 		}
-		if err := tx.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]interface{}{"quantity": gorm.Expr("inventory.quantity + ?", 1)}),
-		}).Create(&model.Inventory{UserID: buyerID, ItemID: itemName, Quantity: 1}).Error; err != nil {
-			return err
-		}
-		return nil
+		return s.store.AddItemRaw(tx, buyerID, itemName, 1)
 	})
 	if err != nil {
 		return TradeUnknown

@@ -12,6 +12,7 @@
     "category_tools": "🔧 Tools",
     "empty": "🎒 Your bag is empty, {user}! Go mining or buy some stuff.",
     "error": "❌ Could not load inventory.",
+    "full": "❌ Your inventory is full! Sell or use items first to free up space.",
     "footer": "Use !use \u003citem name\u003e to use it!",
     "sell_amount_label": "Quantity",
     "sell_button": "💰 Sell items",

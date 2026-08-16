@@ -193,6 +193,17 @@ func (svc *Service) AttemptBurgle(thiefID, targetID, serverID int64, lang string
 		return result
 	}
 
+	// Check the thief has room to carry a stolen item
+	free, err := svc.store.FreeSlots(svc.store.DB, thiefID)
+	if err != nil {
+		result.Message = svc.T(lang, "burgle.error")
+		return result
+	}
+	if free <= 0 {
+		result.Message = svc.T(lang, "burgle.bag_full")
+		return result
+	}
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Get target's inventory to find a stealable item (equipment is in UserEquipment, not Inventory)

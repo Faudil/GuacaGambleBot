@@ -12,6 +12,7 @@
     "category_tools": "🔧 Outils",
     "empty": "🎒 Ton sac est vide, {user} ! Va miner ou achète des trucs.",
     "error": "❌ Impossible de charger l'inventaire.",
+    "full": "❌ Ton inventaire est plein ! Vends ou utilise des objets pour libérer de la place.",
     "footer": "Utilise !use \u003cnom de l'objet\u003e pour t'en servir !",
     "sell_amount_label": "Quantité",
     "sell_button": "💰 Vendre des objets",

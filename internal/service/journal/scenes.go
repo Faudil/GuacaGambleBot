@@ -30,6 +30,7 @@ var domainPaths = map[string][]string{
 	"fishing":    {"prospector"},
 	"farm":       {"prospector"},
 	"hunt":       {"prospector", "hunter"},
+	"expedition": {"prospector", "hunter"},
 	"archeology": {"prospector", "historian"},
 	"casino":     {"highroller"},
 	"lotto":      {"highroller"},

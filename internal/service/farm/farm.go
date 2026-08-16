@@ -229,6 +229,14 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 		return nil, ErrNotReady
 	}
 
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
+
 	var cropName string
 	var mutation bool
 

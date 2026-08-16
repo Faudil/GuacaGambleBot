@@ -33,6 +33,7 @@
       "level_too_low": "Vous devez être au moins niveau {level} pour cambrioler.",
       "need_rank": "Vous devez être au moins Cambrioleur (Rang Voleur 1) pour cambrioler des maisons.",
       "nothing_worth": "Votre cible n'a rien qui vaille la peine.",
+      "bag_full": "Votre inventaire est plein ! Vendez ou utilisez des objets avant de cambrioler.",
       "nothing_worth_alt": "Rien ne valait le risque.",
       "pacifist_protected": "Ce joueur est protégé par la Bénédiction du Pacifiste.",
       "result_item": "📦 Objet Volé",

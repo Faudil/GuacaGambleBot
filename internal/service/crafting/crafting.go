@@ -6,7 +6,6 @@ import (
 	"math"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
@@ -153,6 +152,14 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 		effectiveAmount = amount * 2
 	}
 
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return false, 0, err
+	}
+	if free < effectiveAmount {
+		return false, 0, store.ErrInventoryFull
+	}
+
 	if err := s.store.DB.Transaction(func(tx *gorm.DB) error {
 		for ing, qty := range recipe.Ingredients {
 			req := max(1, int(float64(qty*amount)*ingMultiplier))
@@ -218,10 +225,7 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 			}
 		} else {
 			// Standard item: add to inventory
-			if err := tx.Clauses(clause.OnConflict{
-				Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-				DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", effectiveAmount)}),
-			}).Create(&model.Inventory{UserID: userID, ItemID: recipe.Result, Quantity: effectiveAmount}).Error; err != nil {
+			if err := s.store.AddItemRaw(tx, userID, recipe.Result, effectiveAmount); err != nil {
 				return err
 			}
 		}

@@ -436,6 +436,14 @@ func nextMood(state *FishFightState) {
 }
 
 func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResolve, error) {
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
+
 	xp := 15 + state.Species.Stamina + rand.Intn(11)
 	if state.Golden {
 		xp += 50
@@ -443,24 +451,15 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 
 	if charsvc.HasBuff(s.store, userID, "scavenger") {
 		charsvc.ConsumeBuff(s.store, userID, "scavenger")
-		_ = s.store.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + 2")}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: state.Species.ItemID, Quantity: 2}).Error
+		_ = s.store.AddItemRaw(s.store.DB, userID, state.Species.ItemID, 2)
 	} else {
-		if err := s.store.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + 1")}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: state.Species.ItemID, Quantity: 1}).Error; err != nil {
+		if err := s.store.AddItemRaw(s.store.DB, userID, state.Species.ItemID, 1); err != nil {
 			return nil, err
 		}
 	}
 
 	if state.Mutated {
-		_ = s.store.DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + 1")}),
-		}).Create(&model.Inventory{UserID: userID, ItemID: "mutagen", Quantity: 1}).Error
+		_ = s.store.AddItemRaw(s.store.DB, userID, "mutagen", 1)
 	}
 
 	res := &FightResolve{

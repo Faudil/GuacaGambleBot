@@ -102,6 +102,14 @@ func (s *Service) GetHousing(userID int64) (*model.UserHousing, error) {
 	return &h, nil
 }
 
+func (s *Service) applyHousingBonuses(userID int64, ht *HouseType) {
+	s.store.DB.Model(&model.User{}).Where("user_id = ?", userID).
+		Updates(map[string]any{
+			"extra_inv_slots": ht.InventoryBonus,
+			"extra_pet_slots": ht.PetSlotsBonus,
+		})
+}
+
 func (s *Service) BuyHouse(userID int64, houseType string) error {
 	ht, ok := Houses[houseType]
 	if !ok {
@@ -118,13 +126,17 @@ func (s *Service) BuyHouse(userID int64, houseType string) error {
 		return err
 	}
 	now := time.Now()
-	return s.store.DB.Clauses(clause.OnConflict{
+	if err := s.store.DB.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"house_type": houseType, "level": 1, "last_collected": now}),
 	}).Create(&model.UserHousing{
 		UserID: userID, HouseType: houseType, Level: 1, LastCollected: &now,
 		StoredItems: "{}",
-	}).Error
+	}).Error; err != nil {
+		return err
+	}
+	s.applyHousingBonuses(userID, ht)
+	return nil
 }
 
 func (s *Service) UpgradeLevel(userID int64) error {
@@ -150,8 +162,12 @@ func (s *Service) UpgradeLevel(userID int64) error {
 	if _, err := s.store.UpdateBalance(userID, -cost); err != nil {
 		return err
 	}
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
-		UpdateColumn("level", gorm.Expr("level + 1")).Error
+	if err := s.store.DB.Model(&model.UserHousing{}).Where("user_id = ?", userID).
+		UpdateColumn("level", gorm.Expr("level + 1")).Error; err != nil {
+		return err
+	}
+	s.applyHousingBonuses(userID, ht)
+	return nil
 }
 
 func (s *Service) Rename(userID int64, name string) error {

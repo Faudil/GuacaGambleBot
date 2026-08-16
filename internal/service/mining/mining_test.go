@@ -45,6 +45,16 @@ func TestDescend(t *testing.T) {
 	}
 }
 
+func TestDescendBlockedWhenInventoryFull(t *testing.T) {
+	svc, s := testService(t)
+	_, err := s.GetBalance(1)
+	require.NoError(t, err)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "coal", store.BaseInventoryLimit))
+
+	_, err = svc.Descend(1, 1, nil, "", 0)
+	assert.ErrorIs(t, err, store.ErrInventoryFull)
+}
+
 func TestDescendCollapse(t *testing.T) {
 	svc, s := testService(t)
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
@@ -379,11 +389,11 @@ func TestLoreAtDepth(t *testing.T) {
 }
 
 func TestLootAtDepth(t *testing.T) {
-	assert.Len(t, lootAtDepth(1), 2)
+	assert.Len(t, lootAtDepth(1), 3)
 	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
-	assert.Len(t, lootAtDepth(15), 3)
-	assert.Len(t, lootAtDepth(20), 3)
-	assert.Len(t, lootAtDepth(30), 2)
+	assert.Len(t, lootAtDepth(15), 4)
+	assert.Len(t, lootAtDepth(20), 4)
+	assert.Len(t, lootAtDepth(30), 3)
 }
 
 func TestPickNarrativeEvent(t *testing.T) {

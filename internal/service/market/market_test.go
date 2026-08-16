@@ -87,10 +87,12 @@ func TestGetPlayerSellItems(t *testing.T) {
 		ItemID: "coal", CurrentPrice: 8, LastReset: today, WeekID: weekID, IsActive: true,
 	}).Error)
 
-	// coal: in rotation; wheat: vendor rate (5 * 50% = 2); rotten_plant: price 0, not sellable.
+	// coal: in rotation; wheat: vendor rate (5 * 50% = 2); rotten_plant: price 0, not sellable;
+	// mask_of_malveillance: award-only, shop-excluded, not sellable.
 	seedInventory(t, st, 1, "coal", 3)
 	seedInventory(t, st, 1, "wheat", 5)
 	seedInventory(t, st, 1, "rotten_plant", 9)
+	seedInventory(t, st, 1, "mask_of_malveillance", 2)
 
 	views, total, err := svc.GetPlayerSellItems(1, 1, 10)
 	require.NoError(t, err)
@@ -289,6 +291,61 @@ func TestSellItemNotSellable(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNotSellable)
 }
 
+func TestSellShopExcludedItemNotAllowed(t *testing.T) {
+	svc, st := testService(t)
+
+	// Award-only items (Mask of Malveillance) must not appear in the market
+	// or the shop, and must not be vendored either.
+	seedInventory(t, st, 1, "mask_of_malveillance", 1)
+
+	_, _, _, err := svc.SellItem(1, "mask_of_malveillance", 1)
+	assert.ErrorIs(t, err, ErrNotSellable)
+
+	var inv model.Inventory
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "mask_of_malveillance").First(&inv)
+	assert.Equal(t, 1, inv.Quantity, "failed sale must not consume the item")
+
+	mask := items.Get("mask_of_malveillance")
+	require.NotNil(t, mask)
+	assert.False(t, mask.IsSellable())
+}
+
+func TestSellSetItemNotAllowed(t *testing.T) {
+	svc, st := testService(t)
+
+	// Set pieces (Rift Walker, ...) are earned in delve/raids; the market
+	// must not turn them into plain currency.
+	seedInventory(t, st, 1, "rift_blade", 1)
+
+	_, _, _, err := svc.SellItem(1, "rift_blade", 1)
+	assert.ErrorIs(t, err, ErrNotSellable)
+
+	var inv model.Inventory
+	st.DB.Where("user_id = ? AND item_id = ?", 1, "rift_blade").First(&inv)
+	assert.Equal(t, 1, inv.Quantity, "failed sale must not consume the item")
+
+	blade := items.Get("rift_blade")
+	require.NotNil(t, blade)
+	assert.False(t, blade.IsSellable())
+}
+
+func TestSellLegendaryDropVendorPrice(t *testing.T) {
+	svc, st := testService(t)
+
+	// Legendary drops leave the market rotation (they must be earned by
+	// playing), but selling what you earned stays available at vendor rate.
+	seedInventory(t, st, 1, "nova_fruit", 2)
+
+	gain, _, _, err := svc.SellItem(1, "nova_fruit", 1)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(items.Get("nova_fruit").Price), gain)
+
+	// And it must not be buyable: no active market state may exist for it.
+	var count int64
+	st.DB.Model(&model.MarketState{}).Where("item_id = ? AND is_active = ?", "nova_fruit", true).Count(&count)
+	assert.Equal(t, int64(0), count)
+}
+
 func TestSellSeedVendorPrice(t *testing.T) {
 	svc, st := testService(t)
 
@@ -371,7 +428,7 @@ func TestSellItemAdjustsPriceDown(t *testing.T) {
 
 	var st2 model.MarketState
 	st.DB.Where("item_id = ?", "coal").First(&st2)
-	assert.Equal(t, 1, st2.CurrentPrice)
+	assert.Equal(t, 2, st2.CurrentPrice)
 	assert.Equal(t, 10, st2.DailySold)
 }
 
@@ -413,6 +470,7 @@ func TestPumpAndDump999LosesMoney(t *testing.T) {
 
 	_, err := st.UpdateBalance(1, 1000000)
 	require.NoError(t, err)
+	st.DB.Model(&model.User{}).Where("user_id = ?", 1).Update("extra_inv_slots", 1000)
 	start, _ := st.GetBalance(1)
 
 	cost, _, _, err := svc.BuyItem(1, "coal", 999)
@@ -426,7 +484,44 @@ func TestPumpAndDump999LosesMoney(t *testing.T) {
 
 	var st2 model.MarketState
 	st.DB.Where("item_id = ?", "coal").First(&st2)
-	assert.Equal(t, 1, st2.CurrentPrice, "sellback should crash the price back to the floor")
+	assert.Equal(t, 2, st2.CurrentPrice, "sellback should crash the price back to the floor")
+}
+
+func TestVendorArbitrageClosed(t *testing.T) {
+	svc, st := testService(t)
+
+	// Expensive item sitting at the market floor: the classic arbitrage was
+	// to buy 1 unit cheap, wait for the weekly rotation to drop it, then
+	// vendor it for 50% of base. With the floor equal to the vendor rate,
+	// that round trip must lose money.
+	bow := items.Get("hunters_bow")
+	require.NotNil(t, bow)
+	floor := maxInt(1, int(float64(bow.Price)*PriceFloorMult))
+
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	st.DB.Where("1=1").Delete(&model.MarketState{})
+	st.DB.Create(&model.MarketState{
+		ItemID: bow.ID, CurrentPrice: floor, LastReset: today, WeekID: weekID, IsActive: true,
+	})
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+
+	cost, _, _, err := svc.BuyItem(1, bow.ID, 1)
+	require.NoError(t, err)
+
+	// Weekly rotation changes: the item leaves the market
+	st.DB.Model(&model.MarketState{}).Where("item_id = ?", bow.ID).Update("is_active", false)
+
+	gain, _, _, err := svc.SellItem(1, bow.ID, 1)
+	require.NoError(t, err)
+	assert.Equal(t, vendorPrice(bow.Price), gain)
+	assert.Less(t, gain, cost, "buying at the floor and vendoring after rotation must lose money")
+}
+
+func TestFloorNeverBelowVendor(t *testing.T) {
+	assert.GreaterOrEqual(t, PriceFloorMult, VendorSellMult,
+		"the market floor must never be below the vendor rate or buy-cheap-then-vendor is risk-free")
 }
 
 func TestLargeBuyClampsAtCeiling(t *testing.T) {
@@ -441,6 +536,7 @@ func TestLargeBuyClampsAtCeiling(t *testing.T) {
 
 	_, err := st.UpdateBalance(1, 1000000)
 	require.NoError(t, err)
+	st.DB.Model(&model.User{}).Where("user_id = ?", 1).Update("extra_inv_slots", 1000)
 
 	cost, _, _, err := svc.BuyItem(1, "coal", 999)
 	require.NoError(t, err)
@@ -468,8 +564,8 @@ func TestLargeSellClampsAtFloor(t *testing.T) {
 
 	var st2 model.MarketState
 	st.DB.Where("item_id = ?", "coal").First(&st2)
-	assert.Equal(t, 1, st2.CurrentPrice)
-	// asks 4 + 3 + 2 then 996 units at 1
+	assert.Equal(t, 2, st2.CurrentPrice)
+	// asks 4 + 3 + 2 then 996 units at 1 (floor is 2 for coal)
 	assert.Equal(t, 1005, gain)
 }
 
@@ -575,4 +671,14 @@ func TestMarketableItemFilter(t *testing.T) {
 	wheatSeed := items.Get("wheat_seed")
 	require.NotNil(t, wheatSeed)
 	assert.False(t, wheatSeed.IsMarketable())
+
+	// Legendary drops must not be marketable — buying them would bypass the
+	// activity that awards them
+	for _, id := range []string{"nova_fruit", "shadow_fossil", "resonance_core"} {
+		it := items.Get(id)
+		require.NotNil(t, it)
+		assert.True(t, it.IsLegendaryDrop())
+		assert.False(t, it.IsMarketable(), "%s must not be in the market rotation", id)
+		assert.True(t, it.IsSellable(), "%s must stay sellable at vendor rate", id)
+	}
 }

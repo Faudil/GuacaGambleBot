@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -326,10 +325,7 @@ func (s *Service) grantRewardItem(userID int64, itemID string) {
 		}
 		return
 	}
-	s.store.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: 1})
+	s.store.AddItemRaw(s.store.DB, userID, itemID, 1)
 }
 
 func (s *Service) GetQuestDef(id string) *QuestDef {
@@ -383,10 +379,7 @@ func (s *Service) EnsureTutorialEgg(userID int64) (bool, error) {
 		return false, nil
 	}
 
-	err = s.store.DB.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: "forest_egg", Quantity: 1}).Error
+	err = s.store.AddItemRaw(s.store.DB, userID, "forest_egg", 1)
 	if err != nil {
 		return false, err
 	}

@@ -176,6 +176,8 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				"prev_emoji": prev.Emoji,
 				"prev_name":  i18n.T("hunt."+prev.Key, lang),
 			})
+		case store.ErrInventoryFull:
+			interaction.RespondError(b, i, lang, "inventory.full")
 		default:
 			slog.Error("hunt failed", "user", userID, "zone", zoneKey, "error", err)
 			interaction.RespondError(b, i, lang, "hunt.error")

@@ -101,6 +101,7 @@
     "scan_btn": "📡 Scan",
     "scan_result": "━━ ⚡ Tool Effectiveness ━━\n🧨 Dynamite: {dynamite_depth}cm (Risk {dynamite_risk}%)\n🔨 Hammer: {hammer_depth}cm (Risk {hammer_risk}%)\n🖌️ Brush: {brush_depth}cm (Risk {brush_risk}%)",
     "sell_btn": "💰 Sell (1.2x)",
+    "session_expired": "❌ Your dig session has expired. Start a new excavation with /dig!",
     "shadow_msg": "🖤 **Shadow Fossil!** A fossil of pure darkness emerges from the rock. It pulses with an unnatural energy!",
     "site_cliffside_desc": "🟧 **Cliffside (Free)** , Moderate depth. Mixed rock types. Rare to epic fossils.",
     "site_cliffside_name": "🏔️ Cliffside",

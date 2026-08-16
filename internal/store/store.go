@@ -706,10 +706,7 @@ func (s *Store) PopQuestNotification(userID int64) (QuestNotification, bool) {
 // grantDailyQuestReward hands out the reward promised by the daily quest
 // completion message (a hatchable egg).
 func (s *Store) grantDailyQuestReward(tx *gorm.DB, userID int64) error {
-	return tx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
-		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", 1)}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: "forest_egg", Quantity: 1}).Error
+	return s.AddItemRaw(tx, userID, "forest_egg", 1)
 }
 
 // CreateQuest creates a new quest entry and its step data for a user.

@@ -69,7 +69,7 @@ type Item struct {
 
 	// ShopExcluded marks items that are obtained only through their dedicated
 	// activity (criminality, boss leagues, etc.) and must never be offered by
-	// the daily shop.
+	// the daily shop nor sold on the market or to the vendor.
 	ShopExcluded bool
 }
 
@@ -115,9 +115,9 @@ var all = []Item{
 	{ID: "kraken_tentacle", Name: "Kraken Tentacle", Emoji: "🦑", Price: 500, Description: "YOU CAUGHT A MONSTER?!", EffectType: "resource", Droppable: true, Category: Fishing},
 	{ID: "magma_carp", Name: "Magma Carp", Emoji: "🐟", Price: 200, Description: "A fiery fish from the depths.", EffectType: "resource", Droppable: true, Category: Fishing},
 	{ID: "lava_serpent", Name: "Lava Serpent", Emoji: "🐍", Price: 500, Description: "A legendary beast of molten rock.", EffectType: "resource", Droppable: true, Category: Fishing},
-	{ID: "worm", Name: "Worm", Emoji: "🪱", Price: 5, Description: "Common bait. Good for small catches.", EffectType: "bait", Droppable: false, Category: Fishing},
-	{ID: "crayfish", Name: "Crayfish", Emoji: "🦞", Price: 25, Description: "Rare bait. Attracts stronger fish.", EffectType: "bait", Droppable: false, Category: Fishing},
-	{ID: "golden_lure", Name: "Golden Lure", Emoji: "👑", Price: 100, Description: "Legendary bait. Draws the deadliest creatures.", EffectType: "bait", Droppable: false, Category: Fishing},
+	{ID: "worm", Name: "Worm", Emoji: "🪱", Price: 5, Description: "Common bait. Good for small catches.", EffectType: "bait", Droppable: true, Category: Fishing},
+	{ID: "crayfish", Name: "Crayfish", Emoji: "🦞", Price: 25, Description: "Rare bait. Attracts stronger fish.", EffectType: "bait", Droppable: true, Category: Fishing},
+	{ID: "golden_lure", Name: "Golden Lure", Emoji: "👑", Price: 100, Description: "Legendary bait. Draws the deadliest creatures.", EffectType: "bait", Droppable: true, Category: Fishing},
 	{ID: "mutagen", Name: "Mutagen", Emoji: "🧪", Price: 100, Description: "A glowing mutagenic substance from a mutated fish.", EffectType: "resource", Droppable: true, Category: Fishing},
 
 	// --- Farming ---
@@ -418,14 +418,27 @@ func ItemsByCategory(cat Category) []Item {
 }
 
 // IsSellable reports whether the item can be sold at all. Any item with a
-// positive base price can be sold to the vendor at any time; only the weekly
-// rotation decides whether it sells at the dynamic market price instead.
+// positive base price can be sold to the vendor at any time, unless it is
+// shop-excluded or a set piece (award-only items are never merchantable);
+// only the weekly rotation decides whether it sells at the dynamic market
+// price instead.
 func (it *Item) IsSellable() bool {
-	return it.Price > 0
+	return it.Price > 0 && !it.ShopExcluded && it.SetID == ""
+}
+
+// IsLegendaryDrop reports whether the item is a legendary-tier reward that
+// must be earned by playing its activity. Legendary drops never appear in the
+// market rotation nor the daily shop: buying them would override the need to
+// play the activity that awards them.
+func (it *Item) IsLegendaryDrop() bool {
+	return it.Droppable && it.Rarity == RarityLegendary
 }
 
 func (it *Item) IsMarketable() bool {
 	if it.Price <= 0 {
+		return false
+	}
+	if it.IsLegendaryDrop() {
 		return false
 	}
 	switch it.Category {

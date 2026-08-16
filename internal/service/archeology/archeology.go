@@ -232,6 +232,14 @@ func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
 		return nil, ErrDigLimit
 	}
 
+	free, err := s.store.FreeSlots(s.store.DB, userID)
+	if err != nil {
+		return nil, err
+	}
+	if free <= 0 {
+		return nil, store.ErrInventoryFull
+	}
+
 	site, ok := Sites[siteKey]
 	if !ok {
 		return nil, errors.New("unknown site")

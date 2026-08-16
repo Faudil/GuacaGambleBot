@@ -363,6 +363,13 @@ func (c *Cog) canStartDelve(userID int64, lang string) (bool, string) {
 	if !ok {
 		return false, i18n.T("delve.cooldown_death", lang)
 	}
+	free, err := c.store.FreeSlots(c.store.DB, userID)
+	if err != nil {
+		return false, i18n.T("delve.error", lang)
+	}
+	if free <= 0 {
+		return false, i18n.T("inventory.full", lang)
+	}
 	return true, ""
 }
 
