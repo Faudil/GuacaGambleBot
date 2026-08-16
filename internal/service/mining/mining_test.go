@@ -136,8 +136,8 @@ func TestDescendHiddenChamber(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	found := false
 	for i := 0; i < 500; i++ {
-		// The daily descend limit (50) would stop the loop long before the rare
-		// event is found; reset it so the RNG-driven search can run to completion.
+	// The daily descend limit would stop the loop long before the rare
+	// event is found; reset it so the RNG-driven search can run to completion.
 		_ = s.ResetGameLimit(1, "mine_descend")
 		bag := []BagEntry{}
 		res, err := svc.Descend(1, 40, bag, "", 0)
@@ -200,7 +200,7 @@ func TestApplyEventOptionShrineMystery(t *testing.T) {
 
 func TestEnterMine(t *testing.T) {
 	svc, _ := testService(t)
-	for i := 0; i < 50; i++ {
+	for i := 0; i < dailyDescendLimit; i++ {
 		require.NoError(t, svc.EnterMine(1))
 	}
 	err := svc.EnterMine(1)
@@ -211,12 +211,12 @@ func TestRemainingEntries(t *testing.T) {
 	svc, _ := testService(t)
 	r, err := svc.RemainingEntries(1)
 	require.NoError(t, err)
-	assert.Equal(t, 50, r)
+	assert.Equal(t, dailyDescendLimit, r)
 
 	require.NoError(t, svc.EnterMine(1))
 	r, err = svc.RemainingEntries(1)
 	require.NoError(t, err)
-	assert.Equal(t, 49, r)
+	assert.Equal(t, dailyDescendLimit-1, r)
 }
 
 func TestDescendDoesNotConsumeEntry(t *testing.T) {
@@ -227,7 +227,7 @@ func TestDescendDoesNotConsumeEntry(t *testing.T) {
 	if !res.Collapsed {
 		r, rerr := svc.RemainingEntries(1)
 		require.NoError(t, rerr)
-		assert.Equal(t, 50, r, "digging must not consume the expedition quota")
+		assert.Equal(t, dailyDescendLimit, r, "digging must not consume the expedition quota")
 	}
 }
 
