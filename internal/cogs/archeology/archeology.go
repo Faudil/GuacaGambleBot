@@ -108,6 +108,8 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 
 	tipKey := dailyDigTip()
 
+	_, remaining, _ := c.store.CheckGameLimit(userID, "dig", 10)
+
 	desc := i18n.T("arch.bureau_desc", lang, map[string]any{
 		"level":        level,
 		"xpbar":        xpBar,
@@ -118,10 +120,9 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 		"journal":      journal,
 		"jmax":         journalMax,
 		"totalfossils": totalFossils,
+		"remaining":    remaining,
 		"tip":          i18n.T(tipKey, lang),
 	})
-
-	_, remaining, _ := c.store.CheckGameLimit(userID, "dig", 10)
 
 	embed := components.Embed(
 		i18n.T("arch.bureau_title", lang),

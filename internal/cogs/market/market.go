@@ -39,6 +39,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("market", "filter", c.onFilter)
 	r.Component("market", "nav", c.onNav)
 	r.Component("market", "action", c.onActionChoice)
+	r.Component("market", "sellmode", c.onSellMode)
+	r.Component("market", "sellitem", c.onSellItem)
+	r.Component("market", "sellnav", c.onSellNav)
 	r.Modal("market", "order", c.onOrderModal)
 }
 
@@ -253,8 +256,186 @@ func (c *Cog) buildMarketComponents(views []mktsvc.MarketItemView, total int, ca
 	return []discordgo.MessageComponent{
 		components.ActionRow(filter),
 		components.ActionRow(itemSelect),
-		components.ActionRow(prevBtn, pageBtn, refreshBtn, nextBtn),
+		components.ActionRow(
+			components.Button(i18n.T("market.sell_btn", lang), components.Encode("market", "sellmode", "sell"), discordgo.SuccessButton),
+			prevBtn,
+			pageBtn,
+			refreshBtn,
+			nextBtn,
+		),
 	}
+}
+
+// buildSellEmbed builds the embed shown in the market's sell view, listing the
+// player's own sellable items with their unit prices and owned quantities.
+func (c *Cog) buildSellEmbed(views []mktsvc.PlayerSellItemView, lang string, page, totalPages, balance int) *discordgo.MessageEmbed {
+	embed := components.Embed(i18n.T("market.title", lang), i18n.T("market.sell_greeting", lang), 0x2ecc71)
+	for _, v := range views {
+		name := fmt.Sprintf("%s %s", v.Item.Emoji, c.displayName(v.Item.Name, lang))
+		embed.Fields = append(embed.Fields, components.Field(
+			name,
+			i18n.T("market.sell_item_line", lang, map[string]any{
+				"owned": v.Owned,
+				"price": v.UnitPrice,
+			}),
+			true,
+		))
+	}
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: i18n.T("market.footer", lang, map[string]any{"page": page, "total": totalPages, "balance": balance}),
+	}
+	return embed
+}
+
+// buildSellComponents builds the components for the sell view: a select menu of
+// the player's sellable items plus navigation back to the market listing.
+func (c *Cog) buildSellComponents(views []mktsvc.PlayerSellItemView, page, totalPages int, lang string) []discordgo.MessageComponent {
+	var itemOptions []discordgo.SelectMenuOption
+	for _, v := range views {
+		label := fmt.Sprintf("%s — %s", c.displayName(v.Item.Name, lang), i18n.T("market.item_price", lang, map[string]any{"price": v.UnitPrice}))
+		if len(label) > 100 {
+			label = label[:97] + "..."
+		}
+		itemOptions = append(itemOptions, discordgo.SelectMenuOption{
+			Label:       label,
+			Value:       v.Item.ID,
+			Emoji:       &discordgo.ComponentEmoji{Name: v.Item.Emoji},
+			Description: i18n.T("market.sell_item_desc", lang, map[string]any{"owned": v.Owned}),
+		})
+	}
+	if len(itemOptions) == 0 {
+		itemOptions = append(itemOptions, discordgo.SelectMenuOption{
+			Label:       i18n.T("market.empty_label", lang),
+			Value:       "_none",
+			Description: i18n.T("market.empty_desc", lang),
+			Default:     true,
+		})
+	}
+
+	itemSelect := discordgo.SelectMenu{
+		CustomID:    components.Encode("market", "sellitem", fmt.Sprintf("%d", page)),
+		Placeholder: i18n.T("market.sell_select_placeholder", lang),
+		Options:     itemOptions,
+	}
+
+	backBtn := components.Button(i18n.T("market.sell_back_btn", lang), components.Encode("market", "sellmode", "market"), discordgo.PrimaryButton)
+	prevBtn := discordgo.Button{
+		Label:    i18n.T("market.nav_prev", lang),
+		CustomID: components.Encode("market", "sellnav", "prev", fmt.Sprintf("%d", page)),
+		Style:    discordgo.SecondaryButton,
+		Disabled: page <= 1,
+	}
+	pageBtn := discordgo.Button{
+		Label:    i18n.T("market.nav_page", lang, map[string]any{"page": page, "total": totalPages}),
+		CustomID: "_disabled",
+		Style:    discordgo.SecondaryButton,
+		Disabled: true,
+	}
+	refreshBtn := discordgo.Button{
+		Label:    i18n.T("market.nav_refresh", lang),
+		CustomID: components.Encode("market", "sellnav", "refresh", fmt.Sprintf("%d", page)),
+		Style:    discordgo.SecondaryButton,
+	}
+	nextBtn := discordgo.Button{
+		Label:    i18n.T("market.nav_next", lang),
+		CustomID: components.Encode("market", "sellnav", "next", fmt.Sprintf("%d", page)),
+		Style:    discordgo.SecondaryButton,
+		Disabled: page >= totalPages,
+	}
+
+	return []discordgo.MessageComponent{
+		components.ActionRow(itemSelect),
+		components.ActionRow(backBtn, prevBtn, pageBtn, refreshBtn, nextBtn),
+	}
+}
+
+// sendSellView renders the sell view of the market, either as a fresh message
+// or by editing the current one.
+func (c *Cog) sendSellView(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64, page int, edit bool) {
+	if page < 1 {
+		page = 1
+	}
+	views, total, err := c.svc.GetPlayerSellItems(userID, page, mktsvc.ItemsPerPage)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "market.error")
+		return
+	}
+	totalPages := max(1, int(math.Ceil(float64(total)/float64(mktsvc.ItemsPerPage))))
+	page = max(1, min(page, totalPages))
+	bal, _ := c.store.GetBalance(userID)
+
+	embed := c.buildSellEmbed(views, lang, page, totalPages, bal)
+	comps := c.buildSellComponents(views, page, totalPages, lang)
+
+	if edit {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{embed},
+				Components: comps,
+			},
+		})
+	} else {
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+	}
+}
+
+// onSellMode toggles between the market listing and the player's sell view.
+func (c *Cog) onSellMode(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	if rest[0] == "sell" {
+		c.sendSellView(b, i, lang, userID, 1, true)
+		return
+	}
+	c.sendMarketMessage(b, i, lang, userID, "all", 1, true)
+}
+
+// onSellItem opens the sell order modal for an item picked in the sell view.
+func (c *Cog) onSellItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	itemID := i.MessageComponentData().Values[0]
+	if itemID == "_none" {
+		interaction.RespondError(b, i, lang, "market.no_items")
+		return
+	}
+	it := items.Get(itemID)
+	if it == nil {
+		interaction.RespondError(b, i, lang, "market.item_not_found")
+		return
+	}
+	c.openOrderModal(b, i, lang, "sell", itemID)
+}
+
+// onSellNav handles pagination inside the sell view.
+func (c *Cog) onSellNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
+	}
+	action := rest[0]
+	curPage, _ := strconv.Atoi(rest[1])
+
+	_, total, _ := c.svc.GetPlayerSellItems(userID, max(1, curPage), mktsvc.ItemsPerPage)
+	totalPages := max(1, int(math.Ceil(float64(total)/float64(mktsvc.ItemsPerPage))))
+
+	newPage := curPage
+	switch action {
+	case "prev":
+		newPage = curPage - 1
+	case "next":
+		newPage = curPage + 1
+	}
+	newPage = max(1, min(newPage, totalPages))
+
+	c.sendSellView(b, i, lang, userID, newPage, true)
 }
 
 func (c *Cog) onFilter(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -320,6 +501,17 @@ func (c *Cog) onActionChoice(b *interaction.Bot, i *discordgo.InteractionCreate)
 		return
 	}
 
+	it := items.Get(itemID)
+	if it == nil {
+		interaction.RespondError(b, i, lang, "market.item_not_found")
+		return
+	}
+
+	c.openOrderModal(b, i, lang, action, itemID)
+}
+
+// openOrderModal shows the amount modal for a buy or sell order on an item.
+func (c *Cog) openOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, action, itemID string) {
 	it := items.Get(itemID)
 	if it == nil {
 		interaction.RespondError(b, i, lang, "market.item_not_found")

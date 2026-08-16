@@ -317,8 +317,9 @@ func TestChroniclerIntroOnceThenQuips(t *testing.T) {
 	svc, st := testService(t)
 	svc.cfg.NPCChatCooldownHours = 0
 
-	// Give the player a first journal rank (Apprentice on the champion path).
-	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 1}).Error)
+	// Give the player rank 2 on the champion path (the Chronicler's reveal
+	// threshold).
+	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 4}).Error)
 
 	event, err := svc.Chat(1, "the_chronicler", "en")
 	require.NoError(t, err)

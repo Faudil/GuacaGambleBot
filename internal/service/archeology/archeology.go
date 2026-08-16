@@ -62,9 +62,9 @@ type SiteDef struct {
 }
 
 var Tools = map[string]ToolAction{
-	"dynamite": {ID: "dynamite", DepthRem: 20, RiskPct: 50, IntLoss: 30, Emoji: "🧨"},
-	"hammer":   {ID: "hammer", DepthRem: 10, RiskPct: 15, IntLoss: 10, Emoji: "🔨"},
-	"brush":    {ID: "brush", DepthRem: 2, RiskPct: 0, IntLoss: 0, Emoji: "🖌️"},
+	"dynamite": {ID: "dynamite", DepthRem: 20, RiskPct: 30, IntLoss: 20, Emoji: "🧨"},
+	"hammer":   {ID: "hammer", DepthRem: 13, RiskPct: 15, IntLoss: 10, Emoji: "🔨"},
+	"brush":    {ID: "brush", DepthRem: 3, RiskPct: 0, IntLoss: 0, Emoji: "🖌️"},
 }
 
 var LayerDefs = map[LayerType]struct {
@@ -94,7 +94,7 @@ var LayerDefs = map[LayerType]struct {
 		BaseNameID: "layer_gravel",
 		Emoji:      "🪨",
 		Effects: map[string]ToolEffect{
-			"dynamite": {DepthMul: 1, RiskMul: 1.2, IntMul: 1.2},
+			"dynamite": {DepthMul: 1, RiskMul: 0.9, IntMul: 1.1},
 			"hammer":   {DepthMul: 0.8, RiskMul: 0.7, IntMul: 0.5},
 			"brush":    {DepthMul: 1, RiskMul: 0, IntMul: 0},
 		},
@@ -104,7 +104,7 @@ var LayerDefs = map[LayerType]struct {
 		Emoji:      "🟤",
 		Effects: map[string]ToolEffect{
 			"dynamite": {DepthMul: 0.75, RiskMul: 0.6, IntMul: 0.7},
-			"hammer":   {DepthMul: 0.6, RiskMul: 0.3, IntMul: 0.5},
+			"hammer":   {DepthMul: 0.7, RiskMul: 0.3, IntMul: 0.5},
 			"brush":    {DepthMul: 2, RiskMul: 0, IntMul: 0},
 		},
 	},
@@ -112,8 +112,8 @@ var LayerDefs = map[LayerType]struct {
 		BaseNameID: "layer_bedrock",
 		Emoji:      "⬛",
 		Effects: map[string]ToolEffect{
-			"dynamite": {DepthMul: 0.75, RiskMul: 1.4, IntMul: 1.3},
-			"hammer":   {DepthMul: 0.4, RiskMul: 2, IntMul: 1.5},
+			"dynamite": {DepthMul: 0.75, RiskMul: 1.1, IntMul: 1.0},
+			"hammer":   {DepthMul: 0.6, RiskMul: 1.5, IntMul: 1.2},
 			"brush":    {DepthMul: 0, RiskMul: 0, IntMul: 0},
 		},
 	},
@@ -258,6 +258,7 @@ func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
 
 	seq := site.LayerSeqs[rand.Intn(len(site.LayerSeqs))]
 	currentLayer := seq[0]
+	layerDepth := site.Depth / len(seq)
 
 	var cursed bool
 	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "cursed_artifact").First(&model.Inventory{}).Error; err == nil {
@@ -267,10 +268,10 @@ func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
 	return &GameState{
 		UserID:       userID,
 		PermitType:   siteKey,
-		Depth:        site.Depth,
+		Depth:        layerDepth,
 		MaxDepth:     site.Depth,
 		Integrity:    100,
-		Actions:      5,
+		Actions:      6,
 		CurrentLayer: currentLayer,
 		LayerSeq:     seq,
 		LayerIdx:     0,

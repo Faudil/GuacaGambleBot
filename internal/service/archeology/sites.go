@@ -28,7 +28,7 @@ var Sites = map[string]*SiteDef{
 		LayerSeqs: [][]LayerType{
 			{LayerHardRock, LayerGravel, LayerSoftSoil, LayerHardRock},
 			{LayerGravel, LayerHardRock, LayerClay, LayerHardRock},
-			{LayerSoftSoil, LayerHardRock, LayerGravel, LayerBedrock},
+			{LayerSoftSoil, LayerHardRock, LayerGravel, LayerHardRock},
 		},
 	},
 	"fault": {

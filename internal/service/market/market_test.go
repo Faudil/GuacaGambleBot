@@ -76,6 +76,73 @@ func TestGetMarketCategoryFilterEmpty(t *testing.T) {
 	assert.LessOrEqual(t, total, RotationSize)
 }
 
+func TestGetPlayerSellItems(t *testing.T) {
+	svc, st := testService(t)
+
+	// Deterministic rotation: coal is active at a custom price this week.
+	today := time.Now().Format("2006-01-02")
+	weekID := currentWeekID()
+	require.NoError(t, st.DB.Where("1=1").Delete(&model.MarketState{}).Error)
+	require.NoError(t, st.DB.Create(&model.MarketState{
+		ItemID: "coal", CurrentPrice: 8, LastReset: today, WeekID: weekID, IsActive: true,
+	}).Error)
+
+	// coal: in rotation; wheat: vendor rate (5 * 50% = 2); rotten_plant: price 0, not sellable.
+	seedInventory(t, st, 1, "coal", 3)
+	seedInventory(t, st, 1, "wheat", 5)
+	seedInventory(t, st, 1, "rotten_plant", 9)
+
+	views, total, err := svc.GetPlayerSellItems(1, 1, 10)
+	require.NoError(t, err)
+	assert.Equal(t, 2, total, "unsellable items must be excluded")
+
+	// Rotation items come first, at the market price.
+	assert.Equal(t, "coal", views[0].Item.ID)
+	assert.True(t, views[0].InRotation)
+	assert.Equal(t, 8, views[0].UnitPrice)
+	assert.Equal(t, 3, views[0].Owned)
+
+	// Non-rotation items sell at the vendor rate.
+	assert.Equal(t, "wheat", views[1].Item.ID)
+	assert.False(t, views[1].InRotation)
+	assert.Equal(t, vendorPrice(5), views[1].UnitPrice)
+	assert.Equal(t, 5, views[1].Owned)
+}
+
+func TestGetPlayerSellItemsPagination(t *testing.T) {
+	svc, st := testService(t)
+
+	require.NoError(t, st.DB.Where("1=1").Delete(&model.MarketState{}).Error)
+	seedInventory(t, st, 1, "coal", 1)
+	seedInventory(t, st, 1, "wheat", 1)
+	seedInventory(t, st, 1, "trout", 1)
+
+	page1, total, err := svc.GetPlayerSellItems(1, 1, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 3, total)
+	assert.Len(t, page1, 2)
+
+	page2, total, err := svc.GetPlayerSellItems(1, 2, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 3, total)
+	assert.Len(t, page2, 1)
+
+	// Past the end clamps to an empty page without erroring.
+	page3, total, err := svc.GetPlayerSellItems(1, 9, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 3, total)
+	assert.Empty(t, page3)
+}
+
+func TestGetPlayerSellItemsEmptyInventory(t *testing.T) {
+	svc, _ := testService(t)
+
+	views, total, err := svc.GetPlayerSellItems(1, 1, 10)
+	require.NoError(t, err)
+	assert.Equal(t, 0, total)
+	assert.Empty(t, views)
+}
+
 func TestBuyItemSuccess(t *testing.T) {
 	svc, st := testService(t)
 

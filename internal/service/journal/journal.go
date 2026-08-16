@@ -125,13 +125,14 @@ func (s *Service) CheckAndAdvance(userID int64) ([]Completion, error) {
 	return completions, nil
 }
 
-// queueRankUpScenes pushes the Chronicler's introduction on the player's first
-// rank, and a lighter rank-up moment on later ranks.
+// queueRankUpScenes pushes the Chronicler's introduction once the player
+// reaches rank 2 on a path (his reveal only lands on players genuinely
+// engaged with the Journal), and a lighter rank-up moment on other rank-ups.
 func (s *Service) queueRankUpScenes(userID int64, oldRank, newRank int) {
 	if newRank <= oldRank {
 		return
 	}
-	if oldRank == 0 {
+	if oldRank < 2 && newRank >= 2 {
 		s.store.PushJournalScene(userID, store.JournalScene{
 			Key: "journal.chronicler.sighting", DM: true,
 		})

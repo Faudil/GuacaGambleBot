@@ -95,7 +95,7 @@
       "step0_dialogue": "GambleBot fait les cent pas quand tu entres.\n\n\"Le Coffre n'est pas sous le Casino par hasard. Ce bâtiment tourne au risque. Chaque tour, chaque lancer, chaque main alimente le système.\"\n\nIl désigne les machines. \"Joue quelques parties. N'importe lesquelles. Je surveille les lectures.\"",
       "step1_activity": "Objectif : Joue 2 fois à des jeux du Casino.",
       "step2_transition": "Le sol vibre. Un hologramme apparaît. Sa voix est plate, synthétique.\n\n\"Niveaux d'énergie : adéquats. Activité du marché : vérifiée. Seuil d'investissement communautaire non atteint. Accès au Coffre refusé.\"\n\nLes voyants de GambleBot faiblissent. \"Il veut qu'on investisse dans le village. Rassemble tout le monde. On a encore une chose à faire.\"",
-      "step3_activity": "Objectif : Vends 1 objet avec `!market sell`.",
+      "step3_activity": "Objectif : Vends 1 objet — ouvre `/market` et utilise la vue **💰 Vendre**, ou tape `!market sell <objet>`.",
       "step4_dialogue": "La transaction est enregistrée. Les pièces tintent dans ton compte.\n\nGambleBot hoche la tête. \"Bien. Des crédits en poche, le monde s'ouvre à toi.\"\n\nIl jette un œil au terminal. \"Tu vis en dehors de ton sac. Une base d'opérations t'aiderait — et tu as enfin de quoi t'en offrir une.\"",
       "title": "Jour 5 : Le Casino"
     },

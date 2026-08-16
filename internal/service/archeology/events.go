@@ -164,6 +164,7 @@ func (s *Service) resolveCaveIn(state *GameState, choice string) *EventResult {
 			BackToDig: true,
 		}
 	case "abandon":
+		state.Actions = 0
 		state.Finished = true
 		return &EventResult{
 			TitleID:   "arch.event_cavein_abandon_title",

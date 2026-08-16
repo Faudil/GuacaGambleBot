@@ -319,23 +319,44 @@ func TestNextRumorSurfacesOnCompletion(t *testing.T) {
 	assert.Equal(t, 25, pv.Steps[1].Target)
 }
 
-// TestRankUpQueuesSighting verifies the first rank ever queues the Chronicler
-// sighting scene (DM preferred), exactly once.
+// TestRankUpQueuesSighting verifies the first rank queues only a rank-up
+// scene, the first rank 2 queues the Chronicler sighting scene (DM preferred)
+// exactly once, and later rank-ups queue the lighter rank-up scene again.
 func TestRankUpQueuesSighting(t *testing.T) {
 	s := testStore(t)
 	New(s)
 
+	// First rank (0 -> 1): just a rank-up scene, no reveal yet.
 	require.NoError(t, s.DB.Create(&model.UserStat{UserID: 1, ItemsMined: 25}).Error)
 	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
 
 	sc, ok := s.PopJournalScene(1)
-	require.True(t, ok, "sighting scene queued on first rank")
+	require.True(t, ok, "rank-up scene queued on first rank")
+	assert.Equal(t, "journal.rankup", sc.Key)
+	assert.False(t, sc.DM, "rank-up is not a DM")
+	_, ok = s.PopJournalScene(1)
+	assert.False(t, ok, "no sighting at first rank")
+
+	// Reaching rank 2 (4 completed prospector steps) reveals the Chronicler.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("items_fished", 25).Error)
+	require.NoError(t, s.RecordActivity(1, "items_fished", 1))
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("items_farmed", 25).Error)
+	require.NoError(t, s.RecordActivity(1, "items_farmed", 1))
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("pve_wins", 10).Error)
+	require.NoError(t, s.RecordActivity(1, "pve_wins", 1))
+
+	sc, ok = s.PopJournalScene(1)
+	require.True(t, ok, "sighting scene queued on rank 2")
 	assert.Equal(t, "journal.chronicler.sighting", sc.Key)
 	assert.True(t, sc.DM, "sighting prefers DM delivery")
 
-	// A later rank-up queues a lighter rankup scene instead.
-	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).Update("items_fished", 25).Error)
-	require.NoError(t, s.RecordActivity(1, "items_fished", 1))
+	// A later rank-up (2 -> 3) queues a lighter rankup scene instead.
+	require.NoError(t, s.DB.Model(&model.UserStat{}).Where("user_id = ?", 1).
+		Update("items_farmed", 100).Error)
+	require.NoError(t, s.RecordActivity(1, "items_farmed", 1))
 
 	sc, ok = s.PopJournalScene(1)
 	require.True(t, ok)

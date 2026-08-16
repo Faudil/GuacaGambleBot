@@ -119,8 +119,8 @@ var NPCs = map[string]*universe.NPCData{
 		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
 		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",
 
-		RoleEN: "He watches those who walk the paths of the Journal. Speak to him once you have earned a rank anywhere.",
-		RoleFR: "Il observe ceux qui parcourent les voies du Journal. Parle-lui une fois que tu as gagné un rang où que ce soit.",
+		RoleEN: "He watches those who walk the paths of the Journal. Speak to him once you have reached rank 2 on a path.",
+		RoleFR: "Il observe ceux qui parcourent les voies du Journal. Parle-lui une fois que tu as atteint le rang 2 dans une voie.",
 
 		AdviceEN: "Every path you walk writes a line in my book. Walk them all, and the legend becomes yours.",
 		AdviceFR: "Chaque voie que tu parcours écrit une ligne dans mon livre. Parcours-les toutes, et la légende devient tienne.",

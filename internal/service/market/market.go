@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -54,6 +55,17 @@ type MarketItemView struct {
 	CurrentPrice int
 	BasePrice    int
 	TrendPercent int
+}
+
+// PlayerSellItemView describes one of the player's sellable inventory items as
+// shown in the market's sell view: the unit price (dynamic market price when
+// the item is in the weekly rotation, the fixed vendor rate otherwise) and the
+// quantity owned.
+type PlayerSellItemView struct {
+	Item       *items.Item
+	UnitPrice  int
+	Owned      int
+	InRotation bool
 }
 
 func New(s *store.Store, cfg *config.Config) *Service {
@@ -205,6 +217,76 @@ func (s *Service) GetMarket(category string, page, pageSize int) ([]MarketItemVi
 		})
 	}
 	return views, int(total), nil
+}
+
+// GetPlayerSellItems lists the player's owned, sellable items with their unit
+// sell price — the dynamic market price when the item is in the weekly
+// rotation, the fixed vendor rate otherwise. Rotation items come first, then
+// items sorted by unit price descending. Items that cannot be sold are
+// excluded.
+func (s *Service) GetPlayerSellItems(userID int64, page, pageSize int) ([]PlayerSellItemView, int, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = ItemsPerPage
+	}
+	if err := s.ensureWeekRotation(); err != nil {
+		return nil, 0, err
+	}
+	if err := s.ensureDayReset(); err != nil {
+		return nil, 0, err
+	}
+
+	var invs []model.Inventory
+	if err := s.store.DB.Where("user_id = ? AND quantity > 0", userID).Find(&invs).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var states []model.MarketState
+	if err := s.store.DB.Where("is_active = ?", true).Find(&states).Error; err != nil {
+		return nil, 0, err
+	}
+	rotPrice := make(map[string]int, len(states))
+	for _, st := range states {
+		rotPrice[st.ItemID] = st.CurrentPrice
+	}
+
+	var views []PlayerSellItemView
+	for _, inv := range invs {
+		it := items.Get(inv.ItemID)
+		if it == nil || !it.IsSellable() {
+			continue
+		}
+		price, inRotation := rotPrice[inv.ItemID]
+		if !inRotation {
+			price = vendorPrice(it.Price)
+		}
+		views = append(views, PlayerSellItemView{
+			Item:       it,
+			UnitPrice:  price,
+			Owned:      inv.Quantity,
+			InRotation: inRotation,
+		})
+	}
+
+	sort.SliceStable(views, func(i, j int) bool {
+		if views[i].InRotation != views[j].InRotation {
+			return views[i].InRotation
+		}
+		return views[i].UnitPrice > views[j].UnitPrice
+	})
+
+	total := len(views)
+	start := (page - 1) * pageSize
+	if start > total {
+		start = total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return views[start:end], total, nil
 }
 
 func (s *Service) BuyItem(userID int64, itemID string, amount int) (int, bool, int, error) {

@@ -95,7 +95,7 @@
       "step0_dialogue": "GambleBot paces when you walk in.\n\n\"The Vault isn't under the Casino by accident. This building runs on risk. Every spin, every flip, every hand feeds the system.\"\n\nHe gestures at the machines. \"Play a couple rounds. Any game. I'll watch the readings.\"",
       "step1_activity": "Goal: Play 2 Casino games.",
       "step2_transition": "The room hums. A hologram flickers to life. Its voice is flat, synthetic.\n\n\"Power levels: adequate. Market activity: verified. Community investment threshold not met. Vault access denied.\"\n\nGambleBot's lights dim. \"It wants us to invest in the village itself. Get everyone together. We've got one more thing to do.\"",
-      "step3_activity": "Goal: Sell 1 item using `!market sell`.",
+      "step3_activity": "Goal: Sell 1 item — open `/market` and use the **💰 Sell** view, or type `!market sell <item>`.",
       "step4_dialogue": "The transaction registers. Coins clink into your account.\n\nGambleBot nods. \"Good. Credits in hand, the world opens up.\"\n\nHe glances at the terminal. \"You've been living out of your pack. A base of operations would help — and the funds to get one are finally there.\"",
       "title": "Day 5: The Casino"
     },
