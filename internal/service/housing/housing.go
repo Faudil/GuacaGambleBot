@@ -142,18 +142,21 @@ func (s *Service) BuyHouse(userID int64, houseType string) error {
 	if s.HasHouse(userID, houseType) {
 		return ErrAlreadyOwned
 	}
-	bal, err := s.store.GetBalance(userID)
-	if err != nil {
-		return err
-	}
-	if bal < ht.Price {
-		return ErrNotEnoughMoney
-	}
-	if _, err := s.store.UpdateBalance(userID, -ht.Price); err != nil {
-		return err
-	}
 	now := time.Now()
-	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.store.UpdateBalanceTx(tx, userID, 0); err != nil {
+			return err
+		}
+		var bal int
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).Pluck("balance", &bal).Error; err != nil {
+			return err
+		}
+		if bal < ht.Price {
+			return ErrNotEnoughMoney
+		}
+		if err := s.store.UpdateBalanceTx(tx, userID, -ht.Price); err != nil {
+			return err
+		}
 		if err := tx.Model(&model.UserHousing{}).Where("user_id = ?", userID).
 			Update("is_active", false).Error; err != nil {
 			return err

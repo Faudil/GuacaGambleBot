@@ -15,6 +15,7 @@
     "btn_upgrade": "Améliorer",
     "active": "✅ Active",
     "already_owned": "❌ Tu possèdes déjà cette maison !",
+    "buy_failed": "❌ Une erreur est survenue lors de l'achat de cette maison : {error}",
     "buy_success": "🎉 **Félicitations !** Tu es désormais propriétaire d'une **{house}** !",
     "collect_success": "💰 **Loyer récolté !** Tu as gagné **${amount}** grâce à ta propriété.",
     "color_success": "🎨 Couleur du thème mise à jour : **{hex}** !",

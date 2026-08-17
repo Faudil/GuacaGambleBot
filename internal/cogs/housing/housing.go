@@ -352,15 +352,18 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	houseType := rest[0]
 	if err := c.hsvc.BuyHouse(userID, houseType); err != nil {
-		msg := i18n.T("housing.no_money", lang, map[string]any{"price": 0})
-		if errors.Is(err, housingsvc.ErrAlreadyOwned) {
+		var msg string
+		switch {
+		case errors.Is(err, housingsvc.ErrAlreadyOwned):
 			msg = i18n.T("housing.already_owned", lang)
-		} else if errors.Is(err, housingsvc.ErrNotEnoughMoney) {
+		case errors.Is(err, housingsvc.ErrNotEnoughMoney):
 			price := 0
 			if ht := housingsvc.Houses[houseType]; ht != nil {
 				price = ht.Price
 			}
 			msg = i18n.T("housing.no_money", lang, map[string]any{"price": price})
+		default:
+			msg = i18n.T("housing.buy_failed", lang, map[string]any{"error": err.Error()})
 		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,

@@ -40,6 +40,7 @@ type UserHousingUpgrade struct {
 
 type UserFurniture struct {
 	UserID      int64     `gorm:"primaryKey;column:user_id"`
+	HouseType   string    `gorm:"primaryKey;column:house_type"`
 	FurnitureID string    `gorm:"primaryKey;column:furniture_id"`
 	PlacedAt    time.Time `gorm:"column:placed_at"`
 }

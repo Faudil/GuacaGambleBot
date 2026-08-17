@@ -156,7 +156,9 @@ type DataMigration struct {
 var dataMigrations = []DataMigration{
 	{ID: "tutorial_step_reorder", Run: migrateTutorialSteps},
 	{ID: "tutorial_rewind_skipped_hunt", Run: migrateTutorialRewindSkippedHunt},
+	{ID: "housing_composite_pk", Run: migrateHousingCompositePK},
 	{ID: "housing_activate_existing", Run: migrateHousingActivateExisting},
+	{ID: "furniture_house_scope", Run: migrateFurnitureHouseScope},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -250,4 +252,140 @@ func migrateHousingActivateExisting(tx *gorm.DB) error {
 		return nil
 	}
 	return tx.Exec("UPDATE user_housing SET is_active = 1").Error
+}
+
+// tableColumn is a row from `PRAGMA table_info`.
+type tableColumn struct {
+	CID  int     `gorm:"column:cid"`
+	Name string  `gorm:"column:name"`
+	Type string  `gorm:"column:type"`
+	NN   int     `gorm:"column:notnull"`
+	Dflt *string `gorm:"column:dflt_value"`
+	PK   int     `gorm:"column:pk"`
+}
+
+// tableColumns returns the column definitions for a table.
+func tableColumns(tx *gorm.DB, table string) ([]tableColumn, error) {
+	var cols []tableColumn
+	if err := tx.Raw("PRAGMA table_info(" + table + ")").Scan(&cols).Error; err != nil {
+		return nil, err
+	}
+	return cols, nil
+}
+
+// pkColumns returns the ordered primary-key column names of a table.
+func pkColumns(tx *gorm.DB, table string) ([]string, error) {
+	cols, err := tableColumns(tx, table)
+	if err != nil {
+		return nil, err
+	}
+	var pks []string
+	for _, c := range cols {
+		if c.PK > 0 {
+			pks = append(pks, c.Name)
+		}
+	}
+	return pks, nil
+}
+
+func containsAll(haystack []string, needles ...string) bool {
+	for _, n := range needles {
+		found := false
+		for _, h := range haystack {
+			if h == n {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// migrateHousingCompositePK rebuilds legacy user_housing tables whose primary
+// key is only user_id (created before multiple houses per user existed). GORM's
+// AutoMigrate cannot alter primary keys on an existing table, so the table is
+// recreated explicitly with the composite (user_id, house_type) key and the
+// is_active column. Existing rows are preserved; a missing is_active column is
+// backfilled to 0 here and promoted to 1 by migrateHousingActivateExisting.
+func migrateHousingCompositePK(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.UserHousing{}) {
+		return nil
+	}
+	pks, err := pkColumns(tx, "user_housing")
+	if err != nil {
+		return err
+	}
+	if containsAll(pks, "user_id", "house_type") {
+		return nil
+	}
+	cols, err := tableColumns(tx, "user_housing")
+	if err != nil {
+		return err
+	}
+	hasActive := false
+	for _, c := range cols {
+		if c.Name == "is_active" {
+			hasActive = true
+			break
+		}
+	}
+	sel := `SELECT user_id, house_type, level, last_collected, custom_name, custom_color, under_construction, finish_time, stored_items`
+	if hasActive {
+		sel += `, is_active`
+	} else {
+		sel += `, 0`
+	}
+	ins := `user_id, house_type, level, last_collected, custom_name, custom_color, under_construction, finish_time, stored_items, is_active`
+	return tx.Exec(`
+CREATE TABLE user_housing_new (
+	user_id INTEGER NOT NULL,
+	house_type TEXT NOT NULL,
+	level INTEGER DEFAULT 1,
+	last_collected DATETIME,
+	is_active INTEGER DEFAULT 0,
+	custom_name TEXT,
+	custom_color TEXT,
+	under_construction TEXT,
+	finish_time DATETIME,
+	stored_items TEXT DEFAULT '{}',
+	PRIMARY KEY (user_id, house_type)
+);
+INSERT INTO user_housing_new (` + ins + `) ` + sel + ` FROM user_housing;
+DROP TABLE user_housing;
+ALTER TABLE user_housing_new RENAME TO user_housing;`).Error
+}
+
+// migrateFurnitureHouseScope ties placed furniture to the user's active house by
+// rebuilding user_furniture with house_type in its primary key. Legacy rows were
+// global to the user; they are reassigned to the user's active house (or dropped
+// when the user has no house). Runs after housing_activate_existing so is_active
+// reflects the true active house.
+func migrateFurnitureHouseScope(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.UserFurniture{}) {
+		return nil
+	}
+	pks, err := pkColumns(tx, "user_furniture")
+	if err != nil {
+		return err
+	}
+	if containsAll(pks, "user_id", "house_type", "furniture_id") {
+		return nil
+	}
+	return tx.Exec(`
+CREATE TABLE user_furniture_new (
+	user_id INTEGER NOT NULL,
+	house_type TEXT NOT NULL,
+	furniture_id TEXT NOT NULL,
+	placed_at DATETIME,
+	PRIMARY KEY (user_id, house_type, furniture_id)
+);
+INSERT INTO user_furniture_new (user_id, house_type, furniture_id, placed_at)
+	SELECT uf.user_id, uh.house_type, uf.furniture_id, uf.placed_at
+	FROM user_furniture uf
+	JOIN user_housing uh ON uh.user_id = uf.user_id AND uh.is_active = 1;
+DROP TABLE user_furniture;
+ALTER TABLE user_furniture_new RENAME TO user_furniture;`).Error
 }

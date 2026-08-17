@@ -100,15 +100,31 @@ func New(s *store.Store, cfg *config.Config, hsvc *housingsvc.Service) *Service 
 	return &Service{store: s, cfg: cfg, hsvc: hsvc}
 }
 
+func (s *Service) activeHouseType(userID int64) (string, error) {
+	h, err := s.hsvc.GetHousing(userID)
+	if err != nil {
+		return "", err
+	}
+	return h.HouseType, nil
+}
+
 func (s *Service) GetPlaced(userID int64) ([]model.UserFurniture, error) {
+	houseType, err := s.activeHouseType(userID)
+	if err != nil {
+		return nil, err
+	}
 	var placed []model.UserFurniture
-	err := s.store.DB.Where("user_id = ?", userID).Find(&placed).Error
+	err = s.store.DB.Where("user_id = ? AND house_type = ?", userID, houseType).Find(&placed).Error
 	return placed, err
 }
 
 func (s *Service) GetUsedSlots(userID int64) int {
+	houseType, err := s.activeHouseType(userID)
+	if err != nil {
+		return 0
+	}
 	var count int64
-	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ?", userID).Count(&count)
+	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND house_type = ?", userID, houseType).Count(&count)
 	return int(count)
 }
 
@@ -125,8 +141,12 @@ func (s *Service) GetMaxSlots(userID int64) int {
 }
 
 func (s *Service) IsPlaced(userID int64, furnitureID string) bool {
+	houseType, err := s.activeHouseType(userID)
+	if err != nil {
+		return false
+	}
 	var count int64
-	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND furniture_id = ?", userID, furnitureID).Count(&count)
+	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND house_type = ? AND furniture_id = ?", userID, houseType, furnitureID).Count(&count)
 	return count > 0
 }
 
@@ -135,7 +155,7 @@ func (s *Service) Place(userID int64, furnitureID string) error {
 	if !ok {
 		return fmt.Errorf("unknown furniture")
 	}
-	_, err := s.hsvc.GetHousing(userID)
+	houseType, err := s.activeHouseType(userID)
 	if err != nil {
 		return fmt.Errorf("you don't own a house")
 	}
@@ -145,7 +165,7 @@ func (s *Service) Place(userID int64, furnitureID string) error {
 		return fmt.Errorf("no free slots (%d/%d)", used, maxSlots)
 	}
 	var existing int64
-	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND furniture_id = ?", userID, furnitureID).Count(&existing)
+	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND house_type = ? AND furniture_id = ?", userID, houseType, furnitureID).Count(&existing)
 	if existing > 0 {
 		return fmt.Errorf("already placed")
 	}
@@ -174,13 +194,17 @@ func (s *Service) Place(userID int64, furnitureID string) error {
 			}
 		}
 		return tx.Create(&model.UserFurniture{
-			UserID: userID, FurnitureID: furnitureID, PlacedAt: time.Now(),
+			UserID: userID, HouseType: houseType, FurnitureID: furnitureID, PlacedAt: time.Now(),
 		}).Error
 	})
 }
 
 func (s *Service) Remove(userID int64, furnitureID string) error {
-	res := s.store.DB.Where("user_id = ? AND furniture_id = ?", userID, furnitureID).Delete(&model.UserFurniture{})
+	houseType, err := s.activeHouseType(userID)
+	if err != nil {
+		return fmt.Errorf("not placed")
+	}
+	res := s.store.DB.Where("user_id = ? AND house_type = ? AND furniture_id = ?", userID, houseType, furnitureID).Delete(&model.UserFurniture{})
 	if res.RowsAffected == 0 {
 		return fmt.Errorf("not placed")
 	}
