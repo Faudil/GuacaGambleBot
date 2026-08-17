@@ -352,31 +352,31 @@ var eventPool = func() []EventDef {
 		{ID: "camp_rare", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
 			Options: []NarrativeOption{
 				o("mining.ev_camp_rare_o1", "mining.ev_camp_rare_o1d",
-					efi("mining.ev_camp_rare_r1", BagEntry{Name: "gold_nugget", Count: 1}, BagEntry{Name: "copper_ore", Count: 2})),
+					&EventEffect{RiskMod: 10, RiskTurns: 5, Items: []BagEntry{{Name: "gold_nugget", Count: 1}, {Name: "copper_ore", Count: 2}}, Message: "mining.ev_camp_rare_r1"}),
 				o("mining.ev_camp_rare_o2", "mining.ev_camp_rare_o2d", efr("mining.ev_camp_rare_r2", -30, 2)),
 			}},
 		{ID: "cart_rare", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
 			Options: []NarrativeOption{
 				o("mining.ev_cart_rare_o1", "mining.ev_cart_rare_o1d",
-					efi("mining.ev_cart_rare_r1", BagEntry{Name: "iron_ore", Count: 3}, BagEntry{Name: "gold_nugget", Count: 1})),
+					&EventEffect{RiskMod: 10, RiskTurns: 5, Items: []BagEntry{{Name: "iron_ore", Count: 3}, {Name: "gold_nugget", Count: 1}}, Message: "mining.ev_cart_rare_r1"}),
 				o("mining.ev_cart_rare_o2", "mining.ev_cart_rare_o2d",
-					&EventEffect{RiskMod: -15, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_cart_rare_r2"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_cart_rare_r2"}),
 			}},
 
 		// ═══ SHALLOW — LEGENDARY ═══
 		{ID: "collapse_legendary", Stage: StageShallow, Rarity: EventLegendary, MinDepth: 3,
 			Options: []NarrativeOption{
 				o("mining.ev_collapse_leg_o1", "mining.ev_collapse_leg_o1d",
-					&EventEffect{RiskMod: -20, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_collapse_leg_r1"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_collapse_leg_r1"}),
 				o("mining.ev_collapse_leg_o2", "mining.ev_collapse_leg_o2d",
-					&EventEffect{DepthGain: 2, Items: []BagEntry{{Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_collapse_leg_r2"}),
+					&EventEffect{DepthGain: 2, RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_collapse_leg_r2"}),
 			}},
 		{ID: "lantern_legendary", Stage: StageShallow, Rarity: EventLegendary, MinDepth: 4,
 			Options: []NarrativeOption{
 				o("mining.ev_lantern_leg_o1", "mining.ev_lantern_leg_o1d",
-					&EventEffect{RiskMod: -10, RiskTurns: 99, Items: []BagEntry{{Name: "ancient_core_shard", Count: 1}}, Message: "mining.ev_lantern_leg_r1"}),
+					&EventEffect{RiskMod: -10, RiskTurns: 10, Message: "mining.ev_lantern_leg_r1"}),
 				o("mining.ev_lantern_leg_o2", "mining.ev_lantern_leg_o2d",
-					&EventEffect{Items: []BagEntry{{Name: "kethari_crystal", Count: 2}}, Message: "mining.ev_lantern_leg_r2"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "kethari_crystal", Count: 2}, {Name: "ancient_core_shard", Count: 1}}, Message: "mining.ev_lantern_leg_r2"}),
 			}},
 
 		// ═══ DEPTH — COMMON ═══
@@ -407,7 +407,7 @@ var eventPool = func() []EventDef {
 		{ID: "glow_rare", Stage: StageDepth, Rarity: EventRare, MinDepth: 9,
 			Options: []NarrativeOption{
 				o("mining.ev_glow_rare_o1", "mining.ev_glow_rare_o1d",
-					efi("mining.ev_glow_rare_r1", BagEntry{Name: "kethari_crystal", Count: 1})),
+					&EventEffect{RiskMod: 10, RiskTurns: 5, Items: []BagEntry{{Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_glow_rare_r1"}),
 				o("mining.ev_glow_rare_o2", "mining.ev_glow_rare_o2d", efr("mining.ev_glow_rare_r2", -10, 5)),
 			}},
 		{ID: "gem_rare", Stage: StageDepth, Rarity: EventRare, MinDepth: 10,
@@ -421,21 +421,21 @@ var eventPool = func() []EventDef {
 			Options: []NarrativeOption{
 				o("mining.ev_river_rare_o1", "mining.ev_river_rare_o1d", efr("mining.ev_river_rare_r1", -20, 5)),
 				o("mining.ev_river_rare_o2", "mining.ev_river_rare_o2d",
-					&EventEffect{Items: []BagEntry{{Name: "gold_nugget", Count: 3}, {Name: "emerald", Count: 1}}, Message: "mining.ev_river_rare_r2"}),
+					&EventEffect{RiskMod: 10, RiskTurns: 5, Items: []BagEntry{{Name: "gold_nugget", Count: 3}, {Name: "emerald", Count: 1}}, Message: "mining.ev_river_rare_r2"}),
 			}},
 
 		// ═══ DEPTH — LEGENDARY ═══
 		{ID: "glow_legendary", Stage: StageDepth, Rarity: EventLegendary, MinDepth: 9,
 			Options: []NarrativeOption{
 				o("mining.ev_glow_leg_o1", "mining.ev_glow_leg_o1d",
-					&EventEffect{Items: []BagEntry{{Name: "kethari_crystal", Count: 2}, {Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_glow_leg_r1"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "kethari_crystal", Count: 2}, {Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_glow_leg_r1"}),
 				o("mining.ev_glow_leg_o2", "mining.ev_glow_leg_o2d",
-					&EventEffect{RiskMod: -15, RiskTurns: 99, Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_glow_leg_r2"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_glow_leg_r2"}),
 			}},
 		{ID: "chasm_legendary", Stage: StageDepth, Rarity: EventLegendary, MinDepth: 11,
 			Options: []NarrativeOption{
 				o("mining.ev_chasm_leg_o1", "mining.ev_chasm_leg_o1d",
-					&EventEffect{Items: []BagEntry{{Name: "rough_diamond", Count: 3}, {Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_chasm_leg_r1"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "rough_diamond", Count: 3}, {Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_chasm_leg_r1"}),
 				o("mining.ev_chasm_leg_o2", "mining.ev_chasm_leg_o2d",
 					&EventEffect{DepthGain: 3, Items: []BagEntry{{Name: "primordial_geode", Count: 1}}, RiskMod: 15, RiskTurns: 5, Message: "mining.ev_chasm_leg_r2"}),
 			}},
@@ -463,9 +463,9 @@ var eventPool = func() []EventDef {
 		{ID: "crystal_rare", Stage: StageDeep, Rarity: EventRare, MinDepth: 15,
 			Options: []NarrativeOption{
 				o("mining.ev_crystal_rare_o1", "mining.ev_crystal_rare_o1d",
-					efi("mining.ev_crystal_rare_r1", BagEntry{Name: "kethari_crystal", Count: 1})),
+					&EventEffect{RiskMod: 10, RiskTurns: 5, Items: []BagEntry{{Name: "kethari_crystal", Count: 1}}, Message: "mining.ev_crystal_rare_r1"}),
 				o("mining.ev_crystal_rare_o2", "mining.ev_crystal_rare_o2d",
-					&EventEffect{RiskMod: -20, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_crystal_rare_r2"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 5, Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, Message: "mining.ev_crystal_rare_r2"}),
 			}},
 		{ID: "void_rare", Stage: StageDeep, Rarity: EventRare, MinDepth: 18,
 			Options: []NarrativeOption{
@@ -476,27 +476,27 @@ var eventPool = func() []EventDef {
 		{ID: "guardian_rare", Stage: StageDeep, Rarity: EventRare, MinDepth: 19,
 			Options: []NarrativeOption{
 				o("mining.ev_guardian_rare_o1", "mining.ev_guardian_rare_o1d",
-					&EventEffect{Items: []BagEntry{{Name: "ancient_core_shard", Count: 1}}, Message: "mining.ev_guardian_rare_r1"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "ancient_core_shard", Count: 1}, {Name: "ancient_alloy", Count: 3}}, Message: "mining.ev_guardian_rare_r1"}),
 				o("mining.ev_guardian_rare_o2", "mining.ev_guardian_rare_o2d",
-					&EventEffect{RiskMod: -30, RiskTurns: 99, Items: []BagEntry{{Name: "ancient_alloy", Count: 3}}, Message: "mining.ev_guardian_rare_r2"}),
+					&EventEffect{RiskMod: -30, RiskTurns: 10, Message: "mining.ev_guardian_rare_r2"}),
 			}},
 
 		// ═══ DEEP — LEGENDARY ═══
 		{ID: "shrine_legendary", Stage: StageDeep, Rarity: EventLegendary, MinDepth: 17,
 			Options: []NarrativeOption{
 				o("mining.ev_shrine_leg_o1", "mining.ev_shrine_leg_o1d",
-					&EventEffect{Items: []BagEntry{{Name: "resonance_core", Count: 1}, {Name: "kethari_crystal", Count: 2}}, RiskMod: -15, RiskTurns: 10, Message: "mining.ev_shrine_leg_r1"}),
+					&EventEffect{Items: []BagEntry{{Name: "resonance_core", Count: 1}, {Name: "kethari_crystal", Count: 2}}, RiskMod: 15, RiskTurns: 10, Message: "mining.ev_shrine_leg_r1"}),
 				o("mining.ev_shrine_leg_o2", "mining.ev_shrine_leg_o2d",
-					&EventEffect{LoreID: "mine_lore_engine", Items: []BagEntry{{Name: "ancient_core_shard", Count: 1}}, Message: "mining.ev_shrine_leg_r2"}),
+					&EventEffect{RiskMod: 10, RiskTurns: 10, LoreID: "mine_lore_engine", Items: []BagEntry{{Name: "ancient_core_shard", Count: 1}}, Message: "mining.ev_shrine_leg_r2"}),
 				o("mining.ev_shrine_leg_o3", "mining.ev_shrine_leg_o3d",
-					&EventEffect{RiskMod: -40, RiskTurns: 5, Items: []BagEntry{{Name: "primordial_geode", Count: 1}}, Message: "mining.ev_shrine_leg_r3"}),
+					&EventEffect{RiskMod: 20, RiskTurns: 5, Items: []BagEntry{{Name: "primordial_geode", Count: 1}}, Message: "mining.ev_shrine_leg_r3"}),
 			}},
 		{ID: "crystal_legendary", Stage: StageDeep, Rarity: EventLegendary, MinDepth: 15,
 			Options: []NarrativeOption{
 				o("mining.ev_crystal_leg_o1", "mining.ev_crystal_leg_o1d",
-					&EventEffect{RiskMod: -15, RiskTurns: 99, Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_crystal_leg_r1"}),
+					&EventEffect{RiskMod: -15, RiskTurns: 10, Message: "mining.ev_crystal_leg_r1"}),
 				o("mining.ev_crystal_leg_o2", "mining.ev_crystal_leg_o2d",
-					&EventEffect{Items: []BagEntry{{Name: "kethari_crystal", Count: 3}, {Name: "ancient_alloy", Count: 2}}, Message: "mining.ev_crystal_leg_r2"}),
+					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "kethari_crystal", Count: 3}, {Name: "ancient_alloy", Count: 2}, {Name: "resonance_core", Count: 1}}, Message: "mining.ev_crystal_leg_r2"}),
 			}},
 	}
 }()
@@ -767,7 +767,40 @@ func (s *Service) RemainingEntries(userID int64) (int, error) {
 	return remaining, err
 }
 
-func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns int) (*DescendResult, error) {
+// RiskFor returns the collapse chance (0-100) the next descend would have for
+// the user at the given depth, tool and active effects. Descend uses the same
+// math so the displayed risk always matches the actual roll.
+func (s *Service) RiskFor(userID int64, depth int, toolID string, ghostVeilTurns, riskMod int) int {
+	ml, err := s.GetMinerLevel(userID)
+	if err != nil {
+		ml = 1
+	}
+
+	ti := GetToolInfo(toolID)
+	if ti.MinLevel > ml {
+		ti = GetToolInfo("")
+	}
+
+	risk := (depth-1)*5 - ti.RiskReduction + riskMod
+	risk -= int(float64(ml) * 1.5)
+	risk -= int(charsvc.GetVITReduction(s.store, userID) * 100)
+	if charsvc.HasPassive(s.store, userID, "perk_collapse_resist") {
+		risk -= 5
+	}
+
+	if ghostVeilTurns > 0 {
+		risk -= 10
+	}
+	if charsvc.HasBuff(s.store, userID, "reinforce") {
+		risk = 0
+	}
+	if risk < 0 {
+		risk = 0
+	}
+	return risk
+}
+
+func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns, riskMod int) (*DescendResult, error) {
 	free, err := s.store.FreeSlots(s.store.DB, userID)
 	if err != nil {
 		return nil, err
@@ -787,24 +820,9 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 		ti = GetToolInfo("")
 	}
 
-	risk := (depth-1)*5 - ti.RiskReduction
-	levelReduc := int(float64(ml) * 1.5)
-	risk -= levelReduc
-	vitReduc := int(charsvc.GetVITReduction(s.store, userID) * 100)
-	risk -= vitReduc
-	if charsvc.HasPassive(s.store, userID, "perk_collapse_resist") {
-		risk -= 5
-	}
-
-	if ghostVeilTurns > 0 {
-		risk -= 10
-	}
+	risk := s.RiskFor(userID, depth, toolID, ghostVeilTurns, riskMod)
 	if charsvc.HasBuff(s.store, userID, "reinforce") {
-		risk = 0
 		charsvc.ConsumeBuff(s.store, userID, "reinforce")
-	}
-	if risk < 0 {
-		risk = 0
 	}
 
 	roll := rand.Intn(100) + 1

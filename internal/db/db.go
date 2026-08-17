@@ -137,6 +137,7 @@ func Migrate(db *gorm.DB) error {
 		&model.VeilRaidHallOfFame{},
 		&model.UserJournalEntry{},
 		&model.UserJournalMastery{},
+		&model.WinRecord{},
 	); err != nil {
 		return err
 	}

@@ -34,6 +34,9 @@ type Config struct {
 
 	NPCChatCooldownHours int
 
+	SlotsBigWinThreshold    int
+	CoinflipBigWinThreshold int
+
 	Criminality CriminalityConfig
 }
 
@@ -54,27 +57,29 @@ type CriminalityConfig struct {
 func Load() *Config {
 	_ = godotenv.Load()
 	return &Config{
-		DiscordToken:         os.Getenv("DISCORD_TOKEN"),
-		TZ:                   os.Getenv("TZ"),
-		Environment:          os.Getenv("ENVIRONMENT"),
-		DBPath:               getEnv("DB_PATH", "./data/guacabot_go.db"),
-		GuildID:              getInt64("GUILD_ID", 0),
-		Prefix:               getEnv("PREFIX", "!"),
-		LogLevel:             getEnv("LOG_LEVEL", "info"),
-		LogFile:              os.Getenv("LOG_FILE"),
-		LogFormat:            getEnv("LOG_FORMAT", "text"),
-		LogAddSource:         os.Getenv("LOG_ADD_SOURCE") == "true",
-		Universe:             getEnv("UNIVERSE", "hoakhaven"),
-		StartingBalance:      getInt("STARTING_BALANCE", 100),
-		DailyAmount:          getInt("DAILY_AMOUNT", 50),
-		ChannelID:            getInt64("CHANNEL_ID", 0),
-		TestChannelID:        getInt64("TEST_CHANNEL_ID", 0),
-		PetChannelID:         getInt64("PET_CHANNEL_ID", 0),
-		BaseJackpot:          getInt("BASE_JACKPOT", 500),
-		HuntMaxPerDay:        getInt("HUNT_MAX_PER_DAY", 10),
-		HuntCooldownSeconds:  getInt("HUNT_COOLDOWN_SECONDS", 10),
-		PlayCooldownMinutes:  getInt("PLAY_COOLDOWN_MINUTES", 60),
-		NPCChatCooldownHours: getInt("NPC_CHAT_COOLDOWN_HOURS", 6),
+		DiscordToken:            os.Getenv("DISCORD_TOKEN"),
+		TZ:                      os.Getenv("TZ"),
+		Environment:             os.Getenv("ENVIRONMENT"),
+		DBPath:                  getEnv("DB_PATH", "./data/guacabot_go.db"),
+		GuildID:                 getInt64("GUILD_ID", 0),
+		Prefix:                  getEnv("PREFIX", "!"),
+		LogLevel:                getEnv("LOG_LEVEL", "info"),
+		LogFile:                 os.Getenv("LOG_FILE"),
+		LogFormat:               getEnv("LOG_FORMAT", "text"),
+		LogAddSource:            os.Getenv("LOG_ADD_SOURCE") == "true",
+		Universe:                getEnv("UNIVERSE", "hoakhaven"),
+		StartingBalance:         getInt("STARTING_BALANCE", 100),
+		DailyAmount:             getInt("DAILY_AMOUNT", 50),
+		ChannelID:               getInt64("CHANNEL_ID", 0),
+		TestChannelID:           getInt64("TEST_CHANNEL_ID", 0),
+		PetChannelID:            getInt64("PET_CHANNEL_ID", 0),
+		BaseJackpot:             getInt("BASE_JACKPOT", 500),
+		HuntMaxPerDay:           getInt("HUNT_MAX_PER_DAY", 10),
+		HuntCooldownSeconds:     getInt("HUNT_COOLDOWN_SECONDS", 10),
+		PlayCooldownMinutes:     getInt("PLAY_COOLDOWN_MINUTES", 60),
+		NPCChatCooldownHours:    getInt("NPC_CHAT_COOLDOWN_HOURS", 6),
+		SlotsBigWinThreshold:    getInt("SLOTS_BIG_WIN_THRESHOLD", 5000),
+		CoinflipBigWinThreshold: getInt("COINFLIP_BIG_WIN_THRESHOLD", 2000),
 		Criminality: CriminalityConfig{
 			StealMaxGoldPercent:    0.05,
 			StealMaxPerDay:         3,

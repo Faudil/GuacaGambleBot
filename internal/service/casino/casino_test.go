@@ -144,3 +144,55 @@ func TestCoinflipChoiceNormalization(t *testing.T) {
 	assert.Equal(t, "pile", svc.normalizeChoice("pile"))
 	assert.Equal(t, "", svc.normalizeChoice("invalid"))
 }
+
+func TestCoinflipRecordsWinOnly(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	winCount := 0
+	for i := 0; i < 100; i++ {
+		require.NoError(t, st.ResetGameLimit(1, "coinflip"))
+		res, err := svc.Coinflip(1, "pile", 100, true)
+		require.NoError(t, err)
+		if res.Win {
+			winCount++
+		}
+	}
+	records, err := st.TopWinRecords("coinflip", 1000)
+	require.NoError(t, err)
+	require.Len(t, records, winCount)
+	for _, r := range records {
+		assert.Equal(t, int64(1), r.UserID)
+		assert.Equal(t, "coinflip", r.Game)
+		assert.Equal(t, 100, r.Amount)
+	}
+}
+
+func TestSlotsRecordsWinOnly(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	wins := 0
+	sumNet := 0
+	for i := 0; i < 200; i++ {
+		require.NoError(t, st.ResetGameLimit(1, "slots"))
+		res, err := svc.SpinSlots(1, 50)
+		require.NoError(t, err)
+		if res.IsWin {
+			wins++
+			sumNet += res.Payout - 50
+		}
+	}
+	records, err := st.TopWinRecords("slots", 1000)
+	require.NoError(t, err)
+	require.Len(t, records, wins)
+	recordSum := 0
+	for _, r := range records {
+		assert.Equal(t, int64(1), r.UserID)
+		assert.Equal(t, "slots", r.Game)
+		recordSum += r.Amount
+	}
+	assert.Equal(t, sumNet, recordSum)
+}

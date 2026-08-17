@@ -1,6 +1,12 @@
 {
   "leaderboard": {
+    "big_win_coinflip": "{user} vient de gagner **${amount}** au pile ou face !",
+    "big_win_slots": "{user} vient de remporter **${amount}** énormes aux machines à sous !",
+    "big_win_title": "💰 GROS GAIN !",
     "btn_refresh": "Actualiser",
+    "cat_coinflip": "Records Pile ou face",
+    "cat_richest": "Plus riches",
+    "cat_slots": "Records Machines à sous",
     "empty": "Aucun joueur pour l'instant.",
     "entry": "#{rank} {user} , ${balance}",
     "glory_pts": "pts de Gloire",
@@ -13,10 +19,15 @@
     "no_money": "Personne n'a d'argent pour l'instant !",
     "no_pets": "Personne n'a de familier classé pour l'instant !",
     "pets_title": "🐾 Classement des Familiers (ELO)",
+    "records_empty": "Aucun gain enregistré pour l'instant.",
+    "records_entry": "#{rank} {user} — **${amount}**",
+    "records_title_coinflip": "🪙 Plus gros gains au Pile ou face",
+    "records_title_slots": "🎰 Plus gros gains aux Machines à sous",
     "role_added": "Le joueur est entré dans le Top 5 des familiers",
     "role_name": "🌟 Maître des Familiers",
     "role_reason": "Création automatique du rôle Top 5",
     "role_removed": "Le joueur n'est plus dans le Top 5 des familiers",
+    "select_placeholder": "Choisis une catégorie...",
     "title": "Classement",
     "unknown": "Inconnu",
     "wealth_title": "🏆 Classement des plus riches"

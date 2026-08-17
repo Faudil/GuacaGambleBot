@@ -27,3 +27,9 @@ func (s *Service) Top(n int) ([]model.User, error) {
 	}
 	return users, nil
 }
+
+// TopWinRecords returns the n biggest single wins for a casino game ("slots"
+// or "coinflip").
+func (s *Service) TopWinRecords(game string, n int) ([]model.WinRecord, error) {
+	return s.store.TopWinRecords(game, n)
+}

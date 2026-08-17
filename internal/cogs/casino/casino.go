@@ -290,6 +290,9 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	if res.IsWin {
+		c.announceBigWin(b.Session, interaction.ToInt64(i.GuildID), userID, "slots", res.Payout-amount)
+	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
 		interaction.SendJournalScene(b, i, text, dm)
@@ -369,6 +372,9 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	if res.Win {
+		c.announceBigWin(b.Session, interaction.ToInt64(i.GuildID), userID, "coinflip", amount)
+	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
 		interaction.SendJournalScene(b, i, text, dm)
@@ -432,6 +438,9 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	if res.IsWin {
+		c.announceBigWin(s, interaction.ToInt64(m.GuildID), userID, "slots", res.Payout-amount)
+	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
 		interaction.SendJournalSceneMsg(s, m.ChannelID, m.Author.ID, text, dm)
@@ -528,6 +537,9 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	if res.Win {
+		c.announceBigWin(s, interaction.ToInt64(m.GuildID), userID, "coinflip", amount)
+	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
 		interaction.SendJournalSceneMsg(s, m.ChannelID, m.Author.ID, text, dm)
@@ -631,4 +643,43 @@ func (c *Cog) getSlotsFlavor(winType, symbol, lang string) string {
 		}
 	}
 	return i18n.T("slots.lose_generic", lang)
+}
+
+// announceBigWin broadcasts a big winning payout to the guild's announcement
+// channel when the net profit meets the game's threshold. No-op when the guild
+// has no announcement channel configured.
+func (c *Cog) announceBigWin(sess *discordgo.Session, guildID, userID int64, game string, amount int) {
+	if sess == nil || guildID == 0 || amount <= 0 {
+		return
+	}
+	threshold := c.cfg.SlotsBigWinThreshold
+	if game == "coinflip" {
+		threshold = c.cfg.CoinflipBigWinThreshold
+	}
+	if amount < threshold {
+		return
+	}
+	go func() {
+		ss, err := c.store.GetServerSetting(guildID)
+		if err != nil || ss == nil || ss.AnnouncementChannelID == 0 {
+			return
+		}
+		lang := ss.Language
+		if lang == "" {
+			lang = "fr"
+		}
+		key := "leaderboard.big_win_slots"
+		if game == "coinflip" {
+			key = "leaderboard.big_win_coinflip"
+		}
+		embed := components.Embed(
+			i18n.T("leaderboard.big_win_title", lang),
+			i18n.T(key, lang, map[string]any{
+				"user":   interaction.Mention(userID),
+				"amount": strconv.Itoa(amount),
+			}),
+			0xf1c40f,
+		)
+		_, _ = sess.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), embed)
+	}()
 }

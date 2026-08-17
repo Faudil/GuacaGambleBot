@@ -93,7 +93,7 @@ func TestEventFlowRepro(t *testing.T) {
 		}
 		if eff.RiskTurns > 0 {
 			sess.riskMod += eff.RiskMod
-			sess.riskTurns = eff.RiskTurns
+			sess.riskTurns += eff.RiskTurns
 		}
 		msg := ""
 		if eff.Message != "" {
@@ -120,6 +120,20 @@ func TestEventFlowRepro(t *testing.T) {
 // lock-protected read path (mineEmbed) while a writer mutates the session
 // exactly like onDescend does. Run with -race to catch any unlocked access to
 // the shared session state (the "leave after restart/descend loses loot" bug).
+func TestRiskTurnsDecay(t *testing.T) {
+	sess := &userSession{riskMod: -15, riskTurns: 3}
+	decayTurns(sess)
+	require.Equal(t, 2, sess.riskTurns)
+	require.Equal(t, -15, sess.riskMod, "modifier stays while turns remain")
+
+	decayTurns(sess)
+	decayTurns(sess)
+	require.Equal(t, 0, sess.riskTurns)
+	require.Equal(t, 0, sess.riskMod, "risk modifier must clear when turns run out")
+
+	decayTurns(&userSession{riskMod: 0, riskTurns: 0})
+}
+
 func TestConcurrentSessionAccess(t *testing.T) {
 	if err := i18n.Load("../../../locales"); err != nil {
 		t.Fatal(err)

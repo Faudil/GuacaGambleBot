@@ -45,3 +45,30 @@ func TestTop(t *testing.T) {
 	assert.Equal(t, int64(10), users[2].UserID)
 	assert.Equal(t, 500, users[2].Balance)
 }
+
+func TestTopWinRecords(t *testing.T) {
+	s := testStore(t)
+
+	require.NoError(t, s.AddWinRecord(10, "slots", 100))
+	require.NoError(t, s.AddWinRecord(20, "slots", 5000))
+	require.NoError(t, s.AddWinRecord(30, "slots", 200))
+	require.NoError(t, s.AddWinRecord(40, "slots", 200))
+	require.NoError(t, s.AddWinRecord(50, "coinflip", 2000))
+
+	svc := New(s, &config.Config{})
+	records, err := svc.TopWinRecords("slots", 3)
+	require.NoError(t, err)
+	require.Len(t, records, 3)
+	assert.Equal(t, int64(20), records[0].UserID)
+	assert.Equal(t, 5000, records[0].Amount)
+	assert.Equal(t, int64(30), records[1].UserID)
+	assert.Equal(t, 200, records[1].Amount)
+	assert.Equal(t, int64(40), records[2].UserID)
+	assert.Equal(t, 200, records[2].Amount)
+
+	cf, err := svc.TopWinRecords("coinflip", 10)
+	require.NoError(t, err)
+	require.Len(t, cf, 1)
+	assert.Equal(t, int64(50), cf[0].UserID)
+	assert.Equal(t, 2000, cf[0].Amount)
+}

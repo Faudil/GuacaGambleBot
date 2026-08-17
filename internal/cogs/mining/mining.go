@@ -279,15 +279,8 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 	bagStr := c.bagString(sess.bag, lang)
 	ti := miningsvc.GetToolInfo(sess.toolID)
 	ml, _ := c.svc.GetMinerLevel(userID)
-	levelReduc := int(float64(ml) * 1.5)
 
-	riskNext := (depth-1)*5 - ti.RiskReduction - levelReduc + sess.riskMod
-	if sess.ghostVeilTurns > 0 {
-		riskNext -= 10
-	}
-	if riskNext < 0 {
-		riskNext = 0
-	}
+	riskNext := c.svc.RiskFor(userID, depth, sess.toolID, sess.ghostVeilTurns, sess.riskMod)
 
 	color := miningsvc.DepthColor(depth)
 	flavorKey := miningsvc.DepthFlavorKey(depth)
@@ -374,6 +367,17 @@ func (c *Cog) effectsLine(sess *userSession, lang string) string {
 		return ""
 	}
 	return i18n.T("mining.effects_label", lang, map[string]any{"list": strings.Join(parts, " · ")})
+}
+
+// decayTurns decrements the event risk effect counter, clearing the modifier
+// once its turn budget is spent.
+func decayTurns(sess *userSession) {
+	if sess.riskTurns > 0 {
+		sess.riskTurns--
+		if sess.riskTurns <= 0 {
+			sess.riskMod = 0
+		}
+	}
 }
 
 func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -463,7 +467,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	gvt := sess.ghostVeilTurns
-	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.toolID, gvt)
+	res, err := c.svc.Descend(userID, sess.depth, sess.bag, sess.toolID, gvt, sess.riskMod)
 	if err != nil {
 		sessionsMu.Unlock()
 		slog.Error("mining descend failed", "user", userID, "error", err)
@@ -489,6 +493,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if sess.ghostVeilTurns > 0 {
 		sess.ghostVeilTurns--
 	}
+	decayTurns(sess)
 	if res.Event != nil && res.Event.Buff == miningsvc.GhostVeilBuffID() {
 		sess.ghostVeilTurns = 3
 	}
@@ -597,7 +602,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	if eff.RiskTurns > 0 {
 		sess.riskMod += eff.RiskMod
-		sess.riskTurns = eff.RiskTurns
+		sess.riskTurns += eff.RiskTurns
 	}
 	if eff.DepthGain != 0 {
 		sess.depth += eff.DepthGain

@@ -1,6 +1,12 @@
 {
   "leaderboard": {
+    "big_win_coinflip": "{user} just won **${amount}** on a coinflip!",
+    "big_win_slots": "{user} just hit a massive **${amount}** on the slots!",
+    "big_win_title": "💰 BIG WIN!",
     "btn_refresh": "Refresh",
+    "cat_coinflip": "Coinflip Records",
+    "cat_richest": "Richest",
+    "cat_slots": "Slots Records",
     "empty": "No players yet.",
     "entry": "#{rank} {user} , ${balance}",
     "glory_pts": "Glory pts",
@@ -13,10 +19,15 @@
     "no_money": "No one has money yet!",
     "no_pets": "No one has a ranked pet yet!",
     "pets_title": "🐾 Pet Leaderboard (ELO)",
+    "records_empty": "No wins recorded yet.",
+    "records_entry": "#{rank} {user} — **${amount}**",
+    "records_title_coinflip": "🪙 Coinflip Biggest Wins",
+    "records_title_slots": "🎰 Slots Biggest Wins",
     "role_added": "The player has entered the Top 5 pets",
     "role_name": "🌟 Master of Pets",
     "role_reason": "Automatic creation of Top 5 role",
     "role_removed": "The player is no longer in the Top 5 pets",
+    "select_placeholder": "Select a category...",
     "title": "Leaderboard",
     "unknown": "Unknown",
     "wealth_title": "🏆 Richest Leaderboard"

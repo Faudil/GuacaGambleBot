@@ -37,7 +37,7 @@ func testService(t *testing.T) (*Service, *store.Store) {
 
 func TestDescend(t *testing.T) {
 	svc, _ := testService(t)
-	res, err := svc.Descend(1, 1, nil, "", 0)
+	res, err := svc.Descend(1, 1, nil, "", 0, 0)
 	require.NoError(t, err)
 	if !res.Collapsed {
 		assert.NotNil(t, res.Item)
@@ -51,7 +51,7 @@ func TestDescendBlockedWhenInventoryFull(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.AddItemRaw(s.DB, 1, "coal", store.BaseInventoryLimit))
 
-	_, err = svc.Descend(1, 1, nil, "", 0)
+	_, err = svc.Descend(1, 1, nil, "", 0, 0)
 	assert.ErrorIs(t, err, store.ErrInventoryFull)
 }
 
@@ -61,7 +61,7 @@ func TestDescendCollapse(t *testing.T) {
 	bag := []BagEntry{}
 	collapsed := false
 	for i := 0; i < 50; i++ {
-		res, err := svc.Descend(1, 40, bag, "", 0)
+		res, err := svc.Descend(1, 40, bag, "", 0, 0)
 		require.NoError(t, err)
 		if res.Collapsed {
 			collapsed = true
@@ -75,7 +75,7 @@ func TestDescendCollapse(t *testing.T) {
 func TestDescendCanGoAnyDepth(t *testing.T) {
 	svc, _ := testService(t)
 	for depth := 1; depth <= 30; depth++ {
-		res, err := svc.Descend(1, depth, nil, "", 0)
+		res, err := svc.Descend(1, depth, nil, "", 0, 0)
 		require.NoError(t, err)
 		if res.Collapsed {
 			break
@@ -90,11 +90,11 @@ func TestDescendDeeperGivesBetterLoot(t *testing.T) {
 	deepVal := 0
 	trials := 20
 	for i := 0; i < trials; i++ {
-		r1, err := svc.Descend(1, 3, nil, "", 0)
+		r1, err := svc.Descend(1, 3, nil, "", 0, 0)
 		if err != nil || r1.Collapsed {
 			continue
 		}
-		r2, err := svc.Descend(1, 15, nil, "", 0)
+		r2, err := svc.Descend(1, 15, nil, "", 0, 0)
 		if err != nil || r2.Collapsed {
 			continue
 		}
@@ -107,6 +107,22 @@ func TestDescendDeeperGivesBetterLoot(t *testing.T) {
 	}
 	t.Logf("Shallow total value: %d, Deep total value: %d", shallowVal, deepVal)
 	assert.Greater(t, deepVal, shallowVal, "deeper digging should yield more valuable loot")
+}
+
+func TestDescendRiskModAppliesToRoll(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 5, XP: 0})
+
+	// Depth 20 with level 5 keeps a high base risk.
+	assert.Greater(t, svc.RiskFor(1, 20, "", 0, 0), 0)
+	// A -90 risk modifier from event options zeroes the collapse chance.
+	assert.Equal(t, 0, svc.RiskFor(1, 20, "", 0, -90))
+
+	for i := 0; i < 200; i++ {
+		res, err := svc.Descend(1, 20, nil, "", 0, -90)
+		require.NoError(t, err)
+		require.False(t, res.Collapsed, "risk modifier must actually prevent collapse at 0%% risk")
+	}
 }
 
 func TestDescendLevelReducesRisk(t *testing.T) {
@@ -125,9 +141,9 @@ func TestDescendLevelReducesRisk(t *testing.T) {
 	for i := 0; i < trials; i++ {
 		_ = s.ResetGameLimit(1, "mine_descend")
 		_ = s.ResetGameLimit(2, "mine_descend")
-		r1, err := svc.Descend(1, 15, nil, "", 0)
+		r1, err := svc.Descend(1, 15, nil, "", 0, 0)
 		require.NoError(t, err)
-		r2, err := svc.Descend(2, 15, nil, "", 0)
+		r2, err := svc.Descend(2, 15, nil, "", 0, 0)
 		require.NoError(t, err)
 		if r1.Collapsed {
 			collapse1++
@@ -151,7 +167,7 @@ func TestDescendHiddenChamber(t *testing.T) {
 		// event is found; reset it so the RNG-driven search can run to completion.
 		_ = s.ResetGameLimit(1, "mine_descend")
 		bag := []BagEntry{}
-		res, err := svc.Descend(1, 40, bag, "", 0)
+		res, err := svc.Descend(1, 40, bag, "", 0, 0)
 		require.NoError(t, err)
 		if res.Event != nil && res.Event.Type == "hidden_chamber" {
 			found = true
@@ -167,7 +183,7 @@ func TestDescendEventSpawn(t *testing.T) {
 	found := false
 	for i := 0; i < 100; i++ {
 		_ = s.ResetGameLimit(1, "mine_descend")
-		res, err := svc.Descend(1, 15, nil, "", 0)
+		res, err := svc.Descend(1, 15, nil, "", 0, 0)
 		require.NoError(t, err)
 		if res.NarrativeEvent != nil {
 			found = true
@@ -233,7 +249,7 @@ func TestRemainingEntries(t *testing.T) {
 func TestDescendDoesNotConsumeEntry(t *testing.T) {
 	svc, s := testService(t)
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
-	res, err := svc.Descend(1, 1, nil, "", 0)
+	res, err := svc.Descend(1, 1, nil, "", 0, 0)
 	require.NoError(t, err)
 	if !res.Collapsed {
 		r, rerr := svc.RemainingEntries(1)
@@ -325,7 +341,7 @@ func TestMineReinforceBuffPreventsCollapse(t *testing.T) {
 	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0})
 	_ = s.SetActiveBuff(1, "reinforce")
 
-	res, err := svc.Descend(1, 40, nil, "", 0)
+	res, err := svc.Descend(1, 40, nil, "", 0, 0)
 	require.NoError(t, err)
 	assert.False(t, res.Collapsed, "reinforce should prevent collapse on first descend")
 
@@ -497,7 +513,7 @@ func TestDescendConsumesToolDurability(t *testing.T) {
 
 	bag := []BagEntry{}
 	for i := 0; i < 5; i++ {
-		res, err := svc.Descend(1, 1, bag, "steel_pickaxe", 0)
+		res, err := svc.Descend(1, 1, bag, "steel_pickaxe", 0, 0)
 		require.NoError(t, err)
 		require.False(t, res.Collapsed)
 		require.False(t, res.ToolBroke)

@@ -170,6 +170,7 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		if _, err := s.store.UpdateBalance(userID, res.Payout); err != nil {
 			return nil, err
 		}
+		_ = s.store.AddWinRecord(userID, "slots", res.Payout-amount)
 		if err := achievement.IncrementStat(s.store.DB, userID, "slots_won", 1); err != nil {
 			return nil, err
 		}
@@ -289,6 +290,7 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 		if _, err := s.store.UpdateBalance(userID, 2*amount); err != nil {
 			return nil, err
 		}
+		_ = s.store.AddWinRecord(userID, "coinflip", amount)
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_won", 1)
 		_ = achievement.IncrementStat(s.store.DB, userID, "coinflip_money_won", amount)
 		res.XpGain = 10
