@@ -355,6 +355,15 @@ func (c *Cog) canStartDelve(userID int64, lang string) (bool, string) {
 				remaining := 5*time.Minute - elapsed
 				return false, i18n.T("delve.auto_rescue_wait", lang, map[string]any{"pet": raw.AutoRescuePet, "minutes": fmt.Sprintf("%d", int(remaining.Minutes())+1)})
 			}
+			// A new day has dawned and the death cooldown has elapsed:
+			// the fallen player is freed and can delve again.
+			midnight := time.Now().Truncate(24 * time.Hour).Add(24 * time.Hour)
+			if ok, _ := c.store.CheckCooldown(userID, "delve_death", time.Until(midnight)); ok {
+				c.svc.EndSession(raw, "rescued")
+				c.store.ClearCooldown(userID, "delve_death")
+				c.deleteSession(userID)
+				return false, i18n.T("delve.revived", lang)
+			}
 			return false, i18n.T("delve.fallen_wait", lang, map[string]any{"floor": fmt.Sprintf("%d", raw.Floor)})
 		}
 	}

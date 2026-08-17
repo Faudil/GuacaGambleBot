@@ -92,6 +92,7 @@
     "death_fell": "The darkness claims you on floor {floor}. Your limbs grow cold, your vision fades. {auto_msg}",
     "death_no_rescue": "Your pets couldn't reach you. Another adventurer on this floor may find you and pull you back.",
     "fallen_wait": "💀 You fell on floor {floor}. Your pets couldn't reach you. Another adventurer may find you there, or try again tomorrow.",
+    "revived": "🆘 A new day dawns and you crawl free of the darkness. You can delve again.",
     "floor_deeper": "Go Deeper",
     "floor_leave": "Leave the Depths",
     "floor_summary_hp": "⚔️ HP: {hp}/{max_hp}    🔥 Mana: {mana}/{max_mana}",

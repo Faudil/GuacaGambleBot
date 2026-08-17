@@ -32,28 +32,28 @@ type HouseType struct {
 var Houses = map[string]*HouseType{
 	"cardboard_box": {
 		ID: "cardboard_box", Price: 50, MaxLevel: 1, IncomePerHour: 1,
-		InventoryBonus: 5, PetSlotsBonus: 1, BankCapacity: 500, FurnitureSlots: 1, Color: 0xB9936C,
-		Buffs: []string{"+5 Inventory Slots", "+1 Pet Slot", "$500 Bank Cap"},
+		InventoryBonus: 100, PetSlotsBonus: 1, BankCapacity: 500, FurnitureSlots: 1, Color: 0xB9936C,
+		Buffs: []string{"+100 Inventory Slots", "+1 Pet Slot", "$500 Bank Cap"},
 	},
 	"wooden_shack": {
 		ID: "wooden_shack", Price: 500, MaxLevel: 3, IncomePerHour: 10,
-		InventoryBonus: 20, PetSlotsBonus: 2, BankCapacity: 10000, CraftingDiscount: 0.05, FurnitureSlots: 2, Color: 0xA1887F,
-		Buffs: []string{"+20 Inventory Slots", "+2 Pet Slots", "$10,000 Bank Cap", "5% Crafting Discount"},
+		InventoryBonus: 250, PetSlotsBonus: 2, BankCapacity: 10000, CraftingDiscount: 0.05, FurnitureSlots: 2, Color: 0xA1887F,
+		Buffs: []string{"+250 Inventory Slots", "+2 Pet Slots", "$10,000 Bank Cap", "5% Crafting Discount"},
 	},
 	"brick_house": {
 		ID: "brick_house", Price: 5000, MaxLevel: 5, IncomePerHour: 25,
-		InventoryBonus: 50, PetSlotsBonus: 5, BankCapacity: 2000, CraftingDiscount: 0.10, FurnitureSlots: 4, Color: 0xD32F2F,
-		Buffs: []string{"+50 Inventory Slots", "+5 Pet Slots", "$2,000 Bank Cap", "10% Crafting Discount"},
+		InventoryBonus: 500, PetSlotsBonus: 5, BankCapacity: 2000, CraftingDiscount: 0.10, FurnitureSlots: 4, Color: 0xD32F2F,
+		Buffs: []string{"+500 Inventory Slots", "+5 Pet Slots", "$2,000 Bank Cap", "10% Crafting Discount"},
 	},
 	"mansion": {
 		ID: "mansion", Price: 25000, MaxLevel: 10, IncomePerHour: 50,
-		InventoryBonus: 100, PetSlotsBonus: 10, BankCapacity: 5000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
-		Buffs: []string{"+100 Inventory Slots", "+10 Pet Slots", "$250,000 Bank Cap", "20% Crafting Discount"},
+		InventoryBonus: 1000, PetSlotsBonus: 10, BankCapacity: 5000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
+		Buffs: []string{"+1000 Inventory Slots", "+10 Pet Slots", "$250,000 Bank Cap", "20% Crafting Discount"},
 	},
 	"gilded_palace": {
 		ID: "gilded_palace", Price: 500000, MaxLevel: 20, IncomePerHour: 500,
-		InventoryBonus: 250, PetSlotsBonus: 25, BankCapacity: 1000000, CraftingDiscount: 0.30, FurnitureSlots: 10, Color: 0xFFB300,
-		Buffs: []string{"+250 Inventory Slots", "+25 Pet Slots", "$1,000,000 Bank Cap", "30% Crafting Discount"},
+		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 1000000, CraftingDiscount: 0.30, FurnitureSlots: 10, Color: 0xFFB300,
+		Buffs: []string{"+2000 Inventory Slots", "+25 Pet Slots", "$1,000,000 Bank Cap", "30% Crafting Discount"},
 	},
 }
 

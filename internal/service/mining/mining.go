@@ -10,6 +10,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	npcsvc "guacagamblebot/internal/service/npcs"
@@ -38,15 +39,15 @@ func lootAtDepth(depth int) []MineItem {
 	case depth <= 9:
 		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}, {"golden_lure", 100}}
 	case depth <= 14:
-		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}, {"golden_lure", 100}}
+		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}}
 	case depth <= 19:
-		return []MineItem{{"rough_diamond", 300}, {"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"golden_lure", 100}}
+		return []MineItem{{"rough_diamond", 300}, {"ancient_alloy", 500}, {"kethari_crystal", 1000}}
 	case depth <= 24:
-		return []MineItem{{"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"golden_lure", 100}}
+		return []MineItem{{"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"primordial_geode", 2000}}
 	case depth <= 29:
-		return []MineItem{{"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"resonance_core", 5000}, {"golden_lure", 100}}
+		return []MineItem{{"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"resonance_core", 5000}}
 	default:
-		return []MineItem{{"primordial_geode", 2000}, {"resonance_core", 5000}, {"golden_lure", 100}}
+		return []MineItem{{"primordial_geode", 2000}, {"resonance_core", 5000}}
 	}
 }
 
@@ -70,12 +71,13 @@ type ToolInfo struct {
 	MinLevel      int
 	LootTierBonus int
 	RiskReduction int
+	Durability    int
 }
 
 var miningTools = []ToolInfo{
-	{ItemID: "", MinLevel: 1, LootTierBonus: 0, RiskReduction: 0},
-	{ItemID: steelPickaxeItem, MinLevel: 5, LootTierBonus: 1, RiskReduction: 5},
-	{ItemID: diamondDrillItem, MinLevel: 10, LootTierBonus: 2, RiskReduction: 10},
+	{ItemID: "", MinLevel: 1, LootTierBonus: 0, RiskReduction: 0, Durability: 0},
+	{ItemID: steelPickaxeItem, MinLevel: 5, LootTierBonus: 1, RiskReduction: 5, Durability: 25},
+	{ItemID: diamondDrillItem, MinLevel: 10, LootTierBonus: 2, RiskReduction: 10, Durability: 50},
 }
 
 func GetToolInfo(itemID string) ToolInfo {
@@ -285,6 +287,7 @@ type DescendResult struct {
 	Event          *MiningEvent
 	NarrativeEvent *NarrativeEvent
 	LoreID         string
+	ToolBroke      bool
 }
 
 type LeaveResult struct {
@@ -661,15 +664,86 @@ func (s *Service) HasItem(userID int64, itemID string) (bool, error) {
 	return true, nil
 }
 
-func (s *Service) ConsumeItem(userID int64, itemID string) error {
-	res := s.store.DB.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ? AND quantity > 0", userID, itemID).
-		UpdateColumn("quantity", gorm.Expr("quantity - 1"))
-	if res.Error != nil {
-		return res.Error
+// toolDurabilityMax returns how many digs a tool lasts, or 0 for the base tool.
+func toolDurabilityMax(itemID string) int {
+	if it := items.Get(itemID); it != nil {
+		return it.Durability
 	}
-	return s.store.DB.Where("user_id = ? AND item_id = ? AND quantity <= 0", userID, itemID).
-		Delete(&model.Inventory{}).Error
+	return 0
+}
+
+// ToolDurability returns the remaining digs of the user's active tool stack.
+// Zero means the tool is absent or the base (free) tool is in use.
+func (s *Service) ToolDurability(userID int64, toolID string) int {
+	if toolID == "" {
+		return 0
+	}
+	max := toolDurabilityMax(toolID)
+	if max <= 0 {
+		return 0
+	}
+	var inv model.Inventory
+	err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity > 0", userID, toolID).
+		First(&inv).Error
+	if err != nil {
+		return 0
+	}
+	if inv.Durability <= 0 {
+		return max
+	}
+	return inv.Durability
+}
+
+// ConsumeToolDurability uses one dig of the active tool. When the tool breaks,
+// a single unit is removed from the stack (or the row when it was the last
+// one) and broke is reported so the session can fall back to the base tool.
+// Legacy rows with zero durability are lazily initialized to a full tool.
+func (s *Service) ConsumeToolDurability(userID int64, toolID string) (bool, error) {
+	if toolID == "" {
+		return false, nil
+	}
+	max := toolDurabilityMax(toolID)
+	if max <= 0 {
+		return false, nil
+	}
+	var inv model.Inventory
+	err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, toolID).First(&inv).Error
+	if err == gorm.ErrRecordNotFound {
+		// The tool is gone (sold/traded mid-session): fall back to base tool.
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if inv.Quantity <= 0 {
+		return true, nil
+	}
+
+	durability := inv.Durability
+	if durability <= 0 {
+		durability = max
+	}
+	durability--
+
+	broke := durability <= 0
+	if !broke {
+		err = s.store.DB.Model(&model.Inventory{}).
+			Where("user_id = ? AND item_id = ?", userID, toolID).
+			UpdateColumn("durability", durability).Error
+		return false, err
+	}
+
+	// The active tool shattered: consume one unit and start a fresh one, or
+	// delete the row when the stack is empty.
+	if inv.Quantity > 1 {
+		err = s.store.DB.Model(&model.Inventory{}).
+			Where("user_id = ? AND item_id = ?", userID, toolID).
+			Updates(map[string]any{"quantity": inv.Quantity - 1, "durability": max}).Error
+	} else {
+		err = s.store.DB.Where("user_id = ? AND item_id = ?", userID, toolID).
+			Delete(&model.Inventory{}).Error
+	}
+	return true, err
 }
 
 // EnterMine reserves one daily expedition entry for the user. Returns
@@ -745,6 +819,13 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 		return &DescendResult{Collapsed: true, Bag: bag}, nil
 	}
 
+	// A successful dig wears the tool down. If it shatters here the session
+	// falls back to the base tool for the rest of the expedition.
+	toolBroke, err := s.ConsumeToolDurability(userID, toolID)
+	if err != nil {
+		return nil, err
+	}
+
 	var easterEgg *MiningEvent
 	eRoll := rand.Intn(100) + 1
 	if depth >= 10 && eRoll <= 1 {
@@ -815,7 +896,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 		}
 		easterEgg = &MiningEvent{Type: "hidden_chamber", Items: chamberItems}
 		s.npcSvc.AddActivityReputation(userID, "mining", 3)
-		return &DescendResult{Item: nil, Bag: bag, Event: easterEgg, LoreID: loreID}, nil
+		return &DescendResult{Item: nil, Bag: bag, Event: easterEgg, LoreID: loreID, ToolBroke: toolBroke}, nil
 	}
 
 	lvl := depth + ti.LootTierBonus
@@ -872,7 +953,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 		s.npcSvc.AddActivityReputation(userID, "mining", 1)
 	}
 
-	return &DescendResult{Item: &item, Bag: bag, Event: easterEgg, NarrativeEvent: nEvent, LoreID: loreID}, nil
+	return &DescendResult{Item: &item, Bag: bag, Event: easterEgg, NarrativeEvent: nEvent, LoreID: loreID, ToolBroke: toolBroke}, nil
 }
 
 func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*LeaveResult, error) {
@@ -935,10 +1016,6 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*Leave
 			Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error; err != nil {
 			return nil, err
 		}
-	}
-
-	if toolID != "" {
-		_ = s.ConsumeItem(userID, toolID)
 	}
 
 	leveled, lvl := charsvc.AddXP(s.store, userID, totalXP)

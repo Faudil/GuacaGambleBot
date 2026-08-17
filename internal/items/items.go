@@ -71,6 +71,10 @@ type Item struct {
 	// activity (criminality, boss leagues, etc.) and must never be offered by
 	// the daily shop nor sold on the market or to the vendor.
 	ShopExcluded bool
+
+	// Durability is the number of uses a tool lasts before breaking. Zero means
+	// the item does not wear down (plain resources, consumables, ...).
+	Durability int
 }
 
 // MinLevelForRarity maps a rarity tier to the minimum character level required
@@ -218,8 +222,8 @@ var all = []Item{
 	{ID: "old_journal", Name: "Old Journal", Emoji: "📖", Price: 30, Description: "A dusty notebook handwritten by an unknown author.", EffectType: "consumable", Droppable: false, Category: Tools},
 
 	// --- Mining Tools & Artifacts ---
-	{ID: "steel_pickaxe", Name: "Steel Pickaxe", Emoji: "⛏️", Price: 1500, Description: "A sturdy steel pickaxe. Grants +1 loot tier and -5% collapse risk per descend.", EffectType: "mining_tool", Droppable: false, Category: Tools},
-	{ID: "diamond_drill", Name: "Diamond Drill", Emoji: "🔧", Price: 5000, Description: "A diamond-tipped drill. Grants +2 loot tiers and -10% collapse risk per descend.", EffectType: "mining_tool", Droppable: false, Category: Tools},
+	{ID: "steel_pickaxe", Name: "Steel Pickaxe", Emoji: "⛏️", Price: 1500, Description: "A sturdy steel pickaxe. Grants +1 loot tier and -5% collapse risk per descend. Breaks after 25 digs.", EffectType: "mining_tool", Droppable: false, Category: Tools, Durability: 25},
+	{ID: "diamond_drill", Name: "Diamond Drill", Emoji: "🔧", Price: 5000, Description: "A diamond-tipped drill. Grants +2 loot tiers and -10% collapse risk per descend. Breaks after 50 digs.", EffectType: "mining_tool", Droppable: false, Category: Tools, Durability: 50},
 	{ID: "ancient_alloy", Name: "Ancient Alloy", Emoji: "🔩", Price: 500, Description: "A fragment of metal from a forgotten forge. It hums with residual heat.", EffectType: "resource", Droppable: true, Category: Mining},
 	{ID: "ancient_core_shard", Name: "Ancient Core Shard", Emoji: "💠", Price: 0, Description: "A crystalline shard from the Heart of the Mountain. It pulses with a faint light.", EffectType: "collectible", Droppable: false, Category: Special},
 	{ID: "kethari_crystal", Name: "Kethari Crystal", Emoji: "🔮", Price: 1000, Description: "A prismatic crystal forged by the Kethari. It hums with stored resonance.", EffectType: "resource", Droppable: true, Category: Mining},

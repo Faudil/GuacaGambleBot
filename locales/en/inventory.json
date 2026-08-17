@@ -14,6 +14,7 @@
     "error": "❌ Could not load inventory.",
     "full": "❌ Your inventory is full! Sell or use items first to free up space.",
     "footer": "Use !use \u003citem name\u003e to use it!",
+    "invalid_user": "❌ Invalid user. Usage: `!inv [@user]`.",
     "sell_amount_label": "Quantity",
     "sell_button": "💰 Sell items",
     "sell_choose": "💰 Select an item to sell. Items in this week's rotation sell at market price, everything else at vendor price.",

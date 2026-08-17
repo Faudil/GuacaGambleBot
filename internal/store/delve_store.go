@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 )
 
@@ -107,8 +108,15 @@ func (s *Store) AddItemRaw(db *gorm.DB, userID int64, itemID string, quantity in
 	if quantity <= 0 {
 		return nil
 	}
+	inv := &model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}
+	// Newly granted tools start with a full durability bar. The upsert below
+	// only increments quantity, so buying an extra tool never resets the
+	// durability of the tool currently in use.
+	if it := items.Get(itemID); it != nil && it.Durability > 0 {
+		inv.Durability = it.Durability
+	}
 	return db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)}),
-	}).Create(&model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}).Error
+	}).Create(inv).Error
 }

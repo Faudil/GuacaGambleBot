@@ -217,6 +217,8 @@ func (c *Cog) toolSelection(lang string, userID int64, remaining int) (*discordg
 		status := i18n.T("mining.tool_owned", lang)
 		if t.ItemID == "" {
 			status = i18n.T("mining.tool_none", lang)
+		} else if dur := c.svc.ToolDurability(userID, t.ItemID); dur > 0 {
+			status = fmt.Sprintf("%s · %d/%d ⚒️", i18n.T("mining.tool_owned", lang), dur, t.Durability)
 		}
 		embed.Fields = append(embed.Fields, components.Field(
 			fmt.Sprintf("%s %s", t.Emoji(), i18n.T(t.LocaleNameKey(), lang)),
@@ -331,6 +333,11 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 		Text: fmt.Sprintf("%s %s · %s %d",
 			ti.Emoji(), i18n.T(ti.LocaleNameKey(), lang),
 			i18n.T("mining.miner_level_label", lang), ml),
+	}
+	if ti.ItemID != "" {
+		if dur := c.svc.ToolDurability(userID, ti.ItemID); dur > 0 {
+			embed.Footer.Text += fmt.Sprintf(" · %d/%d ⚒️", dur, ti.Durability)
+		}
 	}
 
 	comps := []discordgo.MessageComponent{
@@ -485,10 +492,23 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.Event != nil && res.Event.Buff == miningsvc.GhostVeilBuffID() {
 		sess.ghostVeilTurns = 3
 	}
+	var brokeToolID string
+	if res.ToolBroke {
+		brokeToolID = sess.toolID
+		sess.toolID = ""
+	}
 	sessionsMu.Unlock()
 	c.persistSession(userID)
 
 	eventMsg := c.buildEasterEggText(res.Event, lang)
+	if brokeToolID != "" {
+		brokeMsg := i18n.T("mining.tool_broke", lang, map[string]any{"tool": localizedItemName(brokeToolID, lang)})
+		if eventMsg != "" {
+			eventMsg = brokeMsg + "\n\n" + eventMsg
+		} else {
+			eventMsg = brokeMsg
+		}
+	}
 	if res.LoreID != "" {
 		loreTitle := miningsvc.LoreDisplayName(res.LoreID)
 		loreMsg := i18n.T("mining.lore_discovery", lang, map[string]any{"title": loreTitle})

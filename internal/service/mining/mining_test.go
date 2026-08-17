@@ -391,9 +391,9 @@ func TestLoreAtDepth(t *testing.T) {
 func TestLootAtDepth(t *testing.T) {
 	assert.Len(t, lootAtDepth(1), 3)
 	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
-	assert.Len(t, lootAtDepth(15), 4)
-	assert.Len(t, lootAtDepth(20), 4)
-	assert.Len(t, lootAtDepth(30), 3)
+	assert.Len(t, lootAtDepth(15), 3)
+	assert.Len(t, lootAtDepth(20), 3)
+	assert.Len(t, lootAtDepth(30), 2)
 }
 
 func TestPickNarrativeEvent(t *testing.T) {
@@ -406,4 +406,115 @@ func TestPickNarrativeEvent(t *testing.T) {
 
 	ev17 := pickNarrativeEvent(17)
 	assert.NotNil(t, ev17)
+}
+
+func TestAddItemRawInitializesToolDurability(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "steel_pickaxe", 1))
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "steel_pickaxe").First(&inv).Error)
+	assert.Equal(t, 25, inv.Durability)
+	assert.Equal(t, 1, inv.Quantity)
+
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "diamond_drill", 2))
+	var drill model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "diamond_drill").First(&drill).Error)
+	assert.Equal(t, 50, drill.Durability)
+	assert.Equal(t, 2, drill.Quantity)
+
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "coal", 3))
+	var coal model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&coal).Error)
+	assert.Equal(t, 0, coal.Durability, "non-tool items must not carry durability")
+
+	assert.Equal(t, 25, svc.ToolDurability(1, "steel_pickaxe"))
+	assert.Equal(t, 50, svc.ToolDurability(1, "diamond_drill"))
+	assert.Equal(t, 0, svc.ToolDurability(1, ""))
+	assert.Equal(t, 0, svc.ToolDurability(1, "coal"))
+}
+
+func TestConsumeToolDurabilityBreaksAfterMax(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "steel_pickaxe", 1))
+
+	for i := 0; i < 24; i++ {
+		broke, err := svc.ConsumeToolDurability(1, "steel_pickaxe")
+		require.NoError(t, err)
+		assert.False(t, broke, "tool must not break before 25 digs (dig %d)", i+1)
+	}
+	assert.Equal(t, 1, svc.ToolDurability(1, "steel_pickaxe"))
+
+	broke, err := svc.ConsumeToolDurability(1, "steel_pickaxe")
+	require.NoError(t, err)
+	assert.True(t, broke, "tool must break on the 25th dig")
+
+	var count int64
+	s.DB.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", 1, "steel_pickaxe").Count(&count)
+	assert.Equal(t, int64(0), count, "last tool in stack must be removed on break")
+	assert.Equal(t, 0, svc.ToolDurability(1, "steel_pickaxe"))
+}
+
+func TestConsumeToolDurabilitySwapsStack(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "steel_pickaxe", 2))
+
+	var inv model.Inventory
+	for i := 0; i < 25; i++ {
+		broke, err := svc.ConsumeToolDurability(1, "steel_pickaxe")
+		require.NoError(t, err)
+		if i == 24 {
+			assert.True(t, broke, "active tool breaks after 25 digs")
+		} else {
+			assert.False(t, broke)
+		}
+	}
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "steel_pickaxe").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity, "one unit consumed, one remains")
+	assert.Equal(t, 25, inv.Durability, "fresh tool in the stack starts at full durability")
+}
+
+func TestConsumeToolDurabilityBaseAndMissing(t *testing.T) {
+	svc, s := testService(t)
+	broke, err := svc.ConsumeToolDurability(1, "")
+	require.NoError(t, err)
+	assert.False(t, broke, "base tool never breaks")
+
+	broke, err = svc.ConsumeToolDurability(1, "steel_pickaxe")
+	require.NoError(t, err)
+	assert.True(t, broke, "missing tool should fall back to base tool")
+
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "diamond_drill", 1))
+	broke, err = svc.ConsumeToolDurability(1, "diamond_drill")
+	require.NoError(t, err)
+	assert.False(t, broke)
+}
+
+func TestDescendConsumesToolDurability(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "miner", Level: 5, XP: 0})
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "steel_pickaxe", 1))
+	_ = s.ResetGameLimit(1, "mine_descend")
+
+	bag := []BagEntry{}
+	for i := 0; i < 5; i++ {
+		res, err := svc.Descend(1, 1, bag, "steel_pickaxe", 0)
+		require.NoError(t, err)
+		require.False(t, res.Collapsed)
+		require.False(t, res.ToolBroke)
+		bag = res.Bag
+	}
+	assert.Equal(t, 20, svc.ToolDurability(1, "steel_pickaxe"), "5 digs must consume 5 durability")
+}
+
+func TestLeaveMineDoesNotConsumeTool(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "steel_pickaxe", 1))
+
+	bag := []BagEntry{{Name: "coal", Count: 1}}
+	_, err := svc.LeaveMine(1, bag, "steel_pickaxe")
+	require.NoError(t, err)
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "steel_pickaxe").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity, "leaving the mine must not consume the tool")
 }

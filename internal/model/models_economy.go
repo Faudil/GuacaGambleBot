@@ -22,6 +22,9 @@ type Inventory struct {
 	UserID   int64  `gorm:"primaryKey;column:user_id"`
 	ItemID   string `gorm:"primaryKey;column:item_id"`
 	Quantity int    `gorm:"column:quantity;default:0"`
+	// Durability is the remaining uses of the active tool in a stack. Zero on a
+	// legacy row is treated as a full tool and lazily initialized on first use.
+	Durability int `gorm:"column:durability;default:0"`
 }
 
 type LottoState struct {

@@ -29,7 +29,16 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: invsvc.New(s, cfg), mkt: mktsvc.New(s, cfg)}
-	r.Slash("inventory", "Voir ton inventaire.", c.onSlashMenu)
+	r.SlashWithOptions("inventory", "Voir ton inventaire ou celui d'un autre joueur.",
+		[]*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "user",
+				Description: "Le joueur dont tu veux voir l'inventaire (optionnel)",
+				Required:    false,
+			},
+		},
+		c.onSlashMenu)
 	r.Prefix("inventory", c.onPrefix)
 	r.Prefix("inv", c.onPrefix)
 	r.Prefix("bag", c.onPrefix)
@@ -41,9 +50,29 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
+	selfID := interaction.ToInt64(interaction.UserID(i))
+	targetID := selfID
 
-	result, err := c.svc.GetInventory(userID)
+	opts := i.ApplicationCommandData().Options
+	if len(opts) > 0 {
+		targetID = interaction.ToInt64(opts[0].StringValue())
+	}
+
+	title := i.Member.User.Username
+	if targetID != selfID {
+		resolved := false
+		if i.ApplicationCommandData().Resolved != nil && i.ApplicationCommandData().Resolved.Users != nil {
+			if u, ok := i.ApplicationCommandData().Resolved.Users[opts[0].StringValue()]; ok {
+				title = u.Username
+				resolved = true
+			}
+		}
+		if !resolved {
+			title = interaction.Mention(targetID)
+		}
+	}
+
+	result, err := c.svc.GetInventory(targetID)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "inventory.error")
 		return
@@ -52,55 +81,85 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(result.Entries) == 0 {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("", i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(userID)}), 0xe74c3c), nil))
+				components.Embed("", i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(targetID)}), 0xe74c3c), nil))
 		return
 	}
 
-	embed := components.Embed(
-		i18n.T("inventory.title", lang, map[string]any{"user": i.Member.User.Username}),
-		"", 0x3498db,
-	)
-	embed.Fields = buildFields(result, lang)
-	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("inventory.footer", lang) + fmt.Sprintf(" — %d/%d", result.Current, result.Limit),
-	}
+	embed, comps := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), targetID == selfID)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, sellButton(lang)))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	userID := interaction.ToInt64(m.Author.ID)
+	selfID := interaction.ToInt64(m.Author.ID)
 
-	result, err := c.svc.GetInventory(userID)
+	parts := strings.Fields(m.Content)
+	targetID, valid := resolveTarget(parts, selfID)
+	if !valid {
+		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("inventory.invalid_user", lang))
+		return
+	}
+	title := m.Author.Username
+	if targetID != selfID {
+		if len(m.Mentions) > 0 {
+			title = m.Mentions[0].Username
+		} else {
+			title = interaction.Mention(targetID)
+		}
+	}
+
+	result, err := c.svc.GetInventory(targetID)
 	if err != nil {
 		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("inventory.error", lang))
 		return
 	}
 
 	if len(result.Entries) == 0 {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("inventory.empty", lang, map[string]any{"user": m.Author.Mention()}))
+		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(targetID)}))
 		return
 	}
 
-	embed := components.Embed(
-		i18n.T("inventory.title", lang, map[string]any{"user": m.Author.Username}),
-		"", 0x3498db,
-	)
-	embed.Fields = buildFields(result, lang)
-	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("inventory.footer", lang) + fmt.Sprintf(" — %d/%d", result.Current, result.Limit),
-	}
+	embed, comps := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), targetID == selfID)
 	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: sellButton(lang),
+		Components: comps,
 	})
 }
 
-func sellButton(lang string) []discordgo.MessageComponent {
+func (c *Cog) buildEmbed(lang string, result *invsvc.InvResult, title string, showSell bool) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	embed := components.Embed(title, "", 0x3498db)
+	embed.Fields = buildFields(result, lang)
+	footer := fmt.Sprintf(" — %d/%d", result.Current, result.Limit)
+	if showSell {
+		footer = i18n.T("inventory.footer", lang) + footer
+	}
+	embed.Footer = &discordgo.MessageEmbedFooter{Text: footer}
+	var comps []discordgo.MessageComponent
+	if showSell {
+		comps = sellButton(result.UserID, lang)
+	}
+	return embed, comps
+}
+
+func sellButton(ownerID int64, lang string) []discordgo.MessageComponent {
 	btn := components.Button(i18n.T("inventory.sell_button", lang),
-		components.Encode("inventory", "sell"), discordgo.SecondaryButton)
+		components.EncodeOwner(ownerID, "inventory", "sell"), discordgo.SecondaryButton)
 	return []discordgo.MessageComponent{components.ActionRow(btn)}
+}
+
+// resolveTarget returns the requested user id from a command's arguments.
+// With no argument it falls back to the caller. The second return value is
+// false when an argument was given but could not be parsed as a user.
+func resolveTarget(args []string, selfID int64) (int64, bool) {
+	if len(args) < 2 {
+		return selfID, true
+	}
+	id, ok := interaction.ParseUserID(args[1])
+	if !ok {
+		return 0, false
+	}
+	return id, true
 }
 
 func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -148,7 +207,7 @@ func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	selectMenu := discordgo.SelectMenu{
-		CustomID:    components.Encode("inventory", "pick"),
+		CustomID:    components.EncodeOwner(result.UserID, "inventory", "pick"),
 		Placeholder: i18n.T("inventory.sell_placeholder", lang),
 		Options:     options,
 	}
@@ -160,6 +219,7 @@ func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func (c *Cog) onPickItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
 	itemID := i.MessageComponentData().Values[0]
 
 	it := items.Get(itemID)
@@ -169,7 +229,7 @@ func (c *Cog) onPickItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	modal := components.ModalResponse(
-		components.Encode("inventory", "sellqty", itemID),
+		components.EncodeOwner(userID, "inventory", "sellqty", itemID),
 		i18n.T("inventory.sell_modal_title", lang, map[string]any{"item": displayName(it.Name, lang)}),
 		components.TextInput("amount",
 			i18n.T("inventory.sell_amount_label", lang), true, "1",
@@ -184,6 +244,10 @@ func (c *Cog) onPickItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onSellModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	ownerID, ok := components.OwnerID(i.ModalSubmitData().CustomID)
+	if !ok || !interaction.NotYourMenu(b, i, lang, ownerID) {
+		return
+	}
 	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
 
 	if len(rest) < 1 {

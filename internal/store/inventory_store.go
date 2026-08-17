@@ -13,7 +13,7 @@ import (
 var ErrInventoryFull = errors.New("inventory full")
 
 // BaseInventoryLimit is the inventory capacity every player starts with.
-const BaseInventoryLimit = 100
+const BaseInventoryLimit = 300
 
 // InventoryUsed returns how many slots the user currently occupies: one slot
 // per quantity unit of stackable items plus one per equipment instance.

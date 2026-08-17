@@ -14,6 +14,7 @@
     "error": "❌ Impossible de charger l'inventaire.",
     "full": "❌ Ton inventaire est plein ! Vends ou utilise des objets pour libérer de la place.",
     "footer": "Utilise !use \u003cnom de l'objet\u003e pour t'en servir !",
+    "invalid_user": "❌ Utilisateur invalide. Utilisation : `!inv [@utilisateur]`.",
     "sell_amount_label": "Quantité",
     "sell_button": "💰 Vendre des objets",
     "sell_choose": "💰 Sélectionne un objet à vendre. Les objets de la rotation se vendent au prix du marché, les autres au prix de l'échoppe.",

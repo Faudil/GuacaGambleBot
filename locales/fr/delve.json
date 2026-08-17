@@ -92,6 +92,7 @@
     "death_fell": "Les ténèbres vous réclament à l'étage {floor}. Vos membres s'engourdissent, votre vision s'efface. {auto_msg}",
     "death_no_rescue": "Vos familiers n'ont pas pu vous atteindre. Un autre aventurier à cet étage pourrait vous trouver et vous ramener.",
     "fallen_wait": "💀 Vous êtes tombé à l'étage {floor}. Vos familiers n'ont pas pu vous atteindre. Un autre aventurier pourrait vous trouver là, ou réessayez demain.",
+    "revived": "🆘 Une nouvelle journée se lève et vous vous libérez des ténèbres. Vous pouvez replonger.",
     "floor_deeper": "Descendre",
     "floor_leave": "Quitter les Profondeurs",
     "floor_summary_hp": "⚔️ PV : {hp}/{max_hp}    🔥 Mana : {mana}/{max_mana}",

@@ -61,6 +61,41 @@ func TestBuyHouseSuccess(t *testing.T) {
 	assert.NotNil(t, h.LastCollected)
 }
 
+func TestBuyHouseAppliesInventoryBonus(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 600000)
+	require.NoError(t, err)
+
+	err = svc.BuyHouse(1, "gilded_palace")
+	require.NoError(t, err)
+
+	var u model.User
+	require.NoError(t, st.DB.Where("user_id = ?", 1).First(&u).Error)
+	assert.Equal(t, Houses["gilded_palace"].InventoryBonus, u.ExtraInvSlots)
+	assert.Equal(t, Houses["gilded_palace"].PetSlotsBonus, u.ExtraPetSlots)
+
+	limit, err := st.InventoryLimit(st.DB, 1)
+	require.NoError(t, err)
+	assert.Equal(t, store.BaseInventoryLimit+Houses["gilded_palace"].InventoryBonus, limit)
+}
+
+func TestUpgradeLevelReappliesBonus(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 10000)
+	require.NoError(t, err)
+	now := time.Now()
+	require.NoError(t, st.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "wooden_shack", Level: 1, LastCollected: &now,
+		IsActive: true,
+	}).Error)
+
+	require.NoError(t, svc.UpgradeLevel(1))
+
+	var u model.User
+	require.NoError(t, st.DB.Where("user_id = ?", 1).First(&u).Error)
+	assert.Equal(t, Houses["wooden_shack"].InventoryBonus, u.ExtraInvSlots)
+}
+
 func TestUpgradeLevelMax(t *testing.T) {
 	svc, st := testService(t)
 	_, err := st.UpdateBalance(1, 1000)
