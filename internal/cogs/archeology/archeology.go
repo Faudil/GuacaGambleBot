@@ -145,8 +145,19 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 	var btns []discordgo.MessageComponent
 	for _, site := range sites {
 		label := i18n.T(site.NameID, lang)
+		info := ""
+		if site.Cost > 0 {
+			info = i18n.T("arch.site_cost_tag", lang, map[string]any{"cost": site.Cost})
+		}
 		if !site.Unlocked {
+			info = i18n.T("arch.site_lvl_tag", lang, map[string]any{"level": site.MinLevel})
+			if site.Cost > 0 {
+				info = i18n.T("arch.site_cost_tag", lang, map[string]any{"cost": site.Cost}) + " " + info
+			}
 			label = "🔒 " + label
+		}
+		if info != "" {
+			label += " " + info
 		}
 		style := discordgo.SecondaryButton
 		if site.Unlocked {
@@ -206,7 +217,7 @@ func (c *Cog) onSiteSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	digSessionsMu.Lock()
 	digSessions[userID] = &digSession{state: state}
 	digSessionsMu.Unlock()
-	c.showDigEmbed(b, i, lang, state)
+	c.showDigEmbed(b, i, lang, state, "")
 }
 
 func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -238,14 +249,14 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			c.showResultEmbed(b, i, lang, result)
 			return
 		}
-		c.showDigEmbed(b, i, lang, &outcome.State)
+		c.showDigEmbed(b, i, lang, &outcome.State, i18n.T("arch.scan_feedback", lang))
 		return
 	}
 
 	var act archsvc.ActionType
 	switch actionName {
 	case "continue":
-		c.showDigEmbed(b, i, lang, sess.state)
+		c.showDigEmbed(b, i, lang, sess.state, "")
 		return
 	case "dynamite":
 		act = archsvc.ActionDynamite
@@ -276,7 +287,52 @@ func (c *Cog) onAction(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	c.showDigEmbed(b, i, lang, &outcome.State)
+	c.showDigEmbed(b, i, lang, &outcome.State, digFeedback(lang, outcome, act))
+}
+
+// digFeedback renders the per-action result line shown at the top of the dig
+// screen so the player sees how much progress a tool made.
+func digFeedback(lang string, outcome *archsvc.ActionOutcome, action archsvc.ActionType) string {
+	integrity := ""
+	if outcome.IntLoss > 0 {
+		integrity = i18n.T("arch.fb_integrity", lang, map[string]any{"loss": outcome.IntLoss})
+	}
+	layer := ""
+	if outcome.LayerShift {
+		layer = i18n.T("arch.fb_layer", lang)
+	}
+	return i18n.T("arch.action_feedback", lang, map[string]any{
+		"tool": i18n.T("arch_tool_"+string(action), lang), "depth": outcome.DepthRem,
+		"integrity": integrity, "layer": layer,
+	})
+}
+
+// decodeDigResult reconstructs a DigResult from the data payload embedded in a
+// keep/sell button custom_id (rest after the action). It returns nil when the
+// payload is absent or malformed, in which case the caller falls back to the
+// in-memory session.
+func decodeDigResult(rest []string) *archsvc.DigResult {
+	if len(rest) < 7 {
+		return nil
+	}
+	value, err1 := strconv.Atoi(rest[2])
+	integrity, err2 := strconv.Atoi(rest[4])
+	xp, err3 := strconv.Atoi(rest[5])
+	qty, err4 := strconv.Atoi(rest[6])
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		return nil
+	}
+	if rest[1] == "" || rest[3] == "" {
+		return nil
+	}
+	return &archsvc.DigResult{
+		ItemName:  rest[1],
+		Value:     value,
+		Quality:   rest[3],
+		Integrity: integrity,
+		XP:        xp,
+		Quantity:  qty,
+	}
 }
 
 func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -294,7 +350,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	if len(rest) < 2 {
-		c.showDigEmbed(b, i, lang, sess.state)
+		c.showDigEmbed(b, i, lang, sess.state, "")
 		return
 	}
 
@@ -367,19 +423,28 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
 
-	digSessionsMu.Lock()
-	sess, ok := digSessions[userID]
-	delete(digSessions, userID)
-	digSessionsMu.Unlock()
-	if !ok || sess.pending == nil {
-		interaction.RespondError(b, i, lang, "arch.session_expired")
-		return
-	}
-
-	res := sess.pending
 	action := "keep"
 	if len(rest) > 0 {
 		action = rest[0]
+	}
+
+	res := decodeDigResult(rest)
+	if res == nil {
+		// Legacy buttons carry no result data; fall back to the in-memory
+		// session so nothing is lost.
+		digSessionsMu.Lock()
+		sess, ok := digSessions[userID]
+		delete(digSessions, userID)
+		digSessionsMu.Unlock()
+		if !ok || sess.pending == nil {
+			interaction.RespondError(b, i, lang, "arch.session_expired")
+			return
+		}
+		res = sess.pending
+	} else {
+		digSessionsMu.Lock()
+		delete(digSessions, userID)
+		digSessionsMu.Unlock()
 	}
 
 	var embed *discordgo.MessageEmbed
@@ -434,13 +499,22 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, state *archsvc.GameState) {
+func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, state *archsvc.GameState, feedback string) {
 	userID := interaction.ToInt64(interaction.UserID(i))
-	depthPct := float64(state.Depth) / float64(state.MaxDepth)
-	if depthPct < 0 {
-		depthPct = 0
+	dug := state.MaxDepth - state.Depth
+	if dug < 0 {
+		dug = 0
 	}
-	blocksFull := int((1.0 - depthPct) * 5)
+	if dug > state.MaxDepth {
+		dug = state.MaxDepth
+	}
+	blocksFull := 0
+	if state.MaxDepth > 0 {
+		blocksFull = dug * 5 / state.MaxDepth
+	}
+	if blocksFull > 5 {
+		blocksFull = 5
+	}
 	depthBar := ""
 	for j := 0; j < blocksFull; j++ {
 		depthBar += "🟫"
@@ -470,7 +544,12 @@ func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, l
 		"site":      i18n.T(state.Site.NameID, lang),
 		"layer":     layerEmoji + " " + layerName,
 		"site_desc": i18n.T(state.Site.DescID, lang),
+		"maxdepth":  state.MaxDepth,
 	})
+
+	if feedback != "" {
+		desc = feedback + "\n\n" + desc
+	}
 
 	if state.RevealedLayer {
 		effDyna := c.svc.GetToolEffectiveness(state, archsvc.ActionDynamite)
@@ -489,7 +568,7 @@ func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, l
 		state.Site.Color,
 	)
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("arch.depth_label", lang), depthBar+" "+itoa(state.Depth)+"/"+itoa(state.MaxDepth)+"cm", false),
+		components.Field(i18n.T("arch.depth_label", lang), i18n.T("arch.depth_value", lang, map[string]any{"bar": depthBar, "dug": dug, "max": state.MaxDepth, "left": state.Depth}), false),
 		components.Field(i18n.T("arch.integrity_label", lang), intBar+" "+itoa(state.Integrity)+"%", false),
 		components.Field(i18n.T("arch.actions_label", lang), "**"+itoa(state.Actions)+"**", true),
 		components.Field(i18n.T("arch.layer_label", lang), layerEmoji+" "+layerName, true),
@@ -574,8 +653,11 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 
 	var btns []discordgo.MessageComponent
 	if res.Quality != "disaster" && res.Quality != "damaged" {
-		btns = append(btns, components.Button(i18n.T("arch.keep_btn", lang), components.EncodeOwner(uid, "arch", "post", "keep"), discordgo.SuccessButton))
-		btns = append(btns, components.Button(i18n.T("arch.sell_btn", lang), components.EncodeOwner(uid, "arch", "post", "sell"), discordgo.PrimaryButton))
+		resParts := []string{res.ItemName, itoa(res.Value), res.Quality, itoa(res.Integrity), itoa(res.XP), itoa(res.Quantity)}
+		keepCustomID := components.EncodeOwner(uid, append([]string{"arch", "post", "keep"}, resParts...)...)
+		sellCustomID := components.EncodeOwner(uid, append([]string{"arch", "post", "sell"}, resParts...)...)
+		btns = append(btns, components.Button(i18n.T("arch.keep_btn", lang), keepCustomID, discordgo.SuccessButton))
+		btns = append(btns, components.Button(i18n.T("arch.sell_btn", lang), sellCustomID, discordgo.PrimaryButton))
 	} else {
 		c.svc.AwardResult(userID(interaction.UserID(i)), res)
 	}

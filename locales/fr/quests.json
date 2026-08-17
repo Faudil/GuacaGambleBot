@@ -37,6 +37,7 @@
     "complete_objective_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, chasse, etc.), puis utilise le bouton Rafraîchir pour vérifier ta progression !",
     "completed_activity_msg": "✅ **{title}** terminée ! Tapez `/quest` pour voir votre progression.",
     "completed_msg": "✅ **{title}** , Quête terminée !",
+    "completed_rewards": "🎁 **Tu as reçu :** {rewards}",
     "continue_label": "Continuer",
     "daily_challenge": {
       "active_quest": "📅 **Quête Quotidienne Active :**\n{objective} ({current}/{target})",
@@ -135,6 +136,8 @@
     "req_missing_money": "💰 Il te faut **{needed}$** (tu as {have}$).",
     "req_missing_pet_level": "🐾 Ton familier actif doit atteindre le **niveau {level}** (niveau actuel : {have}). Nourris-le et chasse avec lui pour monter de niveau !",
     "req_money_status": "💰 Argent : ${current} / ${required}",
+    "reward_crowns": "👑 {amount} Couronnes",
+    "reward_money": "💰 {amount} crédits",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objectif accompli !\n🎯 **Suite :** {next}\n\nTape `/quest` pour voir ta progression.",
     "step_command": "📝 Commande : {command}",

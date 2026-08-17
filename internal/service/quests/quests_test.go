@@ -247,6 +247,50 @@ func TestAdvanceStepCompletesQuest(t *testing.T) {
 	assert.Equal(t, "COMPLETED", uq.Status)
 }
 
+func TestAdvanceStepGrantsFullRewards(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "ACTIVE",
+	}).Error)
+	// Start on the finale step (index 31) which carries the full reward package.
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "tutorial", StepIndex: 31, ProgressValue: 0,
+	}).Error)
+
+	require.NoError(t, svc.AdvanceStep(1, "tutorial", ""))
+
+	// Money: starting balance 100 + 1500.
+	bal, err := st.GetBalance(1)
+	require.NoError(t, err)
+	assert.Equal(t, 1600, bal)
+
+	// Crowns: 25.
+	var crowns int
+	require.NoError(t, st.DB.Raw("SELECT crowns FROM users WHERE user_id = ?", 1).Scan(&crowns).Error)
+	assert.Equal(t, 25, crowns)
+
+	// Achievement row granted.
+	var achCount int64
+	require.NoError(t, st.DB.Model(&model.UserAchievement{}).
+		Where("user_id = 1 AND achievement_id = 'signal_complete'").Count(&achCount).Error)
+	assert.Equal(t, int64(1), achCount)
+
+	// Items: zenith_blade becomes real equipment, boss_trophy lands in inventory.
+	var equipCount int64
+	require.NoError(t, st.DB.Model(&model.UserEquipment{}).
+		Where("user_id = 1 AND base_id = 'zenith_blade'").Count(&equipCount).Error)
+	assert.Equal(t, int64(1), equipCount)
+	var inv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = 1 AND item_id = 'boss_trophy'").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+
+	// Advancing again must not duplicate the achievement row.
+	require.NoError(t, svc.AdvanceStep(1, "tutorial", ""))
+	require.NoError(t, st.DB.Model(&model.UserAchievement{}).
+		Where("user_id = 1 AND achievement_id = 'signal_complete'").Count(&achCount).Error)
+	assert.Equal(t, int64(1), achCount, "achievement must not be granted twice")
+}
+
 func TestEnsureTutorialEggGrantsToStuckPlayer(t *testing.T) {
 	svc, st := testService(t)
 	// Player stuck at the hunting step with no pet and no egg.

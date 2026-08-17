@@ -125,3 +125,19 @@ func TestHuntBossKillAchievements(t *testing.T) {
 	require.NoError(t, err)
 	assertContains(t, unlocks, "hunt_boss_100")
 }
+
+func TestSignalCompleteHiddenAchievement(t *testing.T) {
+	// The Signal completion achievement is registered and hidden (granted
+	// explicitly by the quest service, never auto-unlocked).
+	a, ok := Get("signal_complete")
+	require.True(t, ok, "signal_complete must be registered")
+	assert.True(t, a.Hidden)
+	assert.Equal(t, "📡", a.Emoji)
+
+	// CheckAndUnlock must never auto-unlock it.
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 9, Balance: 100}).Error)
+	unlocks, err := CheckAndUnlock(d, 9)
+	require.NoError(t, err)
+	assertNotContains(t, unlocks, "signal_complete")
+}

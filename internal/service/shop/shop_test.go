@@ -54,7 +54,7 @@ func TestDailyOffersOnlyOfferableItems(t *testing.T) {
 		"dragon_slayer_ring", "dragon_slayer_sword", "shadow_stalker_blade",
 		"arcane_weaver_staff", "rift_blade", "hounds_cloak", "shadow_cowl",
 		"mask_of_malveillance", "spark_shard", "phoenix_crest",
-		"mysterious_seed", "rotten_plant", "boss_trophy", "mastery_medallion",
+		"mysterious_seed", "rotten_plant", "boss_trophy", "mastery_medallion", "zenith_blade",
 	} {
 		_, ok := svc.OfferForItem(id)
 		assert.False(t, ok, "%s must not be offered by the daily shop", id)

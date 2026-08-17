@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -147,7 +149,7 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.day8_sprout.step0_event"},
 			{Type: StepBossBattle, TextKey: "quests.day8_sprout.step1_boss", Extra: map[string]any{"boss_stage": 5}},
 			{Type: StepDialogue, TextKey: "quests.day8_sprout.step2_transition"},
-			{Type: StepDialogue, TextKey: "quests.day8_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1000, ItemIDs: []string{"boss_trophy"}}},
+			{Type: StepDialogue, TextKey: "quests.day8_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1500, Crowns: 25, ItemIDs: []string{"zenith_blade", "boss_trophy"}, AchievementID: "signal_complete"}},
 		},
 	},
 	"daily_quest": {
@@ -263,14 +265,8 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, st
 	}
 	step := def.Steps[uqd.StepIndex]
 	if step.Rewards != nil {
-		r := step.Rewards
-		if r.Money > 0 {
-			if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
-				return false, "", err
-			}
-		}
-		for _, itemID := range r.ItemIDs {
-			s.grantRewardItem(userID, itemID)
+		if err := s.grantRewards(userID, step.Rewards); err != nil {
+			return false, "", err
 		}
 	}
 	nextIdx := uqd.StepIndex + 1
@@ -297,6 +293,34 @@ func (s *Service) RecordActivityComplete(userID int64, questID string) (bool, st
 		return false, "", err
 	}
 	return false, def.Steps[nextIdx].TextKey, nil
+}
+
+// grantRewards hands out a step's rewards: credits, crowns, items and an
+// optional hidden achievement. Crowns are added to the user's balance column
+// and the achievement row is inserted idempotently.
+func (s *Service) grantRewards(userID int64, r *QuestReward) error {
+	if r.Money > 0 {
+		if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
+			return err
+		}
+	}
+	if r.Crowns > 0 {
+		if err := s.store.DB.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("crowns", gorm.Expr("crowns + ?", r.Crowns)).Error; err != nil {
+			return err
+		}
+	}
+	for _, itemID := range r.ItemIDs {
+		s.grantRewardItem(userID, itemID)
+	}
+	if r.AchievementID != "" {
+		if err := s.store.DB.Clauses(clause.OnConflict{DoNothing: true}).
+			Create(&model.UserAchievement{UserID: userID, AchievementID: r.AchievementID}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // grantRewardItem hands a quest reward to the player. Equipment pieces are
@@ -506,14 +530,8 @@ func (s *Service) AdvanceStep(userID int64, questID string, choiceID string) err
 	if uqd.StepIndex < len(def.Steps) {
 		step := def.Steps[uqd.StepIndex]
 		if step.Rewards != nil {
-			r := step.Rewards
-			if r.Money > 0 {
-				if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
-					return err
-				}
-			}
-			for _, itemID := range r.ItemIDs {
-				s.grantRewardItem(userID, itemID)
+			if err := s.grantRewards(userID, step.Rewards); err != nil {
+				return err
 			}
 		}
 	}
@@ -790,7 +808,36 @@ func QuestCompletedMsg(questID string, lang string) string {
 		return ""
 	}
 	title := i18n.T(def.TitleKey, lang)
-	return i18n.T("quests.completed_activity_msg", lang, map[string]any{"title": title})
+	msg := i18n.T("quests.completed_activity_msg", lang, map[string]any{"title": title})
+	if len(def.Steps) > 0 {
+		if rs := RewardSummary(lang, def.Steps[len(def.Steps)-1].Rewards); rs != "" {
+			msg += "\n\n" + i18n.T("quests.completed_rewards", lang, map[string]any{"rewards": rs})
+		}
+	}
+	return msg
+}
+
+// RewardSummary renders a step's rewards as a single display string, or ""
+// when the step grants nothing.
+func RewardSummary(lang string, r *QuestReward) string {
+	if r == nil {
+		return ""
+	}
+	var parts []string
+	if r.Money > 0 {
+		parts = append(parts, i18n.T("quests.reward_money", lang, map[string]any{"amount": r.Money}))
+	}
+	if r.Crowns > 0 {
+		parts = append(parts, i18n.T("quests.reward_crowns", lang, map[string]any{"amount": r.Crowns}))
+	}
+	for _, id := range r.ItemIDs {
+		it := items.Get(id)
+		if it == nil {
+			continue
+		}
+		parts = append(parts, it.Emoji+" "+items.LocalizedName(it.Name, lang))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // QuestNotificationMsg returns a localized string to notify the user about a

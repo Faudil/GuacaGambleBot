@@ -350,6 +350,10 @@
       "desc": "Win $5,000 in Roulette.",
       "name": "Death-Defying ($5k)"
     },
+    "signal_complete": {
+      "name": "The Signal",
+      "desc": "Restore the Zenith Generator and answer the signal."
+    },
     "slots_lost_100k": {
       "desc": "Lose $100,000 in Slots.",
       "name": "Lever Addict"

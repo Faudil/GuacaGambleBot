@@ -193,6 +193,25 @@ func (c *Cog) stepButtonDisabled(userID int64, q questssvc.QuestInfo, step quest
 	}
 }
 
+// completedText builds the quest completion message, listing the rewards of
+// the final step so the player sees what they earned.
+func (c *Cog) completedText(lang string, def *questssvc.QuestDef) string {
+	text := i18n.T("quests.completed_msg", lang, map[string]any{"title": i18n.T(def.TitleKey, lang)})
+	if len(def.Steps) == 0 {
+		return text
+	}
+	if rs := c.rewardSummary(lang, def.Steps[len(def.Steps)-1].Rewards); rs != "" {
+		text += "\n\n" + i18n.T("quests.completed_rewards", lang, map[string]any{"rewards": rs})
+	}
+	return text
+}
+
+// rewardSummary renders a step's rewards as a single display string, or ""
+// when the step grants nothing.
+func (c *Cog) rewardSummary(lang string, r *questssvc.QuestReward) string {
+	return questssvc.RewardSummary(lang, r)
+}
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: questssvc.New(s, cfg)}
 	r.Slash("quest", "View your active quests and progress.", c.onSlash)
@@ -444,7 +463,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if uq2.Status == "COMPLETED" {
 				_ = b.Session.InteractionRespond(i.Interaction,
 					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-						components.Embed("✅", i18n.T("quests.completed_msg", lang, map[string]any{"title": i18n.T(def.TitleKey, lang)}), 0x2ecc71), nil))
+						components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
 				return
 			}
 			nextIdx := 0
@@ -505,7 +524,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if uq2.Status == "COMPLETED" {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed("✅", i18n.T("quests.completed_msg", lang, map[string]any{"title": i18n.T(def.TitleKey, lang)}), 0x2ecc71), nil))
+					components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
 			return
 		}
 		nextStep := def.Steps[uqd2.StepIndex]
@@ -539,7 +558,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if uq2.Status == "COMPLETED" {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("✅", i18n.T("quests.completed_msg", lang, map[string]any{"title": i18n.T(def.TitleKey, lang)}), 0x2ecc71), nil))
+				components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
 		return
 	}
 

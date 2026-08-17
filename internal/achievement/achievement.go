@@ -160,9 +160,11 @@ func init() {
 
 // registerHidden registers an achievement that is never auto-unlocked by
 // CheckAndUnlock (its check always fails). Other systems grant it explicitly —
-// the journal service inserts it when a player masters every path.
+// the journal service inserts it when a player masters every path, and the
+// quest service grants it when a quest reward declares one.
 func init() {
 	registerHidden("journal_mastery", "🏅", 10000)
+	registerHidden("signal_complete", "📡", 100)
 }
 
 func registerHidden(id, emoji string, glory int) {

@@ -350,6 +350,10 @@
       "desc": "Gagne 5 000 $ à la Roulette.",
       "name": "Trompe la Mort (5k$)"
     },
+    "signal_complete": {
+      "name": "Le Signal",
+      "desc": "Restaure le Générateur Zenith et réponds au signal."
+    },
     "slots_lost_100k": {
       "desc": "Perds 100 000 $ aux Slots.",
       "name": "Accro au levier"

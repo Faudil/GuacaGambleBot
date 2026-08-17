@@ -215,6 +215,18 @@ func (c *Cog) stepButtonDisabled(userID int64, questID string, step questssvc.Qu
 	}
 }
 
+// completedDesc builds the tutorial completion message, appending the final
+// step's rewards so the player sees what they earned.
+func (c *Cog) completedDesc(lang string, def *questssvc.QuestDef) string {
+	text := i18n.T("start.completed_desc", lang)
+	if def != nil && len(def.Steps) > 0 {
+		if rs := questssvc.RewardSummary(lang, def.Steps[len(def.Steps)-1].Rewards); rs != "" {
+			text += "\n\n" + i18n.T("quests.completed_rewards", lang, map[string]any{"rewards": rs})
+		}
+	}
+	return text
+}
+
 func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	_, err := c.store.EnsureCharacter(userID)
 	if err != nil {
@@ -276,7 +288,8 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 	}
 
 	if uq != nil && uq.Status == "COMPLETED" {
-		return components.Embed(i18n.T("start.completed_title", lang), i18n.T("start.already_completed", lang), 0x2ecc71), nil
+		def := c.svc.GetQuestDef("tutorial")
+		return components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), 0x2ecc71), nil
 	}
 
 	return components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil
@@ -386,7 +399,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if uq2.Status == "COMPLETED" {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(i18n.T("start.completed_title", lang), i18n.T("start.completed_desc", lang), 0x2ecc71), nil))
+				components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), 0x2ecc71), nil))
 		return
 	}
 

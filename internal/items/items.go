@@ -258,6 +258,8 @@ var all = []Item{
 	{ID: "fishing_rod", Name: "Fishing Rod", Emoji: "🎣", Price: 500, Description: "A quality rod. (+4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon", StatDEX: 4},
 	{ID: "lucky_charm", Name: "Lucky Charm", Emoji: "🍀", Price: 400, Description: "A four-leaf clover. (+3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "accessory", StatLUK: 3},
 	{ID: "miner_helmet", Name: "Miner's Helmet", Emoji: "⛑️", Price: 800, Description: "Thick steel helmet. (+3 VIT, +1 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "armor", StatVIT: 3, StatSTR: 1},
+	// Tutorial finale reward — "The Signal" quest completion.
+	{ID: "zenith_blade", Name: "Zenith Blade", Emoji: "⚔️", Price: 0, Description: "Forged from the Vault Guardian's core. It hums with the Generator's light. (+5 STR, +2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 5, EquipSlot: "weapon", StatSTR: 5, StatVIT: 2, ShopExcluded: true},
 
 	// --- Equipment: Tier 3 (Lv 10, Rare) ---
 	{ID: "hunters_bow", Name: "Hunter's Bow", Emoji: "🏹", Price: 1200, Description: "A precise bow. (+6 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityRare, MinLevel: 10, EquipSlot: "weapon", StatSTR: 6},

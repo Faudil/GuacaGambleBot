@@ -37,6 +37,7 @@
     "complete_objective_first": "⚡ Complete the current objective first (mine, farm, hunt, etc.), then use the Refresh button to check your progress!",
     "completed_activity_msg": "✅ **{title}** complete! Type `/quest` to check your progress.",
     "completed_msg": "✅ **{title}** , Quest completed!",
+    "completed_rewards": "🎁 **You received:** {rewards}",
     "continue_label": "Continue",
     "daily_challenge": {
       "active_quest": "📅 **Active Daily Quest:**\n{objective} ({current}/{target})",
@@ -135,6 +136,8 @@
     "req_missing_money": "💰 You need **${needed}** (you have ${have}).",
     "req_missing_pet_level": "🐾 Your active pet must reach **level {level}** (currently level {have}). Feed it and hunt with it to level up!",
     "req_money_status": "💰 Money: ${current} / ${required}",
+    "reward_crowns": "👑 {amount} Crowns",
+    "reward_money": "💰 {amount} credits",
     "step_activity_progress": "{current} / {target} , {activity}",
     "step_advanced": "✅ **{title}** — objective complete!\n🎯 **Next:** {next}\n\nType `/quest` to see your progress.",
     "step_command": "📝 Type: {command}",
