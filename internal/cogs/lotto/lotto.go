@@ -114,9 +114,6 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
 	questMsg, _ := c.store.PopQuestNotification(userID)
-	if text, dm := jsvc.SceneLine(c.store, userID, "lotto", lang); text != "" {
-		interaction.SendJournalScene(b, i, text, dm)
-	}
 
 	var embed *discordgo.MessageEmbed
 	if res.Win {
@@ -154,6 +151,10 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_, comps := c.menu(lang, serverID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "lotto", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	if questMsg.QuestID != "" {
 		interaction.SendQuestNotification(b, i, questMsg, lang)

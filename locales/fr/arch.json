@@ -1,6 +1,7 @@
 {
   "arch": {
     "actions_label": "⏳ Actions Restantes",
+    "already_collected": "✅ Ce fossile a déjà été récupéré.",
     "back_dig": "← Retour aux Fouilles",
     "back_menu": "← Retour au Bureau",
     "brush_btn": "🖌️ Pinceau",

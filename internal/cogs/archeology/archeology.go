@@ -1,6 +1,8 @@
 package archeology
 
 import (
+	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,6 +26,52 @@ import (
 
 var digSessions = map[int64]*digSession{}
 var digSessionsMu sync.Mutex
+
+// collectedTokens tracks the one-time collect tokens embedded in keep/sell
+// buttons so a double-click or a retry after an interaction timeout can never
+// award the same fossil twice.
+var collectedTokens = map[string]time.Time{}
+var collectedTokensMu sync.Mutex
+
+const (
+	collectTokenTTL = 24 * time.Hour
+	collectTokenMax = 2048
+)
+
+// claimCollectToken marks a token as collected, returning false when it was
+// already claimed (the fossil has been handled). The map is pruned on insert
+// so it stays bounded.
+func claimCollectToken(token string) bool {
+	if token == "" {
+		return true
+	}
+	collectedTokensMu.Lock()
+	defer collectedTokensMu.Unlock()
+	if len(collectedTokens) >= collectTokenMax {
+		now := time.Now()
+		for t, ts := range collectedTokens {
+			if now.Sub(ts) > collectTokenTTL {
+				delete(collectedTokens, t)
+			}
+		}
+	}
+	if _, ok := collectedTokens[token]; ok {
+		return false
+	}
+	collectedTokens[token] = time.Now()
+	return true
+}
+
+// releaseCollectToken undoes a claim when processing failed, so the player can
+// retry.
+func releaseCollectToken(token string) {
+	if token == "" {
+		return
+	}
+	collectedTokensMu.Lock()
+	delete(collectedTokens, token)
+	collectedTokensMu.Unlock()
+}
 
 type digSession struct {
 	state   *archsvc.GameState
@@ -307,6 +355,15 @@ func digFeedback(lang string, outcome *archsvc.ActionOutcome, action archsvc.Act
 	})
 }
 
+// collectToken extracts the one-time collect token from a keep/sell button
+// payload (new-format buttons only; legacy payloads carry none).
+func collectToken(rest []string) string {
+	if len(rest) < 9 {
+		return ""
+	}
+	return rest[7]
+}
+
 // decodeDigResult reconstructs a DigResult from the data payload embedded in a
 // keep/sell button custom_id (rest after the action). It returns nil when the
 // payload is absent or malformed, in which case the caller falls back to the
@@ -428,6 +485,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		action = rest[0]
 	}
 
+	token := ""
 	res := decodeDigResult(rest)
 	if res == nil {
 		// Legacy buttons carry no result data; fall back to the in-memory
@@ -442,43 +500,63 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		res = sess.pending
 	} else {
+		token = collectToken(rest)
 		digSessionsMu.Lock()
 		delete(digSessions, userID)
 		digSessionsMu.Unlock()
 	}
 
-	var embed *discordgo.MessageEmbed
-	switch action {
-	case "sell":
-		price, _, err := c.svc.SellResult(userID, res)
-		if err != nil {
-			interaction.RespondError(b, i, lang, "arch.error")
-			return
-		}
-		embed = components.Embed(
-			i18n.T("arch.sold_title", lang),
-			i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": price}),
-			0xF1C40F,
-		)
-
-	default:
-		if err := c.svc.AwardResult(userID, res); err != nil {
-			interaction.RespondError(b, i, lang, "arch.error")
-			return
-		}
-		xpStr := ""
-		if res.XP > 0 {
-			xpStr = i18n.T("arch.xp_gained", lang, map[string]any{"xp": res.XP})
-		}
-		embed = components.Embed(
-			i18n.T("arch.keep_title", lang),
-			i18n.T("arch.keep_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "xp": xpStr}),
-			0x00FF00,
-		)
+	if !claimCollectToken(token) {
+		interaction.RespondError(b, i, lang, "arch.already_collected")
+		return
 	}
 
-	if n, ok := c.store.PopQuestNotification(userID); ok {
+	var embed *discordgo.MessageEmbed
+	var serr error
+	switch action {
+	case "sell":
+		var price int
+		price, _, serr = c.svc.SellResult(userID, res)
+		if serr == nil {
+			embed = components.Embed(
+				i18n.T("arch.sold_title", lang),
+				i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": price}),
+				0xF1C40F,
+			)
+		}
 
+	default:
+		serr = c.svc.AwardResult(userID, res)
+		if serr == nil {
+			xpStr := ""
+			if res.XP > 0 {
+				xpStr = i18n.T("arch.xp_gained", lang, map[string]any{"xp": res.XP})
+			}
+			embed = components.Embed(
+				i18n.T("arch.keep_title", lang),
+				i18n.T("arch.keep_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "xp": xpStr}),
+				0x00FF00,
+			)
+		}
+	}
+	if serr != nil {
+		releaseCollectToken(token)
+		interaction.RespondError(b, i, lang, "arch.error")
+		return
+	}
+
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	// Follow-ups only work after the interaction is acknowledged, and they run
+	// outside the 3s response window, so the heavy quest/journal/achievement
+	// queries no longer risk a Discord "did not respond in time".
+	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
 
@@ -489,14 +567,6 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if uerr == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
 	}
-
-	comps := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
-		),
-	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, state *archsvc.GameState, feedback string) {
@@ -653,7 +723,8 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 
 	var btns []discordgo.MessageComponent
 	if res.Quality != "disaster" && res.Quality != "damaged" {
-		resParts := []string{res.ItemName, itoa(res.Value), res.Quality, itoa(res.Integrity), itoa(res.XP), itoa(res.Quantity)}
+		token := fmt.Sprintf("%x", rand.Uint32())
+		resParts := []string{res.ItemName, itoa(res.Value), res.Quality, itoa(res.Integrity), itoa(res.XP), itoa(res.Quantity), token}
 		keepCustomID := components.EncodeOwner(uid, append([]string{"arch", "post", "keep"}, resParts...)...)
 		sellCustomID := components.EncodeOwner(uid, append([]string{"arch", "post", "sell"}, resParts...)...)
 		btns = append(btns, components.Button(i18n.T("arch.keep_btn", lang), keepCustomID, discordgo.SuccessButton))

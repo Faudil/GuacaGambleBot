@@ -7,7 +7,7 @@ import (
 )
 
 func TestDecodeDigResult(t *testing.T) {
-	rest := []string{"keep", "common_fossil", "150", "common", "100", "75", "1", "402563481200754699"}
+	rest := []string{"keep", "common_fossil", "150", "common", "100", "75", "1", "a1b2c3d4", "402563481200754699"}
 	res := decodeDigResult(rest)
 	assert.NotNil(t, res)
 	assert.Equal(t, "common_fossil", res.ItemName)
@@ -16,16 +16,27 @@ func TestDecodeDigResult(t *testing.T) {
 	assert.Equal(t, 100, res.Integrity)
 	assert.Equal(t, 75, res.XP)
 	assert.Equal(t, 1, res.Quantity)
+	assert.Equal(t, "a1b2c3d4", collectToken(rest))
+}
+
+func TestDecodeDigResultLegacyPayload(t *testing.T) {
+	// Pre-token buttons still decode, and carry no collect token.
+	rest := []string{"keep", "common_fossil", "150", "common", "100", "75", "1", "402563481200754699"}
+	res := decodeDigResult(rest)
+	assert.NotNil(t, res)
+	assert.Equal(t, "common_fossil", res.ItemName)
+	assert.Equal(t, "", collectToken(rest))
 }
 
 func TestDecodeDigResultSellPayload(t *testing.T) {
-	rest := []string{"sell", "coelacanth_egg", "2500", "living", "100", "200", "1", "123"}
+	rest := []string{"sell", "coelacanth_egg", "2500", "living", "100", "200", "1", "a1b2c3d4", "123"}
 	res := decodeDigResult(rest)
 	assert.NotNil(t, res)
 	assert.Equal(t, "coelacanth_egg", res.ItemName)
 	assert.Equal(t, 2500, res.Value)
 	assert.Equal(t, "living", res.Quality)
 	assert.Equal(t, 200, res.XP)
+	assert.Equal(t, "a1b2c3d4", collectToken(rest))
 }
 
 func TestDecodeDigResultInvalid(t *testing.T) {
@@ -34,4 +45,15 @@ func TestDecodeDigResultInvalid(t *testing.T) {
 	assert.Nil(t, decodeDigResult([]string{"keep", "x", "abc", "q", "1", "2", "3"}))
 	assert.Nil(t, decodeDigResult([]string{"keep", "", "150", "", "100", "75", "1"}))
 	assert.Nil(t, decodeDigResult([]string{"keep", "x", "150", "q", "bad", "75", "1"}))
+}
+
+func TestCollectTokenClaimRelease(t *testing.T) {
+	token := "deadbeef"
+	assert.True(t, claimCollectToken(token))
+	assert.False(t, claimCollectToken(token))
+	releaseCollectToken(token)
+	assert.True(t, claimCollectToken(token))
+	releaseCollectToken(token)
+	// Empty token (legacy buttons) always claims.
+	assert.True(t, claimCollectToken(""))
 }

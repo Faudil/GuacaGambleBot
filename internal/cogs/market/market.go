@@ -716,11 +716,16 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 	if text, dm := jsvc.SceneLine(c.store, userID, "market", lang); text != "" {
 		interaction.SendJournalSceneMsg(sess, m.ChannelID, m.Author.ID, text, dm)
 	}
-	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
-
 	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
-		interaction.SendAchievements(b, nil, lang, unlocks)
+		achievementsMsg := i18n.T("achievements.ui.new_achievement_title", lang)
+		for _, a := range unlocks {
+			name := i18n.T("achievements."+a.ID+".name", lang)
+			glory := i18n.T("achievements.ui.new_achievement_glory", lang, map[string]any{"glory": a.Glory})
+			achievementsMsg += "\n🎖️ **" + name + "** " + a.Emoji + "\n" + glory
+		}
+		sellMsg += "\n\n" + achievementsMsg
 	}
+	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
 }
 
 func (c *Cog) displayName(name, lang string) string {

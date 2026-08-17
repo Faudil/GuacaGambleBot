@@ -196,7 +196,7 @@ func TestGetArcheologistXP(t *testing.T) {
 
 func TestAddArcheologistXPMultiLevelUp(t *testing.T) {
 	svc, s := testService(t)
-	svc.addArcheologistXP(1, 1000)
+	svc.addArcheologistXP(s.DB, 1, 1000)
 	var job model.Job
 	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
 	// 1000 XP from level 1: consumes 75+100+125+150+175+200 = 825 across 6 level-ups.
@@ -210,7 +210,7 @@ func TestAddArcheologistXPMultiLevelUp(t *testing.T) {
 func TestAddArcheologistXPCreationLevelsUp(t *testing.T) {
 	svc, s := testService(t)
 	// First award creates the record at level 1 and must still apply level-ups.
-	svc.addArcheologistXP(1, 200)
+	svc.addArcheologistXP(s.DB, 1, 200)
 	var job model.Job
 	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
 	assert.Equal(t, 3, job.Level) // 75 -> L2 (125 left), 100 -> L3 (25 left)
@@ -228,6 +228,16 @@ func TestAwardResult(t *testing.T) {
 	err = s.DB.Where("user_id = ? AND item_id = ?", 1, "common_fossil").First(&inv).Error
 	assert.NoError(t, err)
 	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestAwardResultAccumulatesHarvest(t *testing.T) {
+	svc, s := testService(t)
+	res := &DigResult{ItemName: "common_fossil", Value: 150, XP: 50, Quality: "common"}
+	require.NoError(t, svc.AwardResult(1, res))
+	require.NoError(t, svc.AwardResult(1, res))
+	var fh model.UserFossilHarvest
+	require.NoError(t, s.DB.Where("user_id = ? AND fossil_id = ?", 1, "common_fossil").First(&fh).Error)
+	assert.Equal(t, 2, fh.Count)
 }
 
 func TestSellResult(t *testing.T) {

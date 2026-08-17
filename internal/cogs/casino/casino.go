@@ -294,15 +294,16 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		c.announceBigWin(b.Session, interaction.ToInt64(i.GuildID), userID, "slots", res.Payout-amount)
 	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
-	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
-		interaction.SendJournalScene(b, i, text, dm)
-	}
 
 	blurple := 0x7289da
 	_, menuComps := c.menu(lang, userID)
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(responseType, embed, menuComps))
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	go func() {
 		time.Sleep(1 * time.Second)
@@ -376,15 +377,16 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 		c.announceBigWin(b.Session, interaction.ToInt64(i.GuildID), userID, "coinflip", amount)
 	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
-	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
-		interaction.SendJournalScene(b, i, text, dm)
-	}
 
 	_, menuComps := c.menu(lang, userID)
 	blurple := 0x7289da
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(responseType, embed, menuComps))
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 
 	go func() {
 		time.Sleep(600 * time.Millisecond)

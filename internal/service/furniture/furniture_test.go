@@ -57,7 +57,7 @@ func TestFurnitureScopedPerHouse(t *testing.T) {
 	fsvc, hsvc, s := testService(t)
 	const uid = 1
 
-	buyHouse(t, hsvc, s, uid, "cardboard_box")
+	buyHouse(t, hsvc, s, uid, "wooden_shack")
 	buyHouse(t, hsvc, s, uid, "brick_house") // brick_house becomes active
 	fundForWorkbench(t, s, uid)
 
@@ -70,7 +70,7 @@ func TestFurnitureScopedPerHouse(t *testing.T) {
 	assert.Equal(t, "brick_house", placed[0].HouseType)
 
 	// Switching houses: the other house starts empty and can host the same item.
-	require.NoError(t, hsvc.SwitchHouse(uid, "cardboard_box"))
+	require.NoError(t, hsvc.SwitchHouse(uid, "wooden_shack"))
 	assert.False(t, fsvc.IsPlaced(uid, "workbench"))
 	assert.Equal(t, 0, fsvc.GetUsedSlots(uid))
 	placed, err = fsvc.GetPlaced(uid)
@@ -110,4 +110,23 @@ func TestPlaceRequiresHouse(t *testing.T) {
 	err := fsvc.Place(uid, "workbench")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "don't own a house")
+}
+
+// TestCardboardBoxHasNoFurnitureSlots guards the tier gate: the cheapest house
+// must have zero furniture slots so furniture availability grows from there.
+func TestCardboardBoxHasNoFurnitureSlots(t *testing.T) {
+	ht := housingsvc.Houses["cardboard_box"]
+	require.NotNil(t, ht)
+	assert.Zero(t, ht.FurnitureSlots)
+}
+
+func TestPlaceFailsOnZeroSlotHouse(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+
+	buyHouse(t, hsvc, s, uid, "cardboard_box")
+	fundForWorkbench(t, s, uid)
+
+	err := fsvc.Place(uid, "workbench")
+	require.ErrorIs(t, err, ErrNoFurnitureSlots)
 }

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
@@ -510,13 +511,13 @@ func (s *Service) GetArcheologistXP(userID int64) (int, int) {
 	return job.XP, next
 }
 
-func (s *Service) addArcheologistXP(userID int64, xp int) {
+func (s *Service) addArcheologistXP(db *gorm.DB, userID int64, xp int) {
 	var job model.Job
-	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
+	if err := db.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			job = model.Job{UserID: userID, JobName: "archeologist", Level: 1, XP: xp}
 			s.levelUpJob(&job)
-			if err := s.store.DB.Create(&job).Error; err != nil {
+			if err := db.Create(&job).Error; err != nil {
 				return
 			}
 		}
@@ -524,7 +525,7 @@ func (s *Service) addArcheologistXP(userID int64, xp int) {
 	}
 	job.XP += xp
 	s.levelUpJob(&job)
-	s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "archeologist").
+	db.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "archeologist").
 		Updates(map[string]any{"xp": job.XP, "level": job.Level})
 }
 
@@ -572,24 +573,31 @@ func (s *Service) GetSiteInfo(userID int64) []SiteInfo {
 }
 
 func (s *Service) AwardResult(userID int64, res *DigResult) error {
-	if res.ItemName != "" {
-		qty := res.Quantity
-		if qty < 1 {
-			qty = 1
-		}
-		if err := s.store.AddItemRaw(s.store.DB, userID, res.ItemName, qty); err != nil {
-			return err
-		}
-		s.trackFossilHarvest(userID, res.ItemName, qty)
-	}
+	// Reputation uses its own connection, so it stays outside the transaction
+	// below (a second connection writing while the transaction holds the
+	// write lock would only stall on busy_timeout).
 	s.addDigReputation(userID, res.Quality)
-	if res.XP > 0 {
-		s.addArcheologistXP(userID, res.XP)
-	}
-	if err := s.store.RecordActivity(userID, "items_digged", 1); err != nil {
+
+	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if res.ItemName != "" {
+			qty := res.Quantity
+			if qty < 1 {
+				qty = 1
+			}
+			if err := s.store.AddItemRaw(tx, userID, res.ItemName, qty); err != nil {
+				return err
+			}
+			s.trackFossilHarvest(tx, userID, res.ItemName, qty)
+		}
+		if res.XP > 0 {
+			s.addArcheologistXP(tx, userID, res.XP)
+		}
+		return nil
+	})
+	if err != nil {
 		return err
 	}
-	return nil
+	return s.store.RecordActivity(userID, "items_digged", 1)
 }
 
 // addDigReputation awards a small reputation bonus scaled by the rarity of
@@ -612,25 +620,33 @@ func (s *Service) addDigReputation(userID int64, quality string) {
 	}
 }
 
-func (s *Service) trackFossilHarvest(userID int64, fossilID string, quantity int) {
-	var fh model.UserFossilHarvest
-	if err := s.store.DB.Where("user_id = ? AND fossil_id = ?", userID, fossilID).First(&fh).Error; err != nil {
-		s.store.DB.Create(&model.UserFossilHarvest{UserID: userID, FossilID: fossilID, Count: quantity})
-	} else {
-		s.store.DB.Model(&fh).UpdateColumn("count", gorm.Expr("count + ?", quantity))
-	}
+func (s *Service) trackFossilHarvest(db *gorm.DB, userID int64, fossilID string, quantity int) {
+	// Single atomic upsert instead of a read-then-write, so concurrent awards
+	// can never lose an increment.
+	_ = db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "user_id"}, {Name: "fossil_id"}},
+		DoUpdates: clause.Assignments(map[string]any{"count": gorm.Expr("count + ?", quantity)}),
+	}).Create(&model.UserFossilHarvest{UserID: userID, FossilID: fossilID, Count: quantity}).Error
 }
 
 func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, err error) {
 	price = int(float64(res.Value) * 1.2)
-	newBal, err = s.store.UpdateBalance(userID, price)
+
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := s.store.UpdateBalanceTx(tx, userID, price); err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).Pluck("balance", &newBal).Error; err != nil {
+			return err
+		}
+		semiXP := res.XP / 2
+		if semiXP > 0 {
+			s.addArcheologistXP(tx, userID, semiXP)
+		}
+		return nil
+	})
 	if err != nil {
 		return 0, 0, err
-	}
-
-	semiXP := res.XP / 2
-	if semiXP > 0 {
-		s.addArcheologistXP(userID, semiXP)
 	}
 	return price, newBal, nil
 }
@@ -680,7 +696,7 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 		if err := s.store.DB.Create(&pet).Error; err != nil {
 			return "", false, err
 		}
-		s.addArcheologistXP(userID, 100)
+		s.addArcheologistXP(s.store.DB, userID, 100)
 		return petName, true, nil
 	}
 
@@ -689,7 +705,7 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 	} else {
 		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 3"))
 	}
-	s.addArcheologistXP(userID, 25)
+	s.addArcheologistXP(s.store.DB, userID, 25)
 	return "", false, nil
 }
 

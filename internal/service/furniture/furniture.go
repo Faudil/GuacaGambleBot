@@ -1,6 +1,7 @@
 package furniture
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -90,6 +91,10 @@ var FurnitureDefs = map[string]*FurnitureDef{
 	},
 }
 
+// ErrNoFurnitureSlots is returned when the active house has no furniture slots
+// at all (e.g. a cardboard box), so the player must upgrade houses first.
+var ErrNoFurnitureSlots = errors.New("this house has no furniture slots")
+
 type Service struct {
 	store *store.Store
 	cfg   *config.Config
@@ -161,6 +166,9 @@ func (s *Service) Place(userID int64, furnitureID string) error {
 	}
 	used := s.GetUsedSlots(userID)
 	maxSlots := s.GetMaxSlots(userID)
+	if maxSlots == 0 {
+		return ErrNoFurnitureSlots
+	}
 	if used >= maxSlots {
 		return fmt.Errorf("no free slots (%d/%d)", used, maxSlots)
 	}

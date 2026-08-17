@@ -96,6 +96,13 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.EndSession(s, "left")
 	c.deleteSession(userID)
 	desc := i18n.T("delve.left_voluntarily", lang)
+	embed := &discordgo.MessageEmbed{
+		Title:       "🌅 " + i18n.T("delve.floor_leave", lang),
+		Description: desc,
+		Color:       0x2ecc71,
+	}
+	c.respond(b, i, embed, nil)
+
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
@@ -103,12 +110,6 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
 		interaction.SendJournalScene(b, i, text, dm)
 	}
-	embed := &discordgo.MessageEmbed{
-		Title:       "🌅 " + i18n.T("delve.floor_leave", lang),
-		Description: desc,
-		Color:       0x2ecc71,
-	}
-	c.respond(b, i, embed, nil)
 }
 
 // onKeyTake handles taking the Vault Key in the tutorial's special chamber:
@@ -126,19 +127,19 @@ func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.EndSession(s, "vault key")
 	c.deleteSession(userID)
 
-	if n, ok := c.store.PopQuestNotification(userID); ok {
-		interaction.SendQuestNotification(b, i, n, lang)
-	}
-	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
-		interaction.SendJournalScene(b, i, text, dm)
-	}
-
 	embed := &discordgo.MessageEmbed{
 		Title:       "🔑 " + i18n.T("delve.vault_key_title", lang),
 		Description: i18n.T("delve.vault_key_taken", lang),
 		Color:       0x2ecc71,
 	}
 	c.respond(b, i, embed, nil)
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
+	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
 }
 
 func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {

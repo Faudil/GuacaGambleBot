@@ -32,7 +32,7 @@ type HouseType struct {
 var Houses = map[string]*HouseType{
 	"cardboard_box": {
 		ID: "cardboard_box", Price: 50, MaxLevel: 1, IncomePerHour: 1,
-		InventoryBonus: 100, PetSlotsBonus: 1, BankCapacity: 500, FurnitureSlots: 1, Color: 0xB9936C,
+		InventoryBonus: 100, PetSlotsBonus: 1, BankCapacity: 500, FurnitureSlots: 0, Color: 0xB9936C,
 		Buffs: []string{"+100 Inventory Slots", "+1 Pet Slot", "$500 Bank Cap"},
 	},
 	"wooden_shack": {

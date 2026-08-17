@@ -25,6 +25,7 @@
     "expand_pets_success": "✅ **Pet slots expanded!** You gained `+1` slot.",
     "furniture_already_placed": "Already placed",
     "furniture_available": "Available",
+    "furniture_house_none": "Your **{house}** is too small to hold furniture. Buy a bigger house to unlock furniture!",
     "furniture_no_slots": "No free slots ({used}/{max})",
     "furniture_place_success": "Placed **{name}** in your house!",
     "furniture_placed": "Placed",

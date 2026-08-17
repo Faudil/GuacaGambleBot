@@ -272,9 +272,11 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	buffsText := strings.Join(ht.Buffs, "\n")
-	furnitureSlots := fmt.Sprintf("\n🪑 Furniture: %d/%d slots", c.fsvc.GetUsedSlots(userID), ht.FurnitureSlots)
-	embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.stats_label", lang),
-		i18n.T("housing.stats", lang, map[string]any{"level": h.Level, "buffs": buffsText})+furnitureSlots, false))
+	statsText := i18n.T("housing.stats", lang, map[string]any{"level": h.Level, "buffs": buffsText})
+	if ht.FurnitureSlots > 0 {
+		statsText += fmt.Sprintf("\n🪑 Furniture: %d/%d slots", c.fsvc.GetUsedSlots(userID), ht.FurnitureSlots)
+	}
+	embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.stats_label", lang), statsText, false))
 
 	if h.UnderConstruction != nil && *h.UnderConstruction != "" {
 		embed.Fields = append(embed.Fields, components.Field("🛠️ Construction",
@@ -438,6 +440,22 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	used := c.fsvc.GetUsedSlots(userID)
 	maxSlots := ht.FurnitureSlots
 
+	if maxSlots == 0 {
+		houseName := i18n.T("housing.types."+h.HouseType, lang)
+		embed := components.Embed("🪑 Furnitures",
+			i18n.T("housing.furniture_house_none", lang, map[string]any{"house": houseName}),
+			0xB9936C)
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("🔙 Back", components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+				components.Button("🔬 Research", components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+		return
+	}
+
 	desc := fmt.Sprintf("🪑 **Slots: %d/%d**", used, maxSlots)
 
 	placedFurniture, _ := c.fsvc.GetPlaced(userID)
@@ -529,7 +547,28 @@ func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	furnitureID := rest[0]
 
 	if err := c.fsvc.Place(userID, furnitureID); err != nil {
-		interaction.RespondError(b, i, lang, "housing.no_house")
+		var msg string
+		houseName := furnitureID
+		if h, herr := c.hsvc.GetHousing(userID); herr == nil {
+			houseName = i18n.T("housing.types."+h.HouseType, lang)
+		}
+		switch {
+		case errors.Is(err, furnituresvc.ErrNoFurnitureSlots):
+			msg = i18n.T("housing.furniture_house_none", lang, map[string]any{"house": houseName})
+		case strings.Contains(err.Error(), "already placed"):
+			msg = i18n.T("housing.furniture_already_placed", lang)
+		case strings.Contains(err.Error(), "not enough money"):
+			msg = i18n.T("housing.no_money", lang, map[string]any{"price": 0})
+		default:
+			msg = err.Error()
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
 		return
 	}
 	fd := furnituresvc.FurnitureDefs[furnitureID]

@@ -1,6 +1,7 @@
 {
   "arch": {
     "actions_label": "⏳ Actions Left",
+    "already_collected": "✅ This fossil has already been collected.",
     "back_dig": "← Back to Dig",
     "back_menu": "← Back to Bureau",
     "brush_btn": "🖌️ Brush",
