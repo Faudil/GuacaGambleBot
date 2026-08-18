@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
@@ -280,6 +281,11 @@ func (s *Service) Harvest(userID int64, zoneKey string, plotIndex int) (*Harvest
 
 	lukBonus := charsvc.GetLUKBonus(s.store, userID)
 	if lukBonus > 0 && rand.Float64() < lukBonus*0.1 {
+		quantity++
+	}
+
+	// A Greenhouse Kit placed in the active house boosts the harvest yield.
+	if rand.Float64() < furnituresvc.EffectValue(s.store, userID, "farm_yield") {
 		quantity++
 	}
 

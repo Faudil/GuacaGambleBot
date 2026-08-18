@@ -18,5 +18,13 @@
     "state_start": "Place your bets...",
     "state_suspense": "Suspense...",
     "title": "🎰 Slot Machine"
+  },
+  "mega_slots": {
+    "title": "🔟 Mega Slots",
+    "requires_parlor": "❌ You need a **Gambling Parlor** placed in your active house to use the Mega Slots machine!",
+    "limit": "❌ Mega Slots daily limit reached! Come back tomorrow.",
+    "max_bet": "❌ Max bet is $2,000 on Mega Slots.",
+    "win": "💰 **Win!** You take ${amount} off the Mega Slots!",
+    "lose": "💸 -${amount}"
   }
 }

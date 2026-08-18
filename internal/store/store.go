@@ -17,6 +17,10 @@ import (
 // user's balance inside a transaction (Debit, Transfer, BankDeposit).
 var ErrInsufficientFunds = errors.New("insufficient funds")
 
+// ErrBankFull is returned by BankDeposit when the bank already holds its
+// maximum amount (maxBank).
+var ErrBankFull = errors.New("bank full")
+
 // RepaidLender describes a partial debt repayment to a single lender.
 type RepaidLender struct {
 	LenderID int64
@@ -191,8 +195,10 @@ func (s *Store) Transfer(sender, recipient int64, amount int) (senderBal, recipi
 }
 
 // BankDeposit moves amount from the wallet into the bank in a single
-// transaction. It returns the new wallet and bank balances.
-func (s *Store) BankDeposit(userID int64, amount int) (wallet, bank int, err error) {
+// transaction, never letting the bank exceed maxBank: when amount would
+// overflow the bank, only the remaining space is deposited. It returns the
+// amount actually deposited and the new wallet and bank balances.
+func (s *Store) BankDeposit(userID int64, amount, maxBank int) (deposited, wallet, bank int, err error) {
 	err = s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := s.ensureUserTx(tx, userID); err != nil {
 			return err
@@ -202,27 +208,36 @@ func (s *Store) BankDeposit(userID int64, amount int) (wallet, bank int, err err
 			Where("user_id = ?", userID).Pluck("balance", &bal).Error; err != nil {
 			return err
 		}
-		if bal < amount {
+		var curBank int
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).Pluck("bank", &curBank).Error; err != nil {
+			return err
+		}
+		if curBank >= maxBank {
+			return ErrBankFull
+		}
+		actual := min(amount, maxBank-curBank)
+		if bal < actual {
 			return ErrInsufficientFunds
 		}
 		if err := tx.Model(&model.User{}).
 			Where("user_id = ?", userID).
-			UpdateColumn("balance", gorm.Expr("balance - ?", amount)).Error; err != nil {
+			UpdateColumn("balance", gorm.Expr("balance - ?", actual)).Error; err != nil {
 			return err
 		}
 		if err := tx.Model(&model.User{}).
 			Where("user_id = ?", userID).
-			UpdateColumn("bank", gorm.Expr("bank + ?", amount)).Error; err != nil {
+			UpdateColumn("bank", gorm.Expr("bank + ?", actual)).Error; err != nil {
 			return err
 		}
 		var u model.User
 		if err := tx.Where("user_id = ?", userID).First(&u).Error; err != nil {
 			return err
 		}
-		wallet, bank = u.Balance, u.Bank
+		deposited, wallet, bank = actual, u.Balance, u.Bank
 		return nil
 	})
-	return wallet, bank, err
+	return deposited, wallet, bank, err
 }
 
 // BankWithdraw moves amount from the bank into the wallet in a single

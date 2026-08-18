@@ -109,11 +109,13 @@ func (c *Cog) onSlashDeposit(b *interaction.Bot, i *discordgo.InteractionCreate)
 		interaction.RespondError(b, i, lang, "bank.invalid")
 		return
 	}
-	wallet, bank, derr := c.svc.Deposit(int(userID), amount)
+	res, derr := c.svc.Deposit(int(userID), amount)
 	if derr != nil {
 		switch derr {
 		case banksvc.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "bank.insufficient")
+		case banksvc.ErrBankFull:
+			interaction.RespondError(b, i, lang, "bank.bank_full", map[string]any{"max": res.MaxBank})
 		default:
 			interaction.RespondError(b, i, lang, "bank.invalid")
 		}
@@ -121,9 +123,9 @@ func (c *Cog) onSlashDeposit(b *interaction.Bot, i *discordgo.InteractionCreate)
 	}
 	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
-		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
-		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
@@ -145,11 +147,13 @@ func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("bank.invalid", lang))
 		return
 	}
-	wallet, bank, derr := c.svc.Deposit(int(userID), amount)
+	res, derr := c.svc.Deposit(int(userID), amount)
 	if derr != nil {
 		switch derr {
 		case banksvc.ErrNoMoney:
 			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("bank.insufficient", lang))
+		case banksvc.ErrBankFull:
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("bank.bank_full", lang, map[string]any{"max": res.MaxBank}))
 		default:
 			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("bank.invalid", lang))
 		}
@@ -157,9 +161,9 @@ func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *disco
 	}
 	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
-		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
-		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 	}
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		embed.Description = questssvc.QuestNotificationMsg(n, lang)
@@ -278,11 +282,13 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		interaction.RespondError(b, i, lang, "bank.invalid")
 		return
 	}
-	wallet, bank, derr := c.svc.Deposit(int(userID), amount)
+	res, derr := c.svc.Deposit(int(userID), amount)
 	if derr != nil {
 		switch derr {
 		case banksvc.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "bank.insufficient")
+		case banksvc.ErrBankFull:
+			interaction.RespondError(b, i, lang, "bank.bank_full", map[string]any{"max": res.MaxBank})
 		default:
 			interaction.RespondError(b, i, lang, "bank.invalid")
 		}
@@ -290,9 +296,9 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 	}
 	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
 	embed.Fields = []*discordgo.MessageEmbedField{
-		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
-		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
-		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank), true),
+		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
+		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
+		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 	}
 	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,

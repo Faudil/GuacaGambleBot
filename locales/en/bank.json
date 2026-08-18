@@ -2,7 +2,7 @@
   "bank": {
     "amount_label": "Amount",
     "balance_title": "Your balance",
-    "bank_full": "❌ Your bank is already full (Max $500) !",
+    "bank_full": "❌ Your bank is already full (Max ${max}) !",
     "btn_balance": "Balance",
     "btn_deposit": "Deposit",
     "btn_withdraw": "Withdraw",
@@ -10,7 +10,7 @@
     "deposit_done": "You deposited {amount}.",
     "deposit_modal_title": "Deposit into your safe",
     "deposit_title": "Deposit complete",
-    "deposited": "🏦 You deposited **${amount}**. Bank balance: **${total}/500**.",
+    "deposited": "🏦 You deposited **${amount}**. Bank balance: **${total}/${max}**.",
     "insufficient": "Insufficient funds.",
     "invalid": "Invalid amount.",
     "invalid_amount": "❌ Invalid amount.",

@@ -273,8 +273,12 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	buffsText := strings.Join(ht.Buffs, "\n")
 	statsText := i18n.T("housing.stats", lang, map[string]any{"level": h.Level, "buffs": buffsText})
-	if ht.FurnitureSlots > 0 {
-		statsText += fmt.Sprintf("\n🪑 Furniture: %d/%d slots", c.fsvc.GetUsedSlots(userID), ht.FurnitureSlots)
+	if maxSlots := ht.SlotsAt(h.Level); maxSlots > 0 {
+		statsText += fmt.Sprintf("\n🪑 Furniture: %d/%d slots", c.fsvc.GetUsedSlots(userID), maxSlots)
+	}
+	effects := c.activeEffects(userID)
+	if len(effects) > 0 {
+		statsText += "\n✨ **Loadout:**\n" + strings.Join(effects, "\n")
 	}
 	embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.stats_label", lang), statsText, false))
 
@@ -338,7 +342,11 @@ func (c *Cog) onUpgrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "housing.max_level")
 		return
 	}
-	embed := components.Embed("✅", i18n.T("housing.upgrade_success", lang, map[string]any{"level": "?"}), 0x2ecc71)
+	level := "?"
+	if h, herr := c.hsvc.GetHousing(userID); herr == nil {
+		level = strconv.Itoa(h.Level)
+	}
+	embed := components.Embed("✅", i18n.T("housing.upgrade_success", lang, map[string]any{"level": level}), 0x2ecc71)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -438,7 +446,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	used := c.fsvc.GetUsedSlots(userID)
-	maxSlots := ht.FurnitureSlots
+	maxSlots := ht.SlotsAt(h.Level)
 
 	if maxSlots == 0 {
 		houseName := i18n.T("housing.types."+h.HouseType, lang)
@@ -466,13 +474,17 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if fd == nil {
 				continue
 			}
+			effectInfo := ""
+			for _, e := range fd.Effects {
+				effectInfo += fmt.Sprintf("\n  └ ✨ %s", e.Description)
+			}
 			researchInfo := ""
 			for _, rID := range fd.UnlocksResearch {
 				if rd := researchsvc.ResearchDefs[rID]; rd != nil {
 					researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
 				}
 			}
-			desc += fmt.Sprintf("\n%s %s (%s)%s", fd.Emoji, fd.Name, fd.SlotType, researchInfo)
+			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s", fd.Emoji, fd.Name, fd.Slots, effectInfo, researchInfo)
 		}
 	}
 
@@ -485,13 +497,17 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		for itemID, qty := range fd.CostItems {
 			costStr += fmt.Sprintf(", %dx %s", qty, itemID)
 		}
+		effectInfo := ""
+		for _, e := range fd.Effects {
+			effectInfo += fmt.Sprintf("\n  └ ✨ %s", e.Description)
+		}
 		researchInfo := ""
 		for _, rID := range fd.UnlocksResearch {
 			if rd := researchsvc.ResearchDefs[rID]; rd != nil {
-				researchInfo += fmt.Sprintf(" → 🔬 %s", rd.Name)
+				researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
 			}
 		}
-		desc += fmt.Sprintf("\n%s %s | %s (%s)%s", fd.Emoji, fd.Name, costStr, fd.SlotType, researchInfo)
+		desc += fmt.Sprintf("\n%s %s | %s (%d slot)%s%s", fd.Emoji, fd.Name, costStr, fd.Slots, effectInfo, researchInfo)
 	}
 
 	embed := components.Embed("🪑 Furnitures", desc, 0xB9936C)
@@ -534,6 +550,24 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// activeEffects lists the passive effects of the furniture placed in the user's
+// active house, for display in the house view.
+func (c *Cog) activeEffects(userID int64) []string {
+	placed, err := c.fsvc.GetPlaced(userID)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, pf := range placed {
+		if fd := furnituresvc.FurnitureDefs[pf.FurnitureID]; fd != nil {
+			for _, e := range fd.Effects {
+				out = append(out, fmt.Sprintf("%s %s", fd.Emoji, e.Description))
+			}
+		}
+	}
+	return out
 }
 
 func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {

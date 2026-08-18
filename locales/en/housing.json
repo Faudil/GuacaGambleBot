@@ -75,6 +75,6 @@
       "mansion": "Mansion",
       "wooden_shack": "Wooden Shack"
     },
-    "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**."
+    "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**. **+1 furniture slot!**"
   }
 }

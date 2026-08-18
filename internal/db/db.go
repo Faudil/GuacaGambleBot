@@ -74,6 +74,20 @@ func Open(cfg *config.Config) (*gorm.DB, error) {
 // Migrate creates/updates all tables to match the model definitions, then runs
 // any pending one-time data migrations.
 func Migrate(db *gorm.DB) error {
+	// The SQLite migrator rebuilds any table whose DDL differs from the
+	// model's expectations. Its rebuild copy step skips columns with leading
+	// whitespace (a parsing quirk), so a rebuild of a populated table with a
+	// NOT NULL column that ends up omitted fails with a constraint error.
+	// Tables created by the hand-written housing migrations historically
+	// differed from the AutoMigrate output, so every restart crashed here.
+	// Bring those tables into the exact AutoMigrate shape before AutoMigrate
+	// gets a chance to rebuild them.
+	if err := repairHousingSchema(db); err != nil {
+		return err
+	}
+	if err := repairFurnitureSchema(db); err != nil {
+		return err
+	}
 	if err := db.AutoMigrate(
 		&model.User{},
 		&model.Cooldown{},
@@ -182,6 +196,120 @@ func runDataMigrations(db *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+// repairHousingSchema rewrites user_housing into the exact DDL AutoMigrate
+// would create, so AutoMigrate never attempts (and crashes on) a rebuild.
+// Handled shapes: AutoMigrate-fresh (no-op), custom composite-PK shape created
+// by migrateHousingCompositePK, and legacy single-PK shapes (with or without
+// house_type / is_active / stored_items).
+func repairHousingSchema(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&model.UserHousing{}) {
+		return nil
+	}
+	pks, err := pkColumns(db, "user_housing")
+	if err != nil {
+		return err
+	}
+	if containsAll(pks, "user_id", "house_type") {
+		cols, err := tableColumns(db, "user_housing")
+		if err != nil {
+			return err
+		}
+		for _, c := range cols {
+			if c.Name == "is_active" && strings.EqualFold(c.Type, "numeric") {
+				return nil
+			}
+		}
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		legacy := map[string]bool{}
+		existing, err := tableColumns(tx, "user_housing")
+		if err != nil {
+			return err
+		}
+		for _, c := range existing {
+			legacy[c.Name] = true
+		}
+
+		if err := tx.Exec("ALTER TABLE user_housing RENAME TO user_housing_legacy").Error; err != nil {
+			return err
+		}
+		if err := tx.Migrator().CreateTable(&model.UserHousing{}); err != nil {
+			return err
+		}
+
+		// Build the copy expression column by column so it works regardless of
+		// which columns the legacy table happened to have.
+		expr := func(name, fallback string) string {
+			if legacy[name] {
+				return name
+			}
+			return fallback
+		}
+		sel := "user_id"
+		if legacy["house_type"] {
+			sel += ", COALESCE(NULLIF(house_type, ''), 'cardboard_box')"
+		} else {
+			sel += ", 'cardboard_box'"
+		}
+		sel += ", " + expr("level", "1")
+		sel += ", " + expr("last_collected", "NULL")
+		sel += ", " + expr("is_active", "1")
+		sel += ", " + expr("custom_name", "NULL")
+		sel += ", " + expr("custom_color", "NULL")
+		sel += ", " + expr("under_construction", "NULL")
+		sel += ", " + expr("finish_time", "NULL")
+		sel += ", " + expr("stored_items", "'{}'")
+
+		ins := "INSERT INTO user_housing (user_id, house_type, level, last_collected, is_active, custom_name, custom_color, under_construction, finish_time, stored_items) SELECT " + sel + " FROM user_housing_legacy"
+		if err := tx.Exec(ins).Error; err != nil {
+			return err
+		}
+		return tx.Exec("DROP TABLE user_housing_legacy").Error
+	})
+}
+
+// repairFurnitureSchema rewrites user_furniture into the exact AutoMigrate
+// shape. The legacy shape predates house-scoped furniture (no house_type
+// column); those items are attached to the user's active house, mirroring
+// migrateFurnitureHouseScope.
+func repairFurnitureSchema(db *gorm.DB) error {
+	if !db.Migrator().HasTable(&model.UserFurniture{}) {
+		return nil
+	}
+	pks, err := pkColumns(db, "user_furniture")
+	if err != nil {
+		return err
+	}
+	if containsAll(pks, "user_id", "house_type", "furniture_id") {
+		return nil
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("ALTER TABLE user_furniture RENAME TO user_furniture_legacy").Error; err != nil {
+			return err
+		}
+		if err := tx.Migrator().CreateTable(&model.UserFurniture{}); err != nil {
+			return err
+		}
+
+		houseExpr := "'cardboard_box'"
+		if db.Migrator().HasTable(&model.UserHousing{}) {
+			houseExpr = "COALESCE(uh.house_type, 'cardboard_box')"
+		}
+		ins := `INSERT INTO user_furniture (user_id, house_type, furniture_id, placed_at)
+			SELECT lf.user_id, ` + houseExpr + `, lf.furniture_id, lf.placed_at
+			FROM user_furniture_legacy lf`
+		if db.Migrator().HasTable(&model.UserHousing{}) {
+			ins += ` LEFT JOIN user_housing uh ON uh.user_id = lf.user_id AND uh.is_active = 1`
+		}
+		if err := tx.Exec(ins).Error; err != nil {
+			return err
+		}
+		return tx.Exec("DROP TABLE user_furniture_legacy").Error
+	})
 }
 
 // tutorialStepRemap maps the old tutorial step_index to the new order introduced

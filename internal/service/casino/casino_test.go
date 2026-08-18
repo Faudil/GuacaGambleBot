@@ -11,6 +11,9 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/model"
+	furnituresvc "guacagamblebot/internal/service/furniture"
+	housingsvc "guacagamblebot/internal/service/housing"
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
@@ -195,4 +198,152 @@ func TestSlotsRecordsWinOnly(t *testing.T) {
 		recordSum += r.Amount
 	}
 	assert.Equal(t, sumNet, recordSum)
+}
+
+// placeParlor gives the user a brick house with a Gambling Parlor placed.
+func placeParlor(t *testing.T, s *store.Store, userID int64) {
+	t.Helper()
+	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
+	hsvc := housingsvc.New(s, cfg)
+	_, err := s.UpdateBalance(userID, 100000)
+	require.NoError(t, err)
+	require.NoError(t, hsvc.BuyHouse(userID, "brick_house"))
+	fsvc := furnituresvc.New(s, cfg, hsvc)
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "coal", 50))
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "gold_nugget", 50))
+	require.NoError(t, fsvc.Place(userID, "gambling_parlor"))
+}
+
+func TestEvaluateMegaGrid(t *testing.T) {
+	// No winning line.
+	lines, payout := evaluateMegaGrid([]string{"🍒", "🍇", "🍋", "🔔", "💎", "🍒", "🍇", "🍋", "🔔"}, 100)
+	assert.Empty(t, lines)
+	assert.Zero(t, payout)
+
+	// One full row.
+	lines, payout = evaluateMegaGrid([]string{"🍒", "🍒", "🍒", "🍇", "🍋", "🔔", "💎", "🍒", "🍇"}, 100)
+	assert.Equal(t, []int{0}, lines)
+	assert.Equal(t, 100*3, payout)
+
+	// Two crossing lines (row 0 + column 0) stack.
+	lines, payout = evaluateMegaGrid([]string{"🍒", "🍒", "🍒", "🍒", "🍋", "🔔", "🍒", "🍇", "💎"}, 100)
+	require.Len(t, lines, 2)
+	assert.Equal(t, 100*3*2, payout)
+
+	// Full board of diamonds: all 8 lines, biggest jackpot.
+	lines, payout = evaluateMegaGrid([]string{"💎", "💎", "💎", "💎", "💎", "💎", "💎", "💎", "💎"}, 50)
+	require.Len(t, lines, 8)
+	assert.Equal(t, 50*100*8, payout)
+}
+
+func TestMegaSlotsRequiresParlor(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	_, err = svc.SpinMegaSlots(1, 100)
+	assert.ErrorIs(t, err, ErrRequiresFurniture)
+}
+
+func TestMegaSlotsPlays(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	res, err := svc.SpinMegaSlots(1, 100)
+	require.NoError(t, err)
+	require.Len(t, res.Grid, 9)
+	for _, sym := range res.Grid {
+		assert.NotEmpty(t, sym)
+	}
+	assert.Equal(t, len(res.WinLines) > 0, res.IsWin)
+}
+
+func TestCasinoLimitBoostWithParlor(t *testing.T) {
+	svc, st := testService(t)
+	assert.Equal(t, baseSlotsLimit, svc.casinoLimit(1, baseSlotsLimit))
+
+	placeParlor(t, st, 1)
+	assert.Equal(t, baseSlotsLimit+parlorLimitBoost, svc.casinoLimit(1, baseSlotsLimit))
+}
+
+func TestSlotsLimitBoostedByParlor(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	// 15 spins: more than the base 10, allowed with the parlor.
+	for i := 0; i < baseSlotsLimit+parlorLimitBoost; i++ {
+		_, err := svc.SpinSlots(1, 10)
+		require.NoError(t, err)
+	}
+	_, err = svc.SpinSlots(1, 10)
+	assert.ErrorIs(t, err, ErrLimit)
+}
+
+func TestMegaSlotsLimit(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+
+	for i := 0; i < megaSlotsLimit; i++ {
+		_, err := svc.SpinMegaSlots(1, 10)
+		require.NoError(t, err)
+	}
+	_, err = svc.SpinMegaSlots(1, 10)
+	assert.ErrorIs(t, err, ErrLimit)
+}
+
+func TestMegaSlotsMaxBet(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+
+	_, err := svc.SpinMegaSlots(1, maxMegaSlotsBet+1)
+	assert.ErrorIs(t, err, ErrMaxBet)
+}
+
+func TestMegaSlotsRecordsWinOnly(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+
+	wins := 0
+	sumNet := 0
+	for i := 0; i < 50; i++ {
+		require.NoError(t, st.ResetGameLimit(1, "mega_slots"))
+		res, err := svc.SpinMegaSlots(1, 10)
+		require.NoError(t, err)
+		if res.IsWin {
+			wins++
+			sumNet += res.Payout - 10
+		}
+	}
+	records, err := st.TopWinRecords("mega_slots", 1000)
+	require.NoError(t, err)
+	require.Len(t, records, wins)
+	recordSum := 0
+	for _, r := range records {
+		assert.Equal(t, "mega_slots", r.Game)
+		recordSum += r.Amount
+	}
+	assert.Equal(t, sumNet, recordSum)
+}
+
+// TestMegaSlotsDailyLimitPersists ensures the game_limit row tracks the game.
+func TestMegaSlotsDailyLimitPersists(t *testing.T) {
+	svc, st := testService(t)
+	placeParlor(t, st, 1)
+	_, err := st.UpdateBalance(1, 1000000)
+	require.NoError(t, err)
+
+	_, err = svc.SpinMegaSlots(1, 10)
+	require.NoError(t, err)
+
+	var gl model.GameLimit
+	require.NoError(t, st.DB.Where("user_id = ? AND game_name = ?", 1, "mega_slots").First(&gl).Error)
+	assert.Equal(t, 1, gl.Count)
 }

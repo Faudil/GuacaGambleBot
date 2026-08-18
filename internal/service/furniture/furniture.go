@@ -13,6 +13,14 @@ import (
 	"guacagamblebot/internal/store"
 )
 
+// Effect is a passive bonus granted by a furniture while it is placed in the
+// user's active house. Stat is the key other systems query via EffectValue.
+type Effect struct {
+	Stat        string
+	Value       float64
+	Description string
+}
+
 type FurnitureDef struct {
 	ID              string
 	Name            string
@@ -21,6 +29,8 @@ type FurnitureDef struct {
 	CostMoney       int
 	CostItems       map[string]int
 	SlotType        string
+	Slots           int
+	Effects         []Effect
 	UnlocksResearch []string
 }
 
@@ -30,7 +40,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "A sturdy workbench for crafting tools and weapons.",
 		CostMoney:       2000,
 		SlotType:        "floor",
+		Slots:           1,
 		CostItems:       map[string]int{"pebble": 10, "iron_ore": 5},
+		Effects:         []Effect{{Stat: "craft_cost", Value: 0.10, Description: "-10% crafting ingredient costs"}},
 		UnlocksResearch: []string{"tool_crafting"},
 	},
 	"enchanting_table": {
@@ -38,7 +50,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "Mystical energies swirl around this arcane table.",
 		CostMoney:       3000,
 		SlotType:        "table",
+		Slots:           2,
 		CostItems:       map[string]int{"silver_ore": 5, "pufferfish": 3},
+		Effects:         []Effect{{Stat: "pet_heal", Value: 0.10, Description: "+10% pet heal discount"}},
 		UnlocksResearch: []string{"scroll_magic"},
 	},
 	"magnetic_coil": {
@@ -46,7 +60,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "A complex electromagnetic research device.",
 		CostMoney:       5000,
 		SlotType:        "table",
+		Slots:           1,
 		CostItems:       map[string]int{"copper_ore": 10, "iron_ore": 5},
+		Effects:         []Effect{{Stat: "dig_luck", Value: 0.05, Description: "+5% rare dig finds"}},
 		UnlocksResearch: []string{"magnetism"},
 	},
 	"gambling_parlor": {
@@ -54,7 +70,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "Everything you need for probability manipulation.",
 		CostMoney:       4000,
 		SlotType:        "floor",
+		Slots:           2,
 		CostItems:       map[string]int{"coal": 10, "gold_nugget": 5},
+		Effects:         []Effect{{Stat: "casino_mega", Value: 1, Description: "Unlocks the Mega Slots machine and raises daily casino limits (10 → 15)"}},
 		UnlocksResearch: []string{"game_theory"},
 	},
 	"greenhouse_kit": {
@@ -62,7 +80,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "Advanced horticultural equipment for serious farming.",
 		CostMoney:       6000,
 		SlotType:        "floor",
+		Slots:           2,
 		CostItems:       map[string]int{"rotten_plant": 20, "wheat": 10, "gold_nugget": 5},
+		Effects:         []Effect{{Stat: "farm_yield", Value: 0.10, Description: "+10% farm harvest yield"}},
 		UnlocksResearch: []string{"advanced_botany"},
 	},
 	"genetics_lab": {
@@ -70,7 +90,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "A cutting-edge laboratory for DNA analysis and engineering.",
 		CostMoney:       10000,
 		SlotType:        "floor",
+		Slots:           3,
 		CostItems:       map[string]int{"pure_dna": 5, "bone_dust": 20, "emerald": 2},
+		Effects:         []Effect{{Stat: "pet_xp", Value: 0.10, Description: "+10% pet XP"}},
 		UnlocksResearch: []string{"dna_research"},
 	},
 	"forge": {
@@ -78,7 +100,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "A roaring forge for smithing weapons and armor.",
 		CostMoney:       3000,
 		SlotType:        "floor",
+		Slots:           2,
 		CostItems:       map[string]int{"iron_ore": 10, "coal": 5},
+		Effects:         []Effect{{Stat: "equip_quality", Value: 0.05, Description: "+5% chance to upgrade crafted rarity"}},
 		UnlocksResearch: []string{"equip_common", "equip_uncommon", "equip_rare", "set_dragon_slayer", "set_shadow_stalker"},
 	},
 	"arcane_forge": {
@@ -86,7 +110,9 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Description:     "An enchanted forge infused with arcane energies for legendary crafting.",
 		CostMoney:       10000,
 		SlotType:        "floor",
+		Slots:           3,
 		CostItems:       map[string]int{"platinum": 5, "rough_diamond": 3},
+		Effects:         []Effect{{Stat: "equip_legendary", Value: 0.02, Description: "+2% legendary craft chance"}},
 		UnlocksResearch: []string{"equip_epic", "equip_legendary", "set_arcane_weaver"},
 	},
 }
@@ -113,6 +139,53 @@ func (s *Service) activeHouseType(userID int64) (string, error) {
 	return h.HouseType, nil
 }
 
+// ActiveHouseType resolves the user's active house type, or "" when none.
+func ActiveHouseType(s *store.Store, userID int64) string {
+	var h model.UserHousing
+	if err := s.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h).Error; err != nil {
+		return ""
+	}
+	return h.HouseType
+}
+
+// HasFurniture reports whether the user has the given furniture placed in their
+// active house. It is the gate other services use for feature-unlock furniture.
+func HasFurniture(s *store.Store, userID int64, furnitureID string) bool {
+	houseType := ActiveHouseType(s, userID)
+	if houseType == "" {
+		return false
+	}
+	var count int64
+	s.DB.Model(&model.UserFurniture{}).
+		Where("user_id = ? AND house_type = ? AND furniture_id = ?", userID, houseType, furnitureID).
+		Count(&count)
+	return count > 0
+}
+
+// EffectValue returns the summed value of the given effect stat granted by the
+// furniture placed in the user's active house.
+func EffectValue(s *store.Store, userID int64, stat string) float64 {
+	houseType := ActiveHouseType(s, userID)
+	if houseType == "" {
+		return 0
+	}
+	var placed []model.UserFurniture
+	if err := s.DB.Where("user_id = ? AND house_type = ?", userID, houseType).Find(&placed).Error; err != nil {
+		return 0
+	}
+	var total float64
+	for _, p := range placed {
+		if fd := FurnitureDefs[p.FurnitureID]; fd != nil {
+			for _, e := range fd.Effects {
+				if e.Stat == stat {
+					total += e.Value
+				}
+			}
+		}
+	}
+	return total
+}
+
 func (s *Service) GetPlaced(userID int64) ([]model.UserFurniture, error) {
 	houseType, err := s.activeHouseType(userID)
 	if err != nil {
@@ -123,14 +196,26 @@ func (s *Service) GetPlaced(userID int64) ([]model.UserFurniture, error) {
 	return placed, err
 }
 
+// GetUsedSlots returns the total size of the furniture placed in the active
+// house.
 func (s *Service) GetUsedSlots(userID int64) int {
 	houseType, err := s.activeHouseType(userID)
 	if err != nil {
 		return 0
 	}
-	var count int64
-	s.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND house_type = ?", userID, houseType).Count(&count)
-	return int(count)
+	var placed []model.UserFurniture
+	if err := s.store.DB.Where("user_id = ? AND house_type = ?", userID, houseType).Find(&placed).Error; err != nil {
+		return 0
+	}
+	used := 0
+	for _, p := range placed {
+		if fd := FurnitureDefs[p.FurnitureID]; fd != nil {
+			used += fd.Slots
+		} else {
+			used++
+		}
+	}
+	return used
 }
 
 func (s *Service) GetMaxSlots(userID int64) int {
@@ -142,7 +227,7 @@ func (s *Service) GetMaxSlots(userID int64) int {
 	if ht == nil {
 		return 0
 	}
-	return ht.FurnitureSlots
+	return ht.SlotsAt(h.Level)
 }
 
 func (s *Service) IsPlaced(userID int64, furnitureID string) bool {
@@ -169,7 +254,7 @@ func (s *Service) Place(userID int64, furnitureID string) error {
 	if maxSlots == 0 {
 		return ErrNoFurnitureSlots
 	}
-	if used >= maxSlots {
+	if used+fd.Slots > maxSlots {
 		return fmt.Errorf("no free slots (%d/%d)", used, maxSlots)
 	}
 	var existing int64

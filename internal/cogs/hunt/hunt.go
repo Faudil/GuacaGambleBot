@@ -253,7 +253,7 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		),
 	}
 
-	if len(res.Log) == 0 {
+	if len(res.Turns) == 0 {
 		desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
 		emb := components.Embed(
 			i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zone.Emoji, "name": zoneName}),
@@ -287,13 +287,8 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, spawn, nil))
 
 	// Animate the fight, then show the result.
-	turns := make([]battle.BattleTurn, 0, len(res.Log))
-	for _, e := range res.Log {
-		turns = append(turns, battle.BattleTurn{Pet1HP: e.PetHP, Pet2HP: e.EnemyHP, Msg: c.journalLine(e, lang)})
-	}
-
 	go interaction.AnimateFight(
-		turns,
+		res.Turns,
 		func(journal []string, t battle.BattleTurn) *discordgo.MessageEmbed {
 			petD.HP = t.Pet1HP
 			enemyD.HP = t.Pet2HP
@@ -350,18 +345,6 @@ func (c *Cog) huntRetroFrame(petD, enemyD components.DisplayPet, journal []strin
 		components.FightLabelsFor(lang, i18n.T("hunt.vs", lang)),
 		journal,
 	)
-}
-
-func (c *Cog) journalLine(e huntsvc.BattleLogEntry, lang string) string {
-	key := "pet_combat.hit_msg"
-	if e.Crit {
-		key = "pet_combat.crit_msg"
-	}
-	return i18n.T(key, lang, map[string]any{
-		"attacker_emoji": e.AttackerEmoji,
-		"attacker":       e.AttackerName,
-		"dmg":            e.Damage,
-	})
 }
 
 // resultDesc builds the post-fight summary (loot, XP, level-ups, quest note).

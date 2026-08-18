@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"math/rand"
 
 	"gorm.io/gorm"
 
@@ -11,6 +12,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	"guacagamblebot/internal/store"
 )
 
@@ -147,6 +149,9 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 		charsvc.ConsumeBuff(s.store, userID, "efficiency")
 	}
 
+	// A Workbench placed in the active house cuts ingredient costs.
+	ingMultiplier *= 1 - furnituresvc.EffectValue(s.store, userID, "craft_cost")
+
 	if charsvc.HasBuff(s.store, userID, "perfect_forge") {
 		charsvc.ConsumeBuff(s.store, userID, "perfect_forge")
 		effectiveAmount = amount * 2
@@ -184,7 +189,9 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 				return ErrNoRecipe
 			}
 			for i := 0; i < effectiveAmount; i++ {
-				rar := base.Rarity
+				rar := upgradedRarity(base.Rarity,
+					furnituresvc.EffectValue(s.store, userID, "equip_quality"),
+					furnituresvc.EffectValue(s.store, userID, "equip_legendary"))
 				affixes := items.RollAffixes(rar, base.EquipSlot)
 				var applied []items.AppliedAffix
 				for _, a := range affixes {
@@ -287,4 +294,39 @@ func min(a, b int) int {
 
 func floor(f float64) int {
 	return int(math.Floor(f))
+}
+
+var rarityTiers = []items.Rarity{
+	items.RarityCommon,
+	items.RarityUncommon,
+	items.RarityRare,
+	items.RarityEpic,
+	items.RarityLegendary,
+}
+
+// upgradedRarity rolls whether a crafted piece comes out one tier higher than
+// its base rarity. qualityChance applies at every tier; legendaryChance adds an
+// extra chance specifically for the epic → legendary upgrade (Arcane Forge).
+func upgradedRarity(base items.Rarity, qualityChance, legendaryChance float64) items.Rarity {
+	chance := qualityChance
+	if base == items.RarityEpic {
+		chance += legendaryChance
+	}
+	if chance <= 0 {
+		return base
+	}
+	idx := -1
+	for i, r := range rarityTiers {
+		if r == base {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 || idx >= len(rarityTiers)-1 {
+		return base
+	}
+	if rand.Float64() < chance {
+		return rarityTiers[idx+1]
+	}
+	return base
 }

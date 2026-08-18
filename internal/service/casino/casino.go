@@ -7,15 +7,17 @@ import (
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	charsvc "guacagamblebot/internal/service/character"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
 
 var (
-	ErrNoMoney = errors.New("insufficient funds")
-	ErrMaxBet  = errors.New("max bet exceeded")
-	ErrLimit   = errors.New("daily limit reached")
-	ErrChoice  = errors.New("invalid choice")
+	ErrNoMoney           = errors.New("insufficient funds")
+	ErrMaxBet            = errors.New("max bet exceeded")
+	ErrLimit             = errors.New("daily limit reached")
+	ErrChoice            = errors.New("invalid choice")
+	ErrRequiresFurniture = errors.New("requires gambling parlor")
 )
 
 var SLOT_SYMBOLS = map[string]struct {
@@ -62,6 +64,33 @@ type CoinflipResult struct {
 	NewLevel  int
 }
 
+// MegaSlotsResult is the outcome of a 3x3 Mega Slots spin. Grid holds the 9
+// symbols row-major; WinLines lists the indices of the winning paylines.
+type MegaSlotsResult struct {
+	Grid      []string
+	Payout    int
+	IsWin     bool
+	WinLines  []int
+	XpGain    int
+	LeveledUp bool
+	NewLevel  int
+}
+
+// megaPaylines are the 8 winning lines of a 3x3 grid: 3 rows, 3 columns and
+// the two diagonals.
+var megaPaylines = [8][3]int{
+	{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
+	{0, 3, 6}, {1, 4, 7}, {2, 5, 8},
+	{0, 4, 8}, {2, 4, 6},
+}
+
+const (
+	baseSlotsLimit   = 10
+	megaSlotsLimit   = 5
+	maxMegaSlotsBet  = 2000
+	parlorLimitBoost = 5
+)
+
 type Service struct {
 	store  *store.Store
 	cfg    *config.Config
@@ -72,11 +101,20 @@ func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
 	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
 }
 
+// casinoLimit returns the daily play limit for a game: players with a Gambling
+// Parlor placed in their active house get extra plays.
+func (s *Service) casinoLimit(userID int64, base int) int {
+	if furnituresvc.HasFurniture(s.store, userID, "gambling_parlor") {
+		return base + parlorLimitBoost
+	}
+	return base
+}
+
 func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	if amount <= 0 {
 		return nil, ErrMaxBet
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, "slots", 10)
+	ok, _, err := s.store.CheckGameLimit(userID, "slots", s.casinoLimit(userID, baseSlotsLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +242,7 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	if amount > 2000 {
 		return nil, ErrMaxBet
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, "coinflip", 10)
+	ok, _, err := s.store.CheckGameLimit(userID, "coinflip", s.casinoLimit(userID, baseSlotsLimit))
 	if err != nil {
 		return nil, err
 	}
@@ -314,4 +352,101 @@ func (s *Service) normalizeChoice(c string) string {
 		return "pile"
 	}
 	return ""
+}
+
+// evaluateMegaGrid scores a 3x3 grid: every fully-matching payline pays
+// amount × symbol multiplier, and all winning lines stack.
+func evaluateMegaGrid(grid []string, amount int) (winLines []int, payout int) {
+	for li, line := range megaPaylines {
+		sym := grid[line[0]]
+		if sym == grid[line[1]] && sym == grid[line[2]] {
+			winLines = append(winLines, li)
+			payout += amount * SLOT_SYMBOLS[sym].Mult
+		}
+	}
+	return winLines, payout
+}
+
+// SpinMegaSlots plays the 3x3 Mega Slots machine. The game is only available
+// to players who placed a Gambling Parlor in their active house. A spin rolls
+// 9 symbols and pays for every fully-matching payline (rows, columns and
+// diagonals), so several lines can win at once.
+func (s *Service) SpinMegaSlots(userID int64, amount int) (*MegaSlotsResult, error) {
+	if amount <= 0 {
+		return nil, ErrMaxBet
+	}
+	if amount > maxMegaSlotsBet {
+		return nil, ErrMaxBet
+	}
+	if !furnituresvc.HasFurniture(s.store, userID, "gambling_parlor") {
+		return nil, ErrRequiresFurniture
+	}
+	ok, _, err := s.store.CheckGameLimit(userID, "mega_slots", megaSlotsLimit)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrLimit
+	}
+	if err := s.store.IncrementGameLimit(userID, "mega_slots"); err != nil {
+		return nil, err
+	}
+	if err := achievement.IncrementStat(s.store.DB, userID, "slots_spent", amount); err != nil {
+		return nil, err
+	}
+	if _, err := s.store.Debit(userID, amount); err != nil {
+		if errors.Is(err, store.ErrInsufficientFunds) {
+			return nil, ErrNoMoney
+		}
+		return nil, err
+	}
+
+	grid := make([]string, 9)
+	for i := range grid {
+		grid[i] = wheel[rand.Intn(len(wheel))]
+	}
+
+	luckyBreak := charsvc.HasBuff(s.store, userID, "lucky_break")
+	jackpotFever := charsvc.HasBuff(s.store, userID, "jackpot_fever")
+
+	res := &MegaSlotsResult{Grid: grid}
+	res.WinLines, res.Payout = evaluateMegaGrid(grid, amount)
+	res.IsWin = len(res.WinLines) > 0
+
+	if res.IsWin {
+		res.XpGain = 100
+		s.npcSvc.AddActivityReputation(userID, "gambling", 5)
+		if luckyBreak {
+			res.Payout = int(float64(res.Payout) * 1.5)
+			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
+		}
+		if jackpotFever {
+			res.Payout *= 3
+			charsvc.ConsumeBuff(s.store, userID, "jackpot_fever")
+		}
+		if _, err := s.store.UpdateBalance(userID, res.Payout); err != nil {
+			return nil, err
+		}
+		_ = s.store.AddWinRecord(userID, "mega_slots", res.Payout-amount)
+		if err := achievement.IncrementStat(s.store.DB, userID, "slots_won", 1); err != nil {
+			return nil, err
+		}
+		net := res.Payout - amount
+		if net > 0 {
+			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_won", net)
+		} else if net < 0 {
+			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", -net)
+		}
+	} else {
+		res.XpGain = 10
+		if err := achievement.IncrementStat(s.store.DB, userID, "slots_lost", 1); err != nil {
+			return nil, err
+		}
+		_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
+	}
+
+	leveled, lvl := charsvc.AddXP(s.store, userID, res.XpGain)
+	res.LeveledUp = leveled
+	res.NewLevel = lvl
+	return res, nil
 }

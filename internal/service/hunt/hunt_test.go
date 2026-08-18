@@ -2,6 +2,7 @@ package hunt
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/glebarez/sqlite"
@@ -69,7 +70,7 @@ func TestExecuteHuntEasy(t *testing.T) {
 	res, err := svc.ExecuteHunt(1, "forest")
 	require.NoError(t, err)
 	assert.True(t, res.PlayerWon || res.EnemyWon)
-	assert.NotEmpty(t, res.Log)
+	assert.NotEmpty(t, res.Turns)
 	assert.Greater(t, res.XP, 0)
 }
 
@@ -80,9 +81,37 @@ func TestExecuteHuntInvalidZone(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestHuntThornmail(t *testing.T) {
+	svc, s := testService(t)
+	pet := &model.UserPet{
+		UserID:   1,
+		PetType:  "Chien",
+		Nickname: "Prickly",
+		Level:    5,
+		MaxHP:    200,
+		HP:       200,
+		Atk:      8,
+		Defense:  50,
+		Speed:    2,
+		IsActive: true,
+	}
+	require.NoError(t, s.DB.Create(pet).Error)
+	require.NoError(t, s.DB.Create(&model.UserPetSkill{PetID: pet.ID, Slot: 1, SkillID: "thornmail"}).Error)
+
+	res, err := svc.ExecuteHunt(1, "forest")
+	require.NoError(t, err)
+	require.NotEmpty(t, res.Turns)
+
+	msgs := make([]string, 0, len(res.Turns))
+	for _, t := range res.Turns {
+		msgs = append(msgs, t.Msg)
+	}
+	assert.Contains(t, strings.Join(msgs, "\n"), "thorn damage", "thornmail must reflect damage back at the enemy")
+}
+
 func TestNewEnemy(t *testing.T) {
 	e := NewEnemy("forest")
-	assert.NotEmpty(t, e.Name)
+	assert.NotEmpty(t, e.Nickname)
 	assert.Greater(t, e.HP, 0)
 	assert.Greater(t, e.Level, 0)
 }
@@ -92,27 +121,29 @@ func TestBattleLogTracksHP(t *testing.T) {
 	addActivePet(t, s, 1)
 	res, err := svc.ExecuteHunt(1, "forest")
 	require.NoError(t, err)
-	require.NotEmpty(t, res.Log)
+	require.NotEmpty(t, res.Turns)
 
 	assert.NotEmpty(t, res.EnemyName)
 	assert.NotEmpty(t, res.EnemyEmoji)
 	assert.Greater(t, res.EnemyLevel, 0)
-	assert.Equal(t, res.PetStartHP, res.Log[0].PetHP, "first entry must record the starting pet HP")
+	assert.LessOrEqual(t, res.Turns[0].Pet1HP, res.PetStartHP, "first entry must not exceed the starting pet HP")
 
 	prevPetHP, prevEnemyHP := res.PetStartHP, res.EnemyMaxHP
-	for _, e := range res.Log {
-		assert.LessOrEqual(t, e.EnemyHP, prevEnemyHP, "enemy HP must never increase")
-		assert.LessOrEqual(t, e.PetHP, prevPetHP, "pet HP must never increase")
-		assert.GreaterOrEqual(t, e.EnemyHP, 0)
-		assert.GreaterOrEqual(t, e.PetHP, 0)
-		prevPetHP, prevEnemyHP = e.PetHP, e.EnemyHP
+	for _, turn := range res.Turns {
+		assert.LessOrEqual(t, turn.Pet1HP, prevPetHP, "pet HP must never increase")
+		assert.LessOrEqual(t, turn.Pet2HP, prevEnemyHP, "enemy HP must never increase")
+		assert.GreaterOrEqual(t, turn.Pet1HP, 0)
+		assert.GreaterOrEqual(t, turn.Pet2HP, 0)
+		prevPetHP, prevEnemyHP = turn.Pet1HP, turn.Pet2HP
 	}
 
-	last := res.Log[len(res.Log)-1]
+	last := res.Turns[len(res.Turns)-1]
+	assert.Equal(t, res.PetHP, last.Pet1HP, "last entry must record the final pet HP")
+	assert.Equal(t, res.EnemyHP, last.Pet2HP, "last entry must record the final enemy HP")
 	if res.PlayerWon {
-		assert.Equal(t, 0, last.EnemyHP)
+		assert.Equal(t, 0, last.Pet2HP)
 	} else if res.EnemyWon {
-		assert.Equal(t, 0, last.PetHP)
+		assert.Equal(t, 0, last.Pet1HP)
 	}
 }
 
@@ -218,11 +249,11 @@ func TestNewZoneEncounter(t *testing.T) {
 		enemy, isBoss := NewZoneEncounter("forest")
 		require.NotNil(t, enemy)
 		assert.Greater(t, enemy.HP, 0)
-		assert.NotEmpty(t, enemy.Name)
+		assert.NotEmpty(t, enemy.Nickname)
 		if isBoss {
-			assert.Equal(t, Zones["forest"].Boss.Name, enemy.Name)
+			assert.Equal(t, Zones["forest"].Boss.Name, enemy.Nickname)
 		} else {
-			assert.Contains(t, []string{"Slime Gluant", "Sanglier Sauvage"}, enemy.Name)
+			assert.Contains(t, []string{"Slime Gluant", "Sanglier Sauvage"}, enemy.Nickname)
 		}
 	}
 }

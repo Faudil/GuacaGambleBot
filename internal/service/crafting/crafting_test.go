@@ -11,6 +11,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
@@ -139,4 +140,20 @@ func TestLevelUpCheckSuccess(t *testing.T) {
 	st.DB.Where("user_id = ? AND job_name = ?", 1, "crafter").First(&job)
 	assert.Equal(t, 4, job.Level)
 	assert.Equal(t, 0, job.XP) // 300 - 300 = 0
+}
+
+func TestUpgradedRarity(t *testing.T) {
+	// Zero chance never upgrades.
+	assert.Equal(t, items.RarityCommon, upgradedRarity(items.RarityCommon, 0, 0))
+
+	// Guaranteed chance always upgrades, but not beyond legendary.
+	assert.Equal(t, items.RarityUncommon, upgradedRarity(items.RarityCommon, 1.0, 0))
+	assert.Equal(t, items.RarityRare, upgradedRarity(items.RarityUncommon, 1.0, 0))
+	assert.Equal(t, items.RarityEpic, upgradedRarity(items.RarityRare, 1.0, 0))
+	assert.Equal(t, items.RarityLegendary, upgradedRarity(items.RarityEpic, 1.0, 0))
+	assert.Equal(t, items.RarityLegendary, upgradedRarity(items.RarityLegendary, 1.0, 0))
+
+	// The legendary chance only matters for epic items.
+	assert.Equal(t, items.RarityLegendary, upgradedRarity(items.RarityEpic, 0, 1.0))
+	assert.Equal(t, items.RarityCommon, upgradedRarity(items.RarityCommon, 0, 1.0))
 }

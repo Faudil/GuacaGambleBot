@@ -67,8 +67,11 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("casino", "coinflip_choice", c.onCoinflipChoice)
 	r.Component("casino", "slots_retry", c.onSlotsRetry)
 	r.Component("casino", "coinflip_retry", c.onCoinflipRetry)
+	r.Component("casino", "mega_slots", c.onMegaSlotsOpen)
+	r.Component("casino", "mega_retry", c.onMegaRetry)
 	r.Modal("casino", "slots_submit", c.onSlotsSubmit)
 	r.Modal("casino", "coinflip_submit", c.onCoinflipSubmit)
+	r.Modal("casino", "mega_slots_submit", c.onMegaSlotsSubmit)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -140,6 +143,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 		components.ActionRow(
 			components.Button("🎰 "+i18n.T("slots.title", lang), components.EncodeOwner(userID, "casino", "slots"), discordgo.PrimaryButton),
 			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.EncodeOwner(userID, "casino", "coinflip"), discordgo.SuccessButton),
+			components.Button("🔟 "+i18n.T("mega_slots.title", lang), components.EncodeOwner(userID, "casino", "mega_slots"), discordgo.SecondaryButton),
 		),
 	}
 	return embed, comps
@@ -242,6 +246,156 @@ func (c *Cog) onCoinflipSubmit(b *interaction.Bot, i *discordgo.InteractionCreat
 		return
 	}
 	c.playCoinflip(b, i, choice, amount, discordgo.InteractionResponseChannelMessageWithSource)
+}
+
+func (c *Cog) onMegaSlotsOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	modal := components.ModalResponse(
+		components.EncodeOwner(userID, "casino", "mega_slots_submit"),
+		i18n.T("mega_slots.title", lang),
+		components.TextInput("amount", i18n.T("economy.quantity", lang), true, "100", discordgo.TextInputShort, 1, 12),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+func (c *Cog) onMegaSlotsSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	values := interaction.ModalValues(i)
+	amount, err := strconv.Atoi(strings.TrimSpace(values["amount"]))
+	if err != nil || amount <= 0 {
+		interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
+		return
+	}
+	c.playMegaSlots(b, i, amount, discordgo.InteractionResponseUpdateMessage)
+}
+
+func (c *Cog) onMegaRetry(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	if len(rest) == 0 {
+		interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
+		return
+	}
+	amount, err := strconv.Atoi(rest[0])
+	if err != nil || amount <= 0 {
+		interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
+		return
+	}
+	c.playMegaSlots(b, i, amount, discordgo.InteractionResponseUpdateMessage)
+}
+
+func (c *Cog) megaSlotsEmbed(grid []string, stateText string, amount int, lang string, color int) *discordgo.MessageEmbed {
+	if len(grid) < 9 {
+		grid = []string{"🌀", "🌀", "🌀", "🌀", "🌀", "🌀", "🌀", "🌀", "🌀"}
+	}
+	machineDisplay := fmt.Sprintf("»  %s | %s | %s\n»  %s | %s | %s\n»  %s | %s | %s",
+		grid[0], grid[1], grid[2], grid[3], grid[4], grid[5], grid[6], grid[7], grid[8])
+	infoDisplay := i18n.T("slots.bet_info", lang, map[string]any{"amount": amount}) + "\n" + stateText
+	return &discordgo.MessageEmbed{
+		Title: i18n.T("mega_slots.title", lang),
+		Color: color,
+		Fields: []*discordgo.MessageEmbedField{
+			{Name: "Machine", Value: "# " + machineDisplay, Inline: false},
+			{Name: "Infos", Value: infoDisplay, Inline: false},
+		},
+	}
+}
+
+func (c *Cog) playMegaSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amount int, responseType discordgo.InteractionResponseType) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	res, serr := c.svc.SpinMegaSlots(userID, amount)
+	if serr != nil {
+		var msg string
+		switch serr {
+		case casinosvc.ErrNoMoney:
+			msg = i18n.T("slots.no_money", lang)
+		case casinosvc.ErrRequiresFurniture:
+			msg = i18n.T("mega_slots.requires_parlor", lang)
+		case casinosvc.ErrLimit:
+			msg = i18n.T("mega_slots.limit", lang)
+		case casinosvc.ErrMaxBet:
+			msg = i18n.T("mega_slots.max_bet", lang)
+		default:
+			msg = i18n.T("coinflip.invalid_bet", lang)
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: msg,
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
+	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
+	if res.IsWin {
+		c.announceBigWin(b.Session, interaction.ToInt64(i.GuildID), userID, "mega_slots", res.Payout-amount)
+	}
+	questMsg, _ := c.store.PopQuestNotification(userID)
+
+	blurple := 0x7289da
+	_, menuComps := c.menu(lang, userID)
+	embed := c.megaSlotsEmbed(nil, i18n.T("slots.state_start", lang), amount, lang, blurple)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(responseType, embed, menuComps))
+
+	if text, dm := jsvc.SceneLine(c.store, userID, "casino", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
+
+	go func() {
+		time.Sleep(1 * time.Second)
+
+		partial := []string{res.Grid[0], res.Grid[1], res.Grid[2], "🌀", "🌀", "🌀", "🌀", "🌀", "🌀"}
+		embed := c.megaSlotsEmbed(partial, i18n.T("slots.state_rolling", lang), amount, lang, blurple)
+		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, menuComps))
+
+		time.Sleep(900 * time.Millisecond)
+
+		color := 0xe74c3c
+		if res.IsWin {
+			color = 0x2ecc71
+		}
+		var status string
+		if res.IsWin {
+			status = i18n.T("mega_slots.win", lang, map[string]any{"amount": res.Payout})
+		} else {
+			status = i18n.T("mega_slots.lose", lang, map[string]any{"amount": amount})
+		}
+		if res.LeveledUp {
+			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+		}
+
+		embed = c.megaSlotsEmbed(res.Grid, status, amount, lang, color)
+		resultComps := c.megaResultComps(amount, lang, userID)
+		_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, resultComps))
+
+		if questMsg.QuestID != "" {
+			interaction.SendQuestNotification(b, i, questMsg, lang)
+		}
+
+		unlocks, _ := achievement.CheckAndUnlock(b.DB, userID)
+		if len(unlocks) > 0 {
+			interaction.SendAchievements(b, i, lang, unlocks)
+		}
+	}()
+}
+
+func (c *Cog) megaResultComps(amount int, lang string, userID int64) []discordgo.MessageComponent {
+	return []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("🔄 Retry", components.EncodeOwner(userID, "casino", "mega_retry", strconv.Itoa(amount)), discordgo.SecondaryButton),
+			components.Button("🔟 "+i18n.T("mega_slots.title", lang), components.EncodeOwner(userID, "casino", "mega_slots"), discordgo.SecondaryButton),
+			components.Button("🎰 "+i18n.T("slots.title", lang), components.EncodeOwner(userID, "casino", "slots"), discordgo.PrimaryButton),
+			components.Button("🪙 "+i18n.T("coinflip.legit_label", lang), components.EncodeOwner(userID, "casino", "coinflip"), discordgo.SuccessButton),
+		),
+	}
 }
 
 func (c *Cog) onSlotsRetry(b *interaction.Bot, i *discordgo.InteractionCreate) {

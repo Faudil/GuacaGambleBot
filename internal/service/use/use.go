@@ -77,13 +77,19 @@ func apply(st *store.Store, userID int64, itemID string) (string, error) {
 		if err := st.ResetGameLimit(userID, "coinflip"); err != nil {
 			return "", err
 		}
-		return "🎟️ **VIP Ticket!** Your casino and coinflip limits are refreshed.", nil
+		if err := st.ResetGameLimit(userID, "mega_slots"); err != nil {
+			return "", err
+		}
+		return "🎟️ **VIP Ticket!** Your casino, coinflip and mega slots limits are refreshed.", nil
 
 	case "casino_token":
 		if err := st.ResetGameLimit(userID, "slots"); err != nil {
 			return "", err
 		}
-		return "🎰 **Casino Token!** Your slots limit is refreshed.", nil
+		if err := st.ResetGameLimit(userID, "mega_slots"); err != nil {
+			return "", err
+		}
+		return "🎰 **Casino Token!** Your slots and mega slots limits are refreshed.", nil
 
 	case "scratch_ticket":
 		win := rand.Intn(1001)

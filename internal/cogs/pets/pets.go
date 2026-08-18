@@ -18,6 +18,7 @@ import (
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
@@ -371,7 +372,12 @@ func (c *Cog) healPet(pet *model.UserPet, serverID int64) (healed, cost int, err
 		return 0, 0, petsvc.ErrPetAlreadyFullHP
 	}
 	missing := pet.MaxHP - pet.HP
-	cost = petsvc.HealCost(missing, c.getHospitalDiscount(serverID))
+	discount := c.getHospitalDiscount(serverID)
+	discount += int(furnituresvc.EffectValue(c.store, pet.UserID, "pet_heal") * 100)
+	if discount > 100 {
+		discount = 100
+	}
+	cost = petsvc.HealCost(missing, discount)
 	if err := c.svc.HealPet(pet, cost); err != nil {
 		return 0, cost, err
 	}
@@ -588,8 +594,14 @@ func (c *Cog) playCooldownActive(b *interaction.Bot, i *discordgo.InteractionCre
 	return true
 }
 
+// petXPMultiplier returns the pet XP multiplier granted by a Genetics Lab
+// placed in the user's active house.
+func (c *Cog) petXPMultiplier(userID int64) float64 {
+	return 1 + furnituresvc.EffectValue(c.store, userID, "pet_xp")
+}
+
 func (c *Cog) playWithPet(pet *model.UserPet, lang string) string {
-	xpGain := rand.Intn(16) + 10
+	xpGain := int(float64(rand.Intn(16)+10) * c.petXPMultiplier(pet.UserID))
 	lvlRes := c.svc.AddXP(pet, xpGain)
 	c.svc.AddBond(pet, 2)
 	c.svc.RecordHistory(pet, "played",
@@ -1668,7 +1680,7 @@ func (c *Cog) onInteractionChoice(b *interaction.Bot, i *discordgo.InteractionCr
 
 	c.svc.AddBond(pet, reward.BondReward)
 	if reward.XPReward > 0 {
-		c.svc.AddXP(pet, reward.XPReward)
+		c.svc.AddXP(pet, int(float64(reward.XPReward)*c.petXPMultiplier(pet.UserID)))
 	}
 	// Resolve choice detail via i18n
 	detailKey := fmt.Sprintf("pets.interact.%s.choices.%s.detail", findInteractionID(choiceID), choiceID)

@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/achievement"
+	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
@@ -202,63 +203,50 @@ var Zones = map[string]Zone{
 	},
 }
 
-type Combatant struct {
-	Name    string
-	Emoji   string
-	HP      int
-	MaxHP   int
-	Atk     int
-	Def     int
-	Level   int
-	IsAlive bool
-}
-
-func NewEnemy(zoneKey string) *Combatant {
+// NewEnemy builds a regular zone enemy as a battle pet scaled to a random
+// level within the zone range.
+func NewEnemy(zoneKey string) *battle.BattlePet {
 	zone, ok := Zones[zoneKey]
 	if !ok || len(zone.Enemies) == 0 {
-		return &Combatant{Name: "Shadow Beast", Emoji: "👾", HP: 50, MaxHP: 50, Atk: 10, Def: 5, Level: 1, IsAlive: true}
+		return &battle.BattlePet{ID: -1, Nickname: "Shadow Beast", Emoji: "👾", PetType: "Shadow Beast", Level: 1, HP: 50, MaxHP: 50, Atk: 10, Defense: 5, Speed: 5, DGE: 5, ACC: 5, CritC: 5, CritD: 1.5}
 	}
 	t := zone.Enemies[rand.Intn(len(zone.Enemies))]
 	lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
-	return buildCombatant(t, lvl)
+	return buildBattleEnemy(t, lvl)
 }
 
 // NewZoneEncounter rolls a hunt encounter: with BossSpawnChance probability the
 // zone boss appears instead of a regular enemy. It returns the enemy and
 // whether it is the zone boss.
-func NewZoneEncounter(zoneKey string) (*Combatant, bool) {
+func NewZoneEncounter(zoneKey string) (*battle.BattlePet, bool) {
 	zone, ok := Zones[zoneKey]
 	if !ok {
 		return NewEnemy(zoneKey), false
 	}
 	if zone.Boss.Name != "" && rand.Float64() < BossSpawnChance {
 		lvl := zone.LevelMin + rand.Intn(zone.LevelMax-zone.LevelMin+1)
-		return buildCombatant(zone.Boss, lvl), true
+		return buildBattleEnemy(zone.Boss, lvl), true
 	}
 	return NewEnemy(zoneKey), false
 }
 
-func buildCombatant(t EnemyTemplate, lvl int) *Combatant {
-	return &Combatant{
-		Name:    t.Name,
-		Emoji:   t.Emoji,
-		HP:      t.HP + lvl*5,
-		MaxHP:   t.HP + lvl*5,
-		Atk:     t.Atk + lvl*2,
-		Def:     t.Def + lvl*1,
-		Level:   lvl,
-		IsAlive: true,
+func buildBattleEnemy(t EnemyTemplate, lvl int) *battle.BattlePet {
+	return &battle.BattlePet{
+		ID:       -1,
+		Nickname: t.Name,
+		Emoji:    t.Emoji,
+		PetType:  t.Name,
+		Level:    lvl,
+		HP:       t.HP + lvl*5,
+		MaxHP:    t.HP + lvl*5,
+		Atk:      t.Atk + lvl*2,
+		Defense:  t.Def + lvl*1,
+		Speed:    t.Spd,
+		DGE:      5,
+		ACC:      5,
+		CritC:    5,
+		CritD:    1.5,
 	}
-}
-
-type BattleLogEntry struct {
-	AttackerName  string
-	AttackerEmoji string
-	TargetName    string
-	Damage        int
-	Crit          bool
-	PetHP         int
-	EnemyHP       int
 }
 
 type BattleResult struct {
@@ -273,7 +261,7 @@ type BattleResult struct {
 	IsBoss        bool
 	PlayerWon     bool
 	EnemyWon      bool
-	Log           []BattleLogEntry
+	Turns         []battle.BattleTurn
 	XP            int
 	Loot          []string
 	LeveledUp     bool
@@ -387,19 +375,6 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	}
 
 	enemy, isBoss := NewZoneEncounter(zoneKey)
-	enemyEmoji := "👹"
-	if isBoss {
-		if zone.Boss.Name == enemy.Name {
-			enemyEmoji = zone.Boss.Emoji
-		}
-	} else {
-		for _, e := range zone.Enemies {
-			if e.Name == enemy.Name {
-				enemyEmoji = e.Emoji
-				break
-			}
-		}
-	}
 
 	petHP := pet.HP
 	petMaxHP := pet.MaxHP
@@ -431,62 +406,30 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 
 	if charsvc.HasBuff(s.store, userID, "bulwark") {
 		petHP = petMaxHP
-		// first round immunity: skip the enemy's first attack
 		charsvc.ConsumeBuff(s.store, userID, "bulwark")
 	}
 
-	petStartHP := petHP
-	var log []BattleLogEntry
-
-	for petHP > 0 && enemy.HP > 0 {
-		petDmg := petAtk - enemy.Def
-		if petDmg < 1 {
-			petDmg = 1
-		}
-		crit := false
-		if rand.Intn(100) < pet.CritC {
-			petDmg = int(float64(petDmg) * pet.CritD)
-			crit = true
-		}
-		enemy.HP -= petDmg
-		if enemy.HP < 0 {
-			enemy.HP = 0
-		}
-		log = append(log, BattleLogEntry{
-			AttackerName:  pet.Nickname,
-			AttackerEmoji: petEmoji,
-			TargetName:    enemy.Name,
-			Damage:        petDmg,
-			Crit:          crit,
-			PetHP:         petHP,
-			EnemyHP:       enemy.HP,
-		})
-
-		if enemy.HP <= 0 {
-			enemy.IsAlive = false
-			break
-		}
-
-		enemyDmg := enemy.Atk - petDef
-		if enemyDmg < 1 {
-			enemyDmg = 1
-		}
-		petHP -= enemyDmg
-		if petHP < 0 {
-			petHP = 0
-		}
-		log = append(log, BattleLogEntry{
-			AttackerName:  enemy.Name,
-			AttackerEmoji: enemyEmoji,
-			TargetName:    pet.Nickname,
-			Damage:        enemyDmg,
-			PetHP:         petHP,
-			EnemyHP:       enemy.HP,
-		})
+	var skills []model.UserPetSkill
+	s.store.DB.Where("pet_id = ?", pet.ID).Find(&skills)
+	skillIDs := make([]string, 0, len(skills))
+	for _, sk := range skills {
+		skillIDs = append(skillIDs, sk.SkillID)
 	}
 
-	playerWon := enemy.HP <= 0
-	enemyWon := petHP <= 0
+	petBP := &battle.BattlePet{
+		ID: pet.ID, Nickname: pet.Nickname, Emoji: petEmoji, PetType: pet.PetType,
+		Level: pet.Level, HP: petHP, MaxHP: max(petMaxHP, petHP),
+		Atk: petAtk, Defense: petDef, Speed: pet.Speed,
+		DGE: pet.DGE, ACC: pet.ACC, CritC: pet.CritC, CritD: pet.CritD, SpcC: pet.SpcC,
+		Skills: skillIDs,
+	}
+
+	petStartHP := petHP
+
+	battleResult := battle.SimulatePreserveHP(petBP, enemy)
+
+	playerWon := petBP.IsAlive() && !enemy.IsAlive()
+	enemyWon := !petBP.IsAlive() && enemy.IsAlive()
 
 	var xp int
 	var lootItems []string
@@ -543,7 +486,7 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	}
 
 	// Persist HP changes; XP and leveling are handled by the caller via petsvc.AddXP
-	s.store.DB.Model(&pet).Update("hp", petHP)
+	s.store.DB.Model(&pet).Update("hp", petBP.HP)
 
 	charLeveled, charLvl := charsvc.AddXP(s.store, userID, xp)
 
@@ -574,17 +517,17 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 
 	return &BattleResult{
 		PetStartHP:    petStartHP,
-		PetHP:         petHP,
+		PetHP:         petBP.HP,
 		PetMaxHP:      petMaxHP,
 		EnemyHP:       enemy.HP,
 		EnemyMaxHP:    enemy.MaxHP,
-		EnemyName:     enemy.Name,
-		EnemyEmoji:    enemyEmoji,
+		EnemyName:     enemy.Nickname,
+		EnemyEmoji:    enemy.Emoji,
 		EnemyLevel:    enemy.Level,
 		IsBoss:        isBoss,
 		PlayerWon:     playerWon,
 		EnemyWon:      enemyWon,
-		Log:           log,
+		Turns:         battleResult.Turns,
 		XP:            xp,
 		Loot:          lootItems,
 		LeveledUp:     leveledUp,

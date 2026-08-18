@@ -15,12 +15,13 @@ import (
 )
 
 // RespondError replies to an interaction with a single ephemeral error/info
-// message translated via the given locale key.
-func RespondError(b *Bot, i *discordgo.InteractionCreate, lang, key string) {
+// message translated via the given locale key. Optional params are forwarded
+// to the translation.
+func RespondError(b *Bot, i *discordgo.InteractionCreate, lang, key string, params ...map[string]any) {
 	err := b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: i18n.T(key, lang),
+			Content: i18n.T(key, lang, params...),
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})

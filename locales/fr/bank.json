@@ -2,7 +2,7 @@
   "bank": {
     "amount_label": "Montant",
     "balance_title": "Votre solde",
-    "bank_full": "❌ Ta banque est déjà pleine (Max $500) !",
+    "bank_full": "❌ Ta banque est déjà pleine (Max ${max}) !",
     "btn_balance": "Solde",
     "btn_deposit": "Déposer",
     "btn_withdraw": "Retirer",
@@ -10,7 +10,7 @@
     "deposit_done": "Vous avez déposé {amount}.",
     "deposit_modal_title": "Dépôt dans votre coffre",
     "deposit_title": "Dépôt effectué",
-    "deposited": "🏦 Tu as déposé **${amount}**. Solde banque : **${total}/500**.",
+    "deposited": "🏦 Tu as déposé **${amount}**. Solde banque : **${total}/${max}**.",
     "insufficient": "Fonds insuffisants.",
     "invalid": "Montant invalide.",
     "invalid_amount": "❌ Montant invalide.",

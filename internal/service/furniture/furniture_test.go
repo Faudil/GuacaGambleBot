@@ -130,3 +130,78 @@ func TestPlaceFailsOnZeroSlotHouse(t *testing.T) {
 	err := fsvc.Place(uid, "workbench")
 	require.ErrorIs(t, err, ErrNoFurnitureSlots)
 }
+
+func TestSlotsAt(t *testing.T) {
+	ht := housingsvc.Houses["brick_house"]
+	require.NotNil(t, ht)
+	// base 4, +1 per level, capped at 8.
+	assert.Equal(t, 4, ht.SlotsAt(1))
+	assert.Equal(t, 5, ht.SlotsAt(2))
+	assert.Equal(t, 8, ht.SlotsAt(5))
+	assert.Equal(t, 8, ht.SlotsAt(99))
+
+	// cardboard has no slots at any level.
+	cb := housingsvc.Houses["cardboard_box"]
+	assert.Equal(t, 0, cb.SlotsAt(1))
+}
+
+func TestEffectValueAndHasFurniture(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+
+	// No house → no effects.
+	assert.Equal(t, 0.0, EffectValue(s, uid, "farm_yield"))
+	assert.False(t, HasFurniture(s, uid, "greenhouse_kit"))
+
+	buyHouse(t, hsvc, s, uid, "cardboard_box")
+	buyHouse(t, hsvc, s, uid, "brick_house") // active
+	_, err := s.UpdateBalance(uid, 100000)
+	require.NoError(t, err)
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "rotten_plant", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "wheat", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "gold_nugget", 100))
+	require.NoError(t, fsvc.Place(uid, "greenhouse_kit"))
+
+	assert.True(t, HasFurniture(s, uid, "greenhouse_kit"))
+	assert.Equal(t, 0.10, EffectValue(s, uid, "farm_yield"))
+	assert.Equal(t, 0.0, EffectValue(s, uid, "craft_cost"))
+
+	// Effects are scoped to the active house.
+	require.NoError(t, hsvc.SwitchHouse(uid, "cardboard_box"))
+	assert.False(t, HasFurniture(s, uid, "greenhouse_kit"))
+	assert.Equal(t, 0.0, EffectValue(s, uid, "farm_yield"))
+}
+
+func TestPlaceFailsWhenSizeExceedsSlots(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+
+	// wooden_shack: 2 slots base. Workbench (1) fits, genetics lab (3) does not.
+	buyHouse(t, hsvc, s, uid, "wooden_shack")
+	fundForWorkbench(t, s, uid)
+	require.NoError(t, fsvc.Place(uid, "workbench"))
+
+	_, err := s.UpdateBalance(uid, 100000)
+	require.NoError(t, err)
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "pure_dna", 50))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "bone_dust", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "emerald", 50))
+
+	err = fsvc.Place(uid, "genetics_lab")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no free slots")
+}
+
+func TestGetUsedSlotsSumsSizes(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+
+	buyHouse(t, hsvc, s, uid, "mansion") // 6 base slots
+	fundForWorkbench(t, s, uid)
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "iron_ore", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "coal", 100))
+	require.NoError(t, fsvc.Place(uid, "workbench")) // 1 slot
+	require.NoError(t, fsvc.Place(uid, "forge"))     // 2 slots
+	assert.Equal(t, 3, fsvc.GetUsedSlots(uid))
+	assert.Equal(t, 6, fsvc.GetMaxSlots(uid))
+}

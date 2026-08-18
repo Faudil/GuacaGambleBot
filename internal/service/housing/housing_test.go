@@ -348,3 +348,52 @@ func TestUpgradeOnlyAffectsActiveHouse(t *testing.T) {
 	require.NoError(t, st.DB.Where("user_id = ? AND house_type = ?", 1, "wooden_shack").First(&other).Error)
 	assert.Equal(t, 1, other.Level)
 }
+
+func TestBankCapacityNoHouse(t *testing.T) {
+	svc, _ := testService(t)
+	cap, err := svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 500, cap)
+}
+
+func TestBankCapacityPerHouse(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 600000)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.BuyHouse(1, "cardboard_box"))
+	cap, err := svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 500, cap)
+
+	require.NoError(t, svc.BuyHouse(1, "wooden_shack"))
+	cap, err = svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 10000, cap)
+
+	require.NoError(t, svc.BuyHouse(1, "gilded_palace"))
+	cap, err = svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 1000000, cap)
+}
+
+func TestBankCapacityMerchantUpgrades(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 600000)
+	require.NoError(t, err)
+	require.NoError(t, svc.BuyHouse(1, "gilded_palace"))
+
+	cap, err := svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 1000000, cap)
+
+	require.NoError(t, st.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_office"}).Error)
+	cap, err = svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 1200000, cap)
+
+	require.NoError(t, st.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_vault"}).Error)
+	cap, err = svc.BankCapacity(1)
+	require.NoError(t, err)
+	assert.Equal(t, 2400000, cap)
+}

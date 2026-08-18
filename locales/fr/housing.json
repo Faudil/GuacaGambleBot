@@ -75,6 +75,6 @@
       "mansion": "Manoir",
       "wooden_shack": "Cabane en Bois"
     },
-    "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**."
+    "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**. **+1 emplacement de meuble !**"
   }
 }

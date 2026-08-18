@@ -18,5 +18,13 @@
     "state_start": "Faites vos jeux...",
     "state_suspense": "Suspense...",
     "title": "🎰 Machine à Sous"
+  },
+  "mega_slots": {
+    "title": "🔟 Mega Slots",
+    "requires_parlor": "❌ Tu dois placer une **Salle de Jeu** dans ta maison active pour utiliser la machine Mega Slots !",
+    "limit": "❌ Limite quotidienne des Mega Slots atteinte ! Reviens demain.",
+    "max_bet": "❌ La mise maximale sur les Mega Slots est de 2 000 $.",
+    "win": "💰 **Gagné !** Tu remportes ${amount} aux Mega Slots !",
+    "lose": "💸 -${amount}"
   }
 }

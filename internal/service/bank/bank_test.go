@@ -11,6 +11,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -25,19 +26,21 @@ func TestDeposit(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	wallet, bank, err := svc.Deposit(1, 40)
+	res, err := svc.Deposit(1, 40)
 	require.NoError(t, err)
-	assert.Equal(t, 60, wallet)
-	assert.Equal(t, 40, bank)
+	assert.Equal(t, 60, res.Wallet)
+	assert.Equal(t, 40, res.Bank)
+	assert.Equal(t, 40, res.Deposited)
+	assert.Equal(t, 500, res.MaxBank)
 }
 
 func TestDepositInvalid(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	_, _, err := svc.Deposit(1, 0)
+	_, err := svc.Deposit(1, 0)
 	assert.ErrorIs(t, err, ErrAmount)
-	_, _, err = svc.Deposit(1, -5)
+	_, err = svc.Deposit(1, -5)
 	assert.ErrorIs(t, err, ErrAmount)
 }
 
@@ -45,15 +48,78 @@ func TestDepositInsufficient(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	_, _, err := svc.Deposit(1, 500)
+	_, err := svc.Deposit(1, 500)
 	assert.ErrorIs(t, err, ErrNoMoney)
+}
+
+func TestDepositCappedAtDefaultLimit(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	_, err := s.UpdateBalance(1, 600)
+	require.NoError(t, err)
+
+	res, err := svc.Deposit(1, 400)
+	require.NoError(t, err)
+	assert.Equal(t, 300, res.Wallet)
+	assert.Equal(t, 400, res.Bank)
+	assert.Equal(t, 400, res.Deposited)
+
+	res, err = svc.Deposit(1, 200)
+	require.NoError(t, err)
+	assert.Equal(t, 200, res.Wallet)
+	assert.Equal(t, 500, res.Bank)
+	assert.Equal(t, 100, res.Deposited)
+
+	_, err = svc.Deposit(1, 10)
+	assert.ErrorIs(t, err, ErrBankFull)
+}
+
+func TestDepositCappedByHouse(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	require.NoError(t, s.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
+	}).Error)
+	_, err := s.UpdateBalance(1, 3000)
+	require.NoError(t, err)
+
+	res, err := svc.Deposit(1, 2500)
+	require.NoError(t, err)
+	assert.Equal(t, 2000, res.Bank)
+	assert.Equal(t, 2000, res.Deposited)
+	assert.Equal(t, 2000, res.MaxBank)
+	assert.Equal(t, 1100, res.Wallet)
+
+	_, err = svc.Deposit(1, 1)
+	assert.ErrorIs(t, err, ErrBankFull)
+}
+
+func TestDepositCappedByHouseAndMerchantUpgrades(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	require.NoError(t, s.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "gilded_palace", Level: 1, IsActive: true, StoredItems: "{}",
+	}).Error)
+	require.NoError(t, s.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_office"}).Error)
+	require.NoError(t, s.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_vault"}).Error)
+	_, err := s.UpdateBalance(1, 3000000)
+	require.NoError(t, err)
+
+	res, err := svc.Deposit(1, 2500000)
+	require.NoError(t, err)
+	assert.Equal(t, 2400000, res.MaxBank)
+	assert.Equal(t, 2400000, res.Bank)
+	assert.Equal(t, 2400000, res.Deposited)
 }
 
 func TestWithdraw(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	_, _, err := svc.Deposit(1, 40)
+	_, err := svc.Deposit(1, 40)
 	require.NoError(t, err)
 
 	wallet, bank, err := svc.Withdraw(1, 15)
@@ -66,7 +132,7 @@ func TestWithdrawInsufficient(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	_, _, err := svc.Deposit(1, 40)
+	_, err := svc.Deposit(1, 40)
 	require.NoError(t, err)
 
 	_, _, err = svc.Withdraw(1, 100)
@@ -77,7 +143,7 @@ func TestInfo(t *testing.T) {
 	s := testStore(t)
 	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
 
-	_, _, err := svc.Deposit(1, 100)
+	_, err := svc.Deposit(1, 100)
 	require.NoError(t, err)
 
 	wallet, bank, interest, err := svc.Info(1)
@@ -85,4 +151,97 @@ func TestInfo(t *testing.T) {
 	assert.Equal(t, 0, wallet)
 	assert.Equal(t, 100, bank)
 	assert.Equal(t, 10, interest)
+}
+
+func TestClampOnInfo(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	_, err := s.AdjustColumn(1, "bank", 800)
+	require.NoError(t, err)
+
+	wallet, bank, interest, err := svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 400, wallet)
+	assert.Equal(t, 500, bank)
+	assert.Equal(t, 50, interest)
+}
+
+func TestClampOnDeposit(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	_, err := s.AdjustColumn(1, "bank", 800)
+	require.NoError(t, err)
+
+	res, err := svc.Deposit(1, 100)
+	require.ErrorIs(t, err, ErrBankFull)
+	assert.Equal(t, 400, res.Wallet)
+	assert.Equal(t, 500, res.Bank)
+	assert.Equal(t, 500, res.MaxBank)
+}
+
+func TestClampOnDepositWithRoom(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	require.NoError(t, s.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
+	}).Error)
+	_, err := s.AdjustColumn(1, "bank", 1800)
+	require.NoError(t, err)
+	_, err = s.UpdateBalance(1, 500)
+	require.NoError(t, err)
+
+	res, err := svc.Deposit(1, 300)
+	require.NoError(t, err)
+	assert.Equal(t, 2000, res.MaxBank)
+	assert.Equal(t, 2000, res.Bank)
+	assert.Equal(t, 200, res.Deposited)
+	assert.Equal(t, 400, res.Wallet)
+}
+
+func TestClampOnWithdraw(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	_, err := s.AdjustColumn(1, "bank", 800)
+	require.NoError(t, err)
+
+	wallet, bank, err := svc.Withdraw(1, 100)
+	require.NoError(t, err)
+	assert.Equal(t, 500, wallet)
+	assert.Equal(t, 400, bank)
+}
+
+func TestClampRespectsHouseCap(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	require.NoError(t, s.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
+	}).Error)
+	_, err := s.AdjustColumn(1, "bank", 2500)
+	require.NoError(t, err)
+
+	wallet, bank, _, err := svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 600, wallet)
+	assert.Equal(t, 2000, bank)
+}
+
+func TestClampDisabled(t *testing.T) {
+	BankOverCapAutoFix = false
+	t.Cleanup(func() { BankOverCapAutoFix = true })
+
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	_, err := s.AdjustColumn(1, "bank", 800)
+	require.NoError(t, err)
+
+	wallet, bank, _, err := svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 100, wallet)
+	assert.Equal(t, 800, bank)
 }

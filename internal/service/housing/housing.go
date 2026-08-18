@@ -29,6 +29,23 @@ type HouseType struct {
 	Buffs            []string
 }
 
+// MaxFurnitureSlots caps the total furniture a house can hold: the game has 8
+// furniture items, so slots beyond that are meaningless.
+const MaxFurnitureSlots = 8
+
+// SlotsAt returns how many furniture slots the house offers at a given level:
+// one extra slot per level above 1, never exceeding the cap.
+func (ht *HouseType) SlotsAt(level int) int {
+	if level < 1 {
+		level = 1
+	}
+	total := ht.FurnitureSlots + (level - 1)
+	if total > MaxFurnitureSlots {
+		return MaxFurnitureSlots
+	}
+	return total
+}
+
 var Houses = map[string]*HouseType{
 	"cardboard_box": {
 		ID: "cardboard_box", Price: 50, MaxLevel: 1, IncomePerHour: 1,
@@ -52,7 +69,7 @@ var Houses = map[string]*HouseType{
 	},
 	"gilded_palace": {
 		ID: "gilded_palace", Price: 500000, MaxLevel: 20, IncomePerHour: 500,
-		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 1000000, CraftingDiscount: 0.30, FurnitureSlots: 10, Color: 0xFFB300,
+		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 1000000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
 		Buffs: []string{"+2000 Inventory Slots", "+25 Pet Slots", "$1,000,000 Bank Cap", "30% Crafting Discount"},
 	},
 }
@@ -108,6 +125,36 @@ func (s *Service) GetHousing(userID int64) (*model.UserHousing, error) {
 		return nil, err
 	}
 	return &h, nil
+}
+
+// BankCapacity returns the maximum amount the user can hold in the bank:
+// the active house's BankCapacity (default 500 when the user owns no house),
+// boosted by the merchant upgrades (merchant_office +20%, merchant_vault x2).
+func (s *Service) BankCapacity(userID int64) (int, error) {
+	h, err := s.GetHousing(userID)
+	if err != nil {
+		return 500, nil
+	}
+	ht := Houses[h.HouseType]
+	if ht == nil {
+		return 500, nil
+	}
+	cap := ht.BankCapacity
+	var upgrades []model.UserHousingUpgrade
+	if err := s.store.DB.Where("user_id = ?", userID).Find(&upgrades).Error; err != nil {
+		return 0, err
+	}
+	upgMap := map[string]bool{}
+	for _, u := range upgrades {
+		upgMap[u.UpgradeID] = true
+	}
+	if upgMap["merchant_office"] {
+		cap = int(math.Floor(float64(cap) * 1.2))
+	}
+	if upgMap["merchant_vault"] {
+		cap *= 2
+	}
+	return cap, nil
 }
 
 // ListHouses returns every house the user owns.

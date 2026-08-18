@@ -9,6 +9,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
@@ -405,31 +406,34 @@ func (s *Service) Resolve(state *GameState) *DigResult {
 
 	xpBase := state.Integrity / 2
 
+	// A Magnetic Coil placed in the active house boosts rare find chances.
+	digLuck := furnituresvc.EffectValue(s.store, state.UserID, "dig_luck")
+
 	rarityPool := state.Site.FossilRarities
 
 	if state.Integrity >= 95 && state.LastTool == "brush" {
-		if rand.Float64() < 0.02 {
+		if rand.Float64() < 0.02+digLuck {
 			xp := 200
 			return &DigResult{ItemName: "coelacanth_egg", Value: 2500, Quality: "living", Integrity: state.Integrity, XP: xp, IsEgg: true, Quantity: 1}
 		}
 	}
 
 	if state.Integrity < 15 && state.Integrity > 5 && state.LastTool != "brush" {
-		if rand.Float64() < 0.15 {
+		if rand.Float64() < 0.15+digLuck {
 			xp := 300
 			return &DigResult{ItemName: "shadow_fossil", Value: 5000, Quality: "shadow", Integrity: state.Integrity, XP: xp, IsShadow: true, Quantity: 1}
 		}
 	}
 
 	if state.Integrity < 30 && state.LastTool == "dynamite" {
-		if rand.Float64() < 0.05 {
+		if rand.Float64() < 0.05+digLuck {
 			xp := 100
 			return &DigResult{ItemName: "cursed_artifact", Value: 800, Quality: "cursed", Integrity: state.Integrity, XP: xp, IsCursed: true, Quantity: 1}
 		}
 	}
 
 	journalRoll := rand.Float64()
-	if journalRoll < 0.01 {
+	if journalRoll < 0.01+digLuck {
 		for i := 1; i <= JournalPageCount; i++ {
 			pageID := itoa(i)
 			var inv model.Inventory
