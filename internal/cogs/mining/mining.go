@@ -655,7 +655,12 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(interaction.UserID(i))
 	sess := c.loadSession(userID)
 	if sess == nil {
-		sess = &userSession{}
+		// No active expedition: either the player already left (double click)
+		// or the stale-session auto-grant already secured the loot.
+		c.respond(b, i, components.Embed(
+			i18n.T("mining.title", lang), i18n.T("mining.no_session", lang), 0x4A90D9,
+		), nil)
+		return
 	}
 
 	sessionsMu.Lock()
@@ -674,17 +679,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	sessionsMu.Unlock()
 	_ = c.svc.DeleteSession(userID)
 
-	title := i18n.T("mining.empty_msg", lang)
-	color := 0xC0C0C0
-	if len(res.Bag) > 0 {
-		title = i18n.T("mining.success_msg", lang, map[string]any{
-			"bag": c.bagString(res.Bag, lang), "xp": res.XP,
-		})
-		color = 0x00FF00
-	}
-	if res.LeveledUp {
-		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
-	}
+	title, color := c.leaveResultDisplay(res, lang)
 
 	c.respond(b, i, components.Embed("✅ Expedition Complete!", title, color), nil)
 
@@ -699,6 +694,23 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(res.Unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, res.Unlocks)
 	}
+}
+
+// leaveResultDisplay renders the exit embed title and color from a leave
+// result. The empty case must still pass {xp} so the placeholder never leaks.
+func (c *Cog) leaveResultDisplay(res *miningsvc.LeaveResult, lang string) (string, int) {
+	title := i18n.T("mining.empty_msg", lang, map[string]any{"xp": res.XP})
+	color := 0xC0C0C0
+	if len(res.Bag) > 0 {
+		title = i18n.T("mining.success_msg", lang, map[string]any{
+			"bag": c.bagString(res.Bag, lang), "xp": res.XP,
+		})
+		color = 0x00FF00
+	}
+	if res.LeveledUp {
+		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
+	return title, color
 }
 
 func (c *Cog) buildEasterEggText(ev *miningsvc.MiningEvent, lang string) string {

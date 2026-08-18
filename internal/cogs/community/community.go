@@ -317,7 +317,7 @@ func (c *Cog) inspectButtons(lang string, info *communitysvc.BuildingInfo) []dis
 	return rows
 }
 
-func (c *Cog) statsEmbed(s *discordgo.Session, lang string, serverID, userID int64, member *discordgo.Member) *discordgo.MessageEmbed {
+func (c *Cog) statsEmbed(s interaction.Session, lang string, serverID, userID int64, member *discordgo.Member) *discordgo.MessageEmbed {
 	stats, _ := c.svc.GetUserStats(userID, serverID)
 	embed := components.Embed(
 		i18n.T("community.stats_title", lang, map[string]any{"user": interaction.Mention(userID)}),

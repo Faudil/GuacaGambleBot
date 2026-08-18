@@ -379,6 +379,11 @@ func (s *Service) SellItem(userID int64, itemID string, amount int) (int, bool, 
 		return 0, false, 0, err
 	}
 
+	itemID = items.Canonical(itemID)
+	if itemID == "" {
+		return 0, false, 0, ErrNotFound
+	}
+
 	it := items.Get(itemID)
 	if it == nil {
 		return 0, false, 0, ErrNotFound

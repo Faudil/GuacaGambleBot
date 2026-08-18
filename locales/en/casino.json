@@ -1,0 +1,5 @@
+{
+  "casino": {
+    "rolls_left": "Plays left today — 🎰 {slots} · 🪙 {coinflip} · 🔟 {mega}"
+  }
+}

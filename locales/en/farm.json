@@ -1,6 +1,7 @@
 {
   "farm": {
     "accelerate_btn": "⚡ Accelerate",
+    "accelerate_btn_locked": "⚡ Accelerate (need Growth Elixir)",
     "accelerate_desc": "You pour the Growth Elixir over the soil.\n*The crop ripens in a flash!*",
     "accelerate_title": "⚡ Growth Elixir Applied",
     "back": "← Back",
@@ -54,6 +55,7 @@
     "event_pest_win_title": "⚔️ Pests Defeated",
     "expert_title": "🏅 Expert",
     "fertilize_btn": "🧪 Fertilize",
+    "fertilize_btn_locked": "🧪 Fertilize (need Fertilizer)",
     "fertilize_desc": "You sprinkle fertilizer on the soil.\n*Growth accelerated by 30%!*",
     "fertilize_title": "🧪 Fertilizer Applied",
     "footer": "❓ Mysteries await those who explore...",
@@ -63,6 +65,7 @@
     "harvest_msg": "📦 **{qty}x {item}**",
     "harvest_title": "🌾 Harvest Complete!",
     "inspect_desc": "**{item}**\n{cropdesc}\n\nGrowth: `{bar}` {pct}%\nRemaining: {mins}m {secs}s\nWater: {watered}",
+    "inspect_hint": "💡 Want to speed up growth? Get **Fertilizer** (🧪) or a **Growth Elixir** (⚡) at the market.",
     "inspect_empty": "No plots are active. Plant some seeds!",
     "inspect_main_btn": "🔍 Inspect Farm",
     "inspect_main_title": "🔍 Farm Overview",

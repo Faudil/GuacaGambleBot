@@ -6,12 +6,17 @@ import (
 
 	"gorm.io/gorm/clause"
 
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 )
 
 func (s *Store) HasItem(userID int64, itemID string, qty int) (bool, error) {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return false, nil
+	}
 	var inv model.Inventory
-	err := s.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
+	err := s.DB.Where("user_id = ? AND item_id = ?", userID, canonical).First(&inv).Error
 	if err != nil {
 		return false, nil
 	}

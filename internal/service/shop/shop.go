@@ -166,12 +166,12 @@ func (s *Service) BuyItem(userID int64, itemName string, quantity, unitPrice int
 		})
 	}
 
-	// Non-equipment: add to regular inventory
+	// Non-equipment: add to regular inventory under the canonical item ID.
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := s.store.UpdateBalanceTx(tx, userID, -totalCost); err != nil {
 			return err
 		}
-		return s.store.AddItemRaw(tx, userID, itemName, quantity)
+		return s.store.AddItemRaw(tx, userID, it.ID, quantity)
 	})
 }
 

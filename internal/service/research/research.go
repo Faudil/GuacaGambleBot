@@ -87,7 +87,7 @@ var ResearchDefs = map[string]*ResearchDef{
 		ID: "equip_uncommon", Name: "Uncommon Equipment", Description: "Improve your forging to craft Uncommon gear.",
 		TimeHours: 4, CostMoney: 1500, CostItems: map[string]int{"iron_ore": 10},
 		RequiredFurniture: "forge",
-		UnlocksRecipes:    []string{"craft_iron_pickaxe", "craft_lucky_charm", "craft_fishing_rod", "craft_miner_helmet"},
+		UnlocksRecipes:    []string{"craft_iron_mace", "craft_lucky_charm", "craft_fishing_rod", "craft_miner_helmet"},
 		BonusDesc:         "Unlocks: Uncommon equipment crafting",
 	},
 	"equip_rare": {

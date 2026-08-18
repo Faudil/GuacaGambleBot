@@ -312,9 +312,9 @@
       "name": "Minerai de Fer",
       "description": "Utile pour forger des trucs solides."
     },
-    "iron_pickaxe": {
-      "name": "Pioche en Fer",
-      "description": "Le meilleur ami du mineur. (+4 FOR)"
+    "iron_mace": {
+      "name": "Masse de Fer",
+      "description": "Une lourde masse de fer. (+4 FOR)"
     },
     "iron_shackles": {
       "name": "Menottes de Fer",

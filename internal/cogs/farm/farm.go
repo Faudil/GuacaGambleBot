@@ -932,6 +932,9 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	hasFertilizer := c.svc.HasItem(userID, "fertilizer")
+	hasElixir := c.svc.HasItem(userID, "growth_elixir")
+
 	elapsed := time.Since(p.PlantTime).Seconds()
 	remaining := p.GrowTime - int(elapsed)
 	if remaining < 0 {
@@ -964,6 +967,9 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		"secs":     remSecs,
 		"watered":  waterStr(p.Watered, lang),
 	})
+	if !p.Ready && (!hasFertilizer || !hasElixir) {
+		desc += "\n" + i18n.T("farm.inspect_hint", lang)
+	}
 
 	embed := components.Embed(
 		i18n.T("farm.inspect_title", lang, map[string]any{"n": p.PlotIndex + 1}),
@@ -980,20 +986,30 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				discordgo.PrimaryButton,
 			))
 		}
-		if c.svc.HasItem(userID, "fertilizer") {
-			btns = append(btns, components.Button(
-				i18n.T("farm.fertilize_btn", lang),
-				components.EncodeOwner(userID, "farm", "fertilize", zoneKey, rest[1]),
-				discordgo.DangerButton,
-			))
+		fertilizeLabel := i18n.T("farm.fertilize_btn", lang)
+		fertilizeStyle := discordgo.DangerButton
+		if !hasFertilizer {
+			fertilizeLabel = i18n.T("farm.fertilize_btn_locked", lang)
+			fertilizeStyle = discordgo.SecondaryButton
 		}
-		if c.svc.HasItem(userID, "growth_elixir") {
-			btns = append(btns, components.Button(
-				i18n.T("farm.accelerate_btn", lang),
-				components.EncodeOwner(userID, "farm", "accelerate", zoneKey, rest[1]),
-				discordgo.PrimaryButton,
-			))
+		btns = append(btns, components.ButtonDisabled(
+			fertilizeLabel,
+			components.EncodeOwner(userID, "farm", "fertilize", zoneKey, rest[1]),
+			fertilizeStyle,
+			!hasFertilizer,
+		))
+		accelerateLabel := i18n.T("farm.accelerate_btn", lang)
+		accelerateStyle := discordgo.PrimaryButton
+		if !hasElixir {
+			accelerateLabel = i18n.T("farm.accelerate_btn_locked", lang)
+			accelerateStyle = discordgo.SecondaryButton
 		}
+		btns = append(btns, components.ButtonDisabled(
+			accelerateLabel,
+			components.EncodeOwner(userID, "farm", "accelerate", zoneKey, rest[1]),
+			accelerateStyle,
+			!hasElixir,
+		))
 	}
 	btns = append(btns, components.Button(
 		i18n.T("farm.back", lang),

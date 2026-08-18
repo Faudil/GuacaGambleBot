@@ -122,3 +122,52 @@ func TestRunDataMigrationsIdempotent(t *testing.T) {
 		assert.Equal(t, int64(1), count, "marker %s", id)
 	}
 }
+
+func TestMigrateInventoryCanonicalIDs(t *testing.T) {
+	d := migrationTestDB(t)
+	require.NoError(t, d.AutoMigrate(&model.Inventory{}))
+
+	// Name-keyed rows created by the legacy daily shop.
+	require.NoError(t, d.Create(&model.Inventory{UserID: 1, ItemID: "Fertilizer", Quantity: 1}).Error)
+	require.NoError(t, d.Create(&model.Inventory{UserID: 1, ItemID: "Steel Pickaxe", Quantity: 2}).Error)
+	// A canonical row already exists for user 2 -> quantities must merge.
+	require.NoError(t, d.Create(&model.Inventory{UserID: 2, ItemID: "Fertilizer", Quantity: 3}).Error)
+	require.NoError(t, d.Create(&model.Inventory{UserID: 2, ItemID: "fertilizer", Quantity: 2}).Error)
+
+	require.NoError(t, migrateInventoryCanonicalIDs(d))
+
+	var fert model.Inventory
+	require.NoError(t, d.Where("user_id = ? AND item_id = ?", 1, "fertilizer").First(&fert).Error)
+	assert.Equal(t, 1, fert.Quantity)
+
+	var merged model.Inventory
+	require.NoError(t, d.Where("user_id = ? AND item_id = ?", 2, "fertilizer").First(&merged).Error)
+	assert.Equal(t, 5, merged.Quantity, "name-keyed and canonical quantities must be merged")
+
+	var pick model.Inventory
+	require.NoError(t, d.Where("user_id = ? AND item_id = ?", 1, "steel_pickaxe").First(&pick).Error)
+	assert.Equal(t, 2, pick.Quantity)
+
+	var orphan model.Inventory
+	err := d.Where("user_id = ? AND item_id = ?", 1, "Fertilizer").First(&orphan).Error
+	assert.Error(t, err, "name-keyed rows must be removed")
+}
+
+func TestMigrateInventoryCleanupZeroQuantity(t *testing.T) {
+	d := migrationTestDB(t)
+	require.NoError(t, d.AutoMigrate(&model.Inventory{}))
+
+	require.NoError(t, d.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 0}).Error)
+	require.NoError(t, d.Create(&model.Inventory{UserID: 1, ItemID: "beer", Quantity: -1}).Error)
+	require.NoError(t, d.Create(&model.Inventory{UserID: 1, ItemID: "wheat", Quantity: 3}).Error)
+
+	require.NoError(t, migrateInventoryCleanupZeroQuantity(d))
+
+	var count int64
+	require.NoError(t, d.Model(&model.Inventory{}).Count(&count).Error)
+	assert.Equal(t, int64(1), count, "zero/negative quantity rows must be removed")
+
+	var wheat model.Inventory
+	require.NoError(t, d.Where("user_id = ? AND item_id = ?", 1, "wheat").First(&wheat).Error)
+	assert.Equal(t, 3, wheat.Quantity)
+}

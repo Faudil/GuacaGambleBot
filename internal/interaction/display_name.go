@@ -10,7 +10,7 @@ import (
 // is used directly when it matches the requested user, otherwise the member is
 // fetched from the guild. Falls back to a mention when the member cannot be
 // resolved.
-func DisplayName(s *discordgo.Session, guildID string, member *discordgo.Member, userID int64) string {
+func DisplayName(s Session, guildID string, member *discordgo.Member, userID int64) string {
 	if member != nil && member.User != nil && userID == ToInt64(member.User.ID) {
 		if member.Nick != "" {
 			return member.Nick

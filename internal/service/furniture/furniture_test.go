@@ -205,3 +205,78 @@ func TestGetUsedSlotsSumsSizes(t *testing.T) {
 	assert.Equal(t, 3, fsvc.GetUsedSlots(uid))
 	assert.Equal(t, 6, fsvc.GetMaxSlots(uid))
 }
+
+func fundForBed(t *testing.T, s *store.Store, userID int64) {
+	t.Helper()
+	_, err := s.UpdateBalance(userID, 100000)
+	require.NoError(t, err)
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "stick", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "wheat", 100))
+}
+
+func TestBedDefined(t *testing.T) {
+	fd, ok := FurnitureDefs["bed"]
+	require.True(t, ok, "bed must be defined so it shows in the house furniture UI")
+	assert.NotEmpty(t, fd.Emoji)
+	assert.Equal(t, 2, fd.Slots)
+}
+
+func TestRestRequiresBed(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+	buyHouse(t, hsvc, s, uid, "brick_house")
+
+	err := fsvc.Rest(uid)
+	assert.ErrorIs(t, err, ErrNoBed)
+}
+
+func TestRestResetsCasinoLimits(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+	buyHouse(t, hsvc, s, uid, "brick_house")
+	fundForBed(t, s, uid)
+	require.NoError(t, fsvc.Place(uid, "bed"))
+
+	// Exhaust the slots limit.
+	for i := 0; i < 10; i++ {
+		require.NoError(t, s.IncrementGameLimit(uid, "slots"))
+	}
+	ok, _, err := s.CheckGameLimit(uid, "slots", 10)
+	require.NoError(t, err)
+	assert.False(t, ok)
+
+	require.NoError(t, fsvc.Rest(uid))
+	ok, _, err = s.CheckGameLimit(uid, "slots", 10)
+	require.NoError(t, err)
+	assert.True(t, ok)
+}
+
+func TestRestHalfRefunds(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+	buyHouse(t, hsvc, s, uid, "brick_house")
+	fundForBed(t, s, uid)
+	require.NoError(t, fsvc.Place(uid, "bed"))
+
+	// Use all 20 farm uses: a rest refunds half of the daily capacity.
+	for i := 0; i < 20; i++ {
+		require.NoError(t, s.IncrementGameLimit(uid, "farm"))
+	}
+	require.NoError(t, fsvc.Rest(uid))
+
+	_, remaining, err := s.CheckGameLimit(uid, "farm", 20)
+	require.NoError(t, err)
+	assert.Equal(t, 10, remaining)
+}
+
+func TestRestOncePerDay(t *testing.T) {
+	fsvc, hsvc, s := testService(t)
+	const uid = 1
+	buyHouse(t, hsvc, s, uid, "brick_house")
+	fundForBed(t, s, uid)
+	require.NoError(t, fsvc.Place(uid, "bed"))
+
+	require.NoError(t, fsvc.Rest(uid))
+	err := fsvc.Rest(uid)
+	assert.ErrorIs(t, err, ErrAlreadySlept)
+}

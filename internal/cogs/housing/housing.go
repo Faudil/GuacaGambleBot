@@ -50,10 +50,12 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("house", "furniture", c.onFurniture)
 	r.Component("house", "place", c.onPlace)
 	r.Component("house", "remove", c.onRemove)
+	r.Component("house", "remove_confirm", c.onRemoveConfirm)
 	r.Component("house", "research_view", c.onResearchView)
 	r.Component("house", "start_research", c.onStartResearch)
 	r.Component("house", "complete_research", c.onCompleteResearch)
 	r.Component("house", "sanctuary", c.onSanctuary)
+	r.Component("house", "rest", c.onRest)
 	r.Modal("house", "rename", c.onRename)
 	r.Modal("house", "color", c.onColor)
 }
@@ -99,11 +101,16 @@ func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, [
 			components.Button("🪑 Furniture", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
 			components.Button("🏡 Sanctuary", components.EncodeOwner(userID, "house", "sanctuary"), discordgo.SuccessButton),
 		),
-		components.ActionRow(
-			components.Button(i18n.T("housing.btn_houses", lang), components.EncodeOwner(userID, "house", "houses"), discordgo.SecondaryButton),
-			components.Button(i18n.T("housing.btn_shop", lang), components.EncodeOwner(userID, "house", "shop"), discordgo.PrimaryButton),
-		),
 	}
+	if furnituresvc.HasFurniture(c.store, userID, "bed") {
+		comps = append(comps, components.ActionRow(
+			components.Button(i18n.T("housing.btn_rest", lang), components.EncodeOwner(userID, "house", "rest"), discordgo.SecondaryButton),
+		))
+	}
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("housing.btn_houses", lang), components.EncodeOwner(userID, "house", "houses"), discordgo.SecondaryButton),
+		components.Button(i18n.T("housing.btn_shop", lang), components.EncodeOwner(userID, "house", "shop"), discordgo.PrimaryButton),
+	))
 	return embed, comps
 }
 
@@ -279,6 +286,13 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	effects := c.activeEffects(userID)
 	if len(effects) > 0 {
 		statsText += "\n✨ **Loadout:**\n" + strings.Join(effects, "\n")
+	}
+	if furnituresvc.HasFurniture(c.store, userID, "bed") {
+		if ok, _, err := c.store.CheckGameLimit(userID, "sleep", 1); err == nil && ok {
+			statsText += "\n" + i18n.T("housing.rest_status_ready", lang)
+		} else {
+			statsText += "\n" + i18n.T("housing.rest_status_done", lang)
+		}
 	}
 	embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.stats_label", lang), statsText, false))
 
@@ -484,7 +498,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 					researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
 				}
 			}
-			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s", fd.Emoji, fd.Name, fd.Slots, effectInfo, researchInfo)
+			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s", fd.Emoji, furnitureName(pf.FurnitureID, lang), fd.Slots, effectInfo, researchInfo)
 		}
 	}
 
@@ -507,7 +521,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
 			}
 		}
-		desc += fmt.Sprintf("\n%s %s | %s (%d slot)%s%s", fd.Emoji, fd.Name, costStr, fd.Slots, effectInfo, researchInfo)
+		desc += fmt.Sprintf("\n%s %s | %s (%d slot)%s%s", fd.Emoji, furnitureName(fd.ID, lang), costStr, fd.Slots, effectInfo, researchInfo)
 	}
 
 	embed := components.Embed("🪑 Furnitures", desc, 0xB9936C)
@@ -570,6 +584,19 @@ func (c *Cog) activeEffects(userID int64) []string {
 	return out
 }
 
+// furnitureName resolves the localized furniture name, falling back to the
+// English name from the furniture catalog when a locale key is missing.
+func furnitureName(id string, lang string) string {
+	if fd := furnituresvc.FurnitureDefs[id]; fd != nil {
+		key := "housing.furnitures." + id
+		if name := i18n.T(key, lang); name != key {
+			return name
+		}
+		return fd.Name
+	}
+	return id
+}
+
 func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -605,17 +632,48 @@ func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	fd := furnituresvc.FurnitureDefs[furnitureID]
-	name := furnitureID
-	if fd != nil {
-		name = fd.Name
-	}
-	embed := components.Embed("✅", fmt.Sprintf("Placed **%s** in your house!", name), 0x2ecc71)
+	embed := components.Embed("✅", fmt.Sprintf("Placed **%s** in your house!", furnitureName(furnitureID, lang)), 0x2ecc71)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
 
 func (c *Cog) onRemove(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 1 {
+		return
+	}
+	furnitureID := rest[0]
+
+	fd := furnituresvc.FurnitureDefs[furnitureID]
+	emoji := "❌"
+	slots := 0
+	if fd != nil {
+		emoji = fd.Emoji
+		slots = fd.Slots
+	}
+
+	embed := components.Embed(
+		i18n.T("housing.furniture_remove_confirm_title", lang),
+		i18n.T("housing.furniture_remove_confirm_desc", lang, map[string]any{
+			"emoji": emoji, "name": furnitureName(furnitureID, lang), "slots": slots,
+		}),
+		0xe74c3c,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("housing.furniture_remove_confirm_btn", lang), components.EncodeOwner(userID, "house", "remove_confirm", furnitureID), discordgo.DangerButton),
+			components.Button(i18n.T("housing.furniture_remove_cancel_btn", lang), components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onRemoveConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
@@ -630,19 +688,40 @@ func (c *Cog) onRemove(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	fd := furnituresvc.FurnitureDefs[furnitureID]
-	name := furnitureID
-	if fd != nil {
-		name = fd.Name
-	}
-	embed := components.Embed("🗑️", fmt.Sprintf("Removed **%s** from your house.", name), 0xe67e22)
+	embed := components.Embed("🗑️", fmt.Sprintf("Removed **%s** from your house.", furnitureName(furnitureID, lang)), 0xe67e22)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+}
+
+func (c *Cog) onRest(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	if err := c.fsvc.Rest(userID); err != nil {
+		var msg string
+		switch {
+		case errors.Is(err, furnituresvc.ErrNoBed):
+			msg = i18n.T("housing.rest_no_bed", lang)
+		case errors.Is(err, furnituresvc.ErrAlreadySlept):
+			msg = i18n.T("housing.rest_already", lang)
+		default:
+			msg = err.Error()
+		}
+		embed := components.Embed("❌", msg, 0xe74c3c)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		return
+	}
+	embed := components.Embed("🛏️", i18n.T("housing.rest_success", lang), 0x2ecc71)
+	_, comps := c.menuForUser(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 // --- Research handlers ---
 
 func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
 	desc := ""
@@ -730,12 +809,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 		if isActive {
 			continue
 		}
-		fd := furnituresvc.FurnitureDefs[rd.RequiredFurniture]
-		fName := rd.RequiredFurniture
-		if fd != nil {
-			fName = fd.Name
-		}
-		desc += fmt.Sprintf("• %s → need **%s**\n", rd.Name, fName)
+		desc += fmt.Sprintf("• %s → need **%s**\n", rd.Name, furnitureName(rd.RequiredFurniture, lang))
 		lockedCount++
 	}
 	if lockedCount == 0 {

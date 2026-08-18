@@ -66,8 +66,10 @@ func isOwnerGated(domain, action string) bool {
 }
 
 // Bot bundles the discordgo session, database and shared config for handlers.
+// Session is wrapped in a DeferringSession by NewRouter so handlers never have
+// to manage Discord's 3s interaction window themselves.
 type Bot struct {
-	Session *discordgo.Session
+	Session Session
 	DB      *gorm.DB
 	Prefix  string
 }
@@ -88,25 +90,35 @@ type ModalHandler func(b *Bot, i *discordgo.InteractionCreate)
 // giving every cog both a slash command and a `!prefix` entry point that open
 // the same embed interface.
 type Router struct {
-	bot       *Bot
-	store     *store.Store
-	slash     map[string]SlashHandler
-	slashDefs []*discordgo.ApplicationCommand
-	prefix    map[string]PrefixHandler
-	component map[string]ComponentHandler
-	modal     map[string]ModalHandler
+	bot        *Bot
+	store      *store.Store
+	rawSession *discordgo.Session
+	slash      map[string]SlashHandler
+	slashDefs  []*discordgo.ApplicationCommand
+	prefix     map[string]PrefixHandler
+	component  map[string]ComponentHandler
+	modal      map[string]ModalHandler
 
 	rateLimitMu    sync.Mutex
 	rateLimitTimes map[string]time.Time
 }
 
 // Session returns the underlying discordgo session.
-func (r *Router) Session() *discordgo.Session { return r.bot.Session }
+func (r *Router) Session() *discordgo.Session { return r.rawSession }
 
 func NewRouter(bot *Bot, st *store.Store) *Router {
+	raw, _ := bot.Session.(*discordgo.Session)
+	if raw != nil {
+		// Swap in the deferred-response translation layer: the router
+		// acknowledges every interaction immediately and the handler's reply is
+		// rewritten into an edit/follow-up, so no cog can ever miss Discord's
+		// 3s response window.
+		bot.Session = NewDeferringSession(raw)
+	}
 	return &Router{
 		bot:            bot,
 		store:          st,
+		rawSession:     raw,
 		slash:          map[string]SlashHandler{},
 		slashDefs:      []*discordgo.ApplicationCommand{},
 		prefix:         map[string]PrefixHandler{},
@@ -146,15 +158,107 @@ func (r *Router) Modal(domain, action string, h ModalHandler) {
 
 // Register wires the global discordgo event handlers.
 func (r *Router) Register() {
-	r.bot.Session.AddHandler(r.onInteraction)
-	r.bot.Session.AddHandler(r.onMessage)
+	r.rawSession.AddHandler(r.onInteraction)
+	r.rawSession.AddHandler(r.onMessage)
 }
 
 // DispatchInteraction routes an interaction to the registered handler. It is the
 // entry point used by the gateway and is exported so tests can drive handlers
 // without a live Discord connection.
 func (r *Router) DispatchInteraction(i *discordgo.InteractionCreate) {
-	r.onInteraction(r.bot.Session, i)
+	r.onInteraction(r.rawSession, i)
+}
+
+// modalOpenerActions lists every component (domain, action) that answers with a
+// modal instead of a message update. These must NOT be deferred: the modal
+// response is the first and only reply Discord accepts, so the router lets them
+// respond directly. Keep this in sync with every InteractionResponseModal site
+// in the cogs; a missed opener is caught loudly in the logs (the DeferringSession
+// drops the modal reply with an error).
+var modalOpenerActions = map[string]struct{}{
+	"betting::create":         {},
+	"betting::place":          {},
+	"betting::close":          {},
+	"betting::odds":           {},
+	"betting::freeze":         {},
+	"admin::airdrop":          {},
+	"admin::airdrop_item":     {},
+	"admin::givecrowns":       {},
+	"admin::setlang":          {},
+	"duel::challenge":         {},
+	"onboarding::advanced":    {},
+	"veil::whisper_answer":    {},
+	"blackjack::challenge":    {},
+	"roulette::new":           {},
+	"loan::borrow":            {},
+	"loan::repay":             {},
+	"community::contribute":   {},
+	"pets::rename_btn":        {},
+	"bank::deposit":           {},
+	"bank::withdraw":          {},
+	"inventory::pick":         {},
+	"casino::slots":           {},
+	"casino::coinflip_choice": {},
+	"casino::mega_slots":      {},
+	"market::action":          {},
+	"economy::give":           {},
+	"lotto::buy":              {},
+	"delve::puzzle_solve":     {},
+}
+
+// modalOpenerPrefixes covers dynamically registered modal openers, e.g. one
+// gift button per NPC ("npc::gift_<id>").
+var modalOpenerPrefixes = []string{
+	"npc::gift_",
+}
+
+func isModalOpener(domain, action string) bool {
+	if _, ok := modalOpenerActions[domain+"::"+action]; ok {
+		return true
+	}
+	for _, p := range modalOpenerPrefixes {
+		if strings.HasPrefix(domain+"::"+action, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// deferInteraction acknowledges the interaction with a deferred response so the
+// handler has 15 minutes instead of 3 seconds to produce its real reply. The
+// handler's response is then translated into an edit/follow-up by the
+// DeferringSession. Returns whether the deferred acknowledgment was sent.
+func (r *Router) deferInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
+	respType := discordgo.InteractionResponseDeferredChannelMessageWithSource
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		// Deferred channel message: slash replies arrive as follow-ups.
+	case discordgo.InteractionMessageComponent:
+		domain, action, _ := components.Decode(i.MessageComponentData().CustomID)
+		if isModalOpener(domain, action) {
+			return false // modal openers must respond directly with the modal
+		}
+		respType = discordgo.InteractionResponseDeferredMessageUpdate
+	case discordgo.InteractionModalSubmit:
+		respType = discordgo.InteractionResponseDeferredMessageUpdate
+	default:
+		return false
+	}
+	if s == nil || s.Client == nil {
+		return false // no HTTP client (unit tests); handlers respond directly
+	}
+	if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: respType}); err != nil {
+		logger.Log().Warn("failed to defer interaction; falling back to direct response",
+			"error", err,
+			"user", UserID(i),
+			"guild", i.GuildID,
+		)
+		return false
+	}
+	if ds, ok := r.bot.Session.(*DeferringSession); ok {
+		ds.deferInteraction(i.Interaction)
+	}
+	return true
 }
 
 func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -195,6 +299,7 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
+		r.deferInteraction(s, i)
 		if h, ok := r.slash[data.Name]; ok {
 			h(r.bot, i)
 		} else {
@@ -231,6 +336,7 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
+		r.deferInteraction(s, i)
 		key := domain + "::" + action
 		if h, ok := r.component[key]; ok {
 			h(r.bot, i)
@@ -257,6 +363,7 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
+		r.deferInteraction(s, i)
 		key := domain + "::" + action
 		if h, ok := r.modal[key]; ok {
 			h(r.bot, i)
@@ -396,14 +503,14 @@ func (r *Router) checkRateLimit(userID string) bool {
 // commands in the scope it targets; without the purge, switching between
 // global and guild-scoped registration leaves stale duplicates behind.
 func (r *Router) RegisterCommands(guildID string) error {
-	appID := r.bot.Session.State.User.ID
-	_, err := r.bot.Session.ApplicationCommandBulkOverwrite(appID, guildID, r.slashDefs)
+	appID := r.rawSession.State.User.ID
+	_, err := r.rawSession.ApplicationCommandBulkOverwrite(appID, guildID, r.slashDefs)
 	if err != nil {
 		return err
 	}
 	if guildID != "" {
 		// Guild-scoped registration: drop stale global copies.
-		_, purgeErr := r.bot.Session.ApplicationCommandBulkOverwrite(appID, "", []*discordgo.ApplicationCommand{})
+		_, purgeErr := r.rawSession.ApplicationCommandBulkOverwrite(appID, "", []*discordgo.ApplicationCommand{})
 		if purgeErr != nil {
 			logger.Log().Warn("could not purge global slash commands", "error", purgeErr)
 		} else {
@@ -412,8 +519,8 @@ func (r *Router) RegisterCommands(guildID string) error {
 		return nil
 	}
 	// Global registration: drop stale guild-scoped copies in every guild.
-	for _, g := range r.bot.Session.State.Guilds {
-		_, purgeErr := r.bot.Session.ApplicationCommandBulkOverwrite(appID, g.ID, []*discordgo.ApplicationCommand{})
+	for _, g := range r.rawSession.State.Guilds {
+		_, purgeErr := r.rawSession.ApplicationCommandBulkOverwrite(appID, g.ID, []*discordgo.ApplicationCommand{})
 		if purgeErr != nil {
 			logger.Log().Warn("could not purge guild slash commands", "error", purgeErr, "guild", g.ID)
 		} else {

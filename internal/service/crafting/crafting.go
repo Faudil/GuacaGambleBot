@@ -80,7 +80,7 @@ var Recipes = map[string]Recipe{
 	"craft_leather_armor": {Result: "leather_armor", Ingredients: map[string]int{"iron_ore": 3, "coal": 2}, LevelRequired: 2, XP: 20, RequiredResearch: "equip_common", IsEquipment: true},
 
 	// --- Uncommon equipment (equip_uncommon) ---
-	"craft_iron_pickaxe": {Result: "iron_pickaxe", Ingredients: map[string]int{"iron_ore": 5, "coal": 3}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
+	"craft_iron_mace":    {Result: "iron_mace", Ingredients: map[string]int{"iron_ore": 5, "coal": 3}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
 	"craft_lucky_charm":  {Result: "lucky_charm", Ingredients: map[string]int{"gold_nugget": 1, "emerald": 1}, LevelRequired: 3, XP: 30, RequiredResearch: "equip_uncommon", IsEquipment: true},
 	"craft_fishing_rod":  {Result: "fishing_rod", Ingredients: map[string]int{"wheat": 5, "iron_ore": 3}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},
 	"craft_miner_helmet": {Result: "miner_helmet", Ingredients: map[string]int{"iron_ore": 5, "coal": 5}, LevelRequired: 4, XP: 35, RequiredResearch: "equip_uncommon", IsEquipment: true},

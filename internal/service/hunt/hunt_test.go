@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
@@ -103,10 +104,45 @@ func TestHuntThornmail(t *testing.T) {
 	require.NotEmpty(t, res.Turns)
 
 	msgs := make([]string, 0, len(res.Turns))
-	for _, t := range res.Turns {
-		msgs = append(msgs, t.Msg)
+	for _, turn := range res.Turns {
+		msgs = append(msgs, turn.Msg)
 	}
 	assert.Contains(t, strings.Join(msgs, "\n"), "thorn damage", "thornmail must reflect damage back at the enemy")
+}
+
+func TestHuntGrantsHunterJobXP(t *testing.T) {
+	svc, s := testService(t)
+	addActivePet(t, s, 1)
+	res, err := svc.ExecuteHunt(1, "forest")
+	require.NoError(t, err)
+
+	var job model.Job
+	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "hunter").First(&job).Error,
+		"a hunt must create the hunter job row")
+	assert.GreaterOrEqual(t, job.Level, 1)
+	total := job.XP
+	for lvl := 1; lvl < job.Level; lvl++ {
+		total += jobssvc.XPForLevel(lvl)
+	}
+	assert.Equal(t, res.XP, total, "hunter job XP must match the hunt's activity XP")
+}
+
+func TestHuntGrantsHunterJobXPMultiple(t *testing.T) {
+	svc, s := testServiceWithCfg(t, &config.Config{
+		StartingBalance:     100,
+		HuntMaxPerDay:       100,
+		HuntCooldownSeconds: 0,
+	})
+	addActivePet(t, s, 1)
+	_ = s.DB.Create(&model.Job{UserID: 1, JobName: "hunter", Level: 2, XP: 10})
+
+	_, err := svc.ExecuteHunt(1, "forest")
+	require.NoError(t, err)
+
+	var job model.Job
+	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "hunter").First(&job).Error)
+	assert.GreaterOrEqual(t, job.Level, 2, "existing hunter job must keep its level")
+	assert.Greater(t, job.XP, 10, "existing hunter job must gain XP")
 }
 
 func TestNewEnemy(t *testing.T) {

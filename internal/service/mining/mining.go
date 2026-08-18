@@ -653,8 +653,12 @@ func (s *Service) GrantItem(userID int64, itemID string, quantity int) error {
 }
 
 func (s *Service) HasItem(userID int64, itemID string) (bool, error) {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return false, nil
+	}
 	var inv model.Inventory
-	err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity > 0", userID, itemID).First(&inv).Error
+	err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity > 0", userID, canonical).First(&inv).Error
 	if err == gorm.ErrRecordNotFound {
 		return false, nil
 	}

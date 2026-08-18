@@ -95,7 +95,7 @@ func (c *Cog) onBack(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 // announceMastery posts the Mastery legend reveal to the guild's announcement
 // channel. Fires on every unlock (each player who masters all paths).
-func (c *Cog) announceMastery(sess *discordgo.Session, lang string, guildID, userID int64) {
+func (c *Cog) announceMastery(sess interaction.Session, lang string, guildID, userID int64) {
 	if sess == nil || guildID == 0 {
 		return
 	}
@@ -144,7 +144,7 @@ func rankName(rank int, lang string) string {
 	return i18n.T("journal.ranks."+strconv.Itoa(rank), lang)
 }
 
-func (c *Cog) buildEmbed(sess *discordgo.Session, lang string, guildID, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) buildEmbed(sess interaction.Session, lang string, guildID, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	v, err := c.svc.View(userID)
 	if err != nil {
 		return components.Embed(i18n.T("journal.title", lang), i18n.T("journal.error", lang), 0xe74c3c), nil

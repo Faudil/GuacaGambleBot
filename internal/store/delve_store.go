@@ -1,12 +1,14 @@
 package store
 
 import (
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/model"
 )
 
@@ -104,15 +106,28 @@ func (s *Store) GetFallenPlayersOnFloor(guildID, floor int64, limit int) ([]mode
 	return sessions, err
 }
 
+// ErrUnknownItem is returned when an inventory grant references an item that
+// does not exist. It guards against writing orphan rows keyed by a display name
+// or a typo, which canonical-ID lookups (crafting, farm, use) can never find.
+var ErrUnknownItem = errors.New("unknown item")
+
 func (s *Store) AddItemRaw(db *gorm.DB, userID int64, itemID string, quantity int) error {
 	if quantity <= 0 {
 		return nil
 	}
-	inv := &model.Inventory{UserID: userID, ItemID: itemID, Quantity: quantity}
+	// Resolve the key and store it under the canonical ID. Callers may pass a
+	// display name (e.g. "Fertilizer") or a raw id; the registry normalizes both
+	// so every consumer that looks items up by id finds the grant.
+	it := items.Get(itemID)
+	if it == nil {
+		logger.Log().Warn("inventory grant skipped: unknown item", "item", itemID, "user", userID)
+		return ErrUnknownItem
+	}
+	inv := &model.Inventory{UserID: userID, ItemID: it.ID, Quantity: quantity}
 	// Newly granted tools start with a full durability bar. The upsert below
 	// only increments quantity, so buying an extra tool never resets the
 	// durability of the tool currently in use.
-	if it := items.Get(itemID); it != nil && it.Durability > 0 {
+	if it.Durability > 0 {
 		inv.Durability = it.Durability
 	}
 	return db.Clauses(clause.OnConflict{

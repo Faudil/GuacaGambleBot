@@ -244,6 +244,16 @@ func TestHasItem(t *testing.T) {
 	assert.True(t, svc.HasItem(1, "wheat_seed"))
 }
 
+func TestHasItemNormalizesDisplayName(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "fertilizer", Quantity: 1})
+	assert.True(t, svc.HasItem(1, "Fertilizer"), "display-name lookup must find the canonical row")
+	assert.False(t, svc.HasItem(1, "not_a_real_item"))
+	assert.Equal(t, 1, svc.GetItemQuantity(1, "Fertilizer"))
+	assert.True(t, svc.ConsumeItem(1, "Fertilizer", 1))
+	assert.False(t, svc.ConsumeItem(1, "not_a_real_item", 1))
+}
+
 func TestConsumeItem(t *testing.T) {
 	svc, s := testService(t)
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "wheat_seed", Quantity: 3})

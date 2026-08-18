@@ -2,9 +2,11 @@
   "slots": {
     "bet_info": "Bet: **${amount}**",
     "gain": "💰 **Gain: ${amount}**",
+    "invalid_bet": "❌ Invalid bet.",
     "jackpot_bell": "🔔 **DING DING DING!** The big prize is yours!",
     "jackpot_diamond": "💎 **OMEGA JACKPOT !!!** YOU ARE RICH !!! 💎",
     "jackpot_generic": "🎉 **INCREDIBLE!** Three {symbol} aligned!",
+    "limit_reached": "❌ Slots daily limit reached! Come back tomorrow.",
     "lose_generic": "❌ No luck... Try again!",
     "loss": "💸 -${amount}",
     "no_money": "❌ Not enough money (${balance}).",

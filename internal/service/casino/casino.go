@@ -110,6 +110,23 @@ func (s *Service) casinoLimit(userID int64, base int) int {
 	return base
 }
 
+// RemainingPlays returns how many daily plays the user has left for each
+// casino game (slots, coinflip, mega_slots).
+func (s *Service) RemainingPlays(userID int64) (slots, coinflip, mega int) {
+	slots = s.remaining(userID, "slots", s.casinoLimit(userID, baseSlotsLimit))
+	coinflip = s.remaining(userID, "coinflip", s.casinoLimit(userID, baseSlotsLimit))
+	mega = s.remaining(userID, "mega_slots", megaSlotsLimit)
+	return
+}
+
+func (s *Service) remaining(userID int64, game string, max int) int {
+	_, left, err := s.store.CheckGameLimit(userID, game, max)
+	if err != nil {
+		return max
+	}
+	return left
+}
+
 func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	if amount <= 0 {
 		return nil, ErrMaxBet

@@ -51,6 +51,22 @@ func TestTransferItemNoItem(t *testing.T) {
 	assert.Equal(t, TradeNoItem, result)
 }
 
+func TestTransferItemNormalizesDisplayName(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(2, 500)
+	require.NoError(t, err)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 3}).Error)
+
+	// A user-typed display name must resolve to the canonical id on both the
+	// seller's row and the buyer's grant.
+	result := svc.TransferItem(1, 2, "Coal", 50)
+	assert.Equal(t, TradeSuccess, result)
+
+	var buyerInv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 2, "coal").First(&buyerInv).Error)
+	assert.Equal(t, 1, buyerInv.Quantity)
+}
+
 func setQty(t *testing.T, st *store.Store, userID int64, itemID string, qty int) {
 	t.Helper()
 	require.NoError(t, st.DB.Model(&model.Inventory{}).

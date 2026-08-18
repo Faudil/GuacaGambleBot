@@ -7,6 +7,7 @@
     "effect_risk": "{sign}{pct}% de risque · {turns} creusages restants",
     "effects_label": "🌀 Effets : {list}",
     "empty_msg": "😐 Tu sors de la mine les mains vides.\n📈 **XP Mineur :** +{xp}",
+    "no_session": "Tu n'es plus dans la mine pour l'instant — ta dernière expédition a déjà été sécurisée.",
     "error": "❌ Quelque chose a mal tourné durant l'expédition. Réessaie.",
     "entries_remaining": "⛏️ **Expéditions restantes aujourd'hui :** {count}",
     "ev_camp_desc": "Tu trouves un vieux feu de camp encore chaud. Quelqu'un était là récemment.",

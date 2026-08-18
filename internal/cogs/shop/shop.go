@@ -140,7 +140,7 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	if err := c.svc.BuyItem(userID, offer.Item.Name, 1, offer.Price); err != nil {
+	if err := c.svc.BuyItem(userID, itemID, 1, offer.Price); err != nil {
 		switch err {
 		case shop.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "shop.too_broke_item")

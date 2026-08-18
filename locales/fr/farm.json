@@ -1,6 +1,7 @@
 {
   "farm": {
     "accelerate_btn": "⚡ Accélérer",
+    "accelerate_btn_locked": "⚡ Accélérer (élixir requis)",
     "accelerate_desc": "Tu verses l'Élixir de Croissance sur le sol.\n*La récolte mûrit en un éclair !*",
     "accelerate_title": "⚡ Élixir de Croissance Appliqué",
     "back": "← Retour",
@@ -54,6 +55,7 @@
     "event_pest_win_title": "⚔️ Nuisibles Vaincus",
     "expert_title": "🏅 Expert",
     "fertilize_btn": "🧪 Engrais",
+    "fertilize_btn_locked": "🧪 Engrais (engrais requis)",
     "fertilize_desc": "Tu répands de l'engrais sur le sol.\n*Croissance accélérée de 30% !*",
     "fertilize_title": "🧪 Engrais Appliqué",
     "footer": "❓ Des mystères attendent ceux qui explorent...",
@@ -63,6 +65,7 @@
     "harvest_msg": "📦 **{qty}x {item}**",
     "harvest_title": "🌾 Récolte Terminée !",
     "inspect_desc": "**{item}**\n{cropdesc}\n\nCroissance : `{bar}` {pct}%\nRestant : {mins}m {secs}s\nEau : {watered}",
+    "inspect_hint": "💡 Tu veux accélérer la pousse ? Achète de l'**engrais** (🧪) ou un **élixir de croissance** (⚡) au marché.",
     "inspect_empty": "Aucune parcelle active. Plante des graines !",
     "inspect_main_btn": "🔍 Inspecter la Ferme",
     "inspect_main_title": "🔍 Aperçu de la Ferme",

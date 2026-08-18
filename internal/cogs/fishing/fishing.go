@@ -356,7 +356,7 @@ func (c *Cog) onSpotSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang string) {
+func (c *Cog) startBiteWait(userID int64, session interaction.Session, lang string) {
 	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok || sess.phase != phaseWaiting {
@@ -437,7 +437,7 @@ func (c *Cog) startBiteWait(userID int64, session *discordgo.Session, lang strin
 	}()
 }
 
-func (c *Cog) editWaitMessage(s *discordgo.Session, channelID, msgID, state string, lang string, userID int64, expires ...time.Time) {
+func (c *Cog) editWaitMessage(s interaction.Session, channelID, msgID, state string, lang string, userID int64, expires ...time.Time) {
 	reelBtn := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("fishing.reel_in_btn", lang), components.EncodeOwner(userID, "fish", "strike"), discordgo.PrimaryButton),

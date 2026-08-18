@@ -2,9 +2,11 @@
   "slots": {
     "bet_info": "Mise: **${amount}**",
     "gain": "💰 **Gain : ${amount}**",
+    "invalid_bet": "❌ Mise invalide.",
     "jackpot_bell": "🔔 **DING DING DING !** Le gros lot est pour toi !",
     "jackpot_diamond": "💎 **OMEGA JACKPOT !!!** TU ES RICHE !!! 💎",
     "jackpot_generic": "🎉 **INCROYABLE !** Trois {symbol} alignés !",
+    "limit_reached": "❌ Limite quotidienne des machines à sous atteinte ! Reviens demain.",
     "lose_generic": "❌ Pas de chance... Retente ta chance !",
     "loss": "💸 -${amount}",
     "no_money": "❌ Pas assez d'argent (${balance}).",

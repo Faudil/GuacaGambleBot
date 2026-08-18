@@ -148,6 +148,31 @@ func TestCoinflipChoiceNormalization(t *testing.T) {
 	assert.Equal(t, "", svc.normalizeChoice("invalid"))
 }
 
+func TestRemainingPlays(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 100000)
+	require.NoError(t, err)
+
+	slots, coinflip, mega := svc.RemainingPlays(1)
+	assert.Equal(t, 10, slots)
+	assert.Equal(t, 10, coinflip)
+	assert.Equal(t, 5, mega)
+
+	_, err = svc.SpinSlots(1, 50)
+	require.NoError(t, err)
+	slots, coinflip, mega = svc.RemainingPlays(1)
+	assert.Equal(t, 9, slots)
+	assert.Equal(t, 10, coinflip)
+	assert.Equal(t, 5, mega)
+
+	_, err = svc.Coinflip(1, "pile", 100, false)
+	require.NoError(t, err)
+	slots, coinflip, mega = svc.RemainingPlays(1)
+	assert.Equal(t, 9, slots)
+	assert.Equal(t, 9, coinflip)
+	assert.Equal(t, 5, mega)
+}
+
 func TestCoinflipRecordsWinOnly(t *testing.T) {
 	svc, st := testService(t)
 	_, err := st.UpdateBalance(1, 100000)

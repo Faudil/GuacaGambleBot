@@ -65,6 +65,16 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		Effects:         []Effect{{Stat: "dig_luck", Value: 0.05, Description: "+5% rare dig finds"}},
 		UnlocksResearch: []string{"magnetism"},
 	},
+	"bed": {
+		ID: "bed", Name: "Sleeping Bed", Emoji: "🛏️",
+		Description:     "A cozy bed to rest and recover your energy.",
+		CostMoney:       4000,
+		SlotType:        "floor",
+		Slots:           2,
+		CostItems:       map[string]int{"stick": 10, "wheat": 5},
+		Effects:         []Effect{{Stat: "rest", Value: 1, Description: "Rest once per day: full casino limit refresh, half refresh for other activities"}},
+		UnlocksResearch: nil,
+	},
 	"gambling_parlor": {
 		ID: "gambling_parlor", Name: "Gambling Parlor", Emoji: "🎰",
 		Description:     "Everything you need for probability manipulation.",
@@ -302,4 +312,57 @@ func (s *Service) Remove(userID int64, furnitureID string) error {
 		return fmt.Errorf("not placed")
 	}
 	return nil
+}
+
+var (
+	// ErrNoBed is returned when the player tries to rest without a Sleeping
+	// Bed placed in their active house.
+	ErrNoBed = errors.New("you need a Sleeping Bed in your house to rest")
+	// ErrAlreadySlept is returned when the player already rested today.
+	ErrAlreadySlept = errors.New("you already rested today")
+)
+
+// restFull lists the daily limits fully refreshed by sleeping (casino games).
+var restFull = []string{"slots", "coinflip", "mega_slots"}
+
+// restHalf lists the daily limits half-refreshed by sleeping, with their daily
+// maximum. Credits granted are ceil(max/2), so a 1-use freebie is fully
+// restored while bigger activities get roughly half their daily capacity back.
+var restHalf = map[string]int{
+	"farm":         20,
+	"fish":         10,
+	"fish_free":    1,
+	"mine_descend": 15,
+	"hunt":         10,
+	"dig":          10,
+	"lotto":        3,
+	"bet":          20,
+	"boss_fight":   5,
+}
+
+// Rest lets the player sleep in their Sleeping Bed once per day. Casino daily
+// limits are fully refreshed, other daily activities are half-refreshed. The
+// rest itself is tracked as a "sleep" game limit so it resets at midnight.
+func (s *Service) Rest(userID int64) error {
+	if !HasFurniture(s.store, userID, "bed") {
+		return ErrNoBed
+	}
+	ok, _, err := s.store.CheckGameLimit(userID, "sleep", 1)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrAlreadySlept
+	}
+	for _, game := range restFull {
+		if err := s.store.ResetGameLimit(userID, game); err != nil {
+			return err
+		}
+	}
+	for game, max := range restHalf {
+		if err := s.store.GrantGameLimitCredit(userID, game, (max+1)/2); err != nil {
+			return err
+		}
+	}
+	return s.store.IncrementGameLimit(userID, "sleep")
 }

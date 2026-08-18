@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
@@ -490,6 +491,10 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 
 	charLeveled, charLvl := charsvc.AddXP(s.store, userID, xp)
 
+	if err := s.grantHunterJobXP(userID, xp); err != nil {
+		return nil, err
+	}
+
 	if playerWon && charsvc.HasBuff(s.store, userID, "scavenger") {
 		for _, loot := range zone.LootTable {
 			if rand.Float64() < loot.Chance {
@@ -535,6 +540,34 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 		CharLeveledUp: charLeveled,
 		CharNewLevel:  charLvl,
 	}, nil
+}
+
+// grantHunterJobXP awards hunter job XP for a hunt, creating the job row on
+// first use and leveling it up like the other activity jobs.
+func (s *Service) grantHunterJobXP(userID int64, xp int) error {
+	var job model.Job
+	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "hunter").First(&job).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return err
+		}
+		job = model.Job{UserID: userID, JobName: "hunter", Level: 1, XP: xp}
+		levelUpJob(&job)
+		return s.store.DB.Create(&job).Error
+	}
+	job.XP += xp
+	levelUpJob(&job)
+	return s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "hunter").
+		Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error
+}
+
+// levelUpJob applies as many level-ups as the job's XP warrants.
+func levelUpJob(job *model.Job) {
+	next := jobssvc.XPForLevel(job.Level)
+	for job.XP >= next {
+		job.XP -= next
+		job.Level++
+		next = jobssvc.XPForLevel(job.Level)
+	}
 }
 
 // rollHuntGear decides whether a hunt drops gear and picks a level-appropriate

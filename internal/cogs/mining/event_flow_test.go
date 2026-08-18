@@ -134,6 +134,37 @@ func TestRiskTurnsDecay(t *testing.T) {
 	decayTurns(&userSession{riskMod: 0, riskTurns: 0})
 }
 
+func TestLeaveResultDisplay(t *testing.T) {
+	if err := i18n.Load("../../../locales"); err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "m.db")), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Migrate(d))
+	cfg := &config.Config{StartingBalance: 100}
+	st := store.New(d, cfg)
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	require.NotNil(t, def)
+	inv := invsvc.New(st, cfg)
+	npc := npcsvc.New(st, cfg, def, inv)
+	c := &Cog{store: st, cfg: cfg, svc: miningsvc.New(st, cfg, npc)}
+
+	title, color := c.leaveResultDisplay(&miningsvc.LeaveResult{XP: 0, Bag: nil}, "en")
+	require.NotContains(t, title, "{xp}", "empty result must not leak the {xp} placeholder")
+	require.Contains(t, title, "+0")
+	require.Equal(t, 0xC0C0C0, color)
+
+	title, color = c.leaveResultDisplay(&miningsvc.LeaveResult{
+		XP:  42,
+		Bag: []miningsvc.BagEntry{{Name: "coal", Count: 3}},
+	}, "en")
+	require.Contains(t, title, "Coal")
+	require.Contains(t, title, "+42")
+	require.Equal(t, 0x00FF00, color)
+}
+
 func TestConcurrentSessionAccess(t *testing.T) {
 	if err := i18n.Load("../../../locales"); err != nil {
 		t.Fatal(err)

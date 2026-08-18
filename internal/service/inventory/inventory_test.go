@@ -63,6 +63,15 @@ func TestHasItemInsufficientQuantity(t *testing.T) {
 	assert.False(t, svc.HasItem(1, "coal", 5))
 }
 
+func TestHasItemNormalizesDisplayName(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 2}).Error)
+
+	assert.True(t, svc.HasItem(1, "Coal", 1), "display-name lookup must find the canonical row")
+	assert.False(t, svc.HasItem(1, "Coal", 5))
+	assert.False(t, svc.HasItem(1, "not_a_real_item", 1))
+}
+
 func TestAddItem(t *testing.T) {
 	svc, st := testService(t)
 	err := svc.AddItem(st.DB, 1, "coal", 3)
@@ -84,4 +93,16 @@ func TestRemoveItem(t *testing.T) {
 	var inv model.Inventory
 	st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv)
 	assert.Equal(t, 6, inv.Quantity)
+}
+
+func TestRemoveItemNormalizesDisplayName(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "coal", Quantity: 10}).Error)
+
+	err := svc.RemoveItem(st.DB, 1, "Coal", 3)
+	require.NoError(t, err)
+
+	var inv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, "coal").First(&inv).Error)
+	assert.Equal(t, 7, inv.Quantity)
 }

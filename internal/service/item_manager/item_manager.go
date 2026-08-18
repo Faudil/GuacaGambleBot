@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
@@ -29,8 +30,14 @@ const (
 )
 
 func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price int) TradeResult {
+	// The key may come from a user-typed name; resolve it to the canonical id
+	// so the seller's row and the buyer's grant use the same key.
+	canonical := items.Canonical(itemName)
+	if canonical == "" {
+		return TradeNoItem
+	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", sellerID, itemName).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", sellerID, canonical).First(&inv).Error; err != nil {
 		return TradeNoItem
 	}
 	if inv.Quantity < 1 {
@@ -59,11 +66,11 @@ func (s *Service) TransferItem(sellerID, buyerID int64, itemName string, price i
 			return err
 		}
 		if err := tx.Model(&model.Inventory{}).
-			Where("user_id = ? AND item_id = ?", sellerID, itemName).
+			Where("user_id = ? AND item_id = ?", sellerID, canonical).
 			UpdateColumn("quantity", gorm.Expr("quantity - ?", 1)).Error; err != nil {
 			return err
 		}
-		return s.store.AddItemRaw(tx, buyerID, itemName, 1)
+		return s.store.AddItemRaw(tx, buyerID, canonical, 1)
 	})
 	if err != nil {
 		return TradeUnknown

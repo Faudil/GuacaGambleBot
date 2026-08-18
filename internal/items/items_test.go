@@ -83,3 +83,15 @@ func TestMinLevelForRarity(t *testing.T) {
 	assert.Equal(t, 15, MinLevelForRarity(RarityEpic))
 	assert.Equal(t, 20, MinLevelForRarity(RarityLegendary))
 }
+
+func TestCanonicalResolvesEveryRegisteredItem(t *testing.T) {
+	for _, it := range AllItems() {
+		assert.Equal(t, it.ID, Canonical(it.ID), "id %q must resolve to itself", it.ID)
+		assert.Equal(t, it.ID, Canonical(it.Name), "display name %q must resolve to id %q", it.Name, it.ID)
+	}
+}
+
+func TestCanonicalUnknown(t *testing.T) {
+	assert.Empty(t, Canonical("not_a_real_item"))
+	assert.Empty(t, Canonical(""))
+}

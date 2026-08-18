@@ -254,7 +254,7 @@ var all = []Item{
 	{ID: "leather_armor", Name: "Leather Armor", Emoji: "🦺", Price: 300, Description: "Basic protection. (+2 VIT)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityCommon, MinLevel: 1, EquipSlot: "armor", StatVIT: 2},
 
 	// --- Equipment: Tier 2 (Lv 5, Uncommon) ---
-	{ID: "iron_pickaxe", Name: "Iron Pickaxe", Emoji: "⛏️", Price: 500, Description: "A miner's best friend. (+4 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon", StatSTR: 4},
+	{ID: "iron_mace", Name: "Iron Mace", Emoji: "🔨", Price: 500, Description: "A heavy iron mace. (+4 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon", StatSTR: 4},
 	{ID: "fishing_rod", Name: "Fishing Rod", Emoji: "🎣", Price: 500, Description: "A quality rod. (+4 DEX)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "weapon", StatDEX: 4},
 	{ID: "lucky_charm", Name: "Lucky Charm", Emoji: "🍀", Price: 400, Description: "A four-leaf clover. (+3 LUK)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "accessory", StatLUK: 3},
 	{ID: "miner_helmet", Name: "Miner's Helmet", Emoji: "⛑️", Price: 800, Description: "Thick steel helmet. (+3 VIT, +1 STR)", EffectType: "equipment", Droppable: false, Category: Equipment, Rarity: RarityUncommon, MinLevel: 5, EquipSlot: "armor", StatVIT: 3, StatSTR: 1},
@@ -401,6 +401,18 @@ func Get(nameOrID string) *Item {
 		return it
 	}
 	return byName[nameOrID]
+}
+
+// Canonical resolves a display name or an id to the canonical item ID. It
+// returns "" when the key does not match any known item. Every inventory
+// read/write helper normalizes keys through this function so a display name
+// (e.g. "Fertilizer") can never be stored or looked up under a different key
+// than the canonical id (e.g. "fertilizer").
+func Canonical(nameOrID string) string {
+	if it := Get(nameOrID); it != nil {
+		return it.ID
+	}
+	return ""
 }
 
 func AllItems() []Item {

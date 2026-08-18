@@ -11,13 +11,14 @@ import (
 	"gorm.io/gorm/logger"
 
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 )
 
 const (
 	busyTimeout  = 5000
-	maxOpenConns = 4
-	maxIdleConns = 2
+	maxOpenConns = 8
+	maxIdleConns = 4
 )
 
 // noNotFoundLogger wraps the default GORM logger so that ErrRecordNotFound is
@@ -173,6 +174,8 @@ var dataMigrations = []DataMigration{
 	{ID: "housing_composite_pk", Run: migrateHousingCompositePK},
 	{ID: "housing_activate_existing", Run: migrateHousingActivateExisting},
 	{ID: "furniture_house_scope", Run: migrateFurnitureHouseScope},
+	{ID: "inventory_canonical_ids", Run: migrateInventoryCanonicalIDs},
+	{ID: "inventory_cleanup_zero_quantity", Run: migrateInventoryCleanupZeroQuantity},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -380,6 +383,56 @@ func migrateHousingActivateExisting(tx *gorm.DB) error {
 		return nil
 	}
 	return tx.Exec("UPDATE user_housing SET is_active = 1").Error
+}
+
+// migrateInventoryCleanupZeroQuantity removes inventory rows that hold no
+// units. They are invisible to every consumer (all lookups filter quantity >
+// 0), so they only clutter the table and could confuse name-based scans.
+func migrateInventoryCleanupZeroQuantity(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.Inventory{}) {
+		return nil
+	}
+	return tx.Where("quantity <= 0").Delete(&model.Inventory{}).Error
+}
+
+// migrateInventoryCanonicalIDs folds inventory rows keyed by a display name
+// (e.g. "Fertilizer", "Steel Pickaxe") into their canonical item IDs. Such rows
+// were created by the daily shop before it stored items by ID; they are
+// invisible to every lookup that uses the canonical id, so the player's items
+// appear missing.
+func migrateInventoryCanonicalIDs(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.Inventory{}) {
+		return nil
+	}
+	var rows []model.Inventory
+	if err := tx.Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, r := range rows {
+		it := items.Get(r.ItemID)
+		if it == nil || it.ID == r.ItemID {
+			continue
+		}
+		var existing model.Inventory
+		err := tx.Where("user_id = ? AND item_id = ?", r.UserID, it.ID).First(&existing).Error
+		if err == nil {
+			if err := tx.Model(&model.Inventory{}).
+				Where("user_id = ? AND item_id = ?", r.UserID, it.ID).
+				UpdateColumn("quantity", gorm.Expr("quantity + ?", r.Quantity)).Error; err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Model(&model.Inventory{}).
+				Where("user_id = ? AND item_id = ?", r.UserID, r.ItemID).
+				UpdateColumn("item_id", it.ID).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("user_id = ? AND item_id = ?", r.UserID, r.ItemID).Delete(&model.Inventory{}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tableColumn is a row from `PRAGMA table_info`.

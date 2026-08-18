@@ -134,9 +134,14 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 }
 
 func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	slots, coinflip, mega := c.svc.RemainingPlays(userID)
+	desc := i18n.T("slots.state_start", lang) + "\n\n" +
+		i18n.T("casino.rolls_left", lang, map[string]any{
+			"slots": slots, "coinflip": coinflip, "mega": mega,
+		})
 	embed := components.Embed(
 		i18n.T("slots.title", lang),
-		i18n.T("slots.state_start", lang),
+		desc,
 		0xf1c40f,
 	)
 	comps := []discordgo.MessageComponent{
@@ -438,6 +443,10 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		switch serr {
 		case casinosvc.ErrNoMoney:
 			interaction.RespondError(b, i, lang, "slots.no_money")
+		case casinosvc.ErrLimit:
+			interaction.RespondError(b, i, lang, "slots.limit_reached")
+		case casinosvc.ErrMaxBet:
+			interaction.RespondError(b, i, lang, "slots.invalid_bet")
 		default:
 			interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
 		}
@@ -521,6 +530,8 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 			interaction.RespondError(b, i, lang, "coinflip.choice_error")
 		case casinosvc.ErrMaxBet:
 			interaction.RespondError(b, i, lang, "coinflip.max_bet")
+		case casinosvc.ErrLimit:
+			interaction.RespondError(b, i, lang, "coinflip.limit_reached")
 		default:
 			interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
 		}
@@ -587,6 +598,10 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		switch serr {
 		case casinosvc.ErrNoMoney:
 			msg = i18n.T("slots.no_money", lang)
+		case casinosvc.ErrLimit:
+			msg = i18n.T("slots.limit_reached", lang)
+		case casinosvc.ErrMaxBet:
+			msg = i18n.T("slots.invalid_bet", lang)
 		default:
 			msg = i18n.T("coinflip.invalid_bet", lang)
 		}
@@ -686,6 +701,8 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 			msg = i18n.T("coinflip.choice_error", lang)
 		case casinosvc.ErrMaxBet:
 			msg = i18n.T("coinflip.max_bet", lang)
+		case casinosvc.ErrLimit:
+			msg = i18n.T("coinflip.limit_reached", lang)
 		default:
 			msg = i18n.T("coinflip.invalid_bet", lang)
 		}
@@ -804,7 +821,7 @@ func (c *Cog) getSlotsFlavor(winType, symbol, lang string) string {
 // announceBigWin broadcasts a big winning payout to the guild's announcement
 // channel when the net profit meets the game's threshold. No-op when the guild
 // has no announcement channel configured.
-func (c *Cog) announceBigWin(sess *discordgo.Session, guildID, userID int64, game string, amount int) {
+func (c *Cog) announceBigWin(sess interaction.Session, guildID, userID int64, game string, amount int) {
 	if sess == nil || guildID == 0 || amount <= 0 {
 		return
 	}

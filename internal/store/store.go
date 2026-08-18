@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 )
 
@@ -53,6 +55,9 @@ type Store struct {
 	DefaultPrefix   string
 	questAdvanceFn  QuestAdvanceFn
 	journalFn       JournalAdvanceFn
+
+	settingsMu    sync.Mutex
+	settingsCache map[int64]serverSettingsEntry
 }
 
 func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
@@ -416,9 +421,14 @@ func (s *Store) IncrementGameLimit(userID int64, gameName string) error {
 }
 
 // RemoveInventoryItem removes quantity units of itemID from a user's inventory.
+// The key is normalized to the canonical item ID so display names work too.
 func (s *Store) RemoveInventoryItem(userID int64, itemID string, quantity int) error {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return nil
+	}
 	return s.DB.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ? AND quantity > 0", userID, itemID).
+		Where("user_id = ? AND item_id = ? AND quantity > 0", userID, canonical).
 		UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error
 }
 
@@ -447,11 +457,11 @@ func (s *Store) GetLanguage(serverID int64) string {
 	if serverID == 0 {
 		return "fr"
 	}
-	var ss model.ServerSetting
-	if err := s.DB.Where("server_id = ?", serverID).First(&ss).Error; err != nil || ss.Language == "" {
+	e := s.cachedServerSettings(serverID)
+	if !e.hasRow || e.language == "" {
 		return "fr"
 	}
-	return ss.Language
+	return e.language
 }
 
 // JournalScene is a queued atmospheric scene (Chronicler intro, rank-up moment,
@@ -518,6 +528,9 @@ func (s *Store) GetServerSetting(serverID int64) (*model.ServerSetting, error) {
 
 // SaveServerSetting upserts a guild settings row keyed by server_id.
 func (s *Store) SaveServerSetting(ss *model.ServerSetting) error {
+	s.settingsMu.Lock()
+	delete(s.settingsCache, ss.ServerID)
+	s.settingsMu.Unlock()
 	return s.DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "server_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
@@ -532,11 +545,11 @@ func (s *Store) ServerPrefix(serverID int64) string {
 	if serverID == 0 {
 		return s.DefaultPrefix
 	}
-	ss, err := s.GetServerSetting(serverID)
-	if err != nil || ss == nil || ss.Prefix == "" {
+	e := s.cachedServerSettings(serverID)
+	if !e.hasRow || e.prefix == "" {
 		return s.DefaultPrefix
 	}
-	return ss.Prefix
+	return e.prefix
 }
 
 // IsEnabled reports whether the bot is active in a guild. Guilds without a
@@ -545,11 +558,44 @@ func (s *Store) IsEnabled(serverID int64) bool {
 	if serverID == 0 {
 		return true
 	}
-	ss, err := s.GetServerSetting(serverID)
-	if err != nil || ss == nil {
-		return true
+	e := s.cachedServerSettings(serverID)
+	return !e.hasRow || e.enabled
+}
+
+// serverSettingsEntry is a cached copy of a guild's settings row.
+type serverSettingsEntry struct {
+	hasRow   bool
+	language string
+	prefix   string
+	enabled  bool
+	fetched  time.Time
+}
+
+// serverSettingsCacheTTL bounds how stale a cached settings row may be. Reads
+// happen on every interaction and every message, so serving them from memory
+// keeps per-event DB traffic off the hot SQLite path.
+const serverSettingsCacheTTL = 10 * time.Second
+
+// cachedServerSettings returns the guild settings from memory, fetching the
+// row on a miss. Writes invalidate the entry via SaveServerSetting.
+func (s *Store) cachedServerSettings(serverID int64) serverSettingsEntry {
+	s.settingsMu.Lock()
+	defer s.settingsMu.Unlock()
+	if e, ok := s.settingsCache[serverID]; ok && time.Since(e.fetched) < serverSettingsCacheTTL {
+		return e
 	}
-	return ss.Enabled
+	e := serverSettingsEntry{fetched: time.Now()}
+	if ss, err := s.GetServerSetting(serverID); err == nil && ss != nil {
+		e.hasRow = true
+		e.language = ss.Language
+		e.prefix = ss.Prefix
+		e.enabled = ss.Enabled
+	}
+	if s.settingsCache == nil {
+		s.settingsCache = make(map[int64]serverSettingsEntry)
+	}
+	s.settingsCache[serverID] = e
+	return e
 }
 
 // StartDailyQuest initialises (or resets) the active daily quest for a user.

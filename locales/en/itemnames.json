@@ -312,9 +312,9 @@
       "name": "Iron Ore",
       "description": "Useful for forging sturdy tools."
     },
-    "iron_pickaxe": {
-      "name": "Iron Pickaxe",
-      "description": "A miner's best friend. (+4 STR)"
+    "iron_mace": {
+      "name": "Iron Mace",
+      "description": "A heavy iron mace. (+4 STR)"
     },
     "iron_shackles": {
       "name": "Iron Shackles",

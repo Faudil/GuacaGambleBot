@@ -7,6 +7,7 @@
     "effect_risk": "{sign}{pct}% risk · {turns} digs left",
     "effects_label": "🌀 Effects: {list}",
     "empty_msg": "😐 You exit the mine empty-handed.\n📈 **Miner XP:** +{xp}",
+    "no_session": "You're not currently in the mine — your last expedition has already been secured.",
     "error": "❌ Something went wrong during the expedition. Please try again.",
     "entries_remaining": "⛏️ **Expeditions left today:** {count}",
     "ev_camp_desc": "You find an old campfire, still warm. Someone was here recently.",

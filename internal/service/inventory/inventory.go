@@ -112,16 +112,24 @@ func (s *Service) GetInventory(userID int64) (*InvResult, error) {
 }
 
 func (s *Service) HasItem(userID int64, itemID string, quantity int) bool {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return false
+	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, canonical).First(&inv).Error; err != nil {
 		return false
 	}
 	return inv.Quantity >= quantity
 }
 
 func (s *Service) RemoveItem(db *gorm.DB, userID int64, itemID string, quantity int) error {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return nil
+	}
 	return db.Model(&model.Inventory{}).
-		Where("user_id = ? AND item_id = ?", userID, itemID).
+		Where("user_id = ? AND item_id = ?", userID, canonical).
 		UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error
 }
 

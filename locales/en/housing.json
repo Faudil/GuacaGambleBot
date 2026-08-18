@@ -8,6 +8,7 @@
     "btn_place": "Place",
     "btn_remove": "Remove",
     "btn_research": "🔬 Research",
+    "btn_rest": "🛏️ Rest",
     "btn_show": "Show House",
     "btn_shop": "🏙️ Buy new house",
     "btn_start_research": "📖 Start",
@@ -30,6 +31,10 @@
     "furniture_place_success": "Placed **{name}** in your house!",
     "furniture_placed": "Placed",
     "furniture_remove_success": "Removed **{name}** from your house.",
+    "furniture_remove_confirm_btn": "🗑️ Remove",
+    "furniture_remove_confirm_desc": "{emoji} **{name}** ({slots} slots) will be removed from your house.\n\nThis **cannot be undone**!",
+    "furniture_remove_confirm_title": "🗑️ Remove this furniture?",
+    "furniture_remove_cancel_btn": "Cancel",
     "furniture_slots": "Slots: {used}/{max}",
     "furniture_title": "🪑 Furnitures",
     "industrial_branch": "Industrial Branch",
@@ -48,6 +53,11 @@
     "pending_rewards": "💰 Pending Rewards",
     "pet_full_warning": "❌ **Your zoo is full ({current}/{limit})!**\nRelease some pets or expand your capacity at `!house expand pets`.",
     "rename_success": "✅ Your home is now known as: **{name}**",
+    "rest_already": "😴 You already rested today. Come back tomorrow!",
+    "rest_no_bed": "❌ You need a **Sleeping Bed** placed in your house to rest!",
+    "rest_status_done": "😴 Rested today — come back tomorrow.",
+    "rest_status_ready": "🛏️ Ready to rest!",
+    "rest_success": "😴 **Sweet dreams!** You rest soundly...\n\n🎰 **Casino limits** fully refreshed (slots, coinflip, mega slots)\n🌾 **Other activities** half-refreshed (farming, fishing, mining, hunting, digging, lotto, betting, boss fights)",
     "research_active": "Active Research",
     "research_available": "Available Research",
     "research_completed": "Completed Research",
@@ -74,6 +84,17 @@
       "gilded_palace": "Gilded Palace",
       "mansion": "Mansion",
       "wooden_shack": "Wooden Shack"
+    },
+    "furnitures": {
+      "arcane_forge": "Arcane Forge",
+      "bed": "Sleeping Bed",
+      "enchanting_table": "Enchanting Table",
+      "forge": "Forge",
+      "gambling_parlor": "Gambling Parlor",
+      "genetics_lab": "Genetics Lab",
+      "greenhouse_kit": "Greenhouse Kit",
+      "magnetic_coil": "Magnetic Coil",
+      "workbench": "Workbench"
     },
     "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**. **+1 furniture slot!**"
   }

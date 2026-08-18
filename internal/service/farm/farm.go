@@ -10,6 +10,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	furnituresvc "guacagamblebot/internal/service/furniture"
@@ -171,6 +172,10 @@ func (s *Service) GetPlots(userID int64, zoneKey string) ([]PlotInfo, error) {
 }
 
 func (s *Service) Plant(userID int64, zoneKey string, plotIndex int, seedName string, growTime int) error {
+	seedName = items.Canonical(seedName)
+	if seedName == "" {
+		return ErrNoSeed
+	}
 	var existing model.UserFarming
 	if err := s.store.DB.Where("user_id = ? AND zone_key = ? AND plot_index = ?", userID, zoneKey, plotIndex).First(&existing).Error; err == nil {
 		return ErrOccupied
@@ -382,7 +387,8 @@ func (s *Service) Fertilize(userID int64, zoneKey string, plotIndex int) error {
 	}
 
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "fertilizer").First(&inv).Error; err != nil {
+	fertilizerID := items.Canonical("fertilizer")
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, fertilizerID).First(&inv).Error; err != nil {
 		return ErrNoFertilizer
 	}
 	if inv.Quantity < 1 {
@@ -419,7 +425,8 @@ func (s *Service) Accelerate(userID int64, zoneKey string, plotIndex int) error 
 	}
 
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, "growth_elixir").First(&inv).Error; err != nil {
+	elixirID := items.Canonical("growth_elixir")
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, elixirID).First(&inv).Error; err != nil {
 		return ErrNoAccelerator
 	}
 	if inv.Quantity < 1 {
@@ -559,24 +566,36 @@ func (s *Service) ConsumeBlessing(userID int64) {
 }
 
 func (s *Service) HasItem(userID int64, itemID string) bool {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return false
+	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, canonical).First(&inv).Error; err != nil {
 		return false
 	}
 	return inv.Quantity > 0
 }
 
 func (s *Service) GetItemQuantity(userID int64, itemID string) int {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return 0
+	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, canonical).First(&inv).Error; err != nil {
 		return 0
 	}
 	return inv.Quantity
 }
 
 func (s *Service) ConsumeItem(userID int64, itemID string, quantity int) bool {
+	canonical := items.Canonical(itemID)
+	if canonical == "" {
+		return false
+	}
 	var inv model.Inventory
-	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil {
+	if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, canonical).First(&inv).Error; err != nil {
 		return false
 	}
 	if inv.Quantity < quantity {

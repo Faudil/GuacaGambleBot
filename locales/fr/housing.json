@@ -8,6 +8,7 @@
     "btn_place": "Placer",
     "btn_remove": "Retirer",
     "btn_research": "🔬 Recherche",
+    "btn_rest": "🛏️ Se reposer",
     "btn_show": "Voir Maison",
     "btn_shop": "🏙️ Acheter une maison",
     "btn_start_research": "📖 Commencer",
@@ -30,6 +31,10 @@
     "furniture_place_success": "**{name}** placé dans ta maison !",
     "furniture_placed": "Placé",
     "furniture_remove_success": "**{name}** retiré de ta maison.",
+    "furniture_remove_confirm_btn": "🗑️ Retirer",
+    "furniture_remove_confirm_desc": "{emoji} **{name}** ({slots} emplacements) sera retiré de ta maison.\n\nCeci **ne peut pas être annulé** !",
+    "furniture_remove_confirm_title": "🗑️ Retirer ce meuble ?",
+    "furniture_remove_cancel_btn": "Annuler",
     "furniture_slots": "Emplacements : {used}/{max}",
     "furniture_title": "🪑 Meubles",
     "industrial_branch": "Voie Industrielle",
@@ -48,6 +53,11 @@
     "pending_rewards": "💰 Récompenses en attente",
     "pet_full_warning": "❌ **Ton zoo est plein ({current}/{limit}) !**\nLibère des familiers ou agrandis ton écurie avec `!house expand pets`.",
     "rename_success": "✅ Ta maison est désormais connue sous le nom de : **{name}**",
+    "rest_already": "😴 Tu t'es déjà reposé aujourd'hui. Reviens demain !",
+    "rest_no_bed": "❌ Tu dois placer un **Lit** dans ta maison pour te reposer !",
+    "rest_status_done": "😴 Reposé aujourd'hui — reviens demain.",
+    "rest_status_ready": "🛏️ Prêt à te reposer !",
+    "rest_success": "😴 **Fais de beaux rêves !** Tu te reposes bien...\n\n🎰 **Limites du casino** entièrement rechargées (slots, coinflip, mega slots)\n🌾 **Autres activités** rechargées à moitié (ferme, pêche, mine, chasse, fouilles, loterie, paris, combats de boss)",
     "research_active": "Recherches en cours",
     "research_available": "Recherches disponibles",
     "research_completed": "Recherches terminées",
@@ -74,6 +84,17 @@
       "gilded_palace": "Palais Doré",
       "mansion": "Manoir",
       "wooden_shack": "Cabane en Bois"
+    },
+    "furnitures": {
+      "arcane_forge": "Forge Arcanique",
+      "bed": "Lit",
+      "enchanting_table": "Table d'Enchantement",
+      "forge": "Forge",
+      "gambling_parlor": "Salle de Jeu",
+      "genetics_lab": "Laboratoire de Génétique",
+      "greenhouse_kit": "Kit de Serre",
+      "magnetic_coil": "Bobine Magnétique",
+      "workbench": "Établi"
     },
     "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**. **+1 emplacement de meuble !**"
   }

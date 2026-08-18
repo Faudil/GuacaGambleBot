@@ -54,15 +54,21 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	targetID := selfID
 
 	opts := i.ApplicationCommandData().Options
-	if len(opts) > 0 {
-		targetID = interaction.ToInt64(opts[0].StringValue())
+	targetStr := ""
+	if len(opts) > 0 && opts[0].Value != nil {
+		if v, ok := opts[0].Value.(string); ok {
+			targetStr = v
+		}
+	}
+	if targetStr != "" {
+		targetID = interaction.ToInt64(targetStr)
 	}
 
 	title := i.Member.User.Username
 	if targetID != selfID {
 		resolved := false
 		if i.ApplicationCommandData().Resolved != nil && i.ApplicationCommandData().Resolved.Users != nil {
-			if u, ok := i.ApplicationCommandData().Resolved.Users[opts[0].StringValue()]; ok {
+			if u, ok := i.ApplicationCommandData().Resolved.Users[targetStr]; ok {
 				title = u.Username
 				resolved = true
 			}

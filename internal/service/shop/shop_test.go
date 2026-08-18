@@ -12,6 +12,7 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
 )
 
@@ -75,6 +76,21 @@ func TestBuyItemSuccess(t *testing.T) {
 
 	err = svc.BuyItem(1, "coal", 2, 1)
 	require.NoError(t, err)
+}
+
+func TestBuyItemStoresCanonicalID(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.UpdateBalance(1, 1000)
+	require.NoError(t, err)
+
+	// Callers may pass the display name; the item must be stored under its
+	// canonical ID so crafting/farm/use lookups can find it.
+	err = svc.BuyItem(1, "Fertilizer", 1, 100)
+	require.NoError(t, err)
+
+	var inv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, "fertilizer").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
 }
 
 func TestBuyItemNotFound(t *testing.T) {
