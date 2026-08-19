@@ -250,7 +250,7 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 	))
 
 	// Progression
-	prog := fmt.Sprintf("XP %d · 🏆 ELO %d\n💕 Bond %s %d/%d\n🍖 Fed %d/%d", pet.XP, pet.Elo, buildBondBar(pet.BondLevel), pet.BondLevel, petsvc.MaxBond, pet.FoodEaten, petsvc.MaxFoodCapacity(pet))
+	prog := fmt.Sprintf("XP %d · 🏆 ELO %d\n💕 Bond %s %d/%d\n🍖 Fed %d", pet.XP, pet.Elo, buildBondBar(pet.BondLevel), pet.BondLevel, petsvc.MaxBond, pet.FoodEaten)
 	if pet.SkillPoints > 0 {
 		prog += fmt.Sprintf("\n⚡ **%d** skill point(s) available!", pet.SkillPoints)
 	}
@@ -734,18 +734,12 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	maxFood := petsvc.MaxFoodCapacity(pet)
-	full := petsvc.IsFull(pet)
-
 	var inv []model.Inventory
 	c.store.DB.Where("user_id = ? AND quantity > 0", userID).Find(&inv)
 	opts := make([]discordgo.SelectMenuOption, 0, 25)
 	for _, iv := range inv {
 		def := petsvc.GetFeedItemDef(iv.ItemID)
 		if def == nil {
-			continue
-		}
-		if full && def.CountsToCap {
 			continue
 		}
 		it := items.Get(iv.ItemID)
@@ -764,18 +758,6 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 	if len(opts) == 0 {
-		if full {
-			_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: i18n.T("pets.feed.full", lang, map[string]any{
-						"name": pet.Nickname, "current": pet.FoodEaten, "max": maxFood,
-					}),
-					Flags: discordgo.MessageFlagsEphemeral,
-				},
-			})
-			return
-		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -788,7 +770,7 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	embed := components.Embed(
 		i18n.T("pets.feed.menu_title", lang, map[string]any{"name": pet.Nickname}),
-		i18n.T("pets.feed.menu_desc", lang, map[string]any{"current": pet.FoodEaten, "max": maxFood}),
+		i18n.T("pets.feed.menu_desc", lang, map[string]any{"current": pet.FoodEaten}),
 		0x2ecc71,
 	)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -867,19 +849,6 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	if def.CountsToCap && petsvc.IsFull(pet) {
-		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseChannelMessageWithSource,
-			Data: &discordgo.InteractionResponseData{
-				Content: i18n.T("pets.feed.full", lang, map[string]any{
-					"name": pet.Nickname, "current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
-				}),
-				Flags: discordgo.MessageFlagsEphemeral,
-			},
-		})
-		return
-	}
-
 	if err := c.store.DB.Exec(
 		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
 		userID, itemID,
@@ -903,13 +872,13 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		content = i18n.T("pets.feed.success", lang, map[string]any{
 			"name": pet.Nickname, "item": itemName,
 			"amount": def.Amount, "stat": i18n.T("pets.feed.stats."+def.Stat, lang),
-			"bond": def.Bond, "current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
+			"bond": def.Bond, "current": pet.FoodEaten,
 		})
 	case def.Stat != "":
 		content = i18n.T("pets.feed.success_raw", lang, map[string]any{
 			"name": pet.Nickname, "item": itemName,
 			"amount": def.Amount, "stat": i18n.T("pets.feed.stats."+def.Stat, lang),
-			"current": pet.FoodEaten, "max": petsvc.MaxFoodCapacity(pet),
+			"current": pet.FoodEaten,
 		})
 	default:
 		content = i18n.T("pets.feed.success_bond", lang, map[string]any{

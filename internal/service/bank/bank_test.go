@@ -122,7 +122,7 @@ func TestWithdraw(t *testing.T) {
 	_, err := svc.Deposit(1, 40)
 	require.NoError(t, err)
 
-	wallet, bank, err := svc.Withdraw(1, 15)
+	wallet, bank, _, err := svc.Withdraw(1, 15)
 	require.NoError(t, err)
 	assert.Equal(t, 75, wallet)
 	assert.Equal(t, 25, bank)
@@ -135,7 +135,7 @@ func TestWithdrawInsufficient(t *testing.T) {
 	_, err := svc.Deposit(1, 40)
 	require.NoError(t, err)
 
-	_, _, err = svc.Withdraw(1, 100)
+	_, _, _, err = svc.Withdraw(1, 100)
 	assert.ErrorIs(t, err, ErrNoMoney)
 }
 
@@ -146,11 +146,12 @@ func TestInfo(t *testing.T) {
 	_, err := svc.Deposit(1, 100)
 	require.NoError(t, err)
 
-	wallet, bank, interest, err := svc.Info(1)
+	wallet, bank, interest, maxBank, err := svc.Info(1)
 	require.NoError(t, err)
 	assert.Equal(t, 0, wallet)
 	assert.Equal(t, 100, bank)
 	assert.Equal(t, 10, interest)
+	assert.Equal(t, 500, maxBank)
 }
 
 func TestClampOnInfo(t *testing.T) {
@@ -160,11 +161,37 @@ func TestClampOnInfo(t *testing.T) {
 	_, err := s.AdjustColumn(1, "bank", 800)
 	require.NoError(t, err)
 
-	wallet, bank, interest, err := svc.Info(1)
+	wallet, bank, interest, maxBank, err := svc.Info(1)
 	require.NoError(t, err)
 	assert.Equal(t, 400, wallet)
 	assert.Equal(t, 500, bank)
 	assert.Equal(t, 50, interest)
+	assert.Equal(t, 500, maxBank)
+}
+
+func TestInfoMaxBankFollowsHousing(t *testing.T) {
+	s := testStore(t)
+	svc := New(s, &config.Config{StartingBalance: 100, DailyAmount: 50})
+
+	// No house: default 500.
+	_, _, _, maxBank, err := svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 500, maxBank)
+
+	// Brick house: 5,000.
+	require.NoError(t, s.DB.Create(&model.UserHousing{
+		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
+	}).Error)
+	_, _, _, maxBank, err = svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 5000, maxBank)
+
+	// Merchant office + vault: 5,000 * 1.2 * 2 = 12,000.
+	require.NoError(t, s.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_office"}).Error)
+	require.NoError(t, s.DB.Create(&model.UserHousingUpgrade{UserID: 1, UpgradeID: "merchant_vault"}).Error)
+	_, _, _, maxBank, err = svc.Info(1)
+	require.NoError(t, err)
+	assert.Equal(t, 12000, maxBank)
 }
 
 func TestClampOnDeposit(t *testing.T) {
@@ -208,10 +235,11 @@ func TestClampOnWithdraw(t *testing.T) {
 	_, err := s.AdjustColumn(1, "bank", 800)
 	require.NoError(t, err)
 
-	wallet, bank, err := svc.Withdraw(1, 100)
+	wallet, bank, maxBank, err := svc.Withdraw(1, 100)
 	require.NoError(t, err)
 	assert.Equal(t, 500, wallet)
 	assert.Equal(t, 400, bank)
+	assert.Equal(t, 500, maxBank)
 }
 
 func TestClampRespectsHouseCap(t *testing.T) {
@@ -224,10 +252,11 @@ func TestClampRespectsHouseCap(t *testing.T) {
 	_, err := s.AdjustColumn(1, "bank", 6000)
 	require.NoError(t, err)
 
-	wallet, bank, _, err := svc.Info(1)
+	wallet, bank, _, maxBank, err := svc.Info(1)
 	require.NoError(t, err)
 	assert.Equal(t, 1100, wallet)
 	assert.Equal(t, 5000, bank)
+	assert.Equal(t, 5000, maxBank)
 }
 
 func TestClampDisabled(t *testing.T) {
@@ -240,7 +269,7 @@ func TestClampDisabled(t *testing.T) {
 	_, err := s.AdjustColumn(1, "bank", 800)
 	require.NoError(t, err)
 
-	wallet, bank, _, err := svc.Info(1)
+	wallet, bank, _, _, err := svc.Info(1)
 	require.NoError(t, err)
 	assert.Equal(t, 100, wallet)
 	assert.Equal(t, 800, bank)

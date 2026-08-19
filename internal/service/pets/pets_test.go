@@ -147,8 +147,22 @@ func TestGetCraftedFeedItemDef(t *testing.T) {
 		require.NotNil(t, def, "expected %s to be feedable", id)
 		assert.Equal(t, want.Stat, def.Stat, "unexpected stat for %s", id)
 		assert.Equal(t, want.Amount, def.Amount, "unexpected amount for %s", id)
-		assert.True(t, def.CountsToCap, "expected %s to count toward food capacity", id)
 	}
+}
+
+func TestFeedSameFoodTwice(t *testing.T) {
+	svc, _ := testService(t)
+	pet, err := svc.CreatePet(1, "Escargot")
+	require.NoError(t, err)
+	baseAtk := pet.Atk
+
+	for i := 0; i < 2; i++ {
+		fed, err := svc.FeedPet(pet, GetFeedItemDef("warrior_stew"))
+		require.NoError(t, err)
+		assert.True(t, fed)
+	}
+	assert.Equal(t, baseAtk+2, pet.Atk, "the same meal must stack when fed twice")
+	assert.Equal(t, 2, pet.FoodEaten)
 }
 
 func TestFeedPetStats(t *testing.T) {

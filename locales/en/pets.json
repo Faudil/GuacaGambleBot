@@ -70,9 +70,8 @@
       "error": "❌ Something went wrong while feeding your pet. Please try again.",
       "forget_fail": "❌ Your pet must be level 20 to drink this potion!",
       "forget_success": "🍶 You gave the forgetting potion, it is now level 10 and stats are reset.",
-      "full": "🛑 **{name}** is full! It has reached its maximum food potential ({current}/{max}).",
       "item_not_found": "❌ Item **{name}** does not exist.",
-      "menu_desc": "Each meal permanently strengthens your pet.\n🍽️ Fed: **{current}/{max}**",
+      "menu_desc": "Each meal permanently strengthens your pet.\n🍽️ Fed: **{current}**",
       "menu_placeholder": "Choose a food or ingredient...",
       "menu_title": "🍖 What will you feed {name}?",
       "miam_desc": "You gave **1x {item}** to {emoji} **{name}**.\n\n✨ **EFFECT:** {stat} {sign}{amount}\n\n📊 *Stomach: {food} / {max_food}*",
@@ -91,9 +90,9 @@
         "max_hp": "Max HP",
         "speed": "SPD"
       },
-      "success": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat} · 💕 +{bond} bond)\n🍽️ Fed: **{current}/{max}**",
+      "success": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat} · 💕 +{bond} bond)\n🍽️ Fed: **{current}**",
       "success_bond": "🍬 **{name}** savored the **{item}**! 💕 +{bond} bond",
-      "success_raw": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat})\n🍽️ Fed: **{current}/{max}**"
+      "success_raw": "🍖 **{name}** devoured the **{item}**! (+{amount} {stat})\n🍽️ Fed: **{current}**"
     },
     "hatch": {
       "error": "❌ Something went wrong while hatching! Please try again.",

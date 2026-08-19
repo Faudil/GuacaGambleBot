@@ -455,20 +455,14 @@ func applyStat(pet *model.UserPet, stat string, amount float64) {
 	}
 }
 
-// FeedPet applies a food item's effect to a pet, gated by the lifetime
-// food capacity (RarityFoodCapacity × level). Returns false if the pet
-// is full and the item counts toward the capacity.
+// FeedPet applies a food item's effect to a pet. Feeding is unlimited: the
+// same meal can be given again as long as the player still has it.
 func (s *Service) FeedPet(pet *model.UserPet, def *FeedItemDef) (bool, error) {
 	if def == nil {
 		return false, nil
 	}
-	if def.CountsToCap {
-		if IsFull(pet) {
-			return false, nil
-		}
-		if def.Stat != "" {
-			applyStat(pet, def.Stat, def.Amount)
-		}
+	if def.Stat != "" {
+		applyStat(pet, def.Stat, def.Amount)
 		pet.FoodEaten++
 	}
 	if def.Bond > 0 {

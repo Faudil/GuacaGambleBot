@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"time"
 
 	"gorm.io/gorm"
@@ -432,18 +433,26 @@ func (s *Service) StartConstruction(userID int64, upgradeID string) error {
 	finish := time.Now().Add(time.Duration(upg.TimeHours) * time.Hour)
 
 	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+		// Validate all items are available first, in deterministic order.
+		itemIDs := make([]string, 0, len(upg.CostItems))
+		for itemID := range upg.CostItems {
+			itemIDs = append(itemIDs, itemID)
+		}
+		sort.Strings(itemIDs)
+		for _, itemID := range itemIDs {
+			var inv model.Inventory
+			if err := tx.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, itemID, upg.CostItems[itemID]).First(&inv).Error; err != nil {
+				return fmt.Errorf("missing %s x%d", itemID, upg.CostItems[itemID])
+			}
+		}
 		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
 			UpdateColumn("balance", gorm.Expr("balance - ?", upg.CostMoney)).Error; err != nil {
 			return err
 		}
-		for itemID, qty := range upg.CostItems {
-			var inv model.Inventory
-			if err := tx.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, itemID, qty).First(&inv).Error; err != nil {
-				return fmt.Errorf("missing %s x%d", itemID, qty)
-			}
+		for _, itemID := range itemIDs {
 			if err := tx.Model(&model.Inventory{}).
 				Where("user_id = ? AND item_id = ?", userID, itemID).
-				UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+				UpdateColumn("quantity", gorm.Expr("quantity - ?", upg.CostItems[itemID])).Error; err != nil {
 				return err
 			}
 		}

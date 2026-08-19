@@ -200,15 +200,15 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 	var availButtons []discordgo.MessageComponent
 
 	for _, st := range statuses {
+		if st.Reason == "locked" {
+			continue
+		}
 		switch st.Reason {
 		case "available":
 			fmt.Fprintf(sb, "%s **%s** — *%s*\n> %s | CD: %dm\n\n",
 				st.Emoji, st.Name, st.Description, i18n.T("skills.uses_left", lang, map[string]any{"left": st.UsesLeft, "max": st.DailyLimit}), st.CooldownMins)
 			availButtons = append(availButtons,
 				components.Button(st.Emoji+" "+st.Name, components.EncodeOwner(userID, "skills", "activate", st.ID), discordgo.SuccessButton))
-		case "locked":
-			fmt.Fprintf(sb, "🔒 **%s** — %s\n> %s **Lv.%d**\n\n",
-				st.Name, st.Description, i18n.T("skills.unlocks_at", lang), st.UnlockLevel)
 		case "on cooldown":
 			fmt.Fprintf(sb, "⏳ **%s** — *%s*\n> %s %dm\n\n",
 				st.Name, st.Description, i18n.T("skills.on_cooldown", lang), st.CooldownMins)

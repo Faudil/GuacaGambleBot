@@ -58,7 +58,7 @@
     },
     "blood_tomato": {
       "name": "Blood Tomato",
-      "description": "Deep crimson, pulsing with warmth..."
+      "description": "Deep crimson, pulsing with warmth... Pet food: +1 ATK."
     },
     "bond_treat": {
       "name": "Bond Treat",
@@ -82,11 +82,11 @@
     },
     "carp": {
       "name": "Carp",
-      "description": "The best freshwater fish."
+      "description": "The best freshwater fish. Pet food: +1 SPD."
     },
     "carrot": {
       "name": "Carrot",
-      "description": "A crunchy orange root."
+      "description": "A crunchy orange root. Pet food: +1 DEF."
     },
     "carrot_seed": {
       "name": "Carrot Seed",
@@ -114,7 +114,7 @@
     },
     "cocoa_bean": {
       "name": "Cocoa Bean",
-      "description": "The main ingredient for happiness (chocolate)."
+      "description": "The main ingredient for happiness (chocolate). Pet food: +1 ATK."
     },
     "cocoa_seed": {
       "name": "Cocoa Seed",
@@ -126,11 +126,11 @@
     },
     "coffee": {
       "name": "Coffee",
-      "description": "Wakes you up. Resets !daily cooldown."
+      "description": "Wakes you up. Resets !daily cooldown. Pet food: +1 SPD."
     },
     "coffee_bean": {
       "name": "Coffee Bean",
-      "description": "The black gold of the morning."
+      "description": "The black gold of the morning. Pet food: +1 ATK."
     },
     "coffee_seed": {
       "name": "Coffee Seed",
@@ -146,7 +146,7 @@
     },
     "corn": {
       "name": "Corn",
-      "description": "Also makes popcorn!"
+      "description": "Also makes popcorn! Pet food: +1 ACC."
     },
     "corn_seed": {
       "name": "Corn Seed",
@@ -166,7 +166,7 @@
     },
     "cursed_pumpkin": {
       "name": "Cursed Pumpkin",
-      "description": "It whispers to you at night."
+      "description": "It whispers to you at night. Pet food: +1 ATK."
     },
     "damaged_fossil": {
       "name": "Damaged Fossil",
@@ -282,7 +282,7 @@
     },
     "ghost_wheat": {
       "name": "Ghost Wheat",
-      "description": "Translucent wheat that shimmers in moonlight."
+      "description": "Translucent wheat that shimmers in moonlight. Pet food: +1 ACC."
     },
     "giant_noodles": {
       "name": "Giant Noodles",
@@ -294,7 +294,7 @@
     },
     "golden_apple": {
       "name": "Golden Apple",
-      "description": "It shines with a magical glow."
+      "description": "It shines with a magical glow. Pet food: +1 Max HP."
     },
     "golden_apple_seed": {
       "name": "Golden Apple Seed",
@@ -302,7 +302,7 @@
     },
     "golden_carrot": {
       "name": "Golden Carrot",
-      "description": "A carrot of pure gold. Legendary."
+      "description": "A carrot of pure gold. Legendary. Pet food: +1 DEF."
     },
     "golden_lure": {
       "name": "Golden Lure",
@@ -310,7 +310,7 @@
     },
     "golden_potato": {
       "name": "Golden Potato",
-      "description": "A potato encased in solid gold!"
+      "description": "A potato encased in solid gold! Pet food: +1 DEF."
     },
     "golden_ring": {
       "name": "Golden Ring",
@@ -470,11 +470,11 @@
     },
     "nova_fruit": {
       "name": "Nova Fruit",
-      "description": "A miniature sun cradled in your hands."
+      "description": "A miniature sun cradled in your hands. Pet food: +1 Max HP."
     },
     "oat": {
       "name": "Oat",
-      "description": "Perfect for breakfast."
+      "description": "Perfect for breakfast. Pet food: +1 ACC."
     },
     "oat_seed": {
       "name": "Oat Seed",
@@ -514,7 +514,7 @@
     },
     "potato": {
       "name": "Potato",
-      "description": "You can make vodka from it…"
+      "description": "You can make vodka from it… Pet food: +1 DEF."
     },
     "potato_seed": {
       "name": "Potato Seed",
@@ -526,7 +526,7 @@
     },
     "prismatic_corn": {
       "name": "Prismatic Corn",
-      "description": "Kernels shift through impossible colors."
+      "description": "Kernels shift through impossible colors. Pet food: +1 ACC."
     },
     "pufferfish": {
       "name": "Pufferfish",
@@ -534,7 +534,7 @@
     },
     "pumpkin": {
       "name": "Pumpkin",
-      "description": "Perfect for Halloween."
+      "description": "Perfect for Halloween. Pet food: +1 ATK."
     },
     "pumpkin_seed": {
       "name": "Pumpkin Seed",
@@ -602,11 +602,11 @@
     },
     "salmon": {
       "name": "Salmon",
-      "description": "Perfect for sushi."
+      "description": "Perfect for sushi. Pet food: +1 Max HP."
     },
     "sardine": {
       "name": "Sardine",
-      "description": "A small saltwater fish."
+      "description": "A small saltwater fish. Pet food: +1 SPD."
     },
     "scarecrow_charm": {
       "name": "Scarecrow Charm",
@@ -678,7 +678,7 @@
     },
     "star_fruit": {
       "name": "Star Fruit",
-      "description": "A cosmic fruit from another dimension."
+      "description": "A cosmic fruit from another dimension. Pet food: +1 SPD."
     },
     "star_fruit_seed": {
       "name": "Star Fruit Seed",
@@ -710,7 +710,7 @@
     },
     "strawberry": {
       "name": "Strawberry",
-      "description": "Red, sweet and juicy."
+      "description": "Red, sweet and juicy. Pet food: +1 SPD."
     },
     "strawberry_seed": {
       "name": "Strawberry Seed",
@@ -734,7 +734,7 @@
     },
     "tomato": {
       "name": "Tomato",
-      "description": "Fruit or vegetable? The debate continues."
+      "description": "Fruit or vegetable? The debate continues. Pet food: +1 ATK."
     },
     "tomato_seed": {
       "name": "Tomato Seed",
@@ -746,7 +746,7 @@
     },
     "trout": {
       "name": "Trout",
-      "description": "Freshwater fish."
+      "description": "Freshwater fish. Pet food: +1 SPD."
     },
     "tundra_egg": {
       "name": "Tundra Egg",
@@ -790,7 +790,7 @@
     },
     "wheat": {
       "name": "Wheat",
-      "description": "Essential for making bread."
+      "description": "Essential for making bread. Pet food: +1 ACC."
     },
     "wheat_seed": {
       "name": "Wheat Seed",

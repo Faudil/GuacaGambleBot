@@ -70,9 +70,8 @@
       "error": "❌ Une erreur est survenue en nourrissant ton familier. Réessaie.",
       "forget_fail": "❌ Ton animal doit être niveau 20 pour pouvoir boire cette potion !",
       "forget_success": "🍶 Tu as donné la potion d'oubli à ton animal, il est maintenant niveau 10 et ses stats ont été reset.",
-      "full": "🛑 **{name}** est gavé ! Il a atteint son potentiel maximum de nourriture ({current}/{max}).",
       "item_not_found": "❌ L'objet **{name}** n'existe pas.",
-      "menu_desc": "Chaque repas renforce durablement ton familier.\n🍽️ Nourri : **{current}/{max}**",
+      "menu_desc": "Chaque repas renforce durablement ton familier.\n🍽️ Nourri : **{current}**",
       "menu_placeholder": "Choisis une nourriture ou un ingrédient...",
       "menu_title": "🍖 Que vas-tu donner à {name} ?",
       "miam_desc": "Tu as donné **1x {item}** à {emoji} **{name}**.\n\n✨ **EFFET :** {stat} {sign}{amount}\n\n📊 *Estomac : {food} / {max_food}*",
@@ -91,9 +90,9 @@
         "max_hp": "PV Max",
         "speed": "VIT"
       },
-      "success": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat} · 💕 +{bond} lien)\n🍽️ Nourri : **{current}/{max}**",
+      "success": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat} · 💕 +{bond} lien)\n🍽️ Nourri : **{current}**",
       "success_bond": "🍬 **{name}** a savouré le **{item}** ! 💕 +{bond} lien",
-      "success_raw": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat})\n🍽️ Nourri : **{current}/{max}**"
+      "success_raw": "🍖 **{name}** a dévoré le **{item}** ! (+{amount} {stat})\n🍽️ Nourri : **{current}**"
     },
     "hatch": {
       "error": "❌ Quelque chose s'est mal passé lors de l'éclosion ! Réessaie plus tard.",

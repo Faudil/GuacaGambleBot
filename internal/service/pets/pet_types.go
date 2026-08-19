@@ -172,13 +172,6 @@ func RandomPersonality() string {
 	return uncommon[rand.Intn(len(uncommon))]
 }
 
-var RarityFoodCapacity = map[string]int{
-	RarityCommon:    5,
-	RarityRare:      4,
-	RarityEpic:      3,
-	RarityLegendary: 2,
-}
-
 func RollGacha(targetRarity string, biome string) string {
 	if targetRarity == "" {
 		r := rand.Float64()

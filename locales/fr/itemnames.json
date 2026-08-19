@@ -58,7 +58,7 @@
     },
     "blood_tomato": {
       "name": "Tomate de Sang",
-      "description": "Pourpre foncé, palpitant de chaleur..."
+      "description": "Pourpre foncé, palpitant de chaleur... Nourriture pour animal : +1 ATQ."
     },
     "bond_treat": {
       "name": "Friandise de Lien",
@@ -82,11 +82,11 @@
     },
     "carp": {
       "name": "Carpe",
-      "description": "Le meilleur poisson d'eau douce."
+      "description": "Le meilleur poisson d'eau douce. Nourriture pour animal : +1 VIT."
     },
     "carrot": {
       "name": "Carotte",
-      "description": "Une racine orange croquante."
+      "description": "Une racine orange croquante. Nourriture pour animal : +1 DÉF."
     },
     "carrot_seed": {
       "name": "Graine de Carotte",
@@ -114,7 +114,7 @@
     },
     "cocoa_bean": {
       "name": "Fève de Cacao",
-      "description": "L'ingrédient principal du bonheur (chocolat)."
+      "description": "L'ingrédient principal du bonheur (chocolat). Nourriture pour animal : +1 ATQ."
     },
     "cocoa_seed": {
       "name": "Graine de Cacao",
@@ -126,11 +126,11 @@
     },
     "coffee": {
       "name": "Café",
-      "description": "Réveille tes sens. Réinitialise le cooldown du !daily."
+      "description": "Réveille tes sens. Réinitialise le cooldown du !daily. Nourriture pour animal : +1 VIT."
     },
     "coffee_bean": {
       "name": "Grain de Café",
-      "description": "L'or noir du matin."
+      "description": "L'or noir du matin. Nourriture pour animal : +1 ATQ."
     },
     "coffee_seed": {
       "name": "Graine de Café",
@@ -146,7 +146,7 @@
     },
     "corn": {
       "name": "Maïs",
-      "description": "Fait aussi du pop-corn !"
+      "description": "Fait aussi du pop-corn ! Nourriture pour animal : +1 PRÉC."
     },
     "corn_seed": {
       "name": "Graine de Maïs",
@@ -166,7 +166,7 @@
     },
     "cursed_pumpkin": {
       "name": "Citrouille Maudite",
-      "description": "Elle te murmure la nuit."
+      "description": "Elle te murmure la nuit. Nourriture pour animal : +1 ATQ."
     },
     "damaged_fossil": {
       "name": "Fossile Endommagé",
@@ -282,7 +282,7 @@
     },
     "ghost_wheat": {
       "name": "Blé Fantôme",
-      "description": "Un blé translucide qui scintille au clair de lune."
+      "description": "Un blé translucide qui scintille au clair de lune. Nourriture pour animal : +1 PRÉC."
     },
     "giant_noodles": {
       "name": "Nouilles Géantes",
@@ -294,7 +294,7 @@
     },
     "golden_apple": {
       "name": "Pomme Dorée",
-      "description": "Elle brille d'une lueur magique."
+      "description": "Elle brille d'une lueur magique. Nourriture pour animal : +1 PV Max."
     },
     "golden_apple_seed": {
       "name": "Pépin de Pomme Dorée",
@@ -302,7 +302,7 @@
     },
     "golden_carrot": {
       "name": "Carotte Dorée",
-      "description": "Une carotte d'or pur. Légendaire."
+      "description": "Une carotte d'or pur. Légendaire. Nourriture pour animal : +1 DÉF."
     },
     "golden_lure": {
       "name": "Leurre Doré",
@@ -310,7 +310,7 @@
     },
     "golden_potato": {
       "name": "Patate Dorée",
-      "description": "Une patate enrobée d'or massif !"
+      "description": "Une patate enrobée d'or massif ! Nourriture pour animal : +1 DÉF."
     },
     "golden_ring": {
       "name": "Anneau Doré",
@@ -470,11 +470,11 @@
     },
     "nova_fruit": {
       "name": "Fruit Nova",
-      "description": "Un soleil miniature entre tes mains."
+      "description": "Un soleil miniature entre tes mains. Nourriture pour animal : +1 PV Max."
     },
     "oat": {
       "name": "Avoine",
-      "description": "Parfait pour le petit déjeuner."
+      "description": "Parfait pour le petit déjeuner. Nourriture pour animal : +1 PRÉC."
     },
     "oat_seed": {
       "name": "Graine d'Avoine",
@@ -514,7 +514,7 @@
     },
     "potato": {
       "name": "Patate",
-      "description": "On peut en faire de la vodka..."
+      "description": "On peut en faire de la vodka... Nourriture pour animal : +1 DÉF."
     },
     "potato_seed": {
       "name": "Graine de Patate",
@@ -526,7 +526,7 @@
     },
     "prismatic_corn": {
       "name": "Maïs Prismatique",
-      "description": "Des grains qui traversent des couleurs impossibles."
+      "description": "Des grains qui traversent des couleurs impossibles. Nourriture pour animal : +1 PRÉC."
     },
     "pufferfish": {
       "name": "Poisson-Globe",
@@ -534,7 +534,7 @@
     },
     "pumpkin": {
       "name": "Citrouille",
-      "description": "Parfait pour Halloween."
+      "description": "Parfait pour Halloween. Nourriture pour animal : +1 ATQ."
     },
     "pumpkin_seed": {
       "name": "Graine de Citrouille",
@@ -602,11 +602,11 @@
     },
     "salmon": {
       "name": "Saumon",
-      "description": "Parfait pour faire des sushis."
+      "description": "Parfait pour faire des sushis. Nourriture pour animal : +1 PV Max."
     },
     "sardine": {
       "name": "Sardine",
-      "description": "Un petit poisson d'eau de mer"
+      "description": "Un petit poisson d'eau de mer. Nourriture pour animal : +1 VIT."
     },
     "scarecrow_charm": {
       "name": "Charme d'Épouvantail",
@@ -678,7 +678,7 @@
     },
     "star_fruit": {
       "name": "Fruit Étoile",
-      "description": "Un fruit cosmique venu d'une autre dimension."
+      "description": "Un fruit cosmique venu d'une autre dimension. Nourriture pour animal : +1 VIT."
     },
     "star_fruit_seed": {
       "name": "Pépin de Fruit Étoile",
@@ -710,7 +710,7 @@
     },
     "strawberry": {
       "name": "Fraise",
-      "description": "Rouge, sucrée et juteuse."
+      "description": "Rouge, sucrée et juteuse. Nourriture pour animal : +1 VIT."
     },
     "strawberry_seed": {
       "name": "Graine de Fraise",
@@ -734,7 +734,7 @@
     },
     "tomato": {
       "name": "Tomate",
-      "description": "Un fruit ou un légume ? Le débat continue."
+      "description": "Un fruit ou un légume ? Le débat continue. Nourriture pour animal : +1 ATQ."
     },
     "tomato_seed": {
       "name": "Graine de Tomate",
@@ -746,7 +746,7 @@
     },
     "trout": {
       "name": "Truite",
-      "description": "Un poisson d'eau douce."
+      "description": "Un poisson d'eau douce. Nourriture pour animal : +1 VIT."
     },
     "tundra_egg": {
       "name": "Œuf de la Toundra",
@@ -790,7 +790,7 @@
     },
     "wheat": {
       "name": "Blé",
-      "description": "Indispensable pour faire du pain."
+      "description": "Indispensable pour faire du pain. Nourriture pour animal : +1 PRÉC."
     },
     "wheat_seed": {
       "name": "Graine de Blé",

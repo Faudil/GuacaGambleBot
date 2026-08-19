@@ -72,32 +72,42 @@ func (s *Service) Deposit(userID, amount int) (DepositResult, error) {
 	return res, nil
 }
 
-// Withdraw moves amount from the bank into the wallet atomically.
-func (s *Service) Withdraw(userID, amount int) (wallet, bank int, err error) {
+// Withdraw moves amount from the bank into the wallet atomically. It also
+// returns the user's housing-based bank capacity.
+func (s *Service) Withdraw(userID, amount int) (wallet, bank, maxBank int, err error) {
 	if amount <= 0 {
-		return 0, 0, ErrAmount
+		return 0, 0, 0, ErrAmount
 	}
 	if _, _, err := s.clamp(int64(userID)); err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	wallet, bank, err = s.store.BankWithdraw(int64(userID), amount)
 	if errors.Is(err, store.ErrInsufficientFunds) {
-		return 0, 0, ErrNoMoney
+		return 0, 0, 0, ErrNoMoney
 	}
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
-	return wallet, bank, nil
+	maxBank, err = s.maxBank(int64(userID))
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return wallet, bank, maxBank, nil
 }
 
-// Info returns wallet, bank and projected daily interest.
-func (s *Service) Info(userID int64) (wallet, bank, interest int, err error) {
+// Info returns wallet, bank, projected daily interest and the user's
+// housing-based bank capacity.
+func (s *Service) Info(userID int64) (wallet, bank, interest, maxBank int, err error) {
 	if _, _, err := s.clamp(userID); err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
 	wallet, bank, err = s.store.GetBankData(userID)
 	if err != nil {
-		return 0, 0, 0, err
+		return 0, 0, 0, 0, err
 	}
-	return wallet, bank, (bank / 100) * 10, nil
+	maxBank, err = s.maxBank(userID)
+	if err != nil {
+		return 0, 0, 0, 0, err
+	}
+	return wallet, bank, (bank / 100) * 10, maxBank, nil
 }
