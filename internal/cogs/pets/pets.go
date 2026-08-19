@@ -500,16 +500,19 @@ func (c *Cog) onHealButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 // ─── Playing ───────────────────────────────────────────────────
 
 func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	start := time.Now()
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	if c.playCooldownActive(b, i, userID, lang) {
 		return
 	}
+	cooldownDone := time.Since(start)
 	pet, err := c.svc.GetActivePet(userID)
 	if err != nil || pet == nil {
 		interaction.RespondError(b, i, lang, "pets.play.no_pet")
 		return
 	}
+	petDone := time.Since(start)
 	if pet.OnExpedition {
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -522,13 +525,24 @@ func (c *Cog) onPlayCommand(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	content := c.playWithPet(pet, lang)
 	_ = c.store.SetCooldown(userID, "pet_play")
+	cooldownSetDone := time.Since(start)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Content: content,
 		},
 	})
-	c.tryInteraction(b, i, pet, "play")
+	respondDone := time.Since(start)
+	go c.tryInteraction(b, i, pet, "play")
+	if respondDone > 50*time.Millisecond {
+		slog.Info("pets: /play slow phases",
+			"user", userID,
+			"cooldown_check", cooldownDone.String(),
+			"active_pet", petDone.String(),
+			"cooldown_set", cooldownSetDone.String(),
+			"total_to_respond", respondDone.String(),
+		)
+	}
 }
 
 func (c *Cog) onPlayPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {

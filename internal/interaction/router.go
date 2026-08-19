@@ -16,7 +16,16 @@ import (
 	"guacagamblebot/internal/store"
 )
 
-const rateLimitCooldown = 500 * time.Millisecond
+const (
+	rateLimitCooldown = 500 * time.Millisecond
+	// directRespondWindow is how long a handler may run before the router
+	// acknowledges the interaction with a deferred response. Handlers that
+	// reply within the window keep Discord's 3s window untouched and their
+	// answer is sent directly (one HTTP call, no "thinking" flash); slower
+	// handlers fall back to the deferred acknowledgment and the DeferringSession
+	// rewrites their reply into a follow-up.
+	directRespondWindow = 2 * time.Second
+)
 
 // ownerGatedDomains lists the personal, single-user menus whose interactive
 // components may only be operated by the user who created the embed. Their
@@ -46,6 +55,7 @@ var ownerGatedDomains = map[string]struct{}{
 	"boss":         {},
 	"use":          {},
 	"inventory":    {},
+	"crafting":     {},
 }
 
 // ownerGatedExemptions lists (domain, action) pairs inside owner-gated domains
@@ -101,6 +111,8 @@ type Router struct {
 
 	rateLimitMu    sync.Mutex
 	rateLimitTimes map[string]time.Time
+
+	directRespondWindow time.Duration
 }
 
 // Session returns the underlying discordgo session.
@@ -125,6 +137,8 @@ func NewRouter(bot *Bot, st *store.Store) *Router {
 		component:      map[string]ComponentHandler{},
 		modal:          map[string]ModalHandler{},
 		rateLimitTimes: map[string]time.Time{},
+
+		directRespondWindow: directRespondWindow,
 	}
 }
 
@@ -205,6 +219,7 @@ var modalOpenerActions = map[string]struct{}{
 	"economy::give":           {},
 	"lotto::buy":              {},
 	"delve::puzzle_solve":     {},
+	"arch::dustpick":          {},
 }
 
 // isModalOpener reports whether a component answers with a modal instead of a
@@ -251,6 +266,28 @@ func (r *Router) deferInteraction(s *discordgo.Session, i *discordgo.Interaction
 	return true
 }
 
+// dispatchInteraction runs the handler and only sends the deferred
+// acknowledgment when the handler does not reply within directRespondWindow.
+// A handler that replies in time sends its answer directly (one HTTP call, no
+// "thinking" flash); a slower handler gets the deferred ack and its reply is
+// rewritten into a follow-up. The DeferringSession's isDeferred check is
+// mutex-guarded, so a reply racing the acknowledgment is always classified
+// consistently: whichever of the two calls happens first wins.
+func (r *Router) dispatchInteraction(s *discordgo.Session, i *discordgo.InteractionCreate, h func()) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer r.recoverPanic(i)
+		h()
+	}()
+	select {
+	case <-done:
+	case <-time.After(r.directRespondWindow):
+		r.deferInteraction(s, i)
+		<-done
+	}
+}
+
 func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	defer r.recoverPanic(i)
 
@@ -289,11 +326,11 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
-		r.deferInteraction(s, i)
 		if h, ok := r.slash[data.Name]; ok {
-			h(r.bot, i)
+			r.dispatchInteraction(s, i, func() { h(r.bot, i) })
 		} else {
 			log.Warn("no handler for slash command", "cmd", data.Name)
+			r.deferInteraction(s, i)
 		}
 
 	case discordgo.InteractionMessageComponent:
@@ -326,12 +363,12 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
-		r.deferInteraction(s, i)
 		key := domain + "::" + action
 		if h, ok := r.component[key]; ok {
-			h(r.bot, i)
+			r.dispatchInteraction(s, i, func() { h(r.bot, i) })
 		} else {
 			log.Warn("no handler for component", "custom_id", cid, "key", key)
+			r.deferInteraction(s, i)
 		}
 
 	case discordgo.InteractionModalSubmit:
@@ -353,12 +390,12 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"user", uid,
 			"guild", gid,
 		)
-		r.deferInteraction(s, i)
 		key := domain + "::" + action
 		if h, ok := r.modal[key]; ok {
-			h(r.bot, i)
+			r.dispatchInteraction(s, i, func() { h(r.bot, i) })
 		} else {
 			log.Warn("no handler for modal", "custom_id", cid, "key", key)
+			r.deferInteraction(s, i)
 		}
 	}
 

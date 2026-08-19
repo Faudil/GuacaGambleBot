@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/assert"
@@ -155,7 +156,7 @@ func TestIsModalOpener(t *testing.T) {
 	assert.False(t, isModalOpener("npc", "chat_alchemist"))
 }
 
-func TestRouterDefersSlashAndFollowsUp(t *testing.T) {
+func TestRouterFastSlashRespondsDirectly(t *testing.T) {
 	rt := &deferRT{}
 	s, err := discordgo.New("test")
 	require.NoError(t, err)
@@ -178,7 +179,39 @@ func TestRouterDefersSlashAndFollowsUp(t *testing.T) {
 	}})
 
 	calls, bodies := rt.snapshot()
-	require.Len(t, calls, 2, "deferred ack + follow-up")
+	require.Len(t, calls, 1, "a fast handler must respond directly, without a deferred ack")
+	assert.Contains(t, calls[0], "/callback")
+	var ack map[string]any
+	require.NoError(t, json.Unmarshal([]byte(bodies[0]), &ack))
+	assert.Equal(t, float64(discordgo.InteractionResponseChannelMessageWithSource), ack["type"])
+}
+
+func TestRouterSlowSlashDefersAndFollowsUp(t *testing.T) {
+	rt := &deferRT{}
+	s, err := discordgo.New("test")
+	require.NoError(t, err)
+	s.Client = &http.Client{Transport: rt}
+
+	r := NewRouter(&Bot{Session: s, Prefix: "!"}, nil)
+	r.directRespondWindow = 5 * time.Millisecond
+	r.Slash("slow", "d", func(b *Bot, i *discordgo.InteractionCreate) {
+		time.Sleep(20 * time.Millisecond)
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "pong"},
+		})
+	})
+
+	r.onInteraction(s, &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+		ID:     "42",
+		Type:   discordgo.InteractionApplicationCommand,
+		Token:  "tok",
+		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
+		Data:   discordgo.ApplicationCommandInteractionData{Name: "slow"},
+	}})
+
+	calls, bodies := rt.snapshot()
+	require.Len(t, calls, 2, "a slow handler must get the deferred ack + follow-up")
 	assert.Contains(t, calls[0], "/callback")
 	assert.Contains(t, calls[1], "/webhooks/")
 	var ack map[string]any
@@ -186,7 +219,7 @@ func TestRouterDefersSlashAndFollowsUp(t *testing.T) {
 	assert.Equal(t, float64(discordgo.InteractionResponseDeferredChannelMessageWithSource), ack["type"])
 }
 
-func TestRouterDefersComponentAndEdits(t *testing.T) {
+func TestRouterFastComponentEditsDirectly(t *testing.T) {
 	rt := &deferRT{}
 	s, err := discordgo.New("test")
 	require.NoError(t, err)
@@ -211,10 +244,71 @@ func TestRouterDefersComponentAndEdits(t *testing.T) {
 	}})
 
 	calls, _ := rt.snapshot()
-	require.Len(t, calls, 2, "deferred ack + edit")
+	require.Len(t, calls, 1, "a fast component handler must respond directly, without a deferred ack")
+	assert.Contains(t, calls[0], "/callback")
+}
+
+func TestRouterSlowComponentDefersAndEdits(t *testing.T) {
+	rt := &deferRT{}
+	s, err := discordgo.New("test")
+	require.NoError(t, err)
+	s.Client = &http.Client{Transport: rt}
+
+	r := NewRouter(&Bot{Session: s, Prefix: "!"}, nil)
+	r.directRespondWindow = 5 * time.Millisecond
+	r.Component("test", "run", func(b *Bot, i *discordgo.InteractionCreate) {
+		time.Sleep(20 * time.Millisecond)
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{{Title: "view"}},
+			},
+		})
+	})
+
+	r.onInteraction(s, &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+		ID:     "43",
+		Type:   discordgo.InteractionMessageComponent,
+		Token:  "tok",
+		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
+		Data:   discordgo.MessageComponentInteractionData{CustomID: "test::run::200"},
+	}})
+
+	calls, _ := rt.snapshot()
+	require.Len(t, calls, 2, "a slow component handler must get the deferred ack + edit")
 	assert.Contains(t, calls[0], "/callback")
 	assert.Contains(t, calls[1], "PATCH")
 	assert.Contains(t, calls[1], "/messages/@original")
+}
+
+func TestRouterRecoversHandlerPanicInDispatchGoroutine(t *testing.T) {
+	rt := &deferRT{}
+	s, err := discordgo.New("test")
+	require.NoError(t, err)
+	s.Client = &http.Client{Transport: rt}
+
+	r := NewRouter(&Bot{Session: s, Prefix: "!"}, nil)
+	r.Slash("boom", "d", func(b *Bot, i *discordgo.InteractionCreate) {
+		panic("handler exploded")
+	})
+
+	require.NotPanics(t, func() {
+		r.onInteraction(s, &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+			ID:     "42",
+			Type:   discordgo.InteractionApplicationCommand,
+			Token:  "tok",
+			Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
+			Data:   discordgo.ApplicationCommandInteractionData{Name: "boom"},
+		}})
+	})
+
+	calls, bodies := rt.snapshot()
+	require.Len(t, calls, 1, "the panic must be recovered and the user informed")
+	assert.Contains(t, calls[0], "/callback")
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal([]byte(bodies[0]), &resp))
+	assert.NotEqual(t, float64(discordgo.InteractionResponseDeferredChannelMessageWithSource), resp["type"],
+		"a panicked handler must never leave the interaction deferred")
 }
 
 func TestRouterDoesNotDeferModalOpener(t *testing.T) {
