@@ -81,6 +81,7 @@ var FlagManifest = map[string]FlagDef{
 	},
 	"helped_warden": {
 		Sentence: "The Lost Warden bowed their head. 'One day,' they said, 'I will repay this debt.'",
+		Epithet:  "the Warden's Friend",
 		Unlocks:  []string{"warden_ally"},
 	},
 	"set_item_collected": {
@@ -123,6 +124,20 @@ var FlagManifest = map[string]FlagDef{
 	},
 	"key_master": {
 		Sentence: "You unlocked the path with a key. The clever always find a way.",
+	},
+	"scholar_of_depths": {
+		Sentence: "You read a tome older than the village and understood it. The depths taught you something in return.",
+		Epithet:  "the Scholar",
+	},
+	"fountain_coin": {
+		Sentence: "You cast a coin into the dark waters. Whether the fountain listened, only the depths know.",
+	},
+	"respected_the_dead": {
+		Sentence: "You laid the nameless dead to rest. Somewhere beneath the Undercroft, bones settle easier.",
+		Epithet:  "the Grave Keeper",
+	},
+	"warden_blessed": {
+		Sentence: "The Lost Warden bowed their head in thanks. Their light burns a little brighter for your help.",
 	},
 }
 

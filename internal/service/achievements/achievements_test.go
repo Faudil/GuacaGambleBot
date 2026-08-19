@@ -58,3 +58,18 @@ func TestList(t *testing.T) {
 		assert.False(t, v.Unlocked)
 	}
 }
+
+func TestHiddenAchievementsStayInvisible(t *testing.T) {
+	s := store.New(testDB(t), &config.Config{StartingBalance: 100, DailyAmount: 50})
+	svc := New(s, &config.Config{})
+
+	views, err := svc.List(1)
+	require.NoError(t, err)
+	for _, v := range views {
+		// rank_* and boss_league_* are hidden until their systems are ported.
+		assert.NotEqual(t, "rank_bronze", v.ID)
+		assert.NotEqual(t, "rank_top5", v.ID)
+		assert.NotEqual(t, "boss_league_1", v.ID)
+		assert.NotEqual(t, "boss_league_5", v.ID)
+	}
+}

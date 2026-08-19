@@ -3,6 +3,7 @@ package crafting
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
@@ -88,10 +89,27 @@ func recipeOptions(sel discordgo.SelectMenu) map[string]discordgo.SelectMenuOpti
 	return byValue
 }
 
+func fieldValues(embed *discordgo.MessageEmbed) []string {
+	vals := make([]string, 0, len(embed.Fields))
+	for _, f := range embed.Fields {
+		vals = append(vals, f.Value)
+	}
+	return vals
+}
+
+func anyFieldContains(vals []string, substr string) bool {
+	for _, v := range vals {
+		if strings.Contains(v, substr) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestCraftMenuOnlyShowsUnlockedRecipes(t *testing.T) {
 	c := testCog(t)
-	// Level 1, no research completed: only the level-1 recipes without a
-	// research gate must be listed.
+	// Level 1, no research completed: only the recipes without a research gate
+	// and with a reachable level must be craftable.
 	embed, comps := c.buildCraftMenu(1, "en", "all", 1)
 	assert.Equal(t, "🛠️ Crafting Workshop (Level 1)", embed.Title)
 
@@ -100,21 +118,69 @@ func TestCraftMenuOnlyShowsUnlockedRecipes(t *testing.T) {
 	require.Contains(t, opts, "beer")
 	require.Contains(t, opts, "coffee")
 	require.Contains(t, opts, "scratch_ticket")
-	require.NotContains(t, opts, "craft_stick", "research-gated recipes must be hidden")
-	require.NotContains(t, opts, "rusty_magnet", "level-gated recipes must be hidden")
+	require.NotContains(t, opts, "craft_stick", "research-gated recipes must not be pickable")
+	require.NotContains(t, opts, "rusty_magnet", "research-gated recipes must not be pickable")
 
-	// Crafting a level-1 item without ingredients must fail.
+	// ... but the embed still lists them, with what they need.
+	vals := fieldValues(embed)
+	assert.True(t, anyFieldContains(vals, "🔬 Tool Crafting"),
+		"locked recipes must be visible with their research requirement")
+
+	// Crafting an unlocked level-1 item succeeds.
 	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 3))
-	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "coffee_bean", 3))
 
 	b := &interaction.Bot{Session: &stubSession{}}
-	inter := craftPickInteraction("1", "beer")
-	c.onCraftPick(b, inter)
+	c.onCraftPick(b, craftPickInteraction("1", "beer"))
 	embed = lastEmbed(t, b)
 	assert.Contains(t, embed.Description, "1x Beer")
 
 	var inv model.Inventory
 	require.NoError(t, c.store.DB.Where("user_id = ? AND item_id = ?", 1, "beer").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestCraftMenuLockedRecipesShowRequirements(t *testing.T) {
+	c := testCog(t)
+	// Page 1 mixes 3 unlocked recipes with the first locked ones; requirements
+	// of late-alphabetical recipes land on later pages, so scan a few.
+	vals := []string{}
+	for page := 1; page <= 3; page++ {
+		embed, _ := c.buildCraftMenu(1, "en", "all", page)
+		vals = append(vals, fieldValues(embed)...)
+	}
+
+	assert.True(t, anyFieldContains(vals, "🔬 Tool Crafting"), "research-locked recipe must show the research name")
+	assert.True(t, anyFieldContains(vals, "🔬 Common Equipment"), "equipment recipes must show their research name")
+
+	// Level-locked recipes (no research gate) show the crafter level.
+	embedCons, _ := c.buildCraftMenu(1, "en", "consumables", 1)
+	assert.True(t, anyFieldContains(fieldValues(embedCons), "Lvl. 2"), "level-locked recipe must show the crafter level")
+}
+
+func TestCraftMenuResearchUnlocksRecipeAtLevel1(t *testing.T) {
+	c := testCog(t)
+	// Completing tool_crafting must unlock bow/rusty_magnet/hook even at
+	// crafter level 1: the research is the only gate.
+	require.NoError(t, c.store.DB.Create(&model.UserResearch{
+		UserID: 1, ResearchID: "tool_crafting", Completed: true,
+	}).Error)
+
+	_, comps := c.buildCraftMenu(1, "en", "all", 1)
+	_, recipeSel := menuSelects(t, comps)
+	opts := recipeOptions(recipeSel)
+	require.Contains(t, opts, "bow")
+	require.Contains(t, opts, "rusty_magnet")
+	require.Contains(t, opts, "hook")
+
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "oat", 2))
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "pebble", 2))
+	b := &interaction.Bot{Session: &stubSession{}}
+	c.onCraftPick(b, craftPickInteraction("1", "bow"))
+	embed := lastEmbed(t, b)
+	assert.Contains(t, embed.Description, "1x Bow")
+
+	var inv model.Inventory
+	require.NoError(t, c.store.DB.Where("user_id = ? AND item_id = ?", 1, "bow").First(&inv).Error)
 	assert.Equal(t, 1, inv.Quantity)
 }
 
@@ -132,7 +198,7 @@ func TestCraftMenuPaginates(t *testing.T) {
 	completeAllResearch(t, c, 1)
 
 	embed, comps := c.buildCraftMenu(1, "en", "all", 1)
-	assert.Len(t, crtsvc.Recipes, 51)
+	assert.Len(t, crtsvc.Recipes, 71)
 	assert.Len(t, embed.Fields, 25, "page 1 shows the first 25 recipes")
 
 	_, recipeSel := menuSelects(t, comps)
@@ -147,12 +213,12 @@ func TestCraftMenuPaginates(t *testing.T) {
 
 	_, comps3 := c.buildCraftMenu(1, "en", "all", 3)
 	_, recipeSel3 := menuSelects(t, comps3)
-	assert.Len(t, recipeSel3.Options, 1, "last page holds the remaining recipe")
+	assert.Len(t, recipeSel3.Options, 21, "last page holds the remaining recipes")
 
 	// A stale nav press landing beyond the last page is clamped.
 	_, compsClamped := c.buildCraftMenu(1, "en", "all", 99)
 	_, recipeSelClamped := menuSelects(t, compsClamped)
-	assert.Len(t, recipeSelClamped.Options, 1)
+	assert.Len(t, recipeSelClamped.Options, 21)
 }
 
 func TestCraftMenuCategoryFilter(t *testing.T) {
@@ -161,11 +227,20 @@ func TestCraftMenuCategoryFilter(t *testing.T) {
 	completeAllResearch(t, c, 1)
 
 	embed, comps := c.buildCraftMenu(1, "en", "pets", 1)
-	assert.Len(t, embed.Fields, 8, "all pet food and potion recipes")
+	assert.Len(t, embed.Fields, 25, "pets page 1 shows the first 25 recipes")
+	embed2, _ := c.buildCraftMenu(1, "en", "pets", 2)
+	assert.Len(t, embed2.Fields, 3, "pets page 2 shows the remaining recipes")
 	_, recipeSel := menuSelects(t, comps)
 	opts := recipeOptions(recipeSel)
 	require.Contains(t, opts, "warrior_stew")
 	require.Contains(t, opts, "berserker_elixir")
+	require.Contains(t, opts, "lucky_roast")
+	require.Contains(t, opts, "dragon_chili")
+	require.Contains(t, opts, "colossus_draught")
+	_, comps2 := c.buildCraftMenu(1, "en", "pets", 2)
+	_, recipeSel2 := menuSelects(t, comps2)
+	opts2 := recipeOptions(recipeSel2)
+	require.Contains(t, opts2, "vitality_elixir", "later pet recipes appear on page 2")
 	require.NotContains(t, opts, "beer", "other categories must be excluded")
 	require.NotContains(t, opts, "craft_stick", "equipment must be excluded")
 
@@ -179,13 +254,49 @@ func TestCraftMenuCategoryFilter(t *testing.T) {
 
 func TestCraftMenuEmptyCategory(t *testing.T) {
 	c := testCog(t)
-	// Level 1 user with no unlocked recipes: the select menu must still render
-	// with a disabled-style placeholder option.
+	// Level 1 user with no unlocked equipment: the embed lists the locked
+	// equipment recipes and the select menu falls back to a placeholder.
 	embed, comps := c.buildCraftMenu(1, "en", "equipment", 1)
-	assert.Contains(t, embed.Description, "No recipes unlocked")
+	require.NotEmpty(t, embed.Fields, "locked equipment recipes must still be listed")
 	_, recipeSel := menuSelects(t, comps)
 	assert.Len(t, recipeSel.Options, 1)
 	assert.Equal(t, "_none", recipeSel.Options[0].Value)
+}
+
+func TestRecipesViewShowsLockedRecipes(t *testing.T) {
+	c := testCog(t)
+	embed, _ := c.buildRecipesView(1, 1, "en", 1)
+	assert.Contains(t, embed.Description, "🔓 Unlocked Recipes")
+	assert.Contains(t, embed.Description, "Beer", "unlocked recipes stay listed")
+
+	// The unlocked section now fills page 1; the locked section and its
+	// requirements land on later pages, so scan them all.
+	desc := embed.Description
+	for page := 2; page <= 6; page++ {
+		e, _ := c.buildRecipesView(1, 1, "en", page)
+		desc += e.Description
+	}
+	assert.Contains(t, desc, "🔒 Locked Recipes")
+	assert.Contains(t, desc, "🔬 Tool Crafting", "research-gated recipes must show their research")
+	assert.Contains(t, desc, "Lvl. 2", "level-gated recipes must show the crafter level")
+}
+
+func TestCraftSuccessShowsCraftAgainButton(t *testing.T) {
+	c := testCog(t)
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 3))
+
+	b := &interaction.Bot{Session: &stubSession{}}
+	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+
+	s, ok := b.Session.(*stubSession)
+	require.True(t, ok)
+	require.NotNil(t, s.last)
+	require.NotNil(t, s.last.Data.Components)
+	row, ok := s.last.Data.Components[0].(discordgo.ActionsRow)
+	require.True(t, ok)
+	btn, ok := row.Components[0].(discordgo.Button)
+	require.True(t, ok)
+	assert.Equal(t, "crafting::craft_back::1", btn.CustomID, "success must offer a craft-another button")
 }
 
 func TestCraftMenuSelectsCarryOwnerID(t *testing.T) {

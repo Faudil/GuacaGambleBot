@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/universe"
 )
 
@@ -152,6 +153,11 @@ func (s *Service) chroniclerChat(userID int64, lang string) (*ChatEvent, error) 
 		}
 		return &ChatEvent{ID: "chronicler_intro",
 			Text: i18n.T("journal.chronicler.intro", lang, map[string]any{"paths": strings.Join(titles, ", ")})}, nil
+	}
+	// The Chronicler's questline unlocks once three main questlines are
+	// complete; chat visits (including quips) quietly hand over the empty book.
+	if questssvc.CompletedMainQuestlines(s.store, userID) >= 3 {
+		_ = questssvc.StartQuestForUser(s.store, userID, "chronicler_legend")
 	}
 	npcData := s.GetNPCData(jsvc.ChroniclerID)
 	if npcData == nil {

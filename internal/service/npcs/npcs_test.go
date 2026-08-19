@@ -334,6 +334,37 @@ func TestChroniclerIntroOnceThenQuips(t *testing.T) {
 	assert.Equal(t, "regular", event.ID)
 }
 
+func TestChroniclerQuestUnlocksAfterThreeMainQuestlines(t *testing.T) {
+	svc, st := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	require.NoError(t, st.DB.Create(&model.UserJournalEntry{UserID: 1, PathID: "champion", StepIndex: 3}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
+
+	// First chat reveals the Chronicler; the legend quest must not start yet
+	// (fewer than three main questlines completed).
+	event, err := svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "chronicler_intro", event.ID)
+	var count int64
+	st.DB.Model(&model.UserQuest{}).Where("user_id = ? AND quest_id = ?", 1, "chronicler_legend").Count(&count)
+	assert.Zero(t, count, "quest must not start before three main questlines")
+
+	// Complete three main questlines (tutorial excluded), then chat again.
+	for _, id := range []string{"masked_shadow_falls_hunter", "masked_shadow_falls_shadow", "boss_league"} {
+		require.NoError(t, st.DB.Create(&model.UserQuest{
+			UserID: 1, QuestID: id, Status: "COMPLETED",
+		}).Error)
+	}
+	event, err = svc.Chat(1, "the_chronicler", "en")
+	require.NoError(t, err)
+	assert.Equal(t, "regular", event.ID)
+	st.DB.Model(&model.UserQuest{}).Where("user_id = ? AND quest_id = ?", 1, "chronicler_legend").Count(&count)
+	assert.Equal(t, int64(1), count, "legend quest must start after three main questlines")
+}
+
 func TestChroniclerLockedUntilTutorialAndRank(t *testing.T) {
 	svc, st := testService(t)
 	svc.cfg.NPCChatCooldownHours = 0

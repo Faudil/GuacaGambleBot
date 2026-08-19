@@ -6,16 +6,24 @@ import (
 )
 
 const (
-	// RecLevelBase is the recommended level for floor 1. Delve is a mid-game
-	// activity: underleveled players are punished hard instead of being
-	// hard-locked out.
-	RecLevelBase = 12
+	// RecLevelBase is the recommended level for floor 1. Delve is meant to
+	// accompany players from their first steps to endgame: floor 1 is safe
+	// for a brand-new character, floor 10 (the Veil gate) sits around
+	// level 19, and the abyss spans the rest of the level range.
+	RecLevelBase = 1
 
-	RecLevelPerFloor = 3
+	RecLevelPerFloor = 2
 	RecLevelOffset   = 0
 
-	UnderLeveledMult    = 0.30
-	UnderLeveledXPBonus = 0.25
+	// UnderleveledMult is the enemy stat penalty per level the player is
+	// below the recommended level. It is capped at UnderLeveledMaxDiff
+	// levels so deep underleveled runs stay harsh but survivable instead
+	// of scaling without bound.
+	UnderLeveledMult    = 0.15
+	UnderLeveledMaxDiff = 5
+
+	UnderLeveledXPBonus   = 0.20
+	UnderLeveledMaxXPDiff = 5
 )
 
 func RecommendedLevel(floor int) int {
@@ -56,19 +64,74 @@ func LevelScalingMul(floor int, playerLevel int) float64 {
 	if playerLevel >= rec {
 		return 1.0
 	}
-	return 1.0 + float64(rec-playerLevel)*UnderLeveledMult
+	diff := rec - playerLevel
+	if diff > UnderLeveledMaxDiff {
+		diff = UnderLeveledMaxDiff
+	}
+	return 1.0 + float64(diff)*UnderLeveledMult
 }
 
 func TrapDamage(floor int) int {
-	return 8 + 4*floor
+	return 6 + 3*floor
 }
 
 func MimicDamage(floor int) int {
-	return 10 + 5*floor
+	return 8 + 4*floor
 }
 
 func AmbushDamage(floor int) int {
-	return 15 + 3*floor
+	return 12 + 2*floor
+}
+
+// CollapseDamage is the damage taken when a corridor collapse hits while the
+// player has no torch to brace with.
+func CollapseDamage(floor int) int {
+	return 8 + 2*floor
+}
+
+// RiftGazeDamage is the backlash from failing to understand a rift.
+func RiftGazeDamage(floor int) int {
+	return 8 + 2*floor
+}
+
+// SacrificeHPCost is the permanent max HP price paid at a blood altar.
+func SacrificeHPCost(floor int) int {
+	return 12 + 4*floor
+}
+
+// GardenHealAmount is the heal granted by harvesting a garden.
+func GardenHealAmount(floor int) int {
+	return 12 + 4*floor
+}
+
+// ForgeScavengeGold is the gold granted by scavenging a forge.
+func ForgeScavengeGold(floor int) int {
+	return 25 + 8*floor
+}
+
+// PotionHealAmount is the fixed heal of a delve potion.
+func PotionHealAmount() int {
+	return 30
+}
+
+// RiddleFailDamage is the damage taken on a wrong riddle answer.
+func RiddleFailDamage() int {
+	return 10
+}
+
+// RescueTorchCost is the HP lost by a rescuer who has no torch to spare.
+func RescueTorchCost() int {
+	return 10
+}
+
+// BossStatMult is the stat multiplier applied to zone boss encounters.
+func BossStatMult() float64 {
+	return 1.75
+}
+
+// EliteStatMult is the stat multiplier applied to elite (rift) encounters.
+func EliteStatMult() float64 {
+	return 1.5
 }
 
 func DisarmDC(floor int) int {
@@ -84,27 +147,43 @@ func CombatFleeDC(floor int) int {
 }
 
 func MimicChance(floor int) int {
-	c := 30 + 3*floor
-	if c > 70 {
-		c = 70
+	c := 25 + 2*floor
+	if c > 50 {
+		c = 50
 	}
 	return c
 }
 
 func CorridorChance(floor int) int {
-	return 15 + 2*floor
+	c := 12 + floor
+	if c > 40 {
+		c = 40
+	}
+	return c
 }
 
 func BackfireChance(floor int) int {
-	return 15 + 3*floor
+	c := 12 + 2*floor
+	if c > 50 {
+		c = 50
+	}
+	return c
 }
 
 func TorchBurnChance(floor int) int {
-	return 20 + 2*floor
+	c := 15 + floor
+	if c > 45 {
+		c = 45
+	}
+	return c
 }
 
 func EnemyCritChance(floor int) int {
-	return 10 + floor
+	c := 5 + floor/2
+	if c > 25 {
+		c = 25
+	}
+	return c
 }
 
 type CorridorEventType int
@@ -118,6 +197,8 @@ const (
 	CorridorSporeCloud
 	CorridorSteamVent
 	CorridorWhispers
+	CorridorBridge
+	CorridorMist
 )
 
 func RollCorridorEvent(zone string, floor int, dark bool, rng *rand.Rand) CorridorEventType {
@@ -145,12 +226,16 @@ func RollCorridorEvent(zone string, floor int, dark bool, rng *rand.Rand) Corrid
 
 	roll := rng.Intn(100)
 	switch {
-	case roll < 40:
+	case roll < 35:
 		return CorridorTrap
-	case roll < 70:
+	case roll < 60:
 		return CorridorAmbush
-	default:
+	case roll < 80:
 		return CorridorCollapse
+	case roll < 90:
+		return CorridorBridge
+	default:
+		return CorridorMist
 	}
 }
 
@@ -187,20 +272,24 @@ func BossForFloor(floor int) *struct {
 
 func CombatXP(floor int, playerLevel int) int {
 	rec := RecommendedLevel(floor)
-	base := 25 + 15*floor
+	base := 30 + 25*floor
 	if playerLevel < rec {
-		bonus := 1.0 + float64(rec-playerLevel)*UnderLeveledXPBonus
+		diff := rec - playerLevel
+		if diff > UnderLeveledMaxXPDiff {
+			diff = UnderLeveledMaxXPDiff
+		}
+		bonus := 1.0 + float64(diff)*UnderLeveledXPBonus
 		base = int(float64(base) * bonus)
 	}
 	return base
 }
 
 func FloorClearXP(floor int) int {
-	return 10 + 5*floor
+	return 15 + 8*floor
 }
 
 func BossXP(floor int) int {
-	return 100 + 30*floor
+	return 150 + 40*floor
 }
 
 func MerchantPriceBase(floor int) int {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -288,6 +289,17 @@ func (c *Cog) onCloseSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	// Achievements for every winning bettor (the stat was incremented during
+	// settlement; the check runs after the response so it never blocks the UI).
+	for _, wr := range res.WagerResults {
+		if !wr.Won {
+			continue
+		}
+		if unlocks, uerr := achievement.CheckAndUnlock(b.DB, wr.UserID); uerr == nil && len(unlocks) > 0 {
+			interaction.SendAchievements(b, i, lang, unlocks)
+		}
+	}
 }
 
 func (c *Cog) onOddsSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {

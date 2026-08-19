@@ -176,6 +176,7 @@ var dataMigrations = []DataMigration{
 	{ID: "furniture_house_scope", Run: migrateFurnitureHouseScope},
 	{ID: "inventory_canonical_ids", Run: migrateInventoryCanonicalIDs},
 	{ID: "inventory_cleanup_zero_quantity", Run: migrateInventoryCleanupZeroQuantity},
+	{ID: "equip_slot_jewelry", Run: migrateEquipSlotJewelry},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -433,6 +434,51 @@ func migrateInventoryCanonicalIDs(tx *gorm.DB) error {
 		}
 	}
 	return nil
+}
+
+// migrateEquipSlotJewelry renames the "accessory" equipment slot to "jewelry"
+// and reclassifies the few pieces that do not fit the physical-type taxonomy.
+// Slots are derived from what the object is: jewelry = precious ornaments worn
+// on the body (rings, amulets, pendants, brooches, talismans, crowns); trinket =
+// every other non-weapon/non-armor piece (charms, masks, badges, orbs, cores,
+// keys, ...). Delve drops store their generated base id (e.g.
+// "delve_flaming_arcane_orb_of_the_..."), so they are matched by pattern.
+func migrateEquipSlotJewelry(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.UserEquipment{}) {
+		return nil
+	}
+	// accessory → jewelry, except non-precious pieces that move to trinket.
+	if err := tx.Exec(`
+		UPDATE user_equipment SET equip_slot = 'jewelry'
+		WHERE equip_slot = 'accessory'
+		  AND base_id NOT IN ('lucky_charm', 'silent_steps', 'reinforced_badge')
+		  AND base_id NOT LIKE 'delve_%arcane_orb%'`).Error; err != nil {
+		return err
+	}
+	if err := tx.Exec(`
+		UPDATE user_equipment SET equip_slot = 'trinket'
+		WHERE equip_slot = 'accessory'
+		  AND (base_id IN ('lucky_charm', 'silent_steps', 'reinforced_badge')
+		       OR base_id LIKE 'delve_%arcane_orb%')`).Error; err != nil {
+		return err
+	}
+	// Talismans are necklaces → jewelry.
+	if err := tx.Exec(`
+		UPDATE user_equipment SET equip_slot = 'jewelry'
+		WHERE equip_slot = 'trinket' AND base_id = 'dragon_slayer_talisman'`).Error; err != nil {
+		return err
+	}
+	// The remap can leave a user with two equipped items in the same slot
+	// (e.g. lucky_charm next to another trinket, or ring next to talisman).
+	// Keep the oldest equipped piece and unequip the rest.
+	return tx.Exec(`
+		UPDATE user_equipment SET is_equipped = 0
+		WHERE is_equipped = 1
+		  AND id NOT IN (
+		    SELECT MIN(id) FROM user_equipment
+		    WHERE is_equipped = 1
+		    GROUP BY user_id, equip_slot
+		  )`).Error
 }
 
 // tableColumn is a row from `PRAGMA table_info`.

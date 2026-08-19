@@ -37,6 +37,38 @@ func TestIncrementAndUnlock(t *testing.T) {
 	assert.False(t, ids["eco_10k"], "eco_10k should not unlock at balance 2000")
 }
 
+func TestEcoRichUnlocksFromMoneyEarned(t *testing.T) {
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 1}).Error)
+
+	// 10k earned across several credits must unlock eco_rich regardless of the
+	// current wallet balance.
+	require.NoError(t, IncrementStat(d, 1, "money_earned", 7500))
+	require.NoError(t, IncrementStat(d, 1, "money_earned", 2500))
+
+	unlocks, err := CheckAndUnlock(d, 1)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "eco_rich")
+}
+
+func TestCommunityAchievementsFromContributions(t *testing.T) {
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 1}).Error)
+
+	// Contributions are per (user, server); both rows count towards the total.
+	require.NoError(t, d.Create(&model.UserCommunityStat{
+		UserID: 1, ServerID: 1, TotalMoneyInvested: 6000,
+	}).Error)
+	require.NoError(t, d.Create(&model.UserCommunityStat{
+		UserID: 1, ServerID: 2, TotalMoneyInvested: 4000, TotalItemsInvested: 200,
+	}).Error)
+
+	unlocks, err := CheckAndUnlock(d, 1)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "community_initiate")
+	assertNotContains(t, unlocks, "community_supporter")
+}
+
 func TestDailyAchievementProgression(t *testing.T) {
 	d := testDB(t)
 	require.NoError(t, d.Create(&model.User{UserID: 2, Balance: 100}).Error)

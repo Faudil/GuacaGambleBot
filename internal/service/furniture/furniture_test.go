@@ -210,7 +210,8 @@ func fundForBed(t *testing.T, s *store.Store, userID int64) {
 	t.Helper()
 	_, err := s.UpdateBalance(userID, 100000)
 	require.NoError(t, err)
-	require.NoError(t, s.AddItemRaw(s.DB, userID, "stick", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "iron_ore", 100))
+	require.NoError(t, s.AddItemRaw(s.DB, userID, "platinum", 100))
 	require.NoError(t, s.AddItemRaw(s.DB, userID, "wheat", 100))
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
@@ -90,6 +91,34 @@ func TestCloseBetPayout(t *testing.T) {
 
 	b2, _ := st.GetBalance(2)
 	_ = b2
+}
+
+func TestCloseBetTracksWagersAndUnlocks(t *testing.T) {
+	svc, st := testService(t)
+	id, err := svc.CreateBet(1, "Who wins?", "A", "B")
+	require.NoError(t, err)
+
+	_, err = st.UpdateBalance(2, 1000)
+	require.NoError(t, err)
+	require.NoError(t, svc.PlaceBet(2, id, "a", 100))
+
+	_, err = svc.CloseBet(1, id, "a")
+	require.NoError(t, err)
+
+	var us model.UserStat
+	require.NoError(t, st.DB.Where("user_id = 2").First(&us).Error)
+	assert.Equal(t, 1, us.WagersWon, "settlement must record the win")
+
+	// The cog runs CheckAndUnlock after settlement; verify the check fires.
+	unlocks, err := achievement.CheckAndUnlock(st.DB, 2)
+	require.NoError(t, err)
+	var gotRookie bool
+	for _, a := range unlocks {
+		if a.ID == "bet_rookie" {
+			gotRookie = true
+		}
+	}
+	assert.True(t, gotRookie, "bet_rookie must unlock after the first settled win")
 }
 
 func TestFreezeBet(t *testing.T) {

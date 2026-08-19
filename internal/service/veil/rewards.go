@@ -18,23 +18,12 @@ type LegendaryDrop struct {
 	Affixes  []items.AppliedAffix
 }
 
-var legendaryPool = []struct {
-	ID      string
-	Name    string
-	Emoji   string
-	Slot    string
-	StatSTR int
-	StatDEX int
-	StatINT int
-	StatVIT int
-	StatLUK int
-}{
-	{ID: "rift_blade", Name: "Rift-Tempered Blade", Emoji: "⚔️", Slot: "weapon", StatSTR: 15, StatDEX: 10},
-	{ID: "dechirure_scythe", Name: "Scythe of the Sundered Veil", Emoji: "🜁", Slot: "weapon", StatSTR: 12, StatINT: 12},
-	{ID: "rift_cowl", Name: "Cowl of the Veil Walker", Emoji: "👑", Slot: "armor", StatVIT: 12, StatDEX: 8},
-	{ID: "rift_warden_aegis", Name: "Aegis of the Rift Warden", Emoji: "🛡️", Slot: "armor", StatVIT: 15, StatSTR: 8},
-	{ID: "rift_band", Name: "Band of Dimensional Passage", Emoji: "💍", Slot: "accessory", StatLUK: 10, StatSTR: 3, StatDEX: 3, StatINT: 3, StatVIT: 3},
-	{ID: "rift_eye", Name: "Eye of the Rift", Emoji: "👁️", Slot: "trinket", StatINT: 12, StatVIT: 8},
+// riftDropIDs are the Veil Rift legendary set pieces granted by raids. Their
+// stats, slots and minimum levels live in the central catalog
+// (internal/items/catalog.go), which is the single source of truth: a raid
+// drop and a shop purchase of the same piece are identical.
+var riftDropIDs = []string{
+	"rift_blade", "dechirure_scythe", "rift_cowl", "rift_warden_aegis", "rift_band", "rift_eye",
 }
 
 func GenerateRewards(raid *model.VeilRaid, lang string) (shards map[int64]int, chronicles map[int64]string, drops []LegendaryDrop) {
@@ -74,9 +63,12 @@ func GenerateRewards(raid *model.VeilRaid, lang string) (shards map[int64]int, c
 }
 
 func rollLegendaryForPlayer(userID int64) *LegendaryDrop {
-	entry := legendaryPool[rand.Intn(len(legendaryPool))]
+	it := items.Get(riftDropIDs[rand.Intn(len(riftDropIDs))])
+	if it == nil {
+		return nil
+	}
 
-	affixDefs := items.RollAffixes(items.RarityLegendary, entry.Slot)
+	affixDefs := items.RollAffixes(items.RarityLegendary, it.EquipSlot)
 	affixes := make([]items.AppliedAffix, len(affixDefs))
 	for i, a := range affixDefs {
 		affixes[i] = items.AppliedAffix{
@@ -89,35 +81,35 @@ func rollLegendaryForPlayer(userID int64) *LegendaryDrop {
 
 	svc := &Service{}
 	_, err := svc.store.CreateEquipmentFromAffixes(
-		userID, entry.ID, entry.Name, entry.Emoji,
-		"legendary", entry.Slot, 25,
-		entry.StatSTR, entry.StatDEX, entry.StatINT, entry.StatVIT, entry.StatLUK,
-		affixes, "rift_walker")
+		userID, it.ID, it.Name, it.Emoji,
+		"legendary", it.EquipSlot, it.MinLevel,
+		it.StatSTR, it.StatDEX, it.StatINT, it.StatVIT, it.StatLUK,
+		affixes, it.SetID)
 	if err != nil {
 		return nil
 	}
 
 	statsParts := []string{}
-	if entry.StatSTR > 0 {
-		statsParts = append(statsParts, fmt.Sprintf("STR+%d", entry.StatSTR))
+	if it.StatSTR > 0 {
+		statsParts = append(statsParts, fmt.Sprintf("STR+%d", it.StatSTR))
 	}
-	if entry.StatDEX > 0 {
-		statsParts = append(statsParts, fmt.Sprintf("DEX+%d", entry.StatDEX))
+	if it.StatDEX > 0 {
+		statsParts = append(statsParts, fmt.Sprintf("DEX+%d", it.StatDEX))
 	}
-	if entry.StatINT > 0 {
-		statsParts = append(statsParts, fmt.Sprintf("INT+%d", entry.StatINT))
+	if it.StatINT > 0 {
+		statsParts = append(statsParts, fmt.Sprintf("INT+%d", it.StatINT))
 	}
-	if entry.StatVIT > 0 {
-		statsParts = append(statsParts, fmt.Sprintf("VIT+%d", entry.StatVIT))
+	if it.StatVIT > 0 {
+		statsParts = append(statsParts, fmt.Sprintf("VIT+%d", it.StatVIT))
 	}
-	if entry.StatLUK > 0 {
-		statsParts = append(statsParts, fmt.Sprintf("LUK+%d", entry.StatLUK))
+	if it.StatLUK > 0 {
+		statsParts = append(statsParts, fmt.Sprintf("LUK+%d", it.StatLUK))
 	}
 
 	return &LegendaryDrop{
 		UserID:   userID,
-		ItemName: entry.Name,
-		Emoji:    entry.Emoji,
+		ItemName: it.Name,
+		Emoji:    it.Emoji,
 		StatsStr: strings.Join(statsParts, ", "),
 		Affixes:  affixes,
 	}

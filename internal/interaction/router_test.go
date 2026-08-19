@@ -151,4 +151,30 @@ func TestOwnerGatedComponentDispatch(t *testing.T) {
 		"700",
 	))
 	assert.True(t, called, "exempt action must dispatch for any user")
+
+	// House embeds are personal menus: only the owner may operate them.
+	called = false
+	r.Component("house", "show", func(b *Bot, i *discordgo.InteractionCreate) { called = true })
+	r.onInteraction(&discordgo.Session{}, newTestInteractionAs(
+		discordgo.InteractionMessageComponent,
+		discordgo.MessageComponentInteractionData{CustomID: "house::show::800"},
+		"800",
+	))
+	assert.True(t, called, "owner clicking their own house embed must be allowed")
+
+	called = false
+	r.onInteraction(&discordgo.Session{}, newTestInteractionAs(
+		discordgo.InteractionMessageComponent,
+		discordgo.MessageComponentInteractionData{CustomID: "house::show::800"},
+		"801",
+	))
+	assert.False(t, called, "non-owner clicking a house embed must be rejected")
+
+	called = false
+	r.onInteraction(&discordgo.Session{}, newTestInteractionAs(
+		discordgo.InteractionMessageComponent,
+		discordgo.MessageComponentInteractionData{CustomID: "house::show"},
+		"802",
+	))
+	assert.False(t, called, "house custom_id without owner id must be rejected (fail closed)")
 }

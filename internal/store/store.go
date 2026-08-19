@@ -108,12 +108,29 @@ func (s *Store) UpdateBalance(userID int64, delta int) (int, error) {
 		UpdateColumn("balance", gorm.Expr("balance + ?", delta)).Error; err != nil {
 		return 0, err
 	}
+	s.creditMoneyEarned(s.DB, userID, delta)
 	var bal int
 	if err := s.DB.Model(&model.User{}).
 		Where("user_id = ?", userID).Pluck("balance", &bal).Error; err != nil {
 		return 0, err
 	}
 	return bal, nil
+}
+
+// creditMoneyEarned accumulates the money_earned stat on every positive balance
+// credit, backing the eco_rich achievement. It is a coarse proxy: refunds and
+// loan disbursements count as earned money too. db may be the pool or an outer
+// transaction handle.
+func (s *Store) creditMoneyEarned(db *gorm.DB, userID int64, amount int) {
+	if amount <= 0 {
+		return
+	}
+	if err := db.Where("user_id = ?", userID).FirstOrCreate(&model.UserStat{UserID: userID}).Error; err != nil {
+		return
+	}
+	_ = db.Model(&model.UserStat{}).
+		Where("user_id = ?", userID).
+		UpdateColumn("money_earned", gorm.Expr("money_earned + ?", amount)).Error
 }
 
 // UpdateBalanceTx adjusts the wallet balance by delta inside an existing
@@ -125,9 +142,13 @@ func (s *Store) UpdateBalanceTx(tx *gorm.DB, userID int64, delta int) error {
 	if err := s.ensureUserTx(tx, userID); err != nil {
 		return err
 	}
-	return tx.Model(&model.User{}).
+	if err := tx.Model(&model.User{}).
 		Where("user_id = ?", userID).
-		UpdateColumn("balance", gorm.Expr("balance + ?", delta)).Error
+		UpdateColumn("balance", gorm.Expr("balance + ?", delta)).Error; err != nil {
+		return err
+	}
+	s.creditMoneyEarned(tx, userID, delta)
+	return nil
 }
 
 // Debit checks that the user can afford amount and deducts it from the wallet

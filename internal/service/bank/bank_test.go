@@ -82,15 +82,15 @@ func TestDepositCappedByHouse(t *testing.T) {
 	require.NoError(t, s.DB.Create(&model.UserHousing{
 		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
 	}).Error)
-	_, err := s.UpdateBalance(1, 3000)
+	_, err := s.UpdateBalance(1, 10000)
 	require.NoError(t, err)
 
-	res, err := svc.Deposit(1, 2500)
+	res, err := svc.Deposit(1, 5500)
 	require.NoError(t, err)
-	assert.Equal(t, 2000, res.Bank)
-	assert.Equal(t, 2000, res.Deposited)
-	assert.Equal(t, 2000, res.MaxBank)
-	assert.Equal(t, 1100, res.Wallet)
+	assert.Equal(t, 5000, res.Bank)
+	assert.Equal(t, 5000, res.Deposited)
+	assert.Equal(t, 5000, res.MaxBank)
+	assert.Equal(t, 5100, res.Wallet)
 
 	_, err = svc.Deposit(1, 1)
 	assert.ErrorIs(t, err, ErrBankFull)
@@ -108,11 +108,11 @@ func TestDepositCappedByHouseAndMerchantUpgrades(t *testing.T) {
 	_, err := s.UpdateBalance(1, 3000000)
 	require.NoError(t, err)
 
-	res, err := svc.Deposit(1, 2500000)
+	res, err := svc.Deposit(1, 250000)
 	require.NoError(t, err)
-	assert.Equal(t, 2400000, res.MaxBank)
-	assert.Equal(t, 2400000, res.Bank)
-	assert.Equal(t, 2400000, res.Deposited)
+	assert.Equal(t, 240000, res.MaxBank)
+	assert.Equal(t, 240000, res.Bank)
+	assert.Equal(t, 240000, res.Deposited)
 }
 
 func TestWithdraw(t *testing.T) {
@@ -195,10 +195,10 @@ func TestClampOnDepositWithRoom(t *testing.T) {
 
 	res, err := svc.Deposit(1, 300)
 	require.NoError(t, err)
-	assert.Equal(t, 2000, res.MaxBank)
-	assert.Equal(t, 2000, res.Bank)
-	assert.Equal(t, 200, res.Deposited)
-	assert.Equal(t, 400, res.Wallet)
+	assert.Equal(t, 5000, res.MaxBank)
+	assert.Equal(t, 2100, res.Bank)
+	assert.Equal(t, 300, res.Deposited)
+	assert.Equal(t, 300, res.Wallet)
 }
 
 func TestClampOnWithdraw(t *testing.T) {
@@ -221,13 +221,13 @@ func TestClampRespectsHouseCap(t *testing.T) {
 	require.NoError(t, s.DB.Create(&model.UserHousing{
 		UserID: 1, HouseType: "brick_house", Level: 1, IsActive: true, StoredItems: "{}",
 	}).Error)
-	_, err := s.AdjustColumn(1, "bank", 2500)
+	_, err := s.AdjustColumn(1, "bank", 6000)
 	require.NoError(t, err)
 
 	wallet, bank, _, err := svc.Info(1)
 	require.NoError(t, err)
-	assert.Equal(t, 600, wallet)
-	assert.Equal(t, 2000, bank)
+	assert.Equal(t, 1100, wallet)
+	assert.Equal(t, 5000, bank)
 }
 
 func TestClampDisabled(t *testing.T) {

@@ -45,10 +45,10 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 				playerLevel = char.Level
 			}
 			delvesvc.ApplyEnemyLevelScaling(enemy, s.Floor, playerLevel, rng)
-			enemy.MaxHP = int(float64(enemy.MaxHP) * 1.75)
+			enemy.MaxHP = int(float64(enemy.MaxHP) * delvesvc.BossStatMult())
 			enemy.HP = enemy.MaxHP
-			enemy.Atk = int(float64(enemy.Atk) * 1.75)
-			enemy.Def = int(float64(enemy.Def) * 1.75)
+			enemy.Atk = int(float64(enemy.Atk) * delvesvc.BossStatMult())
+			enemy.Def = int(float64(enemy.Def) * delvesvc.BossStatMult())
 			enemy.Name = bossData.Name
 			enemy.Emoji = bossData.Emoji
 
@@ -222,7 +222,7 @@ func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			s.Torches--
 			c.saveSession(s)
 		} else {
-			dmg := 10 + 3*s.Floor
+			dmg := delvesvc.CollapseDamage(s.Floor)
 			s.HP -= dmg
 			c.saveSession(s)
 			if s.HP <= 0 {
@@ -312,6 +312,73 @@ func (c *Cog) onNavigate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		c.saveSession(s)
 		room := c.nextRoom(s, lang)
 		room.Description = i18n.T("delve.handler.whispers", lang) + "\n\n" + room.Description
+		embed, comps := c.renderRoomWithFallen(s, room, lang)
+		c.respond(b, i, embed, comps)
+		return
+
+	case delvesvc.CorridorBridge:
+		dex := delvesvc.EffectiveDEX(c.store, userID)
+		dc := delvesvc.FleeDC(s.Floor)
+		if s.Torches == 0 {
+			dc += 3
+		}
+		if rand.Intn(20)+dex >= dc {
+			xp := delvesvc.FloorClearXP(s.Floor)
+			leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
+			c.saveSession(s)
+			room := c.nextRoom(s, lang)
+			room.Description = i18n.T("delve.handler.bridge_cross", lang, map[string]any{"xp": xp}) + "\n\n" + room.Description
+			if leveledUp {
+				room.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+			}
+			embed, comps := c.renderRoomWithFallen(s, room, lang)
+			c.respond(b, i, embed, comps)
+			return
+		}
+		dmg := delvesvc.CollapseDamage(s.Floor)
+		s.HP -= dmg
+		c.saveSession(s)
+		if s.HP <= 0 {
+			s.HP = 0
+			c.saveSession(s)
+			c.applyFallenPenalties(b, i, s, userID, lang)
+			return
+		}
+		room := c.nextRoom(s, lang)
+		room.Description = i18n.T("delve.handler.bridge_fall", lang, map[string]any{"damage": dmg}) + "\n\n" + room.Description
+		embed, comps := c.renderRoomWithFallen(s, room, lang)
+		c.respond(b, i, embed, comps)
+		return
+
+	case delvesvc.CorridorMist:
+		intVal := delvesvc.EffectiveINT(c.store, userID)
+		dc := delvesvc.ShrinePrayDC(s.Floor)
+		if rand.Intn(20)+intVal >= dc {
+			xp := delvesvc.FloorClearXP(s.Floor)
+			leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
+			var effects []string
+			json.Unmarshal([]byte(s.StatusEffects), &effects)
+			effects = append(effects, "enlightened")
+			jb, _ := json.Marshal(effects)
+			s.StatusEffects = string(jb)
+			c.saveSession(s)
+			room := c.nextRoom(s, lang)
+			room.Description = i18n.T("delve.handler.mist_clear", lang, map[string]any{"xp": xp}) + "\n\n" + room.Description
+			if leveledUp {
+				room.Description += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+			}
+			embed, comps := c.renderRoomWithFallen(s, room, lang)
+			c.respond(b, i, embed, comps)
+			return
+		}
+		var effects []string
+		json.Unmarshal([]byte(s.StatusEffects), &effects)
+		effects = append(effects, "cursed")
+		jb, _ := json.Marshal(effects)
+		s.StatusEffects = string(jb)
+		c.saveSession(s)
+		room := c.nextRoom(s, lang)
+		room.Description = i18n.T("delve.handler.mist_cursed", lang) + "\n\n" + room.Description
 		embed, comps := c.renderRoomWithFallen(s, room, lang)
 		c.respond(b, i, embed, comps)
 		return
@@ -570,6 +637,8 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 		if bossData != nil {
 			flag := fmt.Sprintf("boss_f%d", bossData.Floor)
 			c.svc.AddFlag(s, flag)
+			c.svc.AddFlag(s, "defeated_zone_boss")
+			c.store.RecordActivity(userID, "zone_bosses_defeated", 1)
 			desc += "\n\n" + i18n.T("delve.handler.boss_victory", lang, map[string]any{"name": delvesvc.BossName(bossData.Name, lang)})
 		}
 
@@ -624,7 +693,7 @@ func (c *Cog) onCombatPotion(b *interaction.Bot, i *discordgo.InteractionCreate)
 		return
 	}
 	s.Potions--
-	heal := 30
+	heal := delvesvc.PotionHealAmount()
 	s.HP += heal
 	if s.HP > s.MaxHP {
 		s.HP = s.MaxHP
@@ -848,7 +917,7 @@ func (c *Cog) onSacrifice(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
-	hpCost := 15 + s.Floor*5
+	hpCost := delvesvc.SacrificeHPCost(s.Floor)
 	if s.MaxHP <= hpCost+10 {
 		c.errorMsg(b, i, i18n.T("delve.too_frail", lang))
 		return
@@ -932,7 +1001,7 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	var comps []discordgo.MessageComponent
 
 	for idx, item := range items {
-		p := (int(item.Rarity) + 1) * basePrice
+		p := (item.Rarity.Rank() + 1) * basePrice
 		desc += i18n.T("delve.handler.merchant_item_line", lang, map[string]any{
 			"n":     fmt.Sprintf("%d", idx+1),
 			"emoji": delvesvc.RarityEmoji[item.Rarity],
@@ -1015,7 +1084,7 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	switch idx {
 	case 0, 1, 2:
 		item := offers[idx]
-		price = (int(item.Rarity) + 1) * basePrice
+		price = (item.Rarity.Rank() + 1) * basePrice
 		if s.Gold < price {
 			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 			return
@@ -1175,7 +1244,7 @@ func (c *Cog) onPuzzleAnswer(b *interaction.Bot, i *discordgo.InteractionCreate)
 		c.svc.AddFlag(s, "solved_riddle")
 		desc = i18n.T("delve.handler.riddle_correct", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
 	} else {
-		s.HP -= 10
+		s.HP -= delvesvc.RiddleFailDamage()
 		if s.HP < 0 {
 			s.HP = 0
 		}
@@ -1362,7 +1431,7 @@ func (c *Cog) onRescue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	if s.Torches < 1 {
-		s.HP -= 10
+		s.HP -= delvesvc.RescueTorchCost()
 		if s.HP <= 0 {
 			c.errorMsg(b, i, i18n.T("delve.rescue_no_torches_hp", lang))
 			return
@@ -1581,7 +1650,7 @@ func (c *Cog) onGardenHarvest(b *interaction.Bot, i *discordgo.InteractionCreate
 
 	var desc string
 	if rand.Intn(100) < 50 {
-		heal := 15 + 5*s.Floor
+		heal := delvesvc.GardenHealAmount(s.Floor)
 		s.HP += heal
 		if s.HP > s.MaxHP {
 			s.HP = s.MaxHP
@@ -1698,7 +1767,7 @@ func (c *Cog) onForgeScavenge(b *interaction.Bot, i *discordgo.InteractionCreate
 	}
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
-	gold := 30 + 10*s.Floor
+	gold := delvesvc.ForgeScavengeGold(s.Floor)
 	s.Gold += gold
 	key := delvesvc.MaybeDropKey(s.Zone, s.Floor)
 	desc := i18n.T("delve.handler.forge_scavenge", lang, map[string]any{"gold": gold})
@@ -1785,7 +1854,7 @@ func (c *Cog) onRiftGaze(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		s.StatusEffects = string(jb)
 		desc = i18n.T("delve.handler.rift_gaze_success", lang)
 	} else {
-		dmg := 10 + 3*s.Floor
+		dmg := delvesvc.RiftGazeDamage(s.Floor)
 		s.HP -= dmg
 		if s.HP < 0 {
 			s.HP = 0
@@ -1819,9 +1888,9 @@ func (c *Cog) onRiftDisturb(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		pl = char.Level
 	}
 	delvesvc.ApplyEnemyLevelScaling(enemy, s.Floor, pl, rng)
-	enemy.MaxHP = int(float64(enemy.MaxHP) * 1.5)
+	enemy.MaxHP = int(float64(enemy.MaxHP) * delvesvc.EliteStatMult())
 	enemy.HP = enemy.MaxHP
-	enemy.Atk = int(float64(enemy.Atk) * 1.5)
+	enemy.Atk = int(float64(enemy.Atk) * delvesvc.EliteStatMult())
 
 	c.svc.StartCombat(s, enemy)
 	cs := c.svc.GetCombat(userID)
@@ -1993,6 +2062,321 @@ func (c *Cog) onRestBandage(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	c.saveSession(s)
 	desc := i18n.T("delve.handler.rest_bandage", lang)
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+// === Archive room ===
+
+func (c *Cog) onArchiveRead(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	intVal := delvesvc.EffectiveINT(c.store, userID)
+	dc := delvesvc.DisarmDC(s.Floor)
+	var desc string
+	if rand.Intn(20)+intVal >= dc {
+		xp := delvesvc.FloorClearXP(s.Floor) * 2
+		leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
+		var effects []string
+		json.Unmarshal([]byte(s.StatusEffects), &effects)
+		effects = append(effects, "enlightened")
+		jb, _ := json.Marshal(effects)
+		s.StatusEffects = string(jb)
+		c.svc.AddFlag(s, "scholar_of_depths")
+		desc = i18n.T("delve.handler.archive_read_success", lang, map[string]any{"xp": xp})
+		if leveledUp {
+			desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+		}
+	} else {
+		dmg := delvesvc.RiddleFailDamage()
+		s.HP -= dmg
+		if s.HP < 0 {
+			s.HP = 0
+		}
+		var effects []string
+		json.Unmarshal([]byte(s.StatusEffects), &effects)
+		effects = append(effects, "cursed")
+		jb, _ := json.Marshal(effects)
+		s.StatusEffects = string(jb)
+		desc = i18n.T("delve.handler.archive_read_fail", lang, map[string]any{"damage": dmg})
+	}
+	c.saveSession(s)
+	if s.HP <= 0 {
+		c.applyFallenPenalties(b, i, s, userID, lang)
+		return
+	}
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+func (c *Cog) onArchiveSearch(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	roll := rand.Intn(100)
+	var desc string
+	switch {
+	case roll < 50:
+		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+		if loot != nil {
+			c.svc.AddItem(s, loot.Item)
+			desc = i18n.T("delve.handler.archive_search_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		} else {
+			desc = i18n.T("delve.handler.archive_search_empty", lang)
+		}
+	case roll < 80:
+		gold := delvesvc.GoldReward(s.Zone, s.Floor) * 2
+		s.Gold += gold
+		desc = i18n.T("delve.handler.archive_search_gold", lang, map[string]any{"gold": gold})
+	default:
+		dmg := delvesvc.TrapDamage(s.Floor)
+		s.HP -= dmg
+		if s.HP < 0 {
+			s.HP = 0
+		}
+		desc = i18n.T("delve.handler.archive_search_trap", lang, map[string]any{"damage": dmg})
+	}
+	c.saveSession(s)
+	if s.HP <= 0 {
+		c.applyFallenPenalties(b, i, s, userID, lang)
+		return
+	}
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+// === Fountain room ===
+
+func (c *Cog) onFountainCoin(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	if s.Gold < 10 {
+		c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
+		return
+	}
+	s.Gold -= 10
+
+	roll := rand.Intn(100)
+	var desc string
+	switch {
+	case roll < 35:
+		heal := s.MaxHP * 30 / 100
+		s.HP += heal
+		if s.HP > s.MaxHP {
+			s.HP = s.MaxHP
+		}
+		desc = i18n.T("delve.handler.fountain_blessing", lang, map[string]any{"heal": heal})
+	case roll < 60:
+		s.Potions++
+		if s.Potions > 3 {
+			s.Potions = 3
+		}
+		desc = i18n.T("delve.handler.fountain_potion", lang, map[string]any{"p": s.Potions, "m": 3})
+	case roll < 80:
+		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+		if loot != nil {
+			c.svc.AddItem(s, loot.Item)
+			desc = i18n.T("delve.handler.fountain_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		} else {
+			desc = i18n.T("delve.handler.fountain_empty", lang)
+		}
+	default:
+		desc = i18n.T("delve.handler.fountain_empty", lang)
+	}
+	c.svc.AddFlag(s, "fountain_coin")
+	c.saveSession(s)
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+func (c *Cog) onFountainDrink(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	var desc string
+	if rand.Intn(100) < 60 {
+		heal := s.MaxHP * 30 / 100
+		s.HP += heal
+		if s.HP > s.MaxHP {
+			s.HP = s.MaxHP
+		}
+		desc = i18n.T("delve.handler.fountain_drink_heal", lang, map[string]any{"heal": heal})
+	} else {
+		var effects []string
+		json.Unmarshal([]byte(s.StatusEffects), &effects)
+		effects = append(effects, "poisoned:3")
+		jb, _ := json.Marshal(effects)
+		s.StatusEffects = string(jb)
+		desc = i18n.T("delve.handler.fountain_drink_poison", lang)
+	}
+	c.saveSession(s)
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+// === Ossuary room ===
+
+func (c *Cog) onOssuarySearch(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	roll := rand.Intn(100)
+	switch {
+	case roll < 45:
+		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		if loot != nil {
+			delvesvc.AssignSetName(&loot.Item, s.Zone)
+			c.svc.AddItem(s, loot.Item)
+			desc := i18n.T("delve.handler.ossuary_search_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			c.saveSession(s)
+			embed, comps := c.buildFloorTransition(s, desc, lang)
+			c.respond(b, i, embed, comps)
+			return
+		}
+		desc := i18n.T("delve.handler.ossuary_search_empty", lang)
+		c.saveSession(s)
+		embed, comps := c.buildFloorTransition(s, desc, lang)
+		c.respond(b, i, embed, comps)
+		return
+	case roll < 80:
+		gold := delvesvc.GoldReward(s.Zone, s.Floor) * 2
+		s.Gold += gold
+		c.saveSession(s)
+		desc := i18n.T("delve.handler.ossuary_search_gold", lang, map[string]any{"gold": gold})
+		embed, comps := c.buildFloorTransition(s, desc, lang)
+		c.respond(b, i, embed, comps)
+		return
+	}
+
+	// A bone guardian rises from the heap.
+	seed := s.Seed + int64(s.RoomsCleared)
+	rng := rand.New(rand.NewSource(seed))
+	enemy := delvesvc.GenerateEnemy(s.Zone, s.Floor, rng)
+	char, _ := c.store.EnsureCharacter(userID)
+	pl := 1
+	if char != nil {
+		pl = char.Level
+	}
+	delvesvc.ApplyEnemyLevelScaling(enemy, s.Floor, pl, rng)
+	c.svc.StartCombat(s, enemy)
+	cs := c.svc.GetCombat(userID)
+	cs.EnemyFirstStrike = true
+	c.saveSession(s)
+	embed := delvesvc.RenderCombatEmbed(s, cs, c.svc, lang)
+	embed.Description = i18n.T("delve.handler.ossuary_search_guardian", lang)
+	abilities := delvesvc.GetCombatAbilities(pl)
+	weaponEmoji, weaponName := delvesvc.GetWeaponDisplay(c.store, userID)
+	c.respond(b, i, embed, delvesvc.CombatRoomButtons(lang, abilities, weaponEmoji, weaponName))
+}
+
+func (c *Cog) onOssuaryRest(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	var effects []string
+	json.Unmarshal([]byte(s.StatusEffects), &effects)
+	effects = append(effects, "blessed")
+	jb, _ := json.Marshal(effects)
+	s.StatusEffects = string(jb)
+	xp := delvesvc.FloorClearXP(s.Floor)
+	leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
+	c.svc.AddFlag(s, "respected_the_dead")
+	c.saveSession(s)
+	desc := i18n.T("delve.handler.ossuary_rest", lang, map[string]any{"xp": xp})
+	if leveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+// === Warden room ===
+
+func (c *Cog) onWardenHelp(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	c.svc.AddFlag(s, "helped_warden")
+
+	var desc string
+	if err := c.qsvc.StartQuest(userID, "lost_warden"); err == nil {
+		desc = i18n.T("delve.handler.warden_quest_start", lang)
+	} else if advanced, _ := c.qsvc.AdvanceIfDialogue(userID, "lost_warden"); advanced {
+		desc = i18n.T("delve.handler.warden_quest_advance", lang)
+	} else if c.qsvc.HasActiveQuest(userID, "lost_warden") {
+		desc = i18n.T("delve.handler.warden_quest_progress", lang)
+	} else {
+		xp := delvesvc.FloorClearXP(s.Floor)
+		c.store.AddCharacterXP(userID, xp)
+		c.svc.AddFlag(s, "warden_blessed")
+		desc = i18n.T("delve.handler.warden_blessing", lang, map[string]any{"xp": xp})
+	}
+
+	gold := delvesvc.GoldReward(s.Zone, s.Floor)
+	s.Gold += gold
+	desc += "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
+	c.saveSession(s)
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+func (c *Cog) onWardenListen(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	xp := delvesvc.FloorClearXP(s.Floor)
+	leveledUp, newLevel, _ := c.store.AddCharacterXP(userID, xp)
+	c.saveSession(s)
+	desc := i18n.T("delve.handler.warden_listen", lang, map[string]any{"xp": xp})
+	if leveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }

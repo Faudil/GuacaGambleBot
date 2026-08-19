@@ -13,6 +13,9 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/model"
+	crtsvc "guacagamblebot/internal/service/crafting"
 	furnituresvc "guacagamblebot/internal/service/furniture"
 	housingsvc "guacagamblebot/internal/service/housing"
 	researchsvc "guacagamblebot/internal/service/research"
@@ -56,6 +59,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("house", "complete_research", c.onCompleteResearch)
 	r.Component("house", "sanctuary", c.onSanctuary)
 	r.Component("house", "rest", c.onRest)
+	r.Component("house", "tree_start", c.onTreeStart)
+	r.Component("house", "tree_complete", c.onTreeComplete)
 	r.Modal("house", "rename", c.onRename)
 	r.Modal("house", "color", c.onColor)
 }
@@ -251,7 +256,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "housing.no_house")
 		return
 	}
-	title := i18n.T("housing.title", lang, map[string]any{"user": interaction.Mention(userID)})
+	title := i18n.T("housing.title", lang, map[string]any{"user": interaction.DisplayName(b.Session, i.GuildID, i.Member, userID)})
 	if h.CustomName != nil && *h.CustomName != "" {
 		title = fmt.Sprintf("🏠 %s", *h.CustomName)
 	}
@@ -297,11 +302,28 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.stats_label", lang), statsText, false))
 
 	if h.UnderConstruction != nil && *h.UnderConstruction != "" {
-		embed.Fields = append(embed.Fields, components.Field("🛠️ Construction",
-			fmt.Sprintf("**%s** en cours...", *h.UnderConstruction), false))
+		uc := *h.UnderConstruction
+		ucName := uc
+		if upg := housingsvc.UpgradesTree[uc]; upg != nil {
+			ucName = upg.Name
+		}
+		status := fmt.Sprintf("**%s** %s", ucName, i18n.T("housing.tree_in_progress", lang))
+		if h.FinishTime != nil && time.Now().After(*h.FinishTime) {
+			status = fmt.Sprintf("**%s** %s", ucName, i18n.T("housing.tree_ready", lang))
+		}
+		embed.Fields = append(embed.Fields, components.Field("🛠️ Construction", status, false))
 	}
 
 	_, comps := c.menuForUser(lang, userID)
+	if h.UnderConstruction != nil && *h.UnderConstruction != "" && h.FinishTime != nil && time.Now().After(*h.FinishTime) {
+		ucName := *h.UnderConstruction
+		if upg := housingsvc.UpgradesTree[*h.UnderConstruction]; upg != nil {
+			ucName = upg.Name
+		}
+		comps = append(comps, components.ActionRow(
+			components.Button("✅ "+ucName, components.EncodeOwner(userID, "house", "tree_complete", *h.UnderConstruction), discordgo.SuccessButton),
+		))
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -332,18 +354,82 @@ func (c *Cog) onTree(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("housing.tree_desc", lang),
 		0x1B5E20,
 	)
+
+	owned := map[string]bool{}
+	var upgrades []model.UserHousingUpgrade
+	c.store.DB.Where("user_id = ?", userID).Find(&upgrades)
+	for _, u := range upgrades {
+		owned[u.UpgradeID] = true
+	}
+
+	underConstruction := ""
+	constructionReady := false
+	h, herr := c.hsvc.GetHousing(userID)
+	if herr == nil && h.UnderConstruction != nil && *h.UnderConstruction != "" {
+		underConstruction = *h.UnderConstruction
+		if h.FinishTime != nil && time.Now().After(*h.FinishTime) {
+			constructionReady = true
+		}
+	}
+
 	for _, upg := range housingsvc.UpgradesTree {
 		itemsReq := ""
 		for item, qty := range upg.CostItems {
 			itemsReq += fmt.Sprintf("%dx %s ", qty, item)
 		}
+		status := ""
+		switch {
+		case owned[upg.ID]:
+			status = "✅ " + i18n.T("housing.tree_owned", lang)
+		case underConstruction == upg.ID && constructionReady:
+			status = "✅ " + i18n.T("housing.tree_ready", lang)
+		case underConstruction == upg.ID:
+			status = "⏳ " + i18n.T("housing.tree_in_progress", lang)
+		case upg.Requires != "" && !owned[upg.Requires]:
+			req := upg.Requires
+			if rd := housingsvc.UpgradesTree[req]; rd != nil {
+				req = rd.Name
+			}
+			status = "🔒 " + i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": req})
+		}
 		embed.Fields = append(embed.Fields, components.Field(
-			fmt.Sprintf("%s (%s)", upg.Name, upg.Branch),
+			fmt.Sprintf("%s (%s) %s", upg.Name, upg.Branch, status),
 			fmt.Sprintf("💰 $%d\n📦 %s\n⏱ %dh\n*%s*", upg.CostMoney, itemsReq, upg.TimeHours, upg.BonusDesc),
 			false,
 		))
 	}
-	_, comps := c.menuForUser(lang, userID)
+
+	var comps []discordgo.MessageComponent
+	row := []discordgo.MessageComponent{
+		components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+	}
+	if constructionReady {
+		name := underConstruction
+		if upg := housingsvc.UpgradesTree[underConstruction]; upg != nil {
+			name = upg.Name
+		}
+		row = append(row, components.Button("✅ "+name, components.EncodeOwner(userID, "house", "tree_complete", underConstruction), discordgo.SuccessButton))
+	}
+	comps = append(comps, components.ActionRow(row...))
+
+	actionRow := []discordgo.MessageComponent{}
+	for _, upg := range housingsvc.UpgradesTree {
+		if owned[upg.ID] || underConstruction != "" {
+			continue
+		}
+		if upg.Requires != "" && !owned[upg.Requires] {
+			continue
+		}
+		actionRow = append(actionRow, components.Button("📖 "+upg.ID, components.EncodeOwner(userID, "house", "tree_start", upg.ID), discordgo.PrimaryButton))
+		if len(actionRow) == 5 {
+			comps = append(comps, components.ActionRow(actionRow...))
+			actionRow = nil
+		}
+	}
+	if len(actionRow) > 0 {
+		comps = append(comps, components.ActionRow(actionRow...))
+	}
+
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -896,6 +982,7 @@ func (c *Cog) onStartResearch(b *interaction.Bot, i *discordgo.InteractionCreate
 }
 
 func (c *Cog) onCompleteResearch(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
@@ -915,9 +1002,103 @@ func (c *Cog) onCompleteResearch(b *interaction.Bot, i *discordgo.InteractionCre
 	if rd != nil {
 		rName = rd.Name
 	}
-	embed := components.Embed("✅", fmt.Sprintf("Completed research **%s**! New recipes unlocked!", rName), 0x2ecc71)
+	msg := fmt.Sprintf("Completed research **%s**! New recipes unlocked!", rName)
+	if rd != nil && len(rd.UnlocksRecipes) > 0 {
+		names := make([]string, 0, len(rd.UnlocksRecipes))
+		for _, key := range rd.UnlocksRecipes {
+			if recipe, ok := crtsvc.Recipes[key]; ok {
+				names = append(names, items.LocalizedName(recipe.Result, lang))
+			}
+		}
+		if len(names) > 0 {
+			msg += " " + strings.Join(names, ", ")
+		}
+	}
+	embed := components.Embed("✅", msg, 0x2ecc71)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+}
+
+func (c *Cog) onTreeStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 1 {
+		return
+	}
+	upgradeID := rest[0]
+
+	if err := c.hsvc.StartConstruction(userID, upgradeID); err != nil {
+		var msg string
+		switch {
+		case strings.Contains(err.Error(), "not enough money"):
+			msg = i18n.T("housing.no_money", lang, map[string]any{"price": 0})
+		case strings.Contains(err.Error(), "requires"):
+			req := upgradeID
+			if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
+				req = upg.Requires
+			}
+			if rd := housingsvc.UpgradesTree[req]; rd != nil {
+				req = rd.Name
+			}
+			msg = i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": req})
+		case strings.Contains(err.Error(), "already owned"):
+			msg = i18n.T("housing.tree_already", lang)
+		case strings.Contains(err.Error(), "in progress"):
+			msg = i18n.T("housing.tree_in_progress", lang)
+		default:
+			msg = err.Error()
+		}
+		embed := components.Embed("❌", msg, 0xe74c3c)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		return
+	}
+	name := upgradeID
+	hours := 0
+	if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
+		name = upg.Name
+		hours = upg.TimeHours
+	}
+	embed := components.Embed("🏗️", i18n.T("housing.tree_started", lang, map[string]any{"name": name, "hours": hours}), 0x2ecc71)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+}
+
+func (c *Cog) onTreeComplete(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	upgradeID := ""
+	if len(rest) > 0 {
+		upgradeID = rest[0]
+	}
+
+	if err := c.hsvc.CompleteConstruction(userID); err != nil {
+		var msg string
+		switch {
+		case strings.Contains(err.Error(), "not finished"):
+			msg = i18n.T("housing.tree_not_ready", lang)
+		case strings.Contains(err.Error(), "no construction"):
+			msg = i18n.T("housing.tree_no_construction", lang)
+		default:
+			msg = err.Error()
+		}
+		embed := components.Embed("❌", msg, 0xe74c3c)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		return
+	}
+	name := upgradeID
+	if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
+		name = upg.Name
+	}
+	embed := components.Embed("✅", i18n.T("housing.tree_completed", lang, map[string]any{"name": name}), 0x2ecc71)
+	_, comps := c.menuForUser(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) onSanctuary(b *interaction.Bot, i *discordgo.InteractionCreate) {

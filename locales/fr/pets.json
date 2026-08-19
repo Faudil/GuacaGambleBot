@@ -77,7 +77,7 @@
       "menu_title": "🍖 Que vas-tu donner à {name} ?",
       "miam_desc": "Tu as donné **1x {item}** à {emoji} **{name}**.\n\n✨ **EFFET :** {stat} {sign}{amount}\n\n📊 *Estomac : {food} / {max_food}*",
       "miam_title": "🍖 Miam !",
-      "no_food": "❌ Tu n'as rien à donner à **{name}** !\n\nRécolte des ingrédients (**poissons, récoltes, minerais**) pour le nourrir directement, ou fabrique de vrais repas avec `!craft`.",
+      "no_food": "❌ Tu n'as rien à donner à **{name}** !\n\nRécolte des ingrédients (**poissons, récoltes**) pour le nourrir directement, ou fabrique de vrais repas avec `!craft`.",
       "no_inventory": "❌ Tu n'as pas de **{name}** dans ton inventaire !",
       "no_item": "❌ Tu dois préciser ce que tu veux lui donner. Exemple : `!feed Saumon`",
       "refuse": "🤢 **{name}** renifle le **{item}** et refuse de le manger. Ce n'est pas nourrissant.",

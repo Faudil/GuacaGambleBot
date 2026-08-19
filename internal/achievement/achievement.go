@@ -124,11 +124,14 @@ func init() {
 	register("pet_collector_legendary", "🐉", 500, func(s map[string]any) bool { return num(s, "collected_legendary_pets") >= 1 })
 	register("pet_collector_all", "🌍", 1000, func(s map[string]any) bool { return num(s, "collected_all_pets") >= 19 })
 
-	register("rank_bronze", "🥉", 50, func(s map[string]any) bool { return anyRank(s, "Bronze") })
-	register("rank_silver", "🥈", 100, func(s map[string]any) bool { return anyRank(s, "Argent") })
-	register("rank_gold", "🥇", 500, func(s map[string]any) bool { return anyRank(s, "Or") })
-	register("rank_diamond", "💎", 1000, func(s map[string]any) bool { return anyRank(s, "Diamant") })
-	register("rank_top5", "🌟", 5000, func(s map[string]any) bool { return anyRank(s, "Top 5") })
+	// Pet rank and boss league achievements stay hidden: their backing systems
+	// are not ported to Go yet, so the checks below cannot fire. Keep the
+	// predicates so removing the hidden flag later reactivates them as-is.
+	registerHiddenWithCheck("rank_bronze", "🥉", 50, func(s map[string]any) bool { return anyRank(s, "Bronze") })
+	registerHiddenWithCheck("rank_silver", "🥈", 100, func(s map[string]any) bool { return anyRank(s, "Argent") })
+	registerHiddenWithCheck("rank_gold", "🥇", 500, func(s map[string]any) bool { return anyRank(s, "Or") })
+	registerHiddenWithCheck("rank_diamond", "💎", 1000, func(s map[string]any) bool { return anyRank(s, "Diamant") })
+	registerHiddenWithCheck("rank_top5", "🌟", 5000, func(s map[string]any) bool { return anyRank(s, "Top 5") })
 
 	register("community_initiate", "🧱", 10, func(s map[string]any) bool {
 		return num(s, "community_money") >= 10000 || num(s, "community_items") >= 200
@@ -140,11 +143,11 @@ func init() {
 		return num(s, "community_money") >= 5000000 || num(s, "community_items") >= 50000
 	})
 
-	register("boss_league_1", "⚔️", 20, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 1 })
-	register("boss_league_2", "🏹", 50, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 2 })
-	register("boss_league_3", "🛡️", 100, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 3 })
-	register("boss_league_4", "⚡", 200, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 4 })
-	register("boss_league_5", "🏆", 500,
+	registerHiddenWithCheck("boss_league_1", "⚔️", 20, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 1 })
+	registerHiddenWithCheck("boss_league_2", "🏹", 50, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 2 })
+	registerHiddenWithCheck("boss_league_3", "🛡️", 100, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 3 })
+	registerHiddenWithCheck("boss_league_4", "⚡", 200, func(s map[string]any) bool { return num(s, "boss_league_stage") >= 4 })
+	registerHiddenWithCheck("boss_league_5", "🏆", 500,
 		func(s map[string]any) bool { return num(s, "boss_league_stage") >= 5 })
 
 	// --- LORE COLLECTION ---
@@ -165,12 +168,22 @@ func init() {
 func init() {
 	registerHidden("journal_mastery", "🏅", 10000)
 	registerHidden("signal_complete", "📡", 100)
+	registerHidden("legend_unwritten", "📜", 500)
 }
 
 func registerHidden(id, emoji string, glory int) {
 	registry[id] = &Achievement{
 		ID: id, Emoji: emoji, Glory: glory, Hidden: true,
 		Check: func(map[string]any) bool { return false },
+	}
+}
+
+// registerHiddenWithCheck registers a hidden achievement whose check still runs
+// inside CheckAndUnlock: it stays invisible in lists until satisfied, and
+// unlocking it is what makes it appear.
+func registerHiddenWithCheck(id, emoji string, glory int, check func(map[string]any) bool) {
+	registry[id] = &Achievement{
+		ID: id, Emoji: emoji, Glory: glory, Hidden: true, Check: check,
 	}
 }
 func anyRank(s map[string]any, label string) bool {
@@ -355,6 +368,18 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 		bossTotal += zs.BossKills
 	}
 	stats["hunt_boss_total"] = bossTotal
+
+	// Community contributions, summed across every server the player helped.
+	var communityStats []model.UserCommunityStat
+	db.Where("user_id = ?", userID).Find(&communityStats)
+	communityMoney := 0
+	communityItems := 0
+	for _, cs := range communityStats {
+		communityMoney += cs.TotalMoneyInvested
+		communityItems += cs.TotalItemsInvested
+	}
+	stats["community_money"] = communityMoney
+	stats["community_items"] = communityItems
 
 	return stats, nil
 }

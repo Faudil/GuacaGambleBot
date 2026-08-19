@@ -35,7 +35,7 @@ var ownerGatedDomains = map[string]struct{}{
 	"farm":         {},
 	"pets":         {},
 	"sanctuary":    {},
-	"housing":      {},
+	"house":        {},
 	"economy":      {},
 	"bank":         {},
 	"casino":       {},

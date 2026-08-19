@@ -1,6 +1,7 @@
 package pets
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"testing"
 
@@ -12,6 +13,8 @@ import (
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/model"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
 
@@ -19,6 +22,47 @@ func TestAllPetTypesHaveDamageType(t *testing.T) {
 	for name, pt := range PetTypes {
 		_, ok := battle.PetDamageType(name)
 		assert.True(t, ok, "pet %q (%s) has no battle damage type", name, pt.Rarity)
+	}
+}
+
+func TestPrehistoricPoolsRegistered(t *testing.T) {
+	byRarity := map[string][]string{
+		RarityCommon: PrehistoricPets.Common,
+		RarityRare:   PrehistoricPets.Rare,
+		RarityEpic:   PrehistoricPets.Epic,
+	}
+	for rarity, names := range byRarity {
+		for _, name := range names {
+			pt, ok := PetTypes[name]
+			require.True(t, ok, "prehistoric pet %q must exist in the registry", name)
+			assert.Equal(t, rarity, pt.Rarity, "prehistoric pet %q must be %s", name, rarity)
+		}
+	}
+}
+
+func TestRollPrehistoric(t *testing.T) {
+	all := append(append([]string{}, PrehistoricPets.Common...), PrehistoricPets.Rare...)
+	all = append(all, PrehistoricPets.Epic...)
+
+	seen := map[string]bool{}
+	for i := 0; i < 500; i++ {
+		name := RollPrehistoric()
+		_, ok := PetTypes[name]
+		require.True(t, ok, "rolled unknown pet %q", name)
+		assert.Contains(t, all, name)
+		seen[name] = true
+	}
+
+	// Over many rolls every rarity must be reachable.
+	for _, names := range [][]string{PrehistoricPets.Common, PrehistoricPets.Rare, PrehistoricPets.Epic} {
+		hit := false
+		for _, n := range names {
+			if seen[n] {
+				hit = true
+				break
+			}
+		}
+		assert.True(t, hit, "at least one %v-tier prehistoric pet must roll", names)
 	}
 }
 
@@ -53,12 +97,89 @@ func TestGetPets(t *testing.T) {
 }
 
 func TestGetFeedItemDef(t *testing.T) {
-	for _, id := range []string{"oat", "coffee", "coffee_bean", "tomato", "pumpkin", "golden_apple", "nova_fruit"} {
-		assert.NotNil(t, GetFeedItemDef(id), "expected %s to be feedable", id)
+	feedable := map[string]string{
+		"sardine": "speed", "trout": "speed", "carp": "speed", "salmon": "max_hp",
+		"wheat": "acc", "oat": "acc", "corn": "acc",
+		"carrot": "defense", "potato": "defense",
+		"tomato": "atk", "pumpkin": "atk", "coffee_bean": "atk", "cocoa_bean": "atk",
+		"coffee": "speed", "strawberry": "speed", "star_fruit": "speed",
+		"golden_apple": "max_hp", "nova_fruit": "max_hp",
+		"ghost_wheat": "acc", "prismatic_corn": "acc",
+		"golden_potato": "defense", "golden_carrot": "defense",
+		"blood_tomato": "atk", "cursed_pumpkin": "atk",
 	}
-	for _, id := range []string{"pebble", "coal", "iron_ore", "wheat_seed"} {
+	for id, stat := range feedable {
+		def := GetFeedItemDef(id)
+		require.NotNil(t, def, "expected %s to be feedable", id)
+		assert.Equal(t, stat, def.Stat, "unexpected stat for %s", id)
+		assert.Equal(t, float64(1), def.Amount, "unexpected amount for %s", id)
+	}
+	for _, id := range []string{"pebble", "coal", "iron_ore", "wheat_seed", "bow", "hook"} {
 		assert.Nil(t, GetFeedItemDef(id), "expected %s to NOT be feedable", id)
 	}
+}
+
+func TestGetCraftedFeedItemDef(t *testing.T) {
+	crafted := map[string]FeedItemDef{
+		"lucky_roast":        {Stat: "crit_c", Amount: 1},
+		"thunder_steak":      {Stat: "crit_d", Amount: 0.1},
+		"heart_stew":         {Stat: "max_hp", Amount: 2},
+		"fatalist_elixir":    {Stat: "crit_c", Amount: 2},
+		"ruin_tonic":         {Stat: "crit_d", Amount: 0.2},
+		"vitality_elixir":    {Stat: "max_hp", Amount: 4},
+		"dragon_chili":       {Stat: "atk", Amount: 1},
+		"iron_loaf":          {Stat: "defense", Amount: 1},
+		"storm_porridge":     {Stat: "speed", Amount: 1},
+		"falcon_pie":         {Stat: "acc", Amount: 1},
+		"clover_salad":       {Stat: "crit_c", Amount: 1},
+		"volcano_ribs":       {Stat: "crit_d", Amount: 0.1},
+		"giant_noodles":      {Stat: "max_hp", Amount: 2},
+		"skull_elixir":       {Stat: "atk", Amount: 2},
+		"bastion_tonic":      {Stat: "defense", Amount: 2},
+		"tempest_draught":    {Stat: "speed", Amount: 2},
+		"seer_elixir":        {Stat: "acc", Amount: 2},
+		"gamblers_tonic":     {Stat: "crit_c", Amount: 2},
+		"annihilator_elixir": {Stat: "crit_d", Amount: 0.2},
+		"colossus_draught":   {Stat: "max_hp", Amount: 4},
+	}
+	for id, want := range crafted {
+		def := GetFeedItemDef(id)
+		require.NotNil(t, def, "expected %s to be feedable", id)
+		assert.Equal(t, want.Stat, def.Stat, "unexpected stat for %s", id)
+		assert.Equal(t, want.Amount, def.Amount, "unexpected amount for %s", id)
+		assert.True(t, def.CountsToCap, "expected %s to count toward food capacity", id)
+	}
+}
+
+func TestFeedPetStats(t *testing.T) {
+	svc, _ := testService(t)
+	pet, err := svc.CreatePet(1, "Escargot")
+	require.NoError(t, err)
+	baseHP := pet.MaxHP
+	baseCritC := pet.CritC
+	baseCritD := pet.CritD
+
+	fed, err := svc.FeedPet(pet, GetFeedItemDef("lucky_roast"))
+	require.NoError(t, err)
+	assert.True(t, fed)
+	assert.Equal(t, baseCritC+1, pet.CritC)
+
+	fed, err = svc.FeedPet(pet, GetFeedItemDef("thunder_steak"))
+	require.NoError(t, err)
+	assert.True(t, fed)
+	assert.Equal(t, baseCritD+0.1, pet.CritD)
+
+	fed, err = svc.FeedPet(pet, GetFeedItemDef("heart_stew"))
+	require.NoError(t, err)
+	assert.True(t, fed)
+	assert.Equal(t, baseHP+2, pet.MaxHP)
+	assert.Equal(t, baseHP+2, pet.HP)
+
+	fed, err = svc.FeedPet(pet, GetFeedItemDef("vitality_elixir"))
+	require.NoError(t, err)
+	assert.True(t, fed)
+	assert.Equal(t, baseHP+6, pet.MaxHP)
+	assert.Equal(t, baseHP+6, pet.HP)
 }
 
 func TestAddXPLevelUp(t *testing.T) {
@@ -83,6 +204,62 @@ func TestUpdateElo(t *testing.T) {
 	assert.NotEqual(t, 0, d2)
 	assert.Greater(t, p1.Elo, 1000)
 	assert.Less(t, p2.Elo, 1000)
+}
+
+func TestAddXPAutoStartsArenaRival(t *testing.T) {
+	svc, st := testService(t)
+	pet, err := svc.CreatePet(1, "Dragon")
+	require.NoError(t, err)
+
+	// Tutorial not completed: the quest must not start.
+	res := svc.AddXP(pet, 10000)
+	require.True(t, res.Leveled)
+	require.GreaterOrEqual(t, pet.Level, 5)
+	var q model.UserQuest
+	err = st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&q).Error
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound, "quest must stay locked until the tutorial is completed")
+
+	// Tutorial completed: the next XP gain starts the quest.
+	require.NoError(t, st.DB.Create(&model.UserQuest{UserID: 1, QuestID: "tutorial", Status: "COMPLETED"}).Error)
+	svc.AddXP(pet, 1)
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&q).Error)
+	assert.Equal(t, "ACTIVE", q.Status)
+
+	// Further XP gains must not create duplicate quest rows.
+	svc.AddXP(pet, 1)
+	var count int64
+	st.DB.Model(&model.UserQuest{}).Where("user_id = ? AND quest_id = ?", 1, "arena_rival").Count(&count)
+	assert.Equal(t, int64(1), count)
+}
+
+func TestArtifactActivityAdvancesArenaRival(t *testing.T) {
+	svc, st := testService(t)
+	_ = questssvc.New(st, &config.Config{}) // wires the quest advance hook
+
+	require.NoError(t, st.CreateQuest(1, "arena_rival"))
+	custom, _ := json.Marshal(map[string]any{"target_stat": "artifact_leveled", "target_count": 1})
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
+		Updates(map[string]any{"step_index": 5, "custom_data": string(custom)}).Error)
+
+	// Leveling the artifact must advance the quest to the perk step.
+	_, leveled, err := svc.AddArtifactXP(1, 50)
+	require.NoError(t, err)
+	require.True(t, leveled)
+	var uqd model.UserQuestData
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
+	assert.Equal(t, 6, uqd.StepIndex, "artifact level-up must advance to the perk step")
+
+	// Spending the point must advance the quest to the boss step.
+	custom2, _ := json.Marshal(map[string]any{"target_stat": "artifact_point_spent", "target_count": 1})
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
+		Updates(map[string]any{"step_index": 6, "progress_value": 0, "custom_data": string(custom2)}).Error)
+
+	_, err = svc.LevelArtifactStat(1, 0)
+	require.NoError(t, err)
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
+	assert.Equal(t, 7, uqd.StepIndex, "spending the artifact point must advance to the boss step")
 }
 
 func TestRollGacha(t *testing.T) {

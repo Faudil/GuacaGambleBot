@@ -242,6 +242,9 @@
       "name": "Le Grand Gagnant"
     },
     "menu_desc": "Voir les trophées que vous avez débloqués.",
+    "nav_next": "Suiv ▶",
+    "nav_page": "📄 {page}/{total}",
+    "nav_prev": "◀ Préc",
     "pet_collector_all": {
       "desc": "Possède absolument toutes les espèces de familiers (19).",
       "name": "Maître du Monde Animal"

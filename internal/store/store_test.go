@@ -43,6 +43,26 @@ func TestBalanceMath(t *testing.T) {
 	assert.Equal(t, -50, bal)
 }
 
+func TestUpdateBalanceTracksMoneyEarned(t *testing.T) {
+	s := newStore(t)
+
+	_, err := s.UpdateBalance(1, 250)
+	require.NoError(t, err)
+	_, err = s.UpdateBalance(1, -100)
+	require.NoError(t, err)
+
+	var us model.UserStat
+	require.NoError(t, s.DB.Where("user_id = 1").First(&us).Error)
+	assert.Equal(t, 250, us.MoneyEarned, "only positive credits count as earned")
+
+	// The transactional variant accumulates inside the caller's transaction.
+	require.NoError(t, s.DB.Transaction(func(tx *gorm.DB) error {
+		return s.UpdateBalanceTx(tx, 1, 150)
+	}))
+	require.NoError(t, s.DB.Where("user_id = 1").First(&us).Error)
+	assert.Equal(t, 400, us.MoneyEarned)
+}
+
 func TestBankData(t *testing.T) {
 	s := newStore(t)
 	_, err := s.UpdateBalance(1, 300)

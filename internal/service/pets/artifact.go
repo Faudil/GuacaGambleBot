@@ -148,6 +148,9 @@ func (s *Service) AddArtifactXP(userID int64, amount int) (*model.UserPetArtifac
 	if err := s.store.DB.Save(a).Error; err != nil {
 		return nil, false, err
 	}
+	if leveled {
+		_ = s.store.RecordActivity(userID, "artifact_leveled", 1)
+	}
 	return a, leveled, nil
 }
 
@@ -169,6 +172,9 @@ func (s *Service) LevelArtifactStat(userID int64, statPos int) (*model.UserPetAr
 	}
 	a.UnspentPoints--
 	err = s.store.DB.Save(a).Error
+	if err == nil {
+		_ = s.store.RecordActivity(userID, "artifact_point_spent", 1)
+	}
 	return a, err
 }
 

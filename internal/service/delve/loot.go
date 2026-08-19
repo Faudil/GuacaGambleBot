@@ -6,108 +6,8 @@ import (
 	"strings"
 
 	"guacagamblebot/internal/i18n"
+	"guacagamblebot/internal/items"
 )
-
-type prefixDef struct {
-	ID      string
-	Name    string
-	Emoji   string
-	StatSTR int
-	StatDEX int
-	StatINT int
-	StatVIT int
-	StatLUK int
-	MinRar  Rarity
-}
-
-type baseDef struct {
-	ID        string
-	Name      string
-	Emoji     string
-	EquipSlot string
-	StatSTR   int
-	StatDEX   int
-	StatINT   int
-	StatVIT   int
-	StatLUK   int
-	MinRar    Rarity
-}
-
-type suffixDef struct {
-	ID          string
-	Name        string
-	Description string
-	MinRar      Rarity
-}
-
-var prefixes = []prefixDef{
-	{ID: "flaming", Name: "Flaming", Emoji: "🔥", StatSTR: 3, MinRar: Uncommon},
-	{ID: "shadow", Name: "Shadow", Emoji: "🌑", StatDEX: 3, MinRar: Uncommon},
-	{ID: "sturdy", Name: "Sturdy", Emoji: "🛡️", StatVIT: 4, MinRar: Common},
-	{ID: "pristine", Name: "Pristine", Emoji: "✨", StatLUK: 2, StatDEX: 2, MinRar: Rare},
-	{ID: "frozen", Name: "Frozen", Emoji: "❄️", StatINT: 3, MinRar: Uncommon},
-	{ID: "stormforged", Name: "Stormforged", Emoji: "⚡", StatSTR: 2, StatDEX: 2, MinRar: Rare},
-	{ID: "arcane", Name: "Arcane", Emoji: "🔮", StatINT: 5, MinRar: Rare},
-	{ID: "vampiric", Name: "Vampiric", Emoji: "🩸", StatSTR: 2, StatVIT: 3, MinRar: Rare},
-	{ID: "blessed", Name: "Blessed", Emoji: "✨", StatLUK: 4, StatVIT: 2, MinRar: Epic},
-	{ID: "cursed", Name: "Cursed", Emoji: "💀", StatSTR: 6, MinRar: Epic, StatVIT: -2},
-	{ID: "molten", Name: "Molten", Emoji: "🌋", StatSTR: 4, StatINT: 2, MinRar: Rare},
-	{ID: "venomous", Name: "Venomous", Emoji: "🐍", StatDEX: 4, MinRar: Uncommon},
-	{ID: "thunderous", Name: "Thunderous", Emoji: "🌩️", StatSTR: 3, StatDEX: 3, MinRar: Rare},
-	{ID: "soulbound", Name: "Soulbound", Emoji: "💜", StatINT: 3, StatLUK: 3, MinRar: Epic},
-	{ID: "radiant", Name: "Radiant", Emoji: "☀️", StatVIT: 3, StatLUK: 3, MinRar: Epic},
-	{ID: "ancient", Name: "Ancient", Emoji: "📜", StatINT: 4, StatSTR: 2, MinRar: Epic},
-	{ID: "bone", Name: "Bone", Emoji: "🦴", StatSTR: 2, MinRar: Common},
-	{ID: "iron", Name: "Iron", Emoji: "⛓️", StatVIT: 2, MinRar: Common},
-	{ID: "crystal", Name: "Crystal", Emoji: "💎", StatINT: 3, StatLUK: 1, MinRar: Uncommon},
-	{ID: "wardens", Name: "Warden's", Emoji: "⚜️", StatVIT: 3, StatSTR: 2, MinRar: Rare},
-}
-
-var bases = []baseDef{
-	{ID: "longsword", Name: "Longsword", Emoji: "⚔️", EquipSlot: "weapon", StatSTR: 2, MinRar: Common},
-	{ID: "dagger", Name: "Dagger", Emoji: "🗡️", EquipSlot: "weapon", StatDEX: 2, MinRar: Common},
-	{ID: "staff", Name: "Staff", Emoji: "🪄", EquipSlot: "weapon", StatINT: 2, MinRar: Common},
-	{ID: "battle_axe", Name: "Battle Axe", Emoji: "🪓", EquipSlot: "weapon", StatSTR: 4, MinRar: Uncommon},
-	{ID: "wand", Name: "Wand", Emoji: "✨", EquipSlot: "weapon", StatINT: 3, MinRar: Uncommon},
-	{ID: "shortbow", Name: "Shortbow", Emoji: "🏹", EquipSlot: "weapon", StatDEX: 3, MinRar: Uncommon},
-	{ID: "leather_cap", Name: "Leather Cap", Emoji: "🧢", EquipSlot: "armor", StatVIT: 1, MinRar: Common},
-	{ID: "chainmail", Name: "Chainmail", Emoji: "🛡️", EquipSlot: "armor", StatVIT: 3, MinRar: Uncommon},
-	{ID: "robe", Name: "Robe", Emoji: "👘", EquipSlot: "armor", StatINT: 2, MinRar: Common},
-	{ID: "plate_armor", Name: "Plate Armor", Emoji: "🪖", EquipSlot: "armor", StatVIT: 5, StatSTR: 1, MinRar: Rare},
-	{ID: "amethyst_ring", Name: "Amethyst Ring", Emoji: "💍", EquipSlot: "accessory", StatINT: 2, StatLUK: 1, MinRar: Common},
-	{ID: "silver_pendant", Name: "Silver Pendant", Emoji: "📿", EquipSlot: "accessory", StatLUK: 3, MinRar: Uncommon},
-	{ID: "emerald_brooch", Name: "Emerald Brooch", Emoji: "💚", EquipSlot: "accessory", StatDEX: 2, StatLUK: 2, MinRar: Rare},
-	{ID: "ruby_band", Name: "Ruby Band", Emoji: "❤️", EquipSlot: "accessory", StatSTR: 2, StatVIT: 2, MinRar: Rare},
-	{ID: "shadow_cloak", Name: "Shadow Cloak", Emoji: "🌙", EquipSlot: "armor", StatDEX: 3, MinRar: Uncommon},
-	{ID: "bone_amulet", Name: "Bone Amulet", Emoji: "🦷", EquipSlot: "accessory", StatSTR: 2, StatLUK: 1, MinRar: Uncommon},
-	{ID: "crystal_shield", Name: "Crystal Shield", Emoji: "💠", EquipSlot: "armor", StatVIT: 4, StatINT: 2, MinRar: Rare},
-	{ID: "obsidian_dagger", Name: "Obsidian Dagger", Emoji: "🗡️", EquipSlot: "weapon", StatDEX: 4, StatSTR: 1, MinRar: Rare},
-	{ID: "spirit_mask", Name: "Spirit Mask", Emoji: "🎭", EquipSlot: "armor", StatINT: 3, StatLUK: 2, MinRar: Epic},
-	{ID: "arcane_orb", Name: "Arcane Orb", Emoji: "🔮", EquipSlot: "accessory", StatINT: 4, MinRar: Epic},
-}
-
-var suffixes = []suffixDef{
-	{ID: "the_vengeful_warden", Name: "the Vengeful Warden", Description: "Forged in the tears of a betrayed guardian.", MinRar: Rare},
-	{ID: "the_sunken_court", Name: "the Sunken Court", Description: "Retrieved from the depths of a drowned kingdom.", MinRar: Uncommon},
-	{ID: "the_mad_jester", Name: "the Mad Jester", Description: "Cackles with chaotic energy.", MinRar: Rare},
-	{ID: "the_forgotten_king", Name: "the Forgotten King", Description: "A relic of a ruler erased from history.", MinRar: Epic},
-	{ID: "the_silent_watcher", Name: "the Silent Watcher", Description: "Feels like it's always watching.", MinRar: Common},
-	{ID: "the_hollow_priest", Name: "the Hollow Priest", Description: "Hums with a mournful prayer.", MinRar: Uncommon},
-	{ID: "the_bone_collector", Name: "the Bone Collector", Description: "Craves the heat of battle.", MinRar: Common},
-	{ID: "the_ashen_remnant", Name: "the Ashen Remnant", Description: "Still warm from the fire that consumed its home.", MinRar: Rare},
-	{ID: "the_endless_depths", Name: "the Endless Depths", Description: "Seems to drink the light around it.", MinRar: Epic},
-	{ID: "the_shattered_oath", Name: "the Shattered Oath", Description: "Remembers a promise that was broken.", MinRar: Uncommon},
-	{ID: "the_dying_star", Name: "the Dying Star", Description: "Pulsing with fading celestial light.", MinRar: Legendary},
-	{ID: "the_first_flame", Name: "the First Flame", Description: "The very first ember of creation.", MinRar: Legendary},
-	{ID: "the_iron_pact", Name: "the Iron Pact", Description: "Bound by an unbreakable contract.", MinRar: Rare},
-	{ID: "deep_roots", Name: "Deep Roots", Description: "Grown in the darkest soil.", MinRar: Common},
-	{ID: "the_frostbound_heart", Name: "the Frostbound Heart", Description: "Never thaws.", MinRar: Rare},
-	{ID: "the_abyss_gazer", Name: "the Abyss Gazer", Description: "Looking into it, it looks back.", MinRar: Epic},
-	{ID: "the_lost_pages", Name: "the Lost Pages", Description: "A story cut short.", MinRar: Uncommon},
-	{ID: "the_crimson_tide", Name: "the Crimson Tide", Description: "Still damp with the memory of battle.", MinRar: Uncommon},
-	{ID: "thunders_call", Name: "Thunder's Call", Description: "Hums with static electricity.", MinRar: Rare},
-	{ID: "the_golden_dawn", Name: "the Golden Dawn", Description: "Radiates hope and warmth.", MinRar: Epic},
-}
 
 type LootResult struct {
 	Item  DelveItem
@@ -115,24 +15,38 @@ type LootResult struct {
 }
 
 // minLevelForRarity maps a delve loot rarity to the minimum character level
-// required to equip the generated piece.
+// required to equip the generated piece. Levels are aligned with the delve
+// curve (RecommendedLevel(floor) = 1 + 2*(floor-1)) so gear is usable close
+// to the depth where it drops.
 func minLevelForRarity(r Rarity) int {
 	switch r {
 	case Legendary:
-		return 20
-	case Epic:
 		return 15
-	case Rare:
+	case Epic:
 		return 10
-	case Uncommon:
+	case Rare:
 		return 5
+	case Uncommon:
+		return 3
 	default:
 		return 1
 	}
 }
 
+// floorRarityBonus shifts the rarity roll toward higher tiers as the player
+// descends. It grows from 0 on floor 1 up to a 0.15 cap around floor 13, so
+// early floors mostly yield Common/Uncommon while the Abyss rewards Epics
+// and Legendaries.
+func floorRarityBonus(floor int) float64 {
+	b := float64(floor-1) * 0.0125
+	if b > 0.15 {
+		return 0.15
+	}
+	return b
+}
+
 func rollRarity(floor int, lukBonus float64) Rarity {
-	r := rand.Float64() - lukBonus
+	r := rand.Float64() - lukBonus - floorRarityBonus(floor)
 	switch {
 	case r < 0.05:
 		return Legendary
@@ -151,9 +65,9 @@ func GenerateLoot(zone string, floor int, lukBonus float64) *LootResult {
 	rar := rollRarity(floor, lukBonus)
 	rarityMod := map[Rarity]int{Common: 1, Uncommon: 2, Rare: 3, Epic: 5, Legendary: 10}
 
-	var candidates []baseDef
-	for _, b := range bases {
-		if b.MinRar <= rar {
+	var candidates []items.DelveBase
+	for _, b := range items.DelveBases {
+		if b.MinRar.Rank() <= rar.Rank() {
 			candidates = append(candidates, b)
 		}
 	}
@@ -174,9 +88,9 @@ func GenerateLoot(zone string, floor int, lukBonus float64) *LootResult {
 	statLUK := base.StatLUK
 
 	if rar >= Uncommon && rand.Float64() < 0.6 {
-		var candidates []prefixDef
-		for _, p := range prefixes {
-			if p.MinRar <= rar {
+		var candidates []items.DelvePrefix
+		for _, p := range items.DelvePrefixes {
+			if p.MinRar.Rank() <= rar.Rank() {
 				candidates = append(candidates, p)
 			}
 		}
@@ -195,9 +109,9 @@ func GenerateLoot(zone string, floor int, lukBonus float64) *LootResult {
 
 	desc := ""
 	if rar >= Uncommon && rand.Float64() < 0.5 {
-		var candidates []suffixDef
-		for _, s := range suffixes {
-			if s.MinRar <= rar {
+		var candidates []items.DelveSuffix
+		for _, s := range items.DelveSuffixes {
+			if s.MinRar.Rank() <= rar.Rank() {
 				candidates = append(candidates, s)
 			}
 		}
@@ -354,8 +268,11 @@ var zoneSetNames = map[string]struct {
 	"forge_district": {"forge_master_arsenal", "Forge Master's Arsenal", "forge_district"},
 }
 
+// AssignSetName tags a delve drop with its zone's set (Rare/Epic only —
+// Legendaries are standalone). Set pieces are mid-game gear: collecting and
+// equipping them grants set bonuses (see items.CalculateSetBonuses).
 func AssignSetName(item *DelveItem, zone string) {
-	if item.Rarity < Rare {
+	if item.Rarity < Rare || item.Rarity >= Legendary {
 		return
 	}
 	set, ok := zoneSetNames[zone]

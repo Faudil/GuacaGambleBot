@@ -42,10 +42,30 @@ func TestCraftNoRecipe(t *testing.T) {
 	assert.ErrorIs(t, err, ErrNoRecipe)
 }
 
-func TestCraftLevelTooLow(t *testing.T) {
+func TestCraftResearchGatedRecipeNoLevel(t *testing.T) {
+	svc, st := testService(t)
+	// Research-gated recipes must be craftable at crafter level 1 once the
+	// research is done (bow needs tool_crafting, not a crafter level).
+	require.NoError(t, st.DB.Create(&model.UserResearch{
+		UserID: 1, ResearchID: "tool_crafting", Completed: true,
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "oat", Quantity: 2}).Error)
+	require.NoError(t, st.DB.Create(&model.Inventory{UserID: 1, ItemID: "pebble", Quantity: 2}).Error)
+
+	_, _, err := svc.Craft(1, "bow", 1)
+	require.NoError(t, err)
+
+	var inv model.Inventory
+	require.NoError(t, st.DB.Where("user_id = ? AND item_id = ?", 1, "bow").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestCraftResearchRequired(t *testing.T) {
 	svc, _ := testService(t)
+	// volcano_egg is gated by dna_research; without it the research gate fires
+	// before any level check.
 	_, _, err := svc.Craft(1, "volcano_egg", 1)
-	assert.ErrorIs(t, err, ErrNoLevel)
+	assert.ErrorIs(t, err, ErrResearchRequired)
 }
 
 func TestCraftMissingIngredients(t *testing.T) {

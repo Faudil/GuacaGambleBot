@@ -332,6 +332,9 @@ func (s *Service) Claim(exp *model.PetExpedition) (leveled bool, lvl int, err er
 			Where("id = ?", exp.PetID).
 			Update("on_expedition", false).Error
 	})
+	if err == nil {
+		_ = s.store.RecordActivity(exp.UserID, "expedition_completions", 1)
+	}
 	return
 }
 

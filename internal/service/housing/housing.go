@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
@@ -49,28 +48,28 @@ func (ht *HouseType) SlotsAt(level int) int {
 var Houses = map[string]*HouseType{
 	"cardboard_box": {
 		ID: "cardboard_box", Price: 50, MaxLevel: 1, IncomePerHour: 1,
-		InventoryBonus: 100, PetSlotsBonus: 1, BankCapacity: 500, FurnitureSlots: 0, Color: 0xB9936C,
-		Buffs: []string{"+100 Inventory Slots", "+1 Pet Slot", "$500 Bank Cap"},
+		InventoryBonus: 100, PetSlotsBonus: 1, BankCapacity: 600, FurnitureSlots: 0, Color: 0xB9936C,
+		Buffs: []string{"+100 Inventory Slots", "+1 Pet Slot", "$600 Bank Cap"},
 	},
 	"wooden_shack": {
 		ID: "wooden_shack", Price: 500, MaxLevel: 3, IncomePerHour: 10,
-		InventoryBonus: 250, PetSlotsBonus: 2, BankCapacity: 10000, CraftingDiscount: 0.05, FurnitureSlots: 2, Color: 0xA1887F,
-		Buffs: []string{"+250 Inventory Slots", "+2 Pet Slots", "$10,000 Bank Cap", "5% Crafting Discount"},
+		InventoryBonus: 250, PetSlotsBonus: 2, BankCapacity: 1000, CraftingDiscount: 0.05, FurnitureSlots: 2, Color: 0xA1887F,
+		Buffs: []string{"+250 Inventory Slots", "+2 Pet Slots", "$1,000 Bank Cap", "5% Crafting Discount"},
 	},
 	"brick_house": {
 		ID: "brick_house", Price: 5000, MaxLevel: 5, IncomePerHour: 25,
-		InventoryBonus: 500, PetSlotsBonus: 5, BankCapacity: 2000, CraftingDiscount: 0.10, FurnitureSlots: 4, Color: 0xD32F2F,
-		Buffs: []string{"+500 Inventory Slots", "+5 Pet Slots", "$2,000 Bank Cap", "10% Crafting Discount"},
+		InventoryBonus: 500, PetSlotsBonus: 5, BankCapacity: 5000, CraftingDiscount: 0.10, FurnitureSlots: 4, Color: 0xD32F2F,
+		Buffs: []string{"+500 Inventory Slots", "+5 Pet Slots", "$5,000 Bank Cap", "10% Crafting Discount"},
 	},
 	"mansion": {
 		ID: "mansion", Price: 25000, MaxLevel: 10, IncomePerHour: 50,
-		InventoryBonus: 1000, PetSlotsBonus: 10, BankCapacity: 5000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
-		Buffs: []string{"+1000 Inventory Slots", "+10 Pet Slots", "$250,000 Bank Cap", "20% Crafting Discount"},
+		InventoryBonus: 1000, PetSlotsBonus: 10, BankCapacity: 10000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
+		Buffs: []string{"+1000 Inventory Slots", "+10 Pet Slots", "$10,000 Bank Cap", "20% Crafting Discount"},
 	},
 	"gilded_palace": {
 		ID: "gilded_palace", Price: 500000, MaxLevel: 20, IncomePerHour: 500,
-		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 1000000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
-		Buffs: []string{"+2000 Inventory Slots", "+25 Pet Slots", "$1,000,000 Bank Cap", "30% Crafting Discount"},
+		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 100000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
+		Buffs: []string{"+2000 Inventory Slots", "+25 Pet Slots", "$100,000 Bank Cap", "30% Crafting Discount"},
 	},
 }
 
@@ -384,21 +383,97 @@ func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
 	return &CollectResult{Income: income, Items: items}, nil
 }
 
-func (s *Service) StartConstruction(userID, upgradeID string, timeHours int) error {
-	finish := time.Now().Add(time.Duration(timeHours) * time.Hour)
-	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
-		Updates(map[string]any{"under_construction": upgradeID, "finish_time": finish}).Error
+// HasUpgrade reports whether the user already owns the given house upgrade.
+func (s *Service) HasUpgrade(userID int64, upgradeID string) (bool, error) {
+	var count int64
+	err := s.store.DB.Model(&model.UserHousingUpgrade{}).
+		Where("user_id = ? AND upgrade_id = ?", userID, upgradeID).Count(&count).Error
+	return count > 0, err
 }
 
-func (s *Service) CompleteConstruction(userID string) error {
-	var upg model.UserHousingUpgrade
+// StartConstruction begins building a house upgrade: the player pays the
+// money and item cost immediately and the upgrade finishes after TimeHours.
+// Only one construction can run at a time.
+func (s *Service) StartConstruction(userID int64, upgradeID string) error {
+	upg, ok := UpgradesTree[upgradeID]
+	if !ok {
+		return fmt.Errorf("unknown upgrade")
+	}
+	h, err := s.GetHousing(userID)
+	if err != nil {
+		return err
+	}
+	if h.UnderConstruction != nil && *h.UnderConstruction != "" {
+		return fmt.Errorf("construction already in progress")
+	}
+	owned, err := s.HasUpgrade(userID, upgradeID)
+	if err != nil {
+		return err
+	}
+	if owned {
+		return fmt.Errorf("already owned")
+	}
+	if upg.Requires != "" {
+		hasReq, err := s.HasUpgrade(userID, upg.Requires)
+		if err != nil {
+			return err
+		}
+		if !hasReq {
+			return fmt.Errorf("requires %s", upg.Requires)
+		}
+	}
+	bal, err := s.store.GetBalance(userID)
+	if err != nil {
+		return err
+	}
+	if bal < upg.CostMoney {
+		return fmt.Errorf("not enough money")
+	}
+	finish := time.Now().Add(time.Duration(upg.TimeHours) * time.Hour)
+
+	return s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance - ?", upg.CostMoney)).Error; err != nil {
+			return err
+		}
+		for itemID, qty := range upg.CostItems {
+			var inv model.Inventory
+			if err := tx.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, itemID, qty).First(&inv).Error; err != nil {
+				return fmt.Errorf("missing %s x%d", itemID, qty)
+			}
+			if err := tx.Model(&model.Inventory{}).
+				Where("user_id = ? AND item_id = ?", userID, itemID).
+				UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
+			Updates(map[string]any{"under_construction": upgradeID, "finish_time": finish}).Error
+	})
+}
+
+// CompleteConstruction finalizes a finished house construction and grants the
+// upgrade to the user.
+func (s *Service) CompleteConstruction(userID int64) error {
 	var h model.UserHousing
-	s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h)
-	if h.UnderConstruction == nil {
+	if err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h).Error; err != nil {
+		return err
+	}
+	if h.UnderConstruction == nil || *h.UnderConstruction == "" {
 		return fmt.Errorf("no construction")
 	}
-	upg = model.UserHousingUpgrade{UserID: h.UserID, UpgradeID: *h.UnderConstruction}
-	if err := s.store.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&upg).Error; err != nil {
+	if h.FinishTime == nil || time.Now().Before(*h.FinishTime) {
+		return fmt.Errorf("construction not finished")
+	}
+	owned, err := s.HasUpgrade(userID, *h.UnderConstruction)
+	if err != nil {
+		return err
+	}
+	if owned {
+		return fmt.Errorf("already owned")
+	}
+	upg := model.UserHousingUpgrade{UserID: h.UserID, UpgradeID: *h.UnderConstruction}
+	if err := s.store.DB.Create(&upg).Error; err != nil {
 		return err
 	}
 	return s.store.DB.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).

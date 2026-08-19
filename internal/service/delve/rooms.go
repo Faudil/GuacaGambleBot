@@ -32,6 +32,10 @@ const (
 	RoomShrine   RoomType = "shrine"
 	RoomLocked   RoomType = "locked"
 	RoomVaultKey RoomType = "vault_key"
+	RoomArchive  RoomType = "archive"
+	RoomFountain RoomType = "fountain"
+	RoomOssuary  RoomType = "ossuary"
+	RoomWarden   RoomType = "warden"
 )
 
 type Room struct {
@@ -79,25 +83,29 @@ var zoneRoomTables = map[string][]roomWeight{
 		{RoomMonster, 28}, {RoomTreasure, 12}, {RoomAltar, 5},
 		{RoomMerchant, 8}, {RoomPuzzle, 8}, {RoomRest, 10},
 		{RoomNPC, 5}, {RoomEmpty, 12}, {RoomTomb, 8},
-		{RoomShrine, 5}, {RoomLocked, 8},
+		{RoomShrine, 5}, {RoomLocked, 8}, {RoomArchive, 4},
+		{RoomFountain, 5}, {RoomOssuary, 4}, {RoomWarden, 4},
 	},
 	"fungal_wilds": {
 		{RoomMonster, 26}, {RoomTreasure, 10}, {RoomAltar, 6},
 		{RoomMerchant, 8}, {RoomPuzzle, 8}, {RoomRest, 8},
 		{RoomNPC, 6}, {RoomEmpty, 12}, {RoomGarden, 8},
-		{RoomShrine, 5}, {RoomLocked, 8},
+		{RoomShrine, 5}, {RoomLocked, 8}, {RoomFountain, 5},
+		{RoomWarden, 4},
 	},
 	"forge_district": {
 		{RoomMonster, 23}, {RoomTreasure, 15}, {RoomAltar, 8},
 		{RoomMerchant, 10}, {RoomPuzzle, 10}, {RoomRest, 6},
 		{RoomNPC, 5}, {RoomEmpty, 8}, {RoomForge, 8},
-		{RoomShrine, 5}, {RoomLocked, 8},
+		{RoomShrine, 5}, {RoomLocked, 8}, {RoomArchive, 4},
+		{RoomWarden, 4},
 	},
 	"abyss": {
 		{RoomMonster, 33}, {RoomTreasure, 8}, {RoomAltar, 12},
 		{RoomMerchant, 5}, {RoomPuzzle, 5}, {RoomRest, 5},
 		{RoomNPC, 8}, {RoomEmpty, 10}, {RoomRift, 8},
-		{RoomShrine, 5}, {RoomLocked, 8},
+		{RoomShrine, 5}, {RoomLocked, 8}, {RoomArchive, 4},
+		{RoomOssuary, 4},
 	},
 }
 
@@ -209,6 +217,30 @@ var lockedDescs = []string{
 	"A reinforced door bars your way. Through a crack, you glimpse a glittering chamber beyond. The lock gleams, awaiting a key.",
 }
 
+var archiveDescs = []string{
+	"The passage widens into a sunken library. Shelves of water-warped tomes stand in patient rows, their bindings still intact. Dust hangs in the torchlight like a held breath.",
+	"Petrified bookshelves ring the chamber, their volumes sealed in hardened resin. One pedestal holds a single open book, its pages frozen mid-turn.",
+	"Scrolls lie scattered across a collapsed lectern, some still glowing faintly. A deep bookshelf hums with the weight of forgotten knowledge.",
+}
+
+var fountainDescs = []string{
+	"A stone fountain burbles at the room's heart, its water impossibly clear. Coins from countless desperate hands glitter beneath the surface.",
+	"Cracked marble basins catch a thin stream of glowing water. The liquid rises as you approach, as though curious.",
+	"A basin of shimmering water stands in a ring of old offering bowls. The surface holds no reflection — only depth.",
+}
+
+var ossuaryDescs = []string{
+	"The room is stacked floor to ceiling with bones — femurs like ship timbers, skulls tucked between them like cargo. A single clear aisle leads to a heap at the center.",
+	"Thousands of knucklebones crunch underfoot. Piles of rib cages lean against the walls, and something at the center has been arranged with care.",
+	"An ossuary of the Ancients. Every niche is a careful stack, every stack a memory kept by someone who no longer remembers. A bone altar stands in the center.",
+}
+
+var wardenDescs = []string{
+	"A figure in rusted armor sits against the wall, a helm cradled in their lap. They do not move as you approach — but the air around them hums with a low, patient note.",
+	"Blue motes of light drift around a kneeling knight. Their armor bears no sigil, and their sword is planted point-down in the stone before them.",
+	"A pale guardian watches the passage from the shadows. Their eyes — if they have eyes — rest on you without fear. They have been waiting a long time.",
+}
+
 func weightedPick(rng *rand.Rand, weights []roomWeight) RoomType {
 	total := 0
 	for _, w := range weights {
@@ -294,6 +326,14 @@ func roomDescription(rt RoomType, zone string, rng *rand.Rand, lang string) stri
 		key = fmt.Sprintf("locked_%d", rng.Intn(len(lockedDescs)))
 	case RoomNPC:
 		key = fmt.Sprintf("npc_%d", rng.Intn(len(npcDescs)))
+	case RoomArchive:
+		key = fmt.Sprintf("archive_%d", rng.Intn(len(archiveDescs)))
+	case RoomFountain:
+		key = fmt.Sprintf("fountain_%d", rng.Intn(len(fountainDescs)))
+	case RoomOssuary:
+		key = fmt.Sprintf("ossuary_%d", rng.Intn(len(ossuaryDescs)))
+	case RoomWarden:
+		key = fmt.Sprintf("warden_%d", rng.Intn(len(wardenDescs)))
 	default:
 		switch zone {
 		case "crypt":
@@ -393,6 +433,30 @@ func roomButtons(rt RoomType, rng *rand.Rand) []RoomButton {
 			{Emoji: "💰", Label: "Betray", Action: "npc_betray", Style: discordgo.DangerButton, Data: ""},
 			{Emoji: "💪", Label: "Intimidate", Action: "npc_intimidate", Style: discordgo.PrimaryButton, Data: ""},
 			{Emoji: "🚪", Label: "Ignore", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomArchive:
+		return []RoomButton{
+			{Emoji: "📖", Label: "Read the Tome", Action: "archive_read", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "🔍", Label: "Search the Shelves", Action: "archive_search", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomFountain:
+		return []RoomButton{
+			{Emoji: "🪙", Label: "Toss a Coin", Action: "fountain_coin", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "💧", Label: "Drink Deeply", Action: "fountain_drink", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomOssuary:
+		return []RoomButton{
+			{Emoji: "🦴", Label: "Search the Bones", Action: "ossuary_search", Style: discordgo.DangerButton, Data: ""},
+			{Emoji: "🙏", Label: "Lay the Dead to Rest", Action: "ossuary_rest", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
+		}
+	case RoomWarden:
+		return []RoomButton{
+			{Emoji: "🤝", Label: "Help", Action: "warden_help", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "👂", Label: "Listen", Action: "warden_listen", Style: discordgo.PrimaryButton, Data: ""},
+			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
 		}
 	default:
 		return navigationButtons(rng)

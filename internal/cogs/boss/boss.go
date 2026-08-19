@@ -96,7 +96,7 @@ func questStepBossStage(def *questssvc.QuestDef, stepIdx int) int {
 // findBossBattleQuest finds any active quest whose current step is a StepBossBattle.
 // It checks boss_league first, then falls back to any other active quest.
 func (c *Cog) findBossBattleQuest(userID int64) (string, *questssvc.QuestDef, *model.UserQuest, *model.UserQuestData) {
-	for _, qid := range []string{"boss_league", "tutorial"} {
+	for _, qid := range []string{"boss_league", "arena_rival", "tutorial"} {
 		uq, uqd, err := c.qsvc.GetQuestProgress(userID, qid)
 		if err != nil || uq == nil || uq.Status != "ACTIVE" || uqd == nil {
 			continue

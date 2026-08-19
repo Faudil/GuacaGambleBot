@@ -20,6 +20,10 @@
       "name": "Ancient Core Shard",
       "description": "A crystalline shard from the Heart of the Mountain. It pulses with a faint light."
     },
+    "annihilator_elixir": {
+      "name": "Annihilator Elixir",
+      "description": "Every blow ends in catastrophe. +0.2 Crit Damage."
+    },
     "arcane_weaver_crown": {
       "name": "Arcane Weaver Crown",
       "description": "A circlet of crystallized thought. Part of the Arcane Weaver set."
@@ -47,6 +51,10 @@
     "berserker_elixir": {
       "name": "Berserker Elixir",
       "description": "A volatile brew that awakens raw fury. +2 ATK."
+    },
+    "bastion_tonic": {
+      "name": "Bastion Tonic",
+      "description": "Turns flesh into a fortress wall. +2 DEF."
     },
     "blood_tomato": {
       "name": "Blood Tomato",
@@ -91,6 +99,14 @@
     "cave_egg": {
       "name": "Cave Egg",
       "description": "A cavern-dark egg. Type !hatch to open it!"
+    },
+    "clover_salad": {
+      "name": "Clover Salad",
+      "description": "Crisp greens luckier than a four-leaf clover. +1 Crit Chance."
+    },
+    "colossus_draught": {
+      "name": "Colossus Draught",
+      "description": "Grants the endurance of a mountain. +4 Max HP."
     },
     "coal": {
       "name": "Coal",
@@ -176,6 +192,10 @@
       "name": "Dimensional Shard",
       "description": "Fragments of broken reality. Used as raid currency for exclusive gear and cosmetics."
     },
+    "dragon_chili": {
+      "name": "Dragon Chili",
+      "description": "A blistering chili that awakens raw power. +1 ATK."
+    },
     "dragon_slayer_armor": {
       "name": "Dragon Slayer Armor",
       "description": "Scale mail of an ancient wyrm. Part of the Dragon Slayer set."
@@ -216,6 +236,14 @@
       "name": "Excavator's Hat",
       "description": "A worn expedition hat. It carries centuries of stories."
     },
+    "falcon_pie": {
+      "name": "Falcon Pie",
+      "description": "A savory pie that sharpens the eye. +1 ACC."
+    },
+    "fatalist_elixir": {
+      "name": "Fatalist Elixir",
+      "description": "A brew that bends fortune toward doom. +2 Crit Chance."
+    },
     "fertilizer": {
       "name": "Fertilizer",
       "description": "Accelerates crop growth! Reduces remaining grow time by 30%."
@@ -244,6 +272,10 @@
       "name": "Gale Draught",
       "description": "Tastes like a storm on the tongue. +2 SPD."
     },
+    "gamblers_tonic": {
+      "name": "Gambler's Tonic",
+      "description": "Fate itself starts to hedge its bets. +2 Crit Chance."
+    },
     "garden_plot": {
       "name": "Garden Plot",
       "description": "A patch of fertile soil for growing vegetables."
@@ -251,6 +283,10 @@
     "ghost_wheat": {
       "name": "Ghost Wheat",
       "description": "Translucent wheat that shimmers in moonlight."
+    },
+    "giant_noodles": {
+      "name": "Giant Noodles",
+      "description": "An endless bowl of hearty noodles. +2 Max HP."
     },
     "gold_nugget": {
       "name": "Gold Nugget",
@@ -284,6 +320,10 @@
       "name": "Growth Elixir",
       "description": "Instantly matures a growing crop."
     },
+    "heart_stew": {
+      "name": "Heart Stew",
+      "description": "A hearty broth that bulks the constitution. +2 Max HP."
+    },
     "hook": {
       "name": "Hook",
       "description": "Attracts fish! Resets !fish cooldown."
@@ -311,6 +351,10 @@
     "iron_ore": {
       "name": "Iron Ore",
       "description": "Useful for forging sturdy tools."
+    },
+    "iron_loaf": {
+      "name": "Iron Loaf",
+      "description": "A crusty loaf as dense as forged ore. +1 DEF."
     },
     "iron_mace": {
       "name": "Iron Mace",
@@ -383,6 +427,10 @@
     "lucky_charm": {
       "name": "Lucky Charm",
       "description": "A four-leaf clover. (+3 LUK)"
+    },
+    "lucky_roast": {
+      "name": "Lucky Roast",
+      "description": "A fiery roast that sharpens fate. +1 Crit Chance."
     },
     "magma_carp": {
       "name": "Magma Carp",
@@ -544,6 +592,10 @@
       "name": "Rough Diamond",
       "description": "AMAZING! Worth a fortune!"
     },
+    "ruin_tonic": {
+      "name": "Ruin Tonic",
+      "description": "Turns every strike into a cataclysm. +0.2 Crit Damage."
+    },
     "rusty_magnet": {
       "name": "Rusty Magnet",
       "description": "Pulls scrap ore from the ground. In the mine, farm or Undercroft it can unearth buried hoards."
@@ -563,6 +615,10 @@
     "scratch_ticket": {
       "name": "Scratch Ticket",
       "description": "Scratch to win up to $1000 instantly!"
+    },
+    "seer_elixir": {
+      "name": "Seer Elixir",
+      "description": "Foresight in a single gulp. +2 ACC."
     },
     "shadow_cloak": {
       "name": "Shadow Cloak",
@@ -608,6 +664,10 @@
       "name": "Skill Scroll",
       "description": "Resets all your active pet's learned skills."
     },
+    "skull_elixir": {
+      "name": "Skull Elixir",
+      "description": "A brew of predatory ferocity. +2 ATK."
+    },
     "smoke_pellet": {
       "name": "Smoke Pellet",
       "description": "A quick getaway in a tiny ball. (+4 DEX)"
@@ -644,6 +704,10 @@
       "name": "Storm Core",
       "description": "Kael's fury, captured in crystal. (+5 DEX, +3 LUK)"
     },
+    "storm_porridge": {
+      "name": "Storm Porridge",
+      "description": "A steaming porridge that tingles with haste. +1 SPD."
+    },
     "strawberry": {
       "name": "Strawberry",
       "description": "Red, sweet and juicy."
@@ -656,9 +720,17 @@
       "name": "Swordfish",
       "description": "A majestic fighting fish."
     },
+    "tempest_draught": {
+      "name": "Tempest Draught",
+      "description": "A storm bottled and swallowed. +2 SPD."
+    },
     "thieves_glove": {
       "name": "Thieve's Glove",
       "description": "Use !rob @target with these gloves."
+    },
+    "thunder_steak": {
+      "name": "Thunder Steak",
+      "description": "A crackling cut that amplifies strikes. +0.1 Crit Damage."
     },
     "tomato": {
       "name": "Tomato",
@@ -688,13 +760,25 @@
       "name": "VIP Ticket",
       "description": "Resets your casino and coinflip limits."
     },
+    "vitality_elixir": {
+      "name": "Vitality Elixir",
+      "description": "A living tonic that swells the heart. +4 Max HP."
+    },
     "volcano_egg": {
       "name": "Volcano Egg",
       "description": "A magma-infused egg. Type !hatch to open it!"
     },
+    "volcano_ribs": {
+      "name": "Volcano Ribs",
+      "description": "Ribs seared in subterranean heat. +0.1 Crit Damage."
+    },
     "wanted_poster": {
       "name": "Wanted Poster",
       "description": "Every outlaw's face eventually ends up here. (+4 LUK)"
+    },
+    "warden_badge": {
+      "name": "Warden's Badge",
+      "description": "The sigil of a guardian who lost everything. It still watches. (+4 STR, +3 VIT)"
     },
     "warrior_stew": {
       "name": "Warrior's Stew",
@@ -719,6 +803,10 @@
     "zephyr_berries": {
       "name": "Zephyr Berries",
       "description": "Wild berries crackling with wind energy. +1 SPD."
+    },
+    "chronicler_relic": {
+      "name": "Chronicler's Relic",
+      "description": "The book the Chronicler closed and left behind. Its pages fill with your name. (+8 INT, +5 VIT, +4 LUK)"
     }
   }
 }

@@ -1,6 +1,8 @@
 package achievements
 
 import (
+	"sort"
+
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
@@ -49,5 +51,13 @@ func (s *Service) List(userID int64) ([]View, error) {
 			Unlocked: unlocked[a.ID],
 		})
 	}
+	// Stable, deterministic order (most glorious first, then id) so paginated
+	// views never shuffle between renders.
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Glory != out[j].Glory {
+			return out[i].Glory > out[j].Glory
+		}
+		return out[i].ID < out[j].ID
+	})
 	return out, nil
 }

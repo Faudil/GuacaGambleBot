@@ -42,7 +42,7 @@ func TestSetStage(t *testing.T) {
 }
 
 func TestBossLeagueLength(t *testing.T) {
-	assert.Len(t, BossLeague, 6)
+	assert.Len(t, BossLeague, 7)
 }
 
 func TestCreateBossPet(t *testing.T) {

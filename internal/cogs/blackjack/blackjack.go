@@ -191,7 +191,7 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_ = c.store.IncrementGameLimit(pc.ChallengerID, "blackjack")
 
 	gs := c.svc.NewGame(pc.ChallengerID, opponentID, pc.Amount)
-	embed, comps := c.gameEmbed(gs, lang)
+	embed, comps := c.gameEmbed(b, i, gs, lang)
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
@@ -222,7 +222,7 @@ func (c *Cog) onHit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	embed, comps := c.gameEmbed(gs, lang)
+	embed, comps := c.gameEmbed(b, i, gs, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -248,7 +248,7 @@ func (c *Cog) onStand(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	embed, comps := c.gameEmbed(gs, lang)
+	embed, comps := c.gameEmbed(b, i, gs, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -262,7 +262,7 @@ func (c *Cog) findGame(userID int64) *bjsvc.GameState {
 	return nil
 }
 
-func (c *Cog) gameEmbed(gs *bjsvc.GameState, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) gameEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bjsvc.GameState, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	s1 := gs.Hands[gs.Player1ID].Score()
 	s2 := gs.Hands[gs.Player2ID].Score()
 
@@ -289,7 +289,7 @@ func (c *Cog) gameEmbed(gs *bjsvc.GameState, lang string) (*discordgo.MessageEmb
 
 	embed := components.Embed(i18n.T("blackjack.title", lang), desc, color)
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("blackjack.footer", lang, map[string]any{"user": interaction.Mention(gs.Turn)}),
+		Text: i18n.T("blackjack.footer", lang, map[string]any{"user": interaction.DisplayName(b.Session, i.GuildID, i.Member, gs.Turn)}),
 	}
 
 	comps := []discordgo.MessageComponent{
@@ -306,7 +306,7 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 	delete(c.activeGames, gs.Player1ID)
 	delete(c.activeGames, gs.Player2ID)
 
-	embed, _ := c.gameEmbed(gs, lang)
+	embed, _ := c.gameEmbed(b, i, gs, lang)
 	color := 0x95a5a6
 
 	if isDraw {

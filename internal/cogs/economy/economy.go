@@ -141,7 +141,7 @@ func (c *Cog) onSlashDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		fields = append(fields, components.Field(i18n.T("economy.tax_repayment", lang), "-$"+strconv.Itoa(res.Repaid), false))
 		for _, l := range res.Lenders {
 			fields = append(fields, components.Field(
-				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.Mention(l.LenderID)}),
+				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.DisplayName(b.Session, i.GuildID, i.Member, l.LenderID)}),
 				"$"+strconv.Itoa(l.Amount), false))
 		}
 	}
@@ -183,7 +183,7 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 		fields = append(fields, components.Field(i18n.T("economy.tax_repayment", lang), "-$"+strconv.Itoa(res.Repaid), false))
 		for _, l := range res.Lenders {
 			fields = append(fields, components.Field(
-				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.Mention(l.LenderID)}),
+				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.DisplayName(s, m.GuildID, &discordgo.Member{User: m.Author}, l.LenderID)}),
 				"$"+strconv.Itoa(l.Amount), false))
 		}
 	}
@@ -293,7 +293,7 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		fields = append(fields, components.Field(i18n.T("economy.tax_repayment", lang), "-$"+strconv.Itoa(res.Repaid), false))
 		for _, l := range res.Lenders {
 			fields = append(fields, components.Field(
-				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.Mention(l.LenderID)}),
+				i18n.T("economy.repaid_lender", lang, map[string]any{"lender": interaction.DisplayName(b.Session, i.GuildID, i.Member, l.LenderID)}),
 				"$"+strconv.Itoa(l.Amount), false))
 		}
 	}

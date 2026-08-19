@@ -105,7 +105,7 @@ func (c *Cog) announceMastery(sess interaction.Session, lang string, guildID, us
 			return
 		}
 		embed := components.Embed(
-			i18n.T("journal.mastery.announce_title", lang, map[string]any{"user": interaction.Mention(userID)}),
+			i18n.T("journal.mastery.announce_title", lang, map[string]any{"user": interaction.DisplayName(sess, strconv.FormatInt(guildID, 10), nil, userID)}),
 			i18n.T("journal.mastery.announce_desc", lang),
 			0xf1c40f,
 		)

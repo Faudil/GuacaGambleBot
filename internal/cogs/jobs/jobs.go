@@ -71,7 +71,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	embed := components.Embed(
-		i18n.T("jobs.title", lang, map[string]any{"user": interaction.Mention(userID)}),
+		i18n.T("jobs.title", lang, map[string]any{"user": interaction.DisplayName(b.Session, i.GuildID, i.Member, userID)}),
 		i18n.T("jobs.footer", lang, map[string]any{"total": res.TotalLevel}),
 		0xe67e22,
 	)

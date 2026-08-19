@@ -27,28 +27,28 @@ type ResearchDef struct {
 var ResearchDefs = map[string]*ResearchDef{
 	"tool_crafting": {
 		ID: "tool_crafting", Name: "Tool Crafting", Description: "Learn to craft basic tools and weapons.",
-		TimeHours: 4, CostMoney: 2000, CostItems: map[string]int{"coal": 10},
+		TimeHours: 4, CostMoney: 2000, CostItems: map[string]int{"coal": 10, "copper_ore": 20, "iron_ore": 20},
 		RequiredFurniture: "workbench",
 		UnlocksRecipes:    []string{"bow", "rusty_magnet", "hook"},
 		BonusDesc:         "Unlocks: Bow, Rusty Magnet, Hook",
 	},
 	"scroll_magic": {
 		ID: "scroll_magic", Name: "Scroll Magic", Description: "Arcane knowledge to craft magical scrolls and potions.",
-		TimeHours: 6, CostMoney: 4000, CostItems: map[string]int{"rotten_plant": 20, "silver_ore": 4},
+		TimeHours: 6, CostMoney: 4000, CostItems: map[string]int{"rotten_plant": 20, "silver_ore": 5},
 		RequiredFurniture: "enchanting_table",
 		UnlocksRecipes:    []string{"identity_scroll", "forget_potion"},
 		BonusDesc:         "Unlocks: Identity Scroll, Forget Potion",
 	},
 	"magnetism": {
 		ID: "magnetism", Name: "Magnetism", Description: "Electromagnetic theory for advanced magnet crafting.",
-		TimeHours: 8, CostMoney: 6000, CostItems: map[string]int{"platinum": 10},
+		TimeHours: 8, CostMoney: 6000, CostItems: map[string]int{"platinum": 10, "copper_ore": 30},
 		RequiredFurniture: "magnetic_coil",
 		UnlocksRecipes:    []string{"magnet", "electric_magnet"},
 		BonusDesc:         "Unlocks: Magnet, Electric Magnet",
 	},
 	"game_theory": {
 		ID: "game_theory", Name: "Game Theory", Description: "Probability manipulation and rigging techniques.",
-		TimeHours: 12, CostMoney: 10000, CostItems: map[string]int{"gold_nugget": 10, "rough_diamond": 6},
+		TimeHours: 12, CostMoney: 10000, CostItems: map[string]int{"gold_nugget": 15, "rough_diamond": 6},
 		RequiredFurniture: "gambling_parlor",
 		UnlocksRecipes:    []string{"rigged_coin", "casino_token", "vip_ticket"},
 		BonusDesc:         "Unlocks: Rigged Coin, Casino Token, VIP Ticket",

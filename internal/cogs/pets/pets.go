@@ -11,6 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
@@ -81,28 +82,29 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(i, lang)
+	embed, comps := c.menu(b.Session, i, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menuFromUser(interaction.ToInt64(m.Author.ID), lang)
+	userID := interaction.ToInt64(m.Author.ID)
+	embed, comps := c.menuFromUser(userID, interaction.DisplayName(s, m.GuildID, &discordgo.Member{User: m.Author}, userID), lang)
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
 
-func (c *Cog) menu(i *discordgo.InteractionCreate, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menu(s interaction.Session, i *discordgo.InteractionCreate, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	userID := interaction.ToInt64(interaction.UserID(i))
-	return c.menuFromUser(userID, lang)
+	return c.menuFromUser(userID, interaction.DisplayName(s, i.GuildID, i.Member, userID), lang)
 }
 
-func (c *Cog) menuFromUser(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	pets, err := c.svc.GetPets(userID)
-	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": MentionUser(userID)}), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": pseudo}), "", 0x2ecc71)
 
 	comps := []discordgo.MessageComponent{}
 
@@ -173,7 +175,7 @@ func (c *Cog) petCardLine(p model.UserPet, lang string) string {
 
 func (c *Cog) onMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(i, lang)
+	embed, comps := c.menu(b.Session, i, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
@@ -810,7 +812,7 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) feedEffectDesc(def *petsvc.FeedItemDef, lang string) string {
 	parts := []string{}
 	if def.Stat != "" {
-		parts = append(parts, "+"+strconv.Itoa(def.Amount)+" "+i18n.T("pets.feed.stats."+def.Stat, lang))
+		parts = append(parts, "+"+strconv.FormatFloat(def.Amount, 'f', -1, 64)+" "+i18n.T("pets.feed.stats."+def.Stat, lang))
 	}
 	if def.Bond > 0 {
 		parts = append(parts, "💕 +"+strconv.Itoa(def.Bond))
@@ -923,6 +925,7 @@ func (c *Cog) onFeedSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	})
 
 	_ = c.store.RecordActivity(userID, "pets_fed", 1)
+	_ = achievement.IncrementStat(b.DB, userID, "pets_fed", 1)
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 
@@ -1353,7 +1356,7 @@ func (c *Cog) onHatchPrefix(b *interaction.Bot, s *discordgo.Session, m *discord
 }
 
 func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userID int64, lang string) {
-	eggType, biome := c.findEgg(userID)
+	eggType, hatchKey := c.findEgg(userID)
 	if eggType == "" {
 		interaction.RespondError(b, i, lang, "pets.hatch.no_egg")
 		return
@@ -1363,7 +1366,13 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		return
 	}
 
-	petType := petsvc.RollGacha("", biome)
+	biome := hatchKey
+	petType := ""
+	if hatchKey == "prehistoric" {
+		petType = petsvc.RollPrehistoric()
+	} else {
+		petType = petsvc.RollGacha("", hatchKey)
+	}
 	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(i.GuildID))
 	if err != nil || pet == nil {
 		interaction.RespondError(b, i, lang, "pets.hatch.error")
@@ -1434,7 +1443,7 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 }
 
 func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message, userID int64, lang string) {
-	eggType, biome := c.findEgg(userID)
+	eggType, hatchKey := c.findEgg(userID)
 	if eggType == "" {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_egg", lang))
 		return
@@ -1443,7 +1452,13 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_slots", lang))
 		return
 	}
-	petType := petsvc.RollGacha("", biome)
+	biome := hatchKey
+	petType := ""
+	if hatchKey == "prehistoric" {
+		petType = petsvc.RollPrehistoric()
+	} else {
+		petType = petsvc.RollGacha("", hatchKey)
+	}
 	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(m.GuildID))
 	if err != nil || pet == nil {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
@@ -1527,19 +1542,38 @@ var eggBiomes = map[string]string{
 	"volcano_egg":  "volcano",
 }
 
+// prehistoricEggs are the fossilized eggs that hatch a prehistoric pet from
+// any rarity (see pets.RollPrehistoric).
+var prehistoricEggs = map[string]bool{
+	"fossilized_egg": true,
+}
+
+// eggPriority is the hatch order when the player owns several eggs, most
+// valuable first.
+var eggPriority = []string{
+	"volcano_egg", "tundra_egg", "ocean_egg", "mountain_egg",
+	"desert_egg", "cave_egg", "forest_egg", "fossilized_egg",
+}
+
 func (c *Cog) findEgg(userID int64) (string, string) {
 	var inv []model.Inventory
-	eggIDs := make([]string, 0, len(eggBiomes))
+	eggIDs := make([]string, 0, len(eggBiomes)+len(prehistoricEggs))
 	for id := range eggBiomes {
 		eggIDs = append(eggIDs, id)
 	}
+	for id := range prehistoricEggs {
+		eggIDs = append(eggIDs, id)
+	}
 	c.store.DB.Where("user_id = ? AND item_id IN ? AND quantity > 0", userID, eggIDs).Find(&inv)
-	priority := []string{"volcano_egg", "tundra_egg", "ocean_egg", "mountain_egg", "desert_egg", "cave_egg", "forest_egg"}
-	for _, id := range priority {
+	for _, id := range eggPriority {
 		for _, iv := range inv {
-			if iv.ItemID == id {
-				return id, eggBiomes[id]
+			if iv.ItemID != id {
+				continue
 			}
+			if prehistoricEggs[id] {
+				return id, "prehistoric"
+			}
+			return id, eggBiomes[id]
 		}
 	}
 	return "", ""

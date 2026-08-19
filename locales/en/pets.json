@@ -77,7 +77,7 @@
       "menu_title": "🍖 What will you feed {name}?",
       "miam_desc": "You gave **1x {item}** to {emoji} **{name}**.\n\n✨ **EFFECT:** {stat} {sign}{amount}\n\n📊 *Stomach: {food} / {max_food}*",
       "miam_title": "🍖 Yummy!",
-      "no_food": "❌ You have nothing to feed **{name}**!\n\nGather ingredients (**fish, crops, ores**) to feed it directly, or craft proper meals with `!craft`.",
+      "no_food": "❌ You have nothing to feed **{name}**!\n\nGather ingredients (**fish, crops**) to feed it directly, or craft proper meals with `!craft`.",
       "no_inventory": "❌ You don't have **{name}** in your inventory!",
       "no_item": "❌ You must specify what to give. Example: `!feed Salmon`",
       "refuse": "🤢 **{name}** sniffs the **{item}** and refuses to eat it. It's not nourishing.",

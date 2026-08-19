@@ -477,3 +477,184 @@ func TestFulfillRequirementPetLevelAdvances(t *testing.T) {
 	require.NotNil(t, uqd)
 	assert.Equal(t, 5, uqd.StepIndex)
 }
+
+func TestArenaRivalRegistry(t *testing.T) {
+	svc, _ := testService(t)
+	def := svc.GetQuestDef("arena_rival")
+	require.NotNil(t, def)
+	assert.Equal(t, "main", def.Type)
+	require.Len(t, def.Steps, 9)
+
+	assert.Equal(t, StepDialogue, def.Steps[0].Type)
+	require.NotNil(t, def.Steps[0].Rewards)
+	assert.Contains(t, def.Steps[0].Rewards.ItemIDs, "warrior_stew")
+
+	assert.Equal(t, StepActivity, def.Steps[1].Type)
+	assert.Equal(t, "pets_fed", def.Steps[1].Extra["target_stat"])
+	assert.Equal(t, 1, def.Steps[1].Extra["target_count"])
+
+	assert.Equal(t, StepDialogue, def.Steps[2].Type)
+
+	assert.Equal(t, StepRequirement, def.Steps[3].Type)
+	assert.Equal(t, 10, def.Steps[3].Extra["req_pet_level"])
+
+	assert.Equal(t, StepDialogue, def.Steps[4].Type)
+
+	assert.Equal(t, StepActivity, def.Steps[5].Type)
+	assert.Equal(t, "artifact_leveled", def.Steps[5].Extra["target_stat"])
+	assert.Equal(t, 1, def.Steps[5].Extra["target_count"])
+
+	assert.Equal(t, StepActivity, def.Steps[6].Type)
+	assert.Equal(t, "artifact_point_spent", def.Steps[6].Extra["target_stat"])
+	assert.Equal(t, 1, def.Steps[6].Extra["target_count"])
+
+	assert.Equal(t, StepBossBattle, def.Steps[7].Type)
+	assert.Equal(t, 6, def.Steps[7].Extra["boss_stage"])
+	require.NotNil(t, def.Steps[7].Rewards)
+	assert.Equal(t, 2000, def.Steps[7].Rewards.Money)
+	assert.Equal(t, 200, def.Steps[7].Rewards.XP)
+
+	assert.Equal(t, StepDialogue, def.Steps[8].Type)
+	require.NotNil(t, def.Steps[8].Rewards)
+	assert.Contains(t, def.Steps[8].Rewards.ItemIDs, "gale_draught")
+}
+
+func TestGrantRewardsXP(t *testing.T) {
+	svc, st := testService(t)
+	_, err := st.EnsureCharacter(1)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.grantRewards(1, &QuestReward{Money: 100, XP: 250}))
+
+	var c model.UserCharacter
+	require.NoError(t, st.DB.Where("user_id = ?", 1).First(&c).Error)
+	assert.Equal(t, 250, c.XP, "character XP reward must be granted")
+}
+
+func TestRecordBossVictoryArenaRival(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, svc.StartQuest(1, "arena_rival"))
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
+		Update("step_index", 7).Error)
+
+	require.NoError(t, svc.RecordBossVictory(1, 6))
+
+	_, uqd, err := svc.GetQuestProgress(1, "arena_rival")
+	require.NoError(t, err)
+	require.NotNil(t, uqd)
+	assert.Equal(t, 8, uqd.StepIndex, "winning Krag must advance to the outro step")
+
+	bal, _ := st.GetBalance(1)
+	assert.Equal(t, 2100, bal, "boss step reward must grant 2000 credits")
+
+	var c model.UserCharacter
+	require.NoError(t, st.DB.Where("user_id = ?", 1).First(&c).Error)
+	assert.Equal(t, 200, c.XP, "boss step reward must grant character XP")
+}
+
+func TestLostWardenQuestFlow(t *testing.T) {
+	svc, _ := testService(t)
+
+	// Start on first meeting, advance through dialogue-only steps, never skip
+	// activity steps.
+	require.NoError(t, svc.StartQuest(1, "lost_warden"))
+	_, uqd, err := svc.GetQuestProgress(1, "lost_warden")
+	require.NoError(t, err)
+	assert.Equal(t, 0, uqd.StepIndex)
+
+	// The intro is a dialogue step: AdvanceIfDialogue should move to the
+	// activity step.
+	advanced, err := svc.AdvanceIfDialogue(1, "lost_warden")
+	require.NoError(t, err)
+	assert.True(t, advanced)
+	_, uqd, err = svc.GetQuestProgress(1, "lost_warden")
+	require.NoError(t, err)
+	assert.Equal(t, 1, uqd.StepIndex)
+
+	// On the activity step, AdvanceIfDialogue must refuse to skip it.
+	advanced, err = svc.AdvanceIfDialogue(1, "lost_warden")
+	require.NoError(t, err)
+	assert.False(t, advanced)
+	_, uqd, err = svc.GetQuestProgress(1, "lost_warden")
+	require.NoError(t, err)
+	assert.Equal(t, 1, uqd.StepIndex, "activity step must not be skipped")
+
+	// StartQuest is a no-op when already active.
+	assert.Error(t, svc.StartQuest(1, "lost_warden"))
+	assert.True(t, svc.HasActiveQuest(1, "lost_warden"))
+}
+
+func TestLostWardenRewardItem(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, svc.StartQuest(1, "lost_warden"))
+	// Jump to the final dialogue step.
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "lost_warden").
+		Update("step_index", 4).Error)
+	advanced, err := svc.AdvanceIfDialogue(1, "lost_warden")
+	require.NoError(t, err)
+	assert.True(t, advanced)
+
+	uq, _, err := svc.GetQuestProgress(1, "lost_warden")
+	require.NoError(t, err)
+	assert.Equal(t, "COMPLETED", uq.Status)
+
+	eq, err := st.GetAllUserEquipment(1)
+	require.NoError(t, err)
+	var found bool
+	for _, e := range eq {
+		if e.BaseID == "warden_badge" {
+			found = true
+		}
+	}
+	assert.True(t, found, "quest reward must grant the warden badge")
+}
+
+func TestChroniclerQuestSteps(t *testing.T) {
+	svc, _ := testService(t)
+	def := svc.GetQuestDef("chronicler_legend")
+	require.NotNil(t, def)
+	assert.Equal(t, "side", def.Type)
+	assert.Len(t, def.Steps, 5)
+	assert.Equal(t, "delve_completions", def.Steps[1].Extra["target_stat"])
+	assert.Equal(t, "expedition_completions", def.Steps[2].Extra["target_stat"])
+	assert.Equal(t, 4, def.Steps[3].Extra["boss_stage"])
+	require.NotNil(t, def.Steps[4].Rewards)
+	assert.Contains(t, def.Steps[4].Rewards.ItemIDs, "chronicler_relic")
+	assert.Equal(t, "legend_unwritten", def.Steps[4].Rewards.AchievementID)
+}
+
+func TestCompletedMainQuestlinesCount(t *testing.T) {
+	_, st := testService(t)
+	assert.Equal(t, 0, CompletedMainQuestlines(st, 1))
+
+	// Completed side quests don't count.
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "irian_training", Status: "COMPLETED",
+	}).Error)
+	assert.Equal(t, 0, CompletedMainQuestlines(st, 1))
+
+	// Completed main questlines count, the tutorial excluded.
+	for _, id := range []string{"tutorial", "masked_shadow_falls_hunter", "masked_shadow_falls_shadow"} {
+		require.NoError(t, st.DB.Create(&model.UserQuest{
+			UserID: 1, QuestID: id, Status: "COMPLETED",
+		}).Error)
+	}
+	assert.Equal(t, 2, CompletedMainQuestlines(st, 1))
+
+	// Active main quests don't count.
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "boss_league", Status: "ACTIVE",
+	}).Error)
+	assert.Equal(t, 2, CompletedMainQuestlines(st, 1))
+}
+
+func TestChroniclerQuestStartHelper(t *testing.T) {
+	svc, st := testService(t)
+	// StartQuestForUser works on a bare store.
+	require.NoError(t, StartQuestForUser(st, 1, "chronicler_legend"))
+	assert.True(t, svc.HasActiveQuest(1, "chronicler_legend"))
+	// Second start is rejected (already active).
+	assert.Error(t, StartQuestForUser(st, 1, "chronicler_legend"))
+}

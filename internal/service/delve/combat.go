@@ -84,8 +84,8 @@ func GenerateEnemy(zone string, floor int, rng *rand.Rand) *Enemy {
 		candidates = []Enemy{{Name: "Shadow", Atk: 10, Def: 2, MinFloor: 1, Zone: "", Emoji: "👾"}}
 	}
 	enemy := candidates[rng.Intn(len(candidates))]
-	scale := 1.0 + float64(floor-1)*0.15
-	enemy.MaxHP = int(float64(50+floor*10) * scale)
+	scale := 1.0 + float64(floor-1)*0.10
+	enemy.MaxHP = int(float64(40+floor*8) * scale)
 	enemy.HP = enemy.MaxHP
 	enemy.Atk = int(float64(enemy.Atk) * scale)
 	enemy.Def = int(float64(enemy.Def) * scale)
@@ -451,7 +451,7 @@ func RenderCombatEmbed(session *model.DelveSession, cs *CombatState, svc *Servic
 func ResolveFlee(session *model.DelveSession, lang string) (string, int) {
 	lostGold := session.Gold / 2
 	session.Gold -= lostGold
-	session.HP -= 10
+	session.HP -= RescueTorchCost()
 	if session.HP < 0 {
 		session.HP = 0
 	}

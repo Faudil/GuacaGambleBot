@@ -295,7 +295,27 @@ func (s *Service) AddXP(pet *model.UserPet, amount int) *LevelResult {
 			}
 		}
 	}
+	// Auto-start arena_rival quest when any pet reaches level 5 (ELO ranking
+	// unlocked) and the tutorial is completed
+	if pet.Level >= 5 && s.tutorialCompleted(pet.UserID) {
+		var existing model.UserQuest
+		err := s.store.DB.Where("user_id = ? AND quest_id = ?", pet.UserID, "arena_rival").First(&existing).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			if err := s.store.CreateQuest(pet.UserID, "arena_rival"); err != nil {
+				slog.Error("pets: failed to auto-start arena_rival quest", "user", pet.UserID, "error", err)
+			}
+		}
+	}
 	return res
+}
+
+// tutorialCompleted reports whether the user has finished the tutorial quest.
+func (s *Service) tutorialCompleted(userID int64) bool {
+	var uq model.UserQuest
+	if err := s.store.DB.Where("user_id = ? AND quest_id = ?", userID, "tutorial").First(&uq).Error; err != nil {
+		return false
+	}
+	return uq.Status == "COMPLETED"
 }
 
 func xpForLevel(level int, rMult float64) int {
@@ -413,25 +433,25 @@ func (s *Service) RerollPersonality(pet *model.UserPet) error {
 
 // ─── Feeding ───────────────────────────────────────────────────
 
-func applyStat(pet *model.UserPet, stat string, amount int) {
+func applyStat(pet *model.UserPet, stat string, amount float64) {
 	switch stat {
 	case "max_hp":
-		pet.MaxHP += amount
-		pet.HP += amount
+		pet.MaxHP += int(amount)
+		pet.HP += int(amount)
 	case "atk":
-		pet.Atk += amount
+		pet.Atk += int(amount)
 	case "defense":
-		pet.Defense += amount
+		pet.Defense += int(amount)
 	case "speed":
-		pet.Speed += amount
+		pet.Speed += int(amount)
 	case "dge":
-		pet.DGE += amount
+		pet.DGE += int(amount)
 	case "acc":
-		pet.ACC += amount
+		pet.ACC += int(amount)
 	case "crit_c":
-		pet.CritC += amount
+		pet.CritC += int(amount)
 	case "crit_d":
-		pet.CritD += float64(amount)
+		pet.CritD += amount
 	}
 }
 

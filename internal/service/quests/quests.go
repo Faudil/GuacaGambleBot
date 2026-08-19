@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
 )
 
@@ -174,6 +175,23 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.boss_league.step10_victory"},
 		},
 	},
+	// Auto-started when a pet reaches level 5 (ELO ranking unlocked) and the
+	// tutorial is complete. The herald teaches the player to feed real meals
+	// and prove their pet in the ranked arena against Krag, the Arena Champion.
+	"arena_rival": {
+		ID: "arena_rival", Type: "main", TitleKey: "quests.arena_rival.title", DescKey: "quests.arena_rival.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.arena_rival.step0_intro", Rewards: &QuestReward{ItemIDs: []string{"warrior_stew"}}},
+			{Type: StepActivity, TextKey: "quests.arena_rival.step1_feed", Extra: map[string]any{"target_stat": "pets_fed", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.arena_rival.step2_feed_dialogue"},
+			{Type: StepRequirement, TextKey: "quests.arena_rival.step3_level", Extra: map[string]any{"req_pet_level": 10}},
+			{Type: StepDialogue, TextKey: "quests.arena_rival.step4_artifact_dialogue"},
+			{Type: StepActivity, TextKey: "quests.arena_rival.step5_artifact_level", Extra: map[string]any{"target_stat": "artifact_leveled", "target_count": 1}},
+			{Type: StepActivity, TextKey: "quests.arena_rival.step6_artifact_point", Extra: map[string]any{"target_stat": "artifact_point_spent", "target_count": 1}},
+			{Type: StepBossBattle, TextKey: "quests.arena_rival.step7_boss", Extra: map[string]any{"boss_stage": 6}, Rewards: &QuestReward{Money: 2000, XP: 200}},
+			{Type: StepDialogue, TextKey: "quests.arena_rival.step8_outro", Rewards: &QuestReward{ItemIDs: []string{"gale_draught"}}},
+		},
+	},
 	// --- Optional side quests, unlocked by in-game events ---
 	// Unlocked when the player loses to the tutorial's final boss (stage 5,
 	// The Vault Guardian). Irian mentors the player and trains their pet so
@@ -190,6 +208,34 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepActivity, TextKey: "quests.irian_training.step3_hunt", Extra: map[string]any{"target_stat": "items_hunted", "target_count": 3}},
 			{Type: StepRequirement, TextKey: "quests.irian_training.step4_level_req", Extra: map[string]any{"req_pet_level": 10}},
 			{Type: StepDialogue, TextKey: "quests.irian_training.step5_reward", Rewards: &QuestReward{Money: 500, ItemIDs: []string{"warrior_stew", "stonebread", "zephyr_berries"}}},
+		},
+	},
+	// Lost Warden: a ghostly guardian found inside the Undercroft. The delve
+	// cog auto-starts this quest the first time the player helps the Warden in
+	// a Warden room, and further meetings advance its dialogue steps.
+	"lost_warden": {
+		ID: "lost_warden", Type: "side", NPCID: "the_lost_warden",
+		TitleKey: "quests.lost_warden.title", DescKey: "quests.lost_warden.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.lost_warden.step0_intro", Rewards: &QuestReward{Money: 150}},
+			{Type: StepActivity, TextKey: "quests.lost_warden.step1_floors", Extra: map[string]any{"target_stat": "delve_floors_cleared", "target_count": 5}},
+			{Type: StepDialogue, TextKey: "quests.lost_warden.step2_meeting"},
+			{Type: StepActivity, TextKey: "quests.lost_warden.step3_boss", Extra: map[string]any{"target_stat": "zone_bosses_defeated", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.lost_warden.step4_outro", Rewards: &QuestReward{Money: 500, ItemIDs: []string{"warden_badge"}}},
+		},
+	},
+	// Chronicler "The Last Page": offered by the Chronicler once the player
+	// holds journal rank 2, defeated the tutorial's final boss, and completed
+	// three main questlines. Rewards the chronicler_relic trinket.
+	"chronicler_legend": {
+		ID: "chronicler_legend", Type: "side", NPCID: "the_chronicler",
+		TitleKey: "quests.chronicler_legend.title", DescKey: "quests.chronicler_legend.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.chronicler_legend.step0_intro", Rewards: &QuestReward{Crowns: 5}},
+			{Type: StepActivity, TextKey: "quests.chronicler_legend.step1_delve", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 3}},
+			{Type: StepActivity, TextKey: "quests.chronicler_legend.step2_expedition", Extra: map[string]any{"target_stat": "expedition_completions", "target_count": 2}},
+			{Type: StepBossBattle, TextKey: "quests.chronicler_legend.step3_boss", Extra: map[string]any{"boss_stage": 4}},
+			{Type: StepDialogue, TextKey: "quests.chronicler_legend.step4_outro", Rewards: &QuestReward{Money: 1000, Crowns: 10, ItemIDs: []string{"chronicler_relic"}, AchievementID: "legend_unwritten"}},
 		},
 	},
 }
@@ -303,6 +349,9 @@ func (s *Service) grantRewards(userID int64, r *QuestReward) error {
 		if _, err := s.store.UpdateBalance(userID, r.Money); err != nil {
 			return err
 		}
+	}
+	if r.XP > 0 {
+		charsvc.AddXP(s.store, userID, r.XP)
 	}
 	if r.Crowns > 0 {
 		if err := s.store.DB.Model(&model.User{}).
@@ -796,6 +845,61 @@ func (s *Service) StartQuest(userID int64, questID string) error {
 	return s.store.CreateQuest(userID, questID)
 }
 
+// StartQuestForUser starts a quest from a bare *store.Store. Intended for
+// services that hold a store but no quests.Service instance (e.g. the NPC
+// service), without constructing a second service (which would re-register
+// the store's quest-advance hook). Errors are returned as-is so callers can
+// ignore "already active / completed".
+func StartQuestForUser(st *store.Store, userID int64, questID string) error {
+	return (&Service{store: st}).StartQuest(userID, questID)
+}
+
+// HasActiveQuest reports whether the user currently has the quest active.
+func (s *Service) HasActiveQuest(userID int64, questID string) bool {
+	uq, _, err := s.GetQuestProgress(userID, questID)
+	return err == nil && uq != nil && uq.Status == "ACTIVE"
+}
+
+// AdvanceIfDialogue advances the quest only when its current step is a
+// dialogue or choice step. It reports whether the step was advanced. Used by
+// in-world encounters (e.g. the delve's Warden room) to move a quest forward
+// without skipping activity or requirement steps.
+func (s *Service) AdvanceIfDialogue(userID int64, questID string) (bool, error) {
+	def := QuestRegistry[questID]
+	if def == nil {
+		return false, nil
+	}
+	uq, uqd, err := s.GetQuestProgress(userID, questID)
+	if err != nil || uq == nil || uq.Status != "ACTIVE" || uqd == nil {
+		return false, err
+	}
+	if uqd.StepIndex >= len(def.Steps) {
+		return false, nil
+	}
+	step := def.Steps[uqd.StepIndex]
+	if step.Type != StepDialogue && step.Type != StepChoice {
+		return false, nil
+	}
+	return true, s.AdvanceStep(userID, questID, "")
+}
+
+// CompletedMainQuestlines counts completed main questlines, excluding the
+// tutorial. Used as an unlock gate (e.g. the Chronicler's legend quest).
+func CompletedMainQuestlines(st *store.Store, userID int64) int {
+	var uqs []model.UserQuest
+	if err := st.DB.Where("user_id = ? AND status = ?", userID, "COMPLETED").Find(&uqs).Error; err != nil {
+		return 0
+	}
+	n := 0
+	for _, uq := range uqs {
+		def := QuestRegistry[uq.QuestID]
+		if def != nil && def.Type == "main" && def.ID != "tutorial" {
+			n++
+		}
+	}
+	return n
+}
+
 // QuestCompletedMsg returns a localized string to notify the user that a quest
 // was completed and they can use /quest to check it. Returns empty if questID
 // is empty or the quest definition is not found.
@@ -826,6 +930,9 @@ func RewardSummary(lang string, r *QuestReward) string {
 	var parts []string
 	if r.Money > 0 {
 		parts = append(parts, i18n.T("quests.reward_money", lang, map[string]any{"amount": r.Money}))
+	}
+	if r.XP > 0 {
+		parts = append(parts, i18n.T("quests.reward_xp", lang, map[string]any{"amount": r.XP}))
 	}
 	if r.Crowns > 0 {
 		parts = append(parts, i18n.T("quests.reward_crowns", lang, map[string]any{"amount": r.Crowns}))

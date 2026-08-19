@@ -19,6 +19,7 @@ import (
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	"guacagamblebot/internal/store"
@@ -50,29 +51,76 @@ func TestResolveTargetRejectsGarbage(t *testing.T) {
 func TestBuildEmbedSellOnlyForOwner(t *testing.T) {
 	c := &Cog{}
 	res := &invsvc.InvResult{
-		Entries: []invsvc.InvEntry{{ItemName: "Coal", Quantity: 3}},
+		Entries: []invsvc.InvEntry{{ItemName: "Coal", Quantity: 3, Item: &items.Item{ID: "coal", Name: "Coal", Category: items.Mining}}},
 		Current: 3,
 		Limit:   100,
 		UserID:  1,
 	}
+	themes := presentThemes(res.Entries)
 
-	_, comps := c.buildEmbed("en", res, "Bob", true)
-	assert.NotEmpty(t, comps, "owner view must include the sell button")
+	c.buildEmbed("en", res, "Bob", themes[0], true)
+	comps := c.buildComponents("en", 1, 1, themes, themes[0], true)
+	assert.Len(t, comps, 2, "owner view must have the theme select row and the nav row")
 
-	_, comps = c.buildEmbed("en", res, "Bob", false)
-	assert.Empty(t, comps, "foreign view must not include the sell button")
+	c.buildEmbed("en", res, "Bob", themes[0], false)
+	comps = c.buildComponents("en", 1, 2, themes, themes[0], false)
+	require.Len(t, comps, 2, "foreign view still paginates")
+	row, ok := comps[1].(discordgo.ActionsRow)
+	require.True(t, ok)
+	assert.Len(t, row.Components, 3, "foreign view nav row must not include the sell button")
+}
+
+func TestBuildComponentsNavRowHasSellButtonForOwner(t *testing.T) {
+	require.NoError(t, i18n.Load("../../../locales"))
+	c := &Cog{}
+	res := &invsvc.InvResult{
+		Entries: []invsvc.InvEntry{{ItemName: "Coal", Quantity: 3}},
+		Current: 3,
+		Limit:   100,
+		UserID:  42,
+	}
+	themes := presentThemes(res.Entries)
+	comps := c.buildComponents("en", 42, 42, themes, themes[0], true)
+	require.Len(t, comps, 2)
+
+	row, ok := comps[1].(discordgo.ActionsRow)
+	require.True(t, ok)
+	require.Len(t, row.Components, 4)
+
+	var sellBtn discordgo.Button
+	found := false
+	for _, comp := range row.Components {
+		if btn, ok := comp.(discordgo.Button); ok && btn.Label == "💰 Sell items" {
+			sellBtn = btn
+			found = true
+		}
+	}
+	require.True(t, found, "nav row must include the sell button")
+	ownerID, ok := components.OwnerID(sellBtn.CustomID)
+	assert.True(t, ok, "sell button must carry an owner id")
+	assert.Equal(t, int64(42), ownerID)
+}
+
+func TestBuildComponentsForeignViewHasNoSellButton(t *testing.T) {
+	c := &Cog{}
+	res := &invsvc.InvResult{
+		Entries: []invsvc.InvEntry{{ItemName: "Coal", Quantity: 3}},
+		Current: 3,
+		Limit:   100,
+		UserID:  42,
+	}
+	themes := presentThemes(res.Entries)
+	comps := c.buildComponents("en", 7, 42, themes, themes[0], false)
+	require.Len(t, comps, 2)
+
+	row, ok := comps[1].(discordgo.ActionsRow)
+	require.True(t, ok)
+	assert.Len(t, row.Components, 3, "foreign view nav row must have prev/page/next only")
 }
 
 func TestSellButtonEncodesOwner(t *testing.T) {
-	comps := sellButton(42, "en")
-	assert.Len(t, comps, 1)
-
-	row, ok := comps[0].(discordgo.ActionsRow)
-	require.True(t, ok)
-	require.Len(t, row.Components, 1)
-	btn, ok := row.Components[0].(discordgo.Button)
-	require.True(t, ok)
-
+	btn := discordgo.Button{Label: "💰 Sell items",
+		CustomID: components.EncodeOwner(42, "inventory", "sell"), Style: discordgo.SecondaryButton}
 	ownerID, ok := components.OwnerID(btn.CustomID)
 	assert.True(t, ok, "sell button must carry an owner id")
 	assert.Equal(t, int64(42), ownerID)
@@ -82,9 +130,63 @@ func TestBuildEmbedCountsFooter(t *testing.T) {
 	c := &Cog{}
 	res := &invsvc.InvResult{Current: 7, Limit: 100, UserID: 1}
 
-	embed, _ := c.buildEmbed("en", res, "Bob", false)
+	embed := c.buildEmbed("en", res, "Bob", "other", false)
 	assert.Contains(t, embed.Footer.Text, "7/100")
 	assert.NotContains(t, embed.Footer.Text, "!use", "foreign view footer must not show the use hint")
+}
+
+func TestPresentThemesKeepsDisplayOrder(t *testing.T) {
+	res := &invsvc.InvResult{
+		Entries: []invsvc.InvEntry{
+			{ItemName: "Wheat", Quantity: 1, Item: &items.Item{ID: "wheat", Name: "Wheat", Category: "farming"}},
+			{ItemName: "Coal", Quantity: 1, Item: &items.Item{ID: "coal", Name: "Coal", Category: "mining"}},
+			{ItemName: "Mystery", Quantity: 1, Item: &items.Item{ID: "mystery", Name: "Mystery", Category: "unknown_cat"}},
+			{ItemName: "Salmon", Quantity: 1, Item: &items.Item{ID: "salmon", Name: "Salmon", Category: "fishing"}},
+			{ItemName: "Delve Blade", Quantity: 1, Item: &items.Item{ID: "blade", Name: "Delve Blade", Category: "delve"}},
+		},
+	}
+	themes := presentThemes(res.Entries)
+	assert.Equal(t, []string{"mining", "fishing", "farming", "equipment", "other"}, themes)
+}
+
+func TestBuildCategoryFieldsOnlyRendersSelectedTheme(t *testing.T) {
+	res := &invsvc.InvResult{
+		Entries: []invsvc.InvEntry{
+			{ItemName: "Wheat", Quantity: 4, Item: &items.Item{ID: "wheat", Name: "Wheat", Category: "farming"}},
+			{ItemName: "Coal", Quantity: 3, Item: &items.Item{ID: "coal", Name: "Coal", Category: "mining"}},
+		},
+	}
+
+	fields := buildCategoryFields(res, "mining", "en")
+	require.Len(t, fields, 1)
+	assert.Equal(t, "⛏️ Mining", fields[0].Name)
+	assert.Contains(t, fields[0].Value, "Coal")
+	assert.NotContains(t, fields[0].Value, "Wheat")
+}
+
+func TestBuildComponentsThemeSelectCarriesTarget(t *testing.T) {
+	res := &invsvc.InvResult{
+		Entries: []invsvc.InvEntry{
+			{ItemName: "Wheat", Quantity: 1, Item: &items.Item{ID: "wheat", Name: "Wheat", Category: "farming"}},
+			{ItemName: "Coal", Quantity: 1, Item: &items.Item{ID: "coal", Name: "Coal", Category: "mining"}},
+		},
+	}
+	themes := presentThemes(res.Entries)
+	comps := (&Cog{}).buildComponents("en", 9, 42, themes, "mining", false)
+
+	row, ok := comps[0].(discordgo.ActionsRow)
+	require.True(t, ok)
+	sel, ok := row.Components[0].(discordgo.SelectMenu)
+	require.True(t, ok)
+
+	ownerID, ok := components.OwnerID(sel.CustomID)
+	assert.True(t, ok)
+	assert.Equal(t, int64(9), ownerID)
+
+	_, _, rest := components.Decode(sel.CustomID)
+	assert.Equal(t, "42", rest[0], "select must carry the target user id")
+	require.Len(t, sel.Options, 2)
+	assert.True(t, sel.Options[0].Default, "current theme must be marked default")
 }
 
 type countRT struct {

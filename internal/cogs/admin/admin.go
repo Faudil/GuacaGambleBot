@@ -144,7 +144,7 @@ func (c *Cog) onAirdropSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		0xf1c40f,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("admin.gifted_by", lang, map[string]any{"author": interaction.Mention(interaction.ToInt64(interaction.UserID(i)))}),
+		Text: i18n.T("admin.gifted_by", lang, map[string]any{"author": interaction.DisplayName(b.Session, i.GuildID, i.Member, interaction.ToInt64(interaction.UserID(i)))}),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))

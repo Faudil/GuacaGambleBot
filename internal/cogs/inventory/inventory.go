@@ -45,7 +45,52 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("sac", c.onPrefix)
 	r.Component("inventory", "sell", c.onSellButton)
 	r.Component("inventory", "pick", c.onPickItem)
+	r.Component("inventory", "theme", c.onThemeSelect)
+	r.Component("inventory", "nav", c.onNav)
 	r.Modal("inventory", "sellqty", c.onSellModal)
+}
+
+// themeOrder lists the inventory categories in display order. Any category not
+// listed here (and not mapped below) is collected under "other".
+var themeOrder = []string{"mining", "fishing", "farming", "archeology", "food", "tools", "materials", "equipment", "special"}
+
+// categoryOf returns the theme a inventory entry belongs to.
+func categoryOf(e invsvc.InvEntry) string {
+	if e.EquipInfo != nil {
+		return "equipment"
+	}
+	cat := "other"
+	if e.Item != nil {
+		cat = string(e.Item.Category)
+		if cat == "delve" {
+			cat = "equipment"
+		}
+	}
+	for _, t := range themeOrder {
+		if cat == t {
+			return cat
+		}
+	}
+	return "other"
+}
+
+// presentThemes returns the non-empty themes of an inventory in display order,
+// with uncategorized entries collected under "other".
+func presentThemes(entries []invsvc.InvEntry) []string {
+	present := make(map[string]bool)
+	for _, e := range entries {
+		present[categoryOf(e)] = true
+	}
+	var themes []string
+	for _, cat := range themeOrder {
+		if present[cat] {
+			themes = append(themes, cat)
+		}
+	}
+	if present["other"] {
+		themes = append(themes, "other")
+	}
+	return themes
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -74,7 +119,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 		}
 		if !resolved {
-			title = interaction.Mention(targetID)
+			title = interaction.DisplayName(b.Session, i.GuildID, i.Member, targetID)
 		}
 	}
 
@@ -91,7 +136,9 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	embed, comps := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), targetID == selfID)
+	themes := presentThemes(result.Entries)
+	embed := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), themes[0], targetID == selfID)
+	comps := c.buildComponents(lang, selfID, targetID, themes, themes[0], targetID == selfID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
@@ -111,7 +158,7 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 		if len(m.Mentions) > 0 {
 			title = m.Mentions[0].Username
 		} else {
-			title = interaction.Mention(targetID)
+			title = interaction.DisplayName(sess, m.GuildID, &discordgo.Member{User: m.Author}, targetID)
 		}
 	}
 
@@ -126,32 +173,175 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 		return
 	}
 
-	embed, comps := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), targetID == selfID)
+	themes := presentThemes(result.Entries)
+	embed := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": title}), themes[0], targetID == selfID)
+	comps := c.buildComponents(lang, selfID, targetID, themes, themes[0], targetID == selfID)
 	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
 
-func (c *Cog) buildEmbed(lang string, result *invsvc.InvResult, title string, showSell bool) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Cog) buildEmbed(lang string, result *invsvc.InvResult, title, cat string, showSell bool) *discordgo.MessageEmbed {
 	embed := components.Embed(title, "", 0x3498db)
-	embed.Fields = buildFields(result, lang)
+	embed.Fields = buildCategoryFields(result, cat, lang)
 	footer := fmt.Sprintf(" — %d/%d", result.Current, result.Limit)
 	if showSell {
 		footer = i18n.T("inventory.footer", lang) + footer
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: footer}
-	var comps []discordgo.MessageComponent
-	if showSell {
-		comps = sellButton(result.UserID, lang)
-	}
-	return embed, comps
+	return embed
 }
 
-func sellButton(ownerID int64, lang string) []discordgo.MessageComponent {
-	btn := components.Button(i18n.T("inventory.sell_button", lang),
-		components.EncodeOwner(ownerID, "inventory", "sell"), discordgo.SecondaryButton)
-	return []discordgo.MessageComponent{components.ActionRow(btn)}
+// buildComponents builds the inventory's interactive rows: a theme select menu
+// plus prev/page/next navigation and, for the owner's own view, the sell button.
+func (c *Cog) buildComponents(lang string, viewerID, targetID int64, themes []string, current string, showSell bool) []discordgo.MessageComponent {
+	catOptions := make([]discordgo.SelectMenuOption, 0, len(themes))
+	for _, cat := range themes {
+		catOptions = append(catOptions, discordgo.SelectMenuOption{
+			Label:   i18n.T("inventory.category_"+cat, lang),
+			Value:   cat,
+			Default: cat == current,
+		})
+	}
+	themeSelect := discordgo.SelectMenu{
+		CustomID:    components.EncodeOwner(viewerID, "inventory", "theme", strconv.FormatInt(targetID, 10)),
+		Placeholder: i18n.T("inventory.nav_theme_placeholder", lang),
+		Options:     catOptions,
+	}
+
+	page := indexOf(themes, current) + 1
+	total := len(themes)
+	targetStr := strconv.FormatInt(targetID, 10)
+
+	prevBtn := discordgo.Button{
+		Label:    i18n.T("inventory.nav_prev", lang),
+		CustomID: components.EncodeOwner(viewerID, "inventory", "nav", targetStr, "prev", fmt.Sprintf("%d", page)),
+		Style:    discordgo.SecondaryButton,
+		Disabled: page <= 1,
+	}
+	pageBtn := discordgo.Button{
+		Label:    i18n.T("inventory.nav_page", lang, map[string]any{"page": page, "total": total}),
+		CustomID: "_disabled",
+		Style:    discordgo.SecondaryButton,
+		Disabled: true,
+	}
+	nextBtn := discordgo.Button{
+		Label:    i18n.T("inventory.nav_next", lang),
+		CustomID: components.EncodeOwner(viewerID, "inventory", "nav", targetStr, "next", fmt.Sprintf("%d", page)),
+		Style:    discordgo.SecondaryButton,
+		Disabled: page >= total,
+	}
+
+	rows := []discordgo.MessageComponent{components.ActionRow(themeSelect)}
+	navRow := []discordgo.MessageComponent{prevBtn, pageBtn, nextBtn}
+	if showSell {
+		navRow = append(navRow, components.Button(i18n.T("inventory.sell_button", lang),
+			components.EncodeOwner(viewerID, "inventory", "sell"), discordgo.SecondaryButton))
+	}
+	return append(rows, components.ActionRow(navRow...))
+}
+
+func indexOf(list []string, s string) int {
+	for i, v := range list {
+		if v == s {
+			return i
+		}
+	}
+	return -1
+}
+
+// updateInventoryMessage edits the inventory message to show the given theme.
+func (c *Cog) updateInventoryMessage(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, viewerID, targetID int64, result *invsvc.InvResult, themes []string, cat string) {
+	if !contains(themes, cat) {
+		cat = themes[0]
+	}
+	userLabel := interaction.DisplayName(b.Session, i.GuildID, i.Member, targetID)
+	embed := c.buildEmbed(lang, result, i18n.T("inventory.title", lang, map[string]any{"user": userLabel}), cat, targetID == viewerID)
+	comps := c.buildComponents(lang, viewerID, targetID, themes, cat, targetID == viewerID)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: comps,
+		},
+	})
+}
+
+// onThemeSelect jumps directly to the theme picked in the select menu.
+func (c *Cog) onThemeSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	viewerID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 1 {
+		return
+	}
+	targetID, err := strconv.ParseInt(rest[0], 10, 64)
+	if err != nil {
+		return
+	}
+	cat := i.MessageComponentData().Values[0]
+
+	result, err := c.svc.GetInventory(targetID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+	themes := presentThemes(result.Entries)
+	if !contains(themes, cat) {
+		return
+	}
+	c.updateInventoryMessage(b, i, lang, viewerID, targetID, result, themes, cat)
+}
+
+// onNav handles prev/next pagination between the inventory themes.
+func (c *Cog) onNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	viewerID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 3 {
+		return
+	}
+	targetID, err := strconv.ParseInt(rest[0], 10, 64)
+	if err != nil {
+		return
+	}
+	action := rest[1]
+	curPage, _ := strconv.Atoi(rest[2])
+
+	result, err := c.svc.GetInventory(targetID)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "inventory.error")
+		return
+	}
+	themes := presentThemes(result.Entries)
+	if len(themes) == 0 {
+		return
+	}
+
+	page := curPage
+	switch action {
+	case "prev":
+		page--
+	case "next":
+		page++
+	}
+	if page < 1 {
+		page = 1
+	}
+	if page > len(themes) {
+		page = len(themes)
+	}
+	c.updateInventoryMessage(b, i, lang, viewerID, targetID, result, themes, themes[page-1])
 }
 
 // resolveTarget returns the requested user id from a command's arguments.
@@ -311,87 +501,64 @@ func (c *Cog) onSellModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 }
 
-func buildFields(res *invsvc.InvResult, lang string) []*discordgo.MessageEmbedField {
-	catOrder := []string{"mining", "fishing", "farming", "archeology", "food", "tools", "materials", "equipment", "special"}
-	grouped := make(map[string][]invsvc.InvEntry)
+// buildCategoryFields renders a single theme (category) of the inventory as one
+// embed field, using the same entry formatting as before.
+func buildCategoryFields(res *invsvc.InvResult, cat, lang string) []*discordgo.MessageEmbedField {
+	val := ""
 	for _, e := range res.Entries {
-		cat := "other"
-		if e.Item != nil {
-			cat = string(e.Item.Category)
-			if cat == "delve" {
-				cat = "equipment"
-			}
-		}
-		if e.EquipInfo != nil {
-			cat = "equipment"
-		}
-		grouped[cat] = append(grouped[cat], e)
-	}
-	var fields []*discordgo.MessageEmbedField
-	for _, cat := range catOrder {
-		entries, ok := grouped[cat]
-		if !ok {
+		if categoryOf(e) != cat {
 			continue
 		}
-		val := ""
-		for _, e := range entries {
-			if e.EquipInfo != nil {
-				info := e.EquipInfo
-				rarEmoji := "⬜"
-				switch info.Rarity {
-				case "uncommon":
-					rarEmoji = "🟩"
-				case "rare":
-					rarEmoji = "🔵"
-				case "epic":
-					rarEmoji = "🟣"
-				case "legendary":
-					rarEmoji = "🟠"
-				}
-				statParts := []string{}
-				if info.StatSTR > 0 {
-					statParts = append(statParts, fmt.Sprintf("STR+%d", info.StatSTR))
-				}
-				if info.StatDEX > 0 {
-					statParts = append(statParts, fmt.Sprintf("DEX+%d", info.StatDEX))
-				}
-				if info.StatINT > 0 {
-					statParts = append(statParts, fmt.Sprintf("INT+%d", info.StatINT))
-				}
-				if info.StatVIT > 0 {
-					statParts = append(statParts, fmt.Sprintf("VIT+%d", info.StatVIT))
-				}
-				if info.StatLUK > 0 {
-					statParts = append(statParts, fmt.Sprintf("LUK+%d", info.StatLUK))
-				}
-				statStr := ""
-				if len(statParts) > 0 {
-					statStr = " (`" + strings.Join(statParts, " ") + "`)"
-				}
-				tag := ""
-				if info.IsEquipped {
-					tag = " ✅"
-				}
-				val += fmt.Sprintf("%s %s **%s**%s%s\n", rarEmoji, info.Emoji, e.ItemName, statStr, tag)
-			} else {
-				emoji := "⚪"
-				if e.Item != nil {
-					emoji = e.Item.Emoji
-				}
-				val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, displayName(e.ItemName, lang), e.Quantity)
+		if e.EquipInfo != nil {
+			info := e.EquipInfo
+			rarEmoji := "⬜"
+			switch info.Rarity {
+			case "uncommon":
+				rarEmoji = "🟩"
+			case "rare":
+				rarEmoji = "🔵"
+			case "epic":
+				rarEmoji = "🟣"
+			case "legendary":
+				rarEmoji = "🟠"
 			}
-		}
-		if val != "" {
-			catName := i18n.T("inventory.category_"+cat, lang)
-			fields = append(fields, components.Field(catName, val, false))
+			statParts := []string{}
+			if info.StatSTR > 0 {
+				statParts = append(statParts, fmt.Sprintf("STR+%d", info.StatSTR))
+			}
+			if info.StatDEX > 0 {
+				statParts = append(statParts, fmt.Sprintf("DEX+%d", info.StatDEX))
+			}
+			if info.StatINT > 0 {
+				statParts = append(statParts, fmt.Sprintf("INT+%d", info.StatINT))
+			}
+			if info.StatVIT > 0 {
+				statParts = append(statParts, fmt.Sprintf("VIT+%d", info.StatVIT))
+			}
+			if info.StatLUK > 0 {
+				statParts = append(statParts, fmt.Sprintf("LUK+%d", info.StatLUK))
+			}
+			statStr := ""
+			if len(statParts) > 0 {
+				statStr = " (`" + strings.Join(statParts, " ") + "`)"
+			}
+			tag := ""
+			if info.IsEquipped {
+				tag = " ✅"
+			}
+			val += fmt.Sprintf("%s %s **%s**%s%s\n", rarEmoji, info.Emoji, e.ItemName, statStr, tag)
+		} else {
+			emoji := "⚪"
+			if e.Item != nil {
+				emoji = e.Item.Emoji
+			}
+			val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, displayName(e.ItemName, lang), e.Quantity)
 		}
 	}
-
-	// Show equipment that didn't fit in the standard categories
-	if eqEntries, ok := grouped["equipment"]; ok {
-		_ = eqEntries // already handled above in the loop
+	if val == "" {
+		return nil
 	}
-	return fields
+	return []*discordgo.MessageEmbedField{components.Field(i18n.T("inventory.category_"+cat, lang), val, false)}
 }
 
 func displayName(name, lang string) string {

@@ -248,6 +248,32 @@ func petsByBiomeAndRarity(biome string, rarity string) []string {
 	return out
 }
 
+// PrehistoricPets are the fossil-themed species reanimated from fossils and
+// hatched from fossilized eggs.
+var PrehistoricPets = struct {
+	Common []string
+	Rare   []string
+	Epic   []string
+}{
+	Common: []string{"Trilobite", "Ammonite", "Anomalocaris", "Orthoceras", "Méganeura"},
+	Rare:   []string{"Archéoptéryx", "Ptéranodon", "Dimétrodon", "Smilodon", "Mégalocéros", "Doedicurus"},
+	Epic:   []string{"Mosasaurus", "Titanoboa", "Phorusrhacos", "Rhinocéros laineux", "Entelodon"},
+}
+
+// RollPrehistoric rolls a prehistoric pet across all rarities: mostly common,
+// with a good chance of rare and a small chance of epic.
+func RollPrehistoric() string {
+	r := rand.Float64()
+	switch {
+	case r < 0.60:
+		return PrehistoricPets.Common[rand.Intn(len(PrehistoricPets.Common))]
+	case r < 0.90:
+		return PrehistoricPets.Rare[rand.Intn(len(PrehistoricPets.Rare))]
+	default:
+		return PrehistoricPets.Epic[rand.Intn(len(PrehistoricPets.Epic))]
+	}
+}
+
 var rarityOrder = map[string]int{RarityCommon: 0, RarityRare: 1, RarityEpic: 2, RarityLegendary: 3}
 
 func TradeUpRarity(rarity string) (int, string) {

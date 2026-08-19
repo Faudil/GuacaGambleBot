@@ -120,3 +120,38 @@ func TestClaim(t *testing.T) {
 	_, err = svc.GetActive(1)
 	assert.Error(t, err)
 }
+
+func TestClaimRecordsExpeditionCompletion(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.User{UserID: 1}).Error)
+	require.NoError(t, st.DB.Create(testPet()).Error)
+
+	// A quest with a matching activity step must see the completion.
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "chronicler_legend", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "chronicler_legend", StepIndex: 2,
+		ProgressValue: 0, CustomData: `{"target_stat":"expedition_completions","target_count":2}`,
+	}).Error)
+
+	claim := func() {
+		t.Helper()
+		// The expedition sim may leave the pet knocked out; heal it so the
+		// second expedition is accepted regardless of the random outcome.
+		require.NoError(t, st.DB.Model(&model.UserPet{}).Where("id = ?", 1).
+			Update("hp", testPet().MaxHP).Error)
+		res := svc.Generate(testPet(), 1)
+		exp, err := svc.Start(1, 1, 1, res)
+		require.NoError(t, err)
+		_, _, err = svc.Claim(exp)
+		require.NoError(t, err)
+	}
+
+	claim()
+	claim()
+
+	var qd model.UserQuestData
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "chronicler_legend").First(&qd).Error)
+	assert.Equal(t, 2, qd.ProgressValue, "two claimed expeditions must satisfy the step")
+}

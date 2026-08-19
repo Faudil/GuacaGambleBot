@@ -17,46 +17,10 @@ type SetDef struct {
 	Name    string
 	Emoji   string
 	Bonuses []SetTier
-}
-
-// SetsByName indexes set definitions by their ID.
-var SetsByName = map[string]SetDef{
-	"dragon_slayer": {
-		ID:    "dragon_slayer",
-		Name:  "Dragon Slayer",
-		Emoji: "🐉",
-		Bonuses: []SetTier{
-			{Pieces: 2, StatSTR: 5, StatVIT: 3, Desc: "2pc: +5 STR, +3 VIT"},
-			{Pieces: 4, StatSTR: 10, StatVIT: 5, StatLUK: 3, Desc: "4pc: +10 STR, +5 VIT, +3 LUK"},
-		},
-	},
-	"shadow_stalker": {
-		ID:    "shadow_stalker",
-		Name:  "Shadow Stalker",
-		Emoji: "🌑",
-		Bonuses: []SetTier{
-			{Pieces: 2, StatDEX: 4, StatLUK: 3, Desc: "2pc: +4 DEX, +3 LUK"},
-			{Pieces: 4, StatDEX: 8, StatLUK: 6, Desc: "4pc: +8 DEX, +6 LUK"},
-		},
-	},
-	"arcane_weaver": {
-		ID:    "arcane_weaver",
-		Name:  "Arcane Weaver",
-		Emoji: "🔮",
-		Bonuses: []SetTier{
-			{Pieces: 2, StatINT: 5, StatDEX: 3, Desc: "2pc: +5 INT, +3 DEX"},
-			{Pieces: 4, StatINT: 10, StatDEX: 5, Desc: "4pc: +10 INT, +5 DEX"},
-		},
-	},
-	"rift_walker": {
-		ID:    "rift_walker",
-		Name:  "Rift Walker",
-		Emoji: "🔮",
-		Bonuses: []SetTier{
-			{Pieces: 2, StatSTR: 8, StatVIT: 8, StatLUK: 5, Desc: "2pc: +8 STR, +8 VIT, +5 LUK"},
-			{Pieces: 4, StatSTR: 15, StatDEX: 15, StatINT: 15, StatVIT: 15, StatLUK: 10, Desc: "4pc: +15 ALL, +10 LUK"},
-		},
-	},
+	// Procedural marks sets whose pieces are generated at runtime (e.g. the
+	// delve zone sets, rolled by AssignSetName) instead of being fixed catalog
+	// items. Procedural sets must not be checked for static catalog pieces.
+	Procedural bool
 }
 
 // PieceCountBySet returns the number of equipped items per set ID.

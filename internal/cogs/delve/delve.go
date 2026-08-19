@@ -100,6 +100,14 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		"npc_intimidate":    c.onNpcIntimidate,
 		"merchant_haggle":   c.onMerchantHaggle,
 		"rest_bandage":      c.onRestBandage,
+		"archive_read":      c.onArchiveRead,
+		"archive_search":    c.onArchiveSearch,
+		"fountain_coin":     c.onFountainCoin,
+		"fountain_drink":    c.onFountainDrink,
+		"ossuary_search":    c.onOssuarySearch,
+		"ossuary_rest":      c.onOssuaryRest,
+		"warden_help":       c.onWardenHelp,
+		"warden_listen":     c.onWardenListen,
 	}
 	for action, h := range handlers {
 		r.Component("delve", action, h)

@@ -62,6 +62,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("crafting", "craft_pick", c.onCraftPick)
 	r.Component("crafting", "craft_filter", c.onCraftFilter)
 	r.Component("crafting", "craft_nav", c.onCraftNav)
+	r.Component("crafting", "craft_back", c.onCraftBack)
 }
 
 func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -207,41 +208,95 @@ func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *di
 	})
 }
 
-// unlockedRecipeKeys returns the recipe map keys the user can currently craft:
+// unlocked reports whether the user can craft the recipe right now: crafter
 // level and both research gates satisfied.
+func (c *Cog) unlocked(userID int64, level int, recipe crtsvc.Recipe) bool {
+	return recipe.LevelRequired <= level &&
+		c.isResearchCompleted(userID, recipe.RequiredResearch) &&
+		c.isResearchCompleted(userID, recipe.RequiredResearch2)
+}
+
+// unlockedRecipeKeys returns the recipe map keys the user can currently craft.
 func (c *Cog) unlockedRecipeKeys(userID int64, level int) []string {
 	var out []string
 	for key, recipe := range crtsvc.Recipes {
-		if recipe.LevelRequired <= level &&
-			c.isResearchCompleted(userID, recipe.RequiredResearch) &&
-			c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+		if c.unlocked(userID, level, recipe) {
 			out = append(out, key)
 		}
 	}
 	return out
 }
 
-// buildRecipesView renders one page of the user's unlocked recipes with
+// recipeLock returns what is blocking a locked recipe: the research id that
+// still needs to be completed, or the crafter level required (both empty only
+// when the recipe is actually unlocked).
+func (c *Cog) recipeLock(userID int64, recipe crtsvc.Recipe) (researchID string, level int) {
+	if !c.isResearchCompleted(userID, recipe.RequiredResearch) {
+		return recipe.RequiredResearch, 0
+	}
+	if !c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+		return recipe.RequiredResearch2, 0
+	}
+	return "", recipe.LevelRequired
+}
+
+// buildRecipesView renders one page of all recipes — unlocked ones under the
+// 🔓 section, locked ones under 🔒 with their missing requirement — with
 // prev/page/next navigation. The page is clamped, so a stale button press
 // still lands on a valid page.
 func (c *Cog) buildRecipesView(userID int64, level int, lang string, page int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	keys := c.unlockedRecipeKeys(userID, level)
-	totalPages := max(1, int(math.Ceil(float64(len(keys))/float64(recipesPerPage))))
+	keys := c.craftRecipes(userID, level, lang, "all")
+
+	// Build the full pageable line list: unlocked section first, then locked.
+	lines := []string{i18n.T("crafting.unlocked_title", lang)}
+	unlockedCount := 0
+	for _, key := range keys {
+		recipe := crtsvc.Recipes[key]
+		if !c.unlocked(userID, level, recipe) {
+			continue
+		}
+		unlockedCount++
+		lines = append(lines, "✅ "+recipeDisplayInfo(recipe, lang))
+	}
+	if unlockedCount == 0 {
+		lines = append(lines, i18n.T("crafting.no_unlocked", lang))
+	}
+	lines = append(lines, i18n.T("crafting.locked_title", lang))
+	lockedCount := 0
+	for _, key := range keys {
+		recipe := crtsvc.Recipes[key]
+		if c.unlocked(userID, level, recipe) {
+			continue
+		}
+		lockedCount++
+		researchID, needLevel := c.recipeLock(userID, recipe)
+		line := ""
+		if researchID != "" {
+			line = i18n.T("crafting.lock_research_line", lang, map[string]any{
+				"item":        c.displayName(recipe.Result, lang),
+				"research":    c.researchName(researchID),
+				"ingredients": recipeIngredients(recipe, lang),
+			})
+		} else {
+			line = i18n.T("crafting.lock_line", lang, map[string]any{
+				"item":        c.displayName(recipe.Result, lang),
+				"level":       needLevel,
+				"ingredients": recipeIngredients(recipe, lang),
+			})
+		}
+		lines = append(lines, "🔒 "+line)
+	}
+	if lockedCount == 0 {
+		lines = append(lines, i18n.T("crafting.no_locked", lang))
+	}
+
+	totalPages := max(1, int(math.Ceil(float64(len(lines))/float64(recipesPerPage))))
 	page = max(1, min(page, totalPages))
 
 	desc := i18n.T("crafting.desc_intro", lang)
-	desc += i18n.T("crafting.unlocked_title", lang)
-	if len(keys) == 0 {
-		desc += i18n.T("crafting.no_unlocked", lang)
-	} else {
-		start := (page - 1) * recipesPerPage
-		end := min(start+recipesPerPage, len(keys))
-		lines := make([]string, 0, end-start)
-		for _, key := range keys[start:end] {
-			lines = append(lines, "✅ "+recipeDisplayInfo(crtsvc.Recipes[key], lang))
-		}
-		desc += strings.Join(lines, "\n")
-	}
+	start := (page - 1) * recipesPerPage
+	end := min(start+recipesPerPage, len(lines))
+	desc += strings.Join(lines[start:end], "\n")
 
 	embed := components.Embed(
 		i18n.T("crafting.title", lang, map[string]any{"level": level}),
@@ -288,7 +343,13 @@ func recipeCategory(recipe crtsvc.Recipe) string {
 	}
 	switch recipe.Result {
 	case "warrior_stew", "stonebread", "zephyr_berries", "hunters_soup",
-		"berserker_elixir", "adamant_tonic", "gale_draught", "oracles_insight":
+		"lucky_roast", "thunder_steak", "heart_stew",
+		"dragon_chili", "iron_loaf", "storm_porridge", "falcon_pie",
+		"clover_salad", "volcano_ribs", "giant_noodles",
+		"berserker_elixir", "adamant_tonic", "gale_draught", "oracles_insight",
+		"fatalist_elixir", "ruin_tonic", "vitality_elixir",
+		"skull_elixir", "bastion_tonic", "tempest_draught", "seer_elixir",
+		"gamblers_tonic", "annihilator_elixir", "colossus_draught":
 		return "pets"
 	case "garden_plot", "tropical_greenhouse", "enchanted_orchard":
 		return "structures"
@@ -299,12 +360,15 @@ func recipeCategory(recipe crtsvc.Recipe) string {
 	}
 }
 
-// craftRecipes returns the recipe keys the user can craft, filtered by
-// category and ordered by level then name so the menu stays stable across
-// interactions (map iteration is random).
-func (c *Cog) craftRecipes(userID int64, lang, category string) []string {
-	level := c.svc.GetCrafterLevel(userID)
-	keys := c.unlockedRecipeKeys(userID, level)
+// craftRecipes returns every recipe key — unlocked and locked — filtered by
+// category and ordered so the menu stays stable across interactions (map
+// iteration is random): craftable recipes first, then locked ones, each group
+// by level then name.
+func (c *Cog) craftRecipes(userID int64, level int, lang, category string) []string {
+	keys := make([]string, 0, len(crtsvc.Recipes))
+	for key := range crtsvc.Recipes {
+		keys = append(keys, key)
+	}
 	if category != "" && category != "all" {
 		filtered := make([]string, 0, len(keys))
 		for _, key := range keys {
@@ -316,6 +380,10 @@ func (c *Cog) craftRecipes(userID int64, lang, category string) []string {
 	}
 	sort.Slice(keys, func(i, j int) bool {
 		a, b := crtsvc.Recipes[keys[i]], crtsvc.Recipes[keys[j]]
+		au, bu := c.unlocked(userID, level, a), c.unlocked(userID, level, b)
+		if au != bu {
+			return au
+		}
 		if a.LevelRequired != b.LevelRequired {
 			return a.LevelRequired < b.LevelRequired
 		}
@@ -325,10 +393,12 @@ func (c *Cog) craftRecipes(userID int64, lang, category string) []string {
 }
 
 // buildCraftMenu renders the /craft embed and its components: a category
-// filter, a recipe select menu and prev/page/next navigation.
+// filter, a recipe select menu and prev/page/next navigation. The embed lists
+// every recipe of the active category — locked ones show what they need; the
+// select menu only contains the recipes the user can craft right now.
 func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	level := c.svc.GetCrafterLevel(userID)
-	recipes := c.craftRecipes(userID, lang, category)
+	recipes := c.craftRecipes(userID, level, lang, category)
 	totalPages := max(1, int(math.Ceil(float64(len(recipes))/float64(maxMenuOptions))))
 	page = max(1, min(page, totalPages))
 
@@ -340,14 +410,10 @@ func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*di
 	desc := i18n.T("crafting.menu_desc", lang, map[string]any{"filter": catLabel})
 	embed := components.Embed(i18n.T("crafting.menu_title", lang, map[string]any{"level": level}), desc, 0xe67e22)
 
-	if len(recipes) == 0 {
-		embed.Description += i18n.T("crafting.no_unlocked", lang)
-	} else {
-		start := (page - 1) * maxMenuOptions
-		end := min(start+maxMenuOptions, len(recipes))
-		for _, key := range recipes[start:end] {
-			embed.Fields = append(embed.Fields, recipeField(crtsvc.Recipes[key], lang))
-		}
+	start := (page - 1) * maxMenuOptions
+	end := min(start+maxMenuOptions, len(recipes))
+	for _, key := range recipes[start:end] {
+		embed.Fields = append(embed.Fields, c.recipeMenuField(userID, level, crtsvc.Recipes[key], lang))
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("crafting.nav_page", lang, map[string]any{"page": page, "total": totalPages}),
@@ -355,21 +421,34 @@ func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*di
 
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(c.categoryFilter(category, lang)),
-		components.ActionRow(c.recipeSelect(userID, recipes, page, lang)),
+		components.ActionRow(c.recipeSelect(userID, level, recipes, page, lang)),
 		components.ActionRow(c.craftNavButtons(userID, category, page, totalPages, lang)...),
 	}
 	return embed, comps
 }
 
-func recipeField(recipe crtsvc.Recipe, lang string) *discordgo.MessageEmbedField {
-	return components.Field(
-		fmt.Sprintf("%s %s", recipeEmoji(recipe), items.LocalizedName(recipe.Result, lang)),
-		i18n.T("crafting.menu_recipe_line", lang, map[string]any{
+func (c *Cog) recipeMenuField(userID int64, level int, recipe crtsvc.Recipe, lang string) *discordgo.MessageEmbedField {
+	name := fmt.Sprintf("%s %s", recipeEmoji(recipe), c.displayName(recipe.Result, lang))
+	if c.unlocked(userID, level, recipe) {
+		return components.Field(name,
+			i18n.T("crafting.menu_recipe_line", lang, map[string]any{
+				"ingredients": recipeIngredients(recipe, lang),
+				"xp":          recipe.XP,
+			}), true)
+	}
+	researchID, needLevel := c.recipeLock(userID, recipe)
+	if researchID != "" {
+		return components.Field(name,
+			i18n.T("crafting.menu_locked_research", lang, map[string]any{
+				"ingredients": recipeIngredients(recipe, lang),
+				"research":    c.researchName(researchID),
+			}), true)
+	}
+	return components.Field(name,
+		i18n.T("crafting.menu_locked_level", lang, map[string]any{
 			"ingredients": recipeIngredients(recipe, lang),
-			"xp":          recipe.XP,
-		}),
-		true,
-	)
+			"level":       needLevel,
+		}), true)
 }
 
 func recipeIngredients(recipe crtsvc.Recipe, lang string) string {
@@ -404,12 +483,15 @@ func (c *Cog) categoryFilter(category, lang string) discordgo.SelectMenu {
 	}
 }
 
-func (c *Cog) recipeSelect(userID int64, recipes []string, page int, lang string) discordgo.SelectMenu {
+func (c *Cog) recipeSelect(userID int64, level int, recipes []string, page int, lang string) discordgo.SelectMenu {
 	options := make([]discordgo.SelectMenuOption, 0, maxMenuOptions)
 	start := (page - 1) * maxMenuOptions
 	end := min(start+maxMenuOptions, len(recipes))
 	for _, key := range recipes[start:end] {
 		recipe := crtsvc.Recipes[key]
+		if !c.unlocked(userID, level, recipe) {
+			continue
+		}
 		desc := recipeIngredients(recipe, lang)
 		if len(desc) > 100 {
 			desc = desc[:97] + "..."
@@ -486,7 +568,8 @@ func (c *Cog) onCraftNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	page, _ := strconv.Atoi(rest[1])
 	category := rest[2]
 
-	totalPages := max(1, int(math.Ceil(float64(len(c.craftRecipes(userID, lang, category)))/float64(maxMenuOptions))))
+	level := c.svc.GetCrafterLevel(userID)
+	totalPages := max(1, int(math.Ceil(float64(len(c.craftRecipes(userID, level, lang, category)))/float64(maxMenuOptions))))
 	switch action {
 	case "prev":
 		page--
@@ -552,9 +635,24 @@ func (c *Cog) onCraftPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		msg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charNewLevel})
 	}
 
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("crafting.craft_again_btn", lang),
+				components.EncodeOwner(userID, "crafting", "craft_back"), discordgo.PrimaryButton),
+		),
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("✅", msg, 0x2ecc71), nil))
+			components.Embed("✅", msg, 0x2ecc71), comps))
+}
+
+// onCraftBack reopens the craft menu so the user can craft another item.
+func (c *Cog) onCraftBack(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.buildCraftMenu(userID, lang, "all", 1)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) resolveRecipeKey(query, lang string) string {

@@ -242,6 +242,9 @@
       "name": "The Big Winner"
     },
     "menu_desc": "View the trophies you have earned.",
+    "nav_next": "Next ▶",
+    "nav_page": "📄 {page}/{total}",
+    "nav_prev": "◀ Prev",
     "pet_collector_all": {
       "desc": "Own absolutely all pet species (19).",
       "name": "Master of the Animal World"

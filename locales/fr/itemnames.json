@@ -20,6 +20,10 @@
       "name": "Éclat de Cœur Ancien",
       "description": "Un éclat cristallin du Cœur de la Montagne. Il pulse d'une faible lumière."
     },
+    "annihilator_elixir": {
+      "name": "Élixir d'Annihilation",
+      "description": "Chaque coup se termine en catastrophe. +0.2 Dégâts Crit."
+    },
     "arcane_weaver_crown": {
       "name": "Couronne Tisseuse Arcanique",
       "description": "Un diadème de pensée cristallisée. Fait partie de l'ensemble Tisseur Arcanique."
@@ -47,6 +51,10 @@
     "berserker_elixir": {
       "name": "Élixir du Berserker",
       "description": "Un breuvage volatil qui éveille la fureur brute. +2 ATK."
+    },
+    "bastion_tonic": {
+      "name": "Tonic du Bastion",
+      "description": "Transforme la chair en rempart. +2 DÉF."
     },
     "blood_tomato": {
       "name": "Tomate de Sang",
@@ -91,6 +99,14 @@
     "cave_egg": {
       "name": "Œuf des Cavernes",
       "description": "Un œuf obscur des cavernes. Tape !hatch pour l'ouvrir !"
+    },
+    "clover_salad": {
+      "name": "Salade de Trèfle",
+      "description": "Des feuilles plus chanceuses qu'un trèfle à quatre feuilles. +1 Chance Crit."
+    },
+    "colossus_draught": {
+      "name": "Élixir du Colosse",
+      "description": "Confère l'endurance d'une montagne. +4 PV Max."
     },
     "coal": {
       "name": "Charbon",
@@ -176,6 +192,10 @@
       "name": "Éclat Dimensionnel",
       "description": "Des fragments de réalité brisée. Utilisés comme monnaie de raid pour des objets exclusifs."
     },
+    "dragon_chili": {
+      "name": "Chili du Dragon",
+      "description": "Un chili brûlant qui éveille la puissance brute. +1 ATK."
+    },
     "dragon_slayer_armor": {
       "name": "Armure Tueuse de Dragon",
       "description": "Cotte de mailles d'un ancien wyrm. Fait partie de l'ensemble Tueur de Dragon."
@@ -216,6 +236,14 @@
       "name": "Chapeau d'Excavateur",
       "description": "Un chapeau d'expédition usé. Il porte des siècles d'histoires."
     },
+    "falcon_pie": {
+      "name": "Tourte au Faucon",
+      "description": "Une tourte savoureuse qui aiguise l'œil. +1 PRÉC."
+    },
+    "fatalist_elixir": {
+      "name": "Élixir Fataliste",
+      "description": "Une potion qui plie le destin vers la perte. +2 Chance Crit."
+    },
     "fertilizer": {
       "name": "Engrais",
       "description": "Accélère la croissance des cultures ! Réduit le temps de croissance restant de 30 %."
@@ -244,6 +272,10 @@
       "name": "Coup de Bourrasque",
       "description": "A le goût d'une tempête sur la langue. +2 VIT."
     },
+    "gamblers_tonic": {
+      "name": "Tonic du Parieur",
+      "description": "Le destin lui-même commence à hésiter. +2 Chance Crit."
+    },
     "garden_plot": {
       "name": "Parcelle de Jardin",
       "description": "Un carré de terre fertile pour cultiver des légumes."
@@ -251,6 +283,10 @@
     "ghost_wheat": {
       "name": "Blé Fantôme",
       "description": "Un blé translucide qui scintille au clair de lune."
+    },
+    "giant_noodles": {
+      "name": "Nouilles Géantes",
+      "description": "Un bol interminable de nouilles copieuses. +2 PV Max."
     },
     "gold_nugget": {
       "name": "Pépite d'Or",
@@ -284,6 +320,10 @@
       "name": "Élixir de Croissance",
       "description": "Fait mûrir instantanément une culture en croissance."
     },
+    "heart_stew": {
+      "name": "Ragoût Cœur",
+      "description": "Un ragoût généreux qui renforce la constitution. +2 PV Max."
+    },
     "hook": {
       "name": "Hameçon",
       "description": "Attre les poissons ! Réinitialise le cooldown de !fish."
@@ -311,6 +351,10 @@
     "iron_ore": {
       "name": "Minerai de Fer",
       "description": "Utile pour forger des trucs solides."
+    },
+    "iron_loaf": {
+      "name": "Pain de Fer",
+      "description": "Un pain croustillant aussi dense que du métal forgé. +1 DÉF."
     },
     "iron_mace": {
       "name": "Masse de Fer",
@@ -383,6 +427,10 @@
     "lucky_charm": {
       "name": "Porte-Bonheur",
       "description": "Un trèfle à quatre feuilles. (+3 CHA)"
+    },
+    "lucky_roast": {
+      "name": "Rôti Chanceux",
+      "description": "Un rôti flamboyant qui aiguise la chance. +1 Chance Crit."
     },
     "magma_carp": {
       "name": "Carpe de Magma",
@@ -544,6 +592,10 @@
       "name": "Diamant Brut",
       "description": "INCROYABLE ! Ça vaut une fortune !"
     },
+    "ruin_tonic": {
+      "name": "Tonic de Ruine",
+      "description": "Transforme chaque coup en cataclysme. +0.2 Dégâts Crit."
+    },
     "rusty_magnet": {
       "name": "Aimant Rouillé",
       "description": "Tire du minerai de ferraille du sol. Dans la mine, la ferme ou les Profondeurs, il peut déterrer des trésors enfouis."
@@ -563,6 +615,10 @@
     "scratch_ticket": {
       "name": "Ticket à Gratter",
       "description": "Gratte pour gagner jusqu'à 1 000 $ instantanément !"
+    },
+    "seer_elixir": {
+      "name": "Élixir du Voyant",
+      "description": "La prescience en une gorgée. +2 PRÉC."
     },
     "shadow_cloak": {
       "name": "Cape d'Ombre",
@@ -608,6 +664,10 @@
       "name": "Parchemin de Compétences",
       "description": "Réinitialise toutes les compétences apprises par ton familier actif."
     },
+    "skull_elixir": {
+      "name": "Élixir du Crâne",
+      "description": "Une potion de férocité prédatrice. +2 ATK."
+    },
     "smoke_pellet": {
       "name": "Boule de Fumée",
       "description": "Une évasion rapide dans une petite boule. (+4 DEX)"
@@ -644,6 +704,10 @@
       "name": "Noyau de Tempête",
       "description": "La fureur de Kael, capturée dans du cristal. (+5 DEX, +3 CHA)"
     },
+    "storm_porridge": {
+      "name": "Porridge Tempête",
+      "description": "Une bouillie fumante qui picote de hâte. +1 VIT."
+    },
     "strawberry": {
       "name": "Fraise",
       "description": "Rouge, sucrée et juteuse."
@@ -656,9 +720,17 @@
       "name": "Espadon",
       "description": "Un poisson combattant majestueux."
     },
+    "tempest_draught": {
+      "name": "Coup de Tempête",
+      "description": "Une tempête en bouteille, avalée d'un trait. +2 VIT."
+    },
     "thieves_glove": {
       "name": "Gant de Voleur",
       "description": "Utilise !rob @cible avec ces gants."
+    },
+    "thunder_steak": {
+      "name": "Steak Tonnerre",
+      "description": "Une pièce crépitante qui amplifie les frappes. +0.1 Dégâts Crit."
     },
     "tomato": {
       "name": "Tomate",
@@ -688,17 +760,29 @@
       "name": "Ticket VIP",
       "description": "Réinitialise tes limites de casino et de pile ou face."
     },
+    "vitality_elixir": {
+      "name": "Élixir de Vitalité",
+      "description": "Un élixir vivant qui gonfle le cœur. +4 PV Max."
+    },
     "volcano_egg": {
       "name": "Œuf du Volcan",
       "description": "Un œuf imprégné de magma. Tape !hatch pour l'ouvrir !"
+    },
+    "volcano_ribs": {
+      "name": "Côtes du Volcan",
+      "description": "Des côtes saisies à la chaleur souterraine. +0.1 Dégâts Crit."
     },
     "wanted_poster": {
       "name": "Avis de Recherche",
       "description": "Le visage de chaque hors-la-loi finit par s'y retrouver. (+4 CHA)"
     },
+    "warden_badge": {
+      "name": "Insigne du Gardien",
+      "description": "Le sigil d'un gardien qui a tout perdu. Il veille encore. (+4 FOR, +3 VIT)"
+    },
     "warrior_stew": {
-      "name": "Ragoût de Guerrier",
-      "description": "Un ragoût de viande copieux qui fortifie ton familier. +1 ATK."
+      "name": "Ragoût du Guerrier",
+      "description": "Un ragoût copieux qui fortifie votre animal. +1 ATQ."
     },
     "whale": {
       "name": "Baleine",
@@ -719,6 +803,10 @@
     "zephyr_berries": {
       "name": "Baies de Zéphyr",
       "description": "Des baies sauvages crépitant d'énergie du vent. +1 VIT."
+    },
+    "chronicler_relic": {
+      "name": "Relique du Chroniqueur",
+      "description": "Le livre que le Chroniqueur a fermé et laissé derrière lui. Ses pages se remplissent de votre nom. (+8 INT, +5 VIT, +4 LUK)"
     }
   }
 }

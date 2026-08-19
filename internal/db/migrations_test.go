@@ -171,3 +171,58 @@ func TestMigrateInventoryCleanupZeroQuantity(t *testing.T) {
 	require.NoError(t, d.Where("user_id = ? AND item_id = ?", 1, "wheat").First(&wheat).Error)
 	assert.Equal(t, 3, wheat.Quantity)
 }
+
+func TestMigrateEquipSlotJewelry(t *testing.T) {
+	d := migrationTestDB(t)
+	require.NoError(t, d.AutoMigrate(&model.UserEquipment{}))
+
+	mk := func(uid int64, baseID, slot string, equipped bool) {
+		t.Helper()
+		require.NoError(t, d.Create(&model.UserEquipment{
+			UserID: uid, BaseID: baseID, EquipSlot: slot, IsEquipped: equipped,
+		}).Error)
+	}
+
+	// Dragon Slayer scenario: ring + talisman both equipped (both become jewelry).
+	mk(1, "golden_ring", "accessory", true)
+	mk(1, "dragon_slayer_talisman", "trinket", true)
+	// Collision: lucky_charm (accessory) + orb (trinket) both become trinket.
+	mk(2, "lucky_charm", "accessory", true)
+	mk(2, "arcane_weaver_orb", "trinket", true)
+	// Delve drops store the generated base id, e.g. delve_<full generated name>.
+	mk(3, "delve_flaming_arcane_orb_of_the_dying_star", "accessory", true)
+	// Unequipped rows are reclassified too.
+	mk(4, "ancient_amulet", "accessory", false)
+	// Trinket rows are untouched.
+	mk(5, "spark_shard", "trinket", false)
+
+	require.NoError(t, migrateEquipSlotJewelry(d))
+
+	slotOf := func(uid int64, baseID string) string {
+		t.Helper()
+		var eq model.UserEquipment
+		require.NoError(t, d.Where("user_id = ? AND base_id = ?", uid, baseID).First(&eq).Error)
+		return eq.EquipSlot
+	}
+	assert.Equal(t, "jewelry", slotOf(1, "golden_ring"))
+	assert.Equal(t, "jewelry", slotOf(1, "dragon_slayer_talisman"))
+
+	// Same-slot collisions keep the oldest equipped piece.
+	var ring, talisman model.UserEquipment
+	require.NoError(t, d.Where("user_id = 1 AND base_id = 'golden_ring'").First(&ring).Error)
+	require.NoError(t, d.Where("user_id = 1 AND base_id = 'dragon_slayer_talisman'").First(&talisman).Error)
+	assert.True(t, ring.IsEquipped, "oldest equipped piece must stay equipped")
+	assert.False(t, talisman.IsEquipped, "second piece in the same slot must be unequipped")
+
+	assert.Equal(t, "trinket", slotOf(2, "lucky_charm"))
+	assert.Equal(t, "trinket", slotOf(2, "arcane_weaver_orb"))
+	var charm, orb model.UserEquipment
+	require.NoError(t, d.Where("user_id = 2 AND base_id = 'lucky_charm'").First(&charm).Error)
+	require.NoError(t, d.Where("user_id = 2 AND base_id = 'arcane_weaver_orb'").First(&orb).Error)
+	assert.True(t, charm.IsEquipped, "oldest equipped piece must stay equipped")
+	assert.False(t, orb.IsEquipped, "second piece in the same slot must be unequipped")
+
+	assert.Equal(t, "trinket", slotOf(3, "delve_flaming_arcane_orb_of_the_dying_star"))
+	assert.Equal(t, "jewelry", slotOf(4, "ancient_amulet"))
+	assert.Equal(t, "trinket", slotOf(5, "spark_shard"))
+}

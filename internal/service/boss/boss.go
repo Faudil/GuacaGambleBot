@@ -99,6 +99,15 @@ var BossLeague = []BossStage{
 		RewardMoney: 0, RewardItems: map[string]int{},
 		Achievement: "",
 	},
+	{
+		Stage: 7, NameFR: "Krag, le Champion de l'Arène", NameEN: "Krag, the Arena Champion",
+		Species: "Lion", Level: 20, HP: 200, Atk: 30, Defense: 14, Speed: 22,
+		DGE: 10, ACC: 12, CritC: 10, CritD: 1.5, SpcC: 0,
+		DescFR:      "Le roi de l'arène. Aucun challenger n'a survécu à son rugissement. Son regard perçant jauge chaque adversaire — montre-lui de quoi ton familier est fait.",
+		DescEN:      "The king of the arena. No challenger has survived his roar. His piercing gaze sizes up every opponent — show him what your pet is made of.",
+		RewardMoney: 0, RewardItems: map[string]int{},
+		XP: 0, Achievement: "",
+	},
 }
 
 func (s *Service) GetStage(userID int64) (int, error) {
@@ -140,7 +149,7 @@ func (s *Service) IncrementStat(userID int64, stat string, amount int) error {
 }
 
 var typeEmojis = map[string]string{
-	"Souris": "🐀", "Ours": "🐻", "Aigle": "🦅", "Kraken": "🦑", "Phoenix": "🐦‍🔥", "Robot": "🤖",
+	"Souris": "🐀", "Ours": "🐻", "Aigle": "🦅", "Kraken": "🦑", "Phoenix": "🐦‍🔥", "Robot": "🤖", "Lion": "🦁",
 }
 
 func petEmoji(species string) string {

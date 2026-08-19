@@ -15,19 +15,17 @@ import (
 	"guacagamblebot/internal/store"
 )
 
-type Rarity int
+// Rarity is the delve package's view of the canonical rarity enum, so delve
+// loot tables can live next to the items they generate (items/catalog.go).
+type Rarity = items.Rarity
 
 const (
-	Common Rarity = iota
-	Uncommon
-	Rare
-	Epic
-	Legendary
+	Common    = items.RarityCommon
+	Uncommon  = items.RarityUncommon
+	Rare      = items.RarityRare
+	Epic      = items.RarityEpic
+	Legendary = items.RarityLegendary
 )
-
-func (r Rarity) String() string {
-	return [...]string{"Common", "Uncommon", "Rare", "Epic", "Legendary"}[r]
-}
 
 var RarityEmoji = map[Rarity]string{
 	Common:    "⬜",
@@ -162,6 +160,7 @@ func (svc *Service) EndSession(session *model.DelveSession, outcome string) erro
 	}
 	svc.store.SaveDelveRunHistory(history)
 	_ = svc.store.RecordActivity(session.UserID, "delve_completions", 1)
+	_ = svc.store.RecordActivity(session.UserID, "delve_floors_cleared", session.RoomsCleared)
 
 	for _, fid := range flags {
 		svc.store.AddDelveFlag(session.UserID, fid, fmt.Sprintf(`{"run":%d}`, session.RoomsCleared))
@@ -215,7 +214,7 @@ func (svc *Service) EndSession(session *model.DelveSession, outcome string) erro
 					ID:          di.ID,
 					Name:        di.Name,
 					Emoji:       di.Emoji,
-					Price:       int(di.Rarity) * 50,
+					Price:       di.Rarity.Rank() * 50,
 					Description: di.Description,
 					EffectType:  "equipment",
 					Category:    items.Delve,
@@ -269,6 +268,9 @@ func (svc *Service) AddItem(session *model.DelveSession, item DelveItem) {
 		}
 	}
 	item.Quantity = 1
+	if item.SetName != "" {
+		svc.AddFlag(session, "set_item_collected")
+	}
 	inv = append(inv, item)
 	b, _ = json.Marshal(inv)
 	session.Inventory = string(b)
