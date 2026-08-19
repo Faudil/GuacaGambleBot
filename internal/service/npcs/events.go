@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
+	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/universe"
 )
@@ -259,13 +260,67 @@ func (s *Service) updateLastInteraction(userID int64, npcID string) {
 }
 
 func (s *Service) IsLikedItem(npcData *universe.NPCData, itemID string) bool {
+	if npcData == nil {
+		return false
+	}
+	it := items.Get(itemID)
+	if it == nil {
+		return false
+	}
 	hints := s.parseHints(npcData)
 	for _, h := range hints {
-		if h == itemID {
+		if hintMatchesItem(h, it) {
 			return true
 		}
 	}
 	return false
+}
+
+// hintMatchesItem reports whether an NPC hint token matches an item. Hint
+// tokens may be exact item IDs ("star_fruit"), partial words ("diamond",
+// "berries"), plural categories ("seeds", "ores", "fish") or activity
+// categories ("fish" -> the Fishing category), so a token matches when it is
+// an exact id/name, a substring of the id/name (singularized when plural), or
+// a substring of the item's category.
+func hintMatchesItem(hint string, it *items.Item) bool {
+	hint = strings.ToLower(strings.TrimSpace(hint))
+	if hint == "" {
+		return false
+	}
+	name := strings.ToLower(it.Name)
+	if hint == it.ID || strings.Contains(name, hint) {
+		return true
+	}
+	if strings.HasSuffix(hint, "s") {
+		singular := strings.TrimSuffix(hint, "s")
+		if singular != "" && (strings.Contains(it.ID, singular) || strings.Contains(name, singular)) {
+			return true
+		}
+	}
+	return strings.Contains(strings.ToLower(string(it.Category)), hint)
+}
+
+// LikedItems returns the player's owned items that the NPC is known to like,
+// ready to be offered as a gift. Equipment instances are excluded because
+// they cannot be gifted.
+func (s *Service) LikedItems(userID int64, npcData *universe.NPCData) []invsvc.InvEntry {
+	if npcData == nil {
+		return nil
+	}
+	result, err := s.inv.GetInventory(userID)
+	if err != nil {
+		return nil
+	}
+	var out []invsvc.InvEntry
+	for _, e := range result.Entries {
+		if e.Item == nil || e.EquipInfo != nil {
+			continue
+		}
+		if s.IsLikedItem(npcData, e.Item.ID) {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 func (s *Service) parseHints(npcData *universe.NPCData) []string {

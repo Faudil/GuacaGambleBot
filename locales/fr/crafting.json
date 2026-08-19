@@ -1,10 +1,13 @@
 {
   "crafting": {
-    "desc_intro": "Utilise `!craft \u003cquantité\u003e \u003cobjet\u003e` pour fabriquer un objet.\n\n",
+    "desc_intro": "Utilise `!craft <quantité> <objet>` pour fabriquer un objet.\n\n",
     "invalid_qty": "❌ La quantité doit être supérieure à 0.",
     "level_up": "\n🎉 **Niveau Supérieur !** Tu es maintenant Artisan niveau {level} !",
     "lock_line": "**{item}** (Niv. {level}) - {ingredients}",
     "locked_title": "**🔒 Recettes Verrouillées**\n",
+    "nav_next": "Suiv ▶",
+    "nav_page": "📄 {page}/{total}",
+    "nav_prev": "◀ Préc",
     "no_args": "❌ Tu dois spécifier un objet à fabriquer. Ex: `!craft 2 café`",
     "no_ingredients": "❌ Il te manque des ingrédients : {missing}",
     "no_level": "❌ Tu n'as pas le niveau requis (Niv. {level}) pour crafter cet objet.",

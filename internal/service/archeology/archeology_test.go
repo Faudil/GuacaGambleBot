@@ -245,10 +245,63 @@ func TestSellResult(t *testing.T) {
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 1})
 	bal, err := s.GetBalance(1)
 	require.NoError(t, err)
-	price, newBal, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common"})
+	price, newBal, lucky, _, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common"})
 	require.NoError(t, err)
+	// Base sell price is 1.2x; a lucky roll pays between 1.2x and 2x extra.
+	assert.GreaterOrEqual(t, price, 180)
+	assert.LessOrEqual(t, price, 360)
+	if lucky {
+		assert.Greater(t, price, 180)
+	}
+	assert.Equal(t, bal+price, newBal)
+}
+
+func TestSellResultScalesWithQuantity(t *testing.T) {
+	svc, s := testService(t)
+	bal, err := s.GetBalance(1)
+	require.NoError(t, err)
+	price, newBal, _, _, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common", Quantity: 3})
+	require.NoError(t, err)
+	// 150 * 1.2 * 3 = 540 base, up to 1080 with the lucky multiplier.
+	assert.GreaterOrEqual(t, price, 540)
+	assert.LessOrEqual(t, price, 1080)
+	assert.Equal(t, bal+price, newBal)
+}
+
+func TestSellResultTracksHarvest(t *testing.T) {
+	svc, s := testService(t)
+	_, _, _, _, err := svc.SellResult(1, &DigResult{ItemName: "common_fossil", Value: 150, Quality: "common", Quantity: 3})
+	require.NoError(t, err)
+	var fh model.UserFossilHarvest
+	require.NoError(t, s.DB.Where("user_id = ? AND fossil_id = ?", 1, "common_fossil").First(&fh).Error)
+	assert.Equal(t, 3, fh.Count)
+}
+
+func TestSellPriceDeterministic(t *testing.T) {
+	price, lucky, mult := sellPrice(150, 1, 0.99)
+	assert.False(t, lucky)
+	assert.Equal(t, 1.0, mult)
 	assert.Equal(t, 180, price)
-	assert.Equal(t, bal+180, newBal)
+
+	price, lucky, mult = sellPrice(150, 3, 0.99)
+	assert.False(t, lucky)
+	assert.Equal(t, 1.0, mult)
+	assert.Equal(t, 540, price)
+
+	price, lucky, mult = sellPrice(150, 1, 0.0)
+	assert.True(t, lucky)
+	assert.Equal(t, sellLuckyMin, mult)
+	assert.Equal(t, 216, price)
+
+	price, lucky, mult = sellPrice(150, 1, 0.1)
+	assert.True(t, lucky)
+	assert.InDelta(t, 1.6, mult, 0.001)
+	assert.Equal(t, 288, price)
+
+	price, lucky, mult = sellPrice(150, 3, 0.19)
+	assert.True(t, lucky)
+	assert.InDelta(t, 1.96, mult, 0.001)
+	assert.Equal(t, 1058, price)
 }
 
 func TestReanimate(t *testing.T) {

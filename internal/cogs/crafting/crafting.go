@@ -2,6 +2,7 @@ package crafting
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,10 @@ import (
 	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
 )
+
+// recipesPerPage caps how many recipes are rendered per page so the embed
+// description always stays under Discord's 4096-character limit.
+const recipesPerPage = 12
 
 type Cog struct {
 	store *store.Store
@@ -37,6 +42,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("recettes", c.onRecipesPrefix)
 	r.Prefix("crafting", c.onRecipesPrefix)
 	r.Prefix("rec", c.onRecipesPrefix)
+	r.Component("crafting", "recipes_nav", c.onRecipesNav)
 }
 
 func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -145,104 +151,111 @@ func (c *Cog) onSlashRecipes(b *interaction.Bot, i *discordgo.InteractionCreate)
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	level := c.svc.GetCrafterLevel(userID)
-
-	var unlocked, locked []string
-	for _, recipe := range crtsvc.Recipes {
-		resLine := recipeDisplayInfo(recipe, lang)
-		levelOK := recipe.LevelRequired <= level
-		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
-		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
-		if levelOK && researchOK && research2OK {
-			unlocked = append(unlocked, "✅ "+resLine)
-		} else {
-			reqs := ""
-			if !levelOK {
-				reqs = fmt.Sprintf("Lvl %d", recipe.LevelRequired)
-			}
-			if !researchOK {
-				rName := c.researchName(recipe.RequiredResearch)
-				reqs = addReq(reqs, "🔬"+rName)
-			}
-			if !research2OK {
-				rName := c.researchName(recipe.RequiredResearch2)
-				reqs = addReq(reqs, "🔬"+rName)
-			}
-			locked = append(locked, fmt.Sprintf("🔒 %s | %s", resLine, reqs))
-		}
-	}
-
-	desc := i18n.T("crafting.desc_intro", lang)
-	desc += i18n.T("crafting.unlocked_title", lang)
-	if len(unlocked) > 0 {
-		desc += strings.Join(unlocked, "\n") + "\n\n"
-	} else {
-		desc += i18n.T("crafting.no_unlocked", lang)
-	}
-	if len(locked) > 0 {
-		desc += i18n.T("crafting.locked_title", lang) + strings.Join(locked, "\n")
-	}
-
-	embed := components.Embed(
-		i18n.T("crafting.title", lang, map[string]any{"level": level}),
-		desc, 0xe67e22,
-	)
+	embed, comps := c.buildRecipesView(userID, level, lang, 1)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
-func addReq(reqs, add string) string {
-	if reqs == "" {
-		return add
+func (c *Cog) onRecipesNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
 	}
-	return reqs + " + " + add
+	action := rest[0]
+	page, _ := strconv.Atoi(rest[1])
+	switch action {
+	case "prev":
+		page--
+	case "next":
+		page++
+	}
+	level := c.svc.GetCrafterLevel(userID)
+	embed, comps := c.buildRecipesView(userID, level, lang, page)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) onRecipesPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
 	level := c.svc.GetCrafterLevel(userID)
+	embed, comps := c.buildRecipesView(userID, level, lang, 1)
+	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: comps,
+	})
+}
 
-	var unlocked, locked []string
+// unlockedRecipes returns the recipes the user can currently craft: level and
+// both research gates satisfied.
+func (c *Cog) unlockedRecipes(userID int64, level int) []crtsvc.Recipe {
+	var out []crtsvc.Recipe
 	for _, recipe := range crtsvc.Recipes {
-		resLine := recipeDisplayInfo(recipe, lang)
-		levelOK := recipe.LevelRequired <= level
-		researchOK := c.isResearchCompleted(userID, recipe.RequiredResearch)
-		research2OK := c.isResearchCompleted(userID, recipe.RequiredResearch2)
-		if levelOK && researchOK && research2OK {
-			unlocked = append(unlocked, "✅ "+resLine)
-		} else {
-			reqs := ""
-			if !levelOK {
-				reqs = fmt.Sprintf("Lvl %d", recipe.LevelRequired)
-			}
-			if !researchOK {
-				rName := c.researchName(recipe.RequiredResearch)
-				reqs = addReq(reqs, "🔬"+rName)
-			}
-			if !research2OK {
-				rName := c.researchName(recipe.RequiredResearch2)
-				reqs = addReq(reqs, "🔬"+rName)
-			}
-			locked = append(locked, fmt.Sprintf("🔒 %s | %s", resLine, reqs))
+		if recipe.LevelRequired <= level &&
+			c.isResearchCompleted(userID, recipe.RequiredResearch) &&
+			c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+			out = append(out, recipe)
 		}
 	}
+	return out
+}
+
+// buildRecipesView renders one page of the user's unlocked recipes with
+// prev/page/next navigation. The page is clamped, so a stale button press
+// still lands on a valid page.
+func (c *Cog) buildRecipesView(userID int64, level int, lang string, page int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	unlocked := c.unlockedRecipes(userID, level)
+	totalPages := max(1, int(math.Ceil(float64(len(unlocked))/float64(recipesPerPage))))
+	page = max(1, min(page, totalPages))
 
 	desc := i18n.T("crafting.desc_intro", lang)
 	desc += i18n.T("crafting.unlocked_title", lang)
-	if len(unlocked) > 0 {
-		desc += strings.Join(unlocked, "\n") + "\n\n"
-	} else {
+	if len(unlocked) == 0 {
 		desc += i18n.T("crafting.no_unlocked", lang)
-	}
-	if len(locked) > 0 {
-		desc += i18n.T("crafting.locked_title", lang) + strings.Join(locked, "\n")
+	} else {
+		start := (page - 1) * recipesPerPage
+		end := min(start+recipesPerPage, len(unlocked))
+		lines := make([]string, 0, end-start)
+		for _, recipe := range unlocked[start:end] {
+			lines = append(lines, "✅ "+recipeDisplayInfo(recipe, lang))
+		}
+		desc += strings.Join(lines, "\n")
 	}
 
 	embed := components.Embed(
 		i18n.T("crafting.title", lang, map[string]any{"level": level}),
 		desc, 0xe67e22,
 	)
-	_, _ = sess.ChannelMessageSendEmbed(m.ChannelID, embed)
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: i18n.T("crafting.nav_page", lang, map[string]any{"page": page, "total": totalPages}),
+	}
+
+	navPage := i18n.T("crafting.nav_page", lang, map[string]any{"page": page, "total": totalPages})
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			discordgo.Button{
+				Label:    i18n.T("crafting.nav_prev", lang),
+				CustomID: components.Encode("crafting", "recipes_nav", "prev", strconv.Itoa(page)),
+				Style:    discordgo.SecondaryButton,
+				Disabled: page <= 1,
+			},
+			discordgo.Button{
+				Label:    navPage,
+				CustomID: "_disabled",
+				Style:    discordgo.SecondaryButton,
+				Disabled: true,
+			},
+			discordgo.Button{
+				Label:    i18n.T("crafting.nav_next", lang),
+				CustomID: components.Encode("crafting", "recipes_nav", "next", strconv.Itoa(page)),
+				Style:    discordgo.SecondaryButton,
+				Disabled: page >= totalPages,
+			},
+		),
+	}
+	return embed, comps
 }
 
 func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {

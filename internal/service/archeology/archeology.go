@@ -14,7 +14,14 @@ import (
 	"guacagamblebot/internal/store"
 )
 
-const JournalPageCount = 8
+const (
+	JournalPageCount = 8
+
+	sellBaseMult    = 1.2
+	sellLuckyChance = 0.2
+	sellLuckyMin    = 1.2
+	sellLuckyMax    = 2.0
+)
 
 var (
 	ErrDigLimit  = errors.New("dig daily limit reached")
@@ -633,8 +640,8 @@ func (s *Service) trackFossilHarvest(db *gorm.DB, userID int64, fossilID string,
 	}).Create(&model.UserFossilHarvest{UserID: userID, FossilID: fossilID, Count: quantity}).Error
 }
 
-func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, err error) {
-	price = int(float64(res.Value) * 1.2)
+func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, lucky bool, mult float64, err error) {
+	price, lucky, mult = sellPrice(res.Value, res.Quantity, rand.Float64())
 
 	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
 		if err := s.store.UpdateBalanceTx(tx, userID, price); err != nil {
@@ -643,6 +650,13 @@ func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, e
 		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).Pluck("balance", &newBal).Error; err != nil {
 			return err
 		}
+		if res.ItemName != "" {
+			qty := res.Quantity
+			if qty < 1 {
+				qty = 1
+			}
+			s.trackFossilHarvest(tx, userID, res.ItemName, qty)
+		}
 		semiXP := res.XP / 2
 		if semiXP > 0 {
 			s.addArcheologistXP(tx, userID, semiXP)
@@ -650,9 +664,31 @@ func (s *Service) SellResult(userID int64, res *DigResult) (price, newBal int, e
 		return nil
 	})
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false, 0, err
 	}
-	return price, newBal, nil
+	return price, newBal, lucky, mult, nil
+}
+
+// sellPrice computes the sell price for a dig result: the base value scaled by
+// the number of fossils found and a fixed premium, with a lucky chance of
+// rolling a higher multiplier. The roll is passed in so the logic stays
+// deterministic and testable.
+func sellPrice(value, qty int, roll float64) (price int, lucky bool, mult float64) {
+	if qty < 1 {
+		qty = 1
+	}
+	price = int(float64(value) * sellBaseMult * float64(qty))
+	if roll >= sellLuckyChance {
+		return price, false, 1.0
+	}
+	mult = sellLuckyMin + (roll/sellLuckyChance)*(sellLuckyMax-sellLuckyMin)
+	if mult > sellLuckyMax {
+		mult = sellLuckyMax
+	}
+	if mult < sellLuckyMin {
+		mult = sellLuckyMin
+	}
+	return int(float64(price) * mult), true, mult
 }
 
 func (s *Service) Reanimate(userID int64, rarity string) (petName string, success bool, err error) {

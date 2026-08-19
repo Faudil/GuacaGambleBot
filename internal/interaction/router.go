@@ -201,27 +201,17 @@ var modalOpenerActions = map[string]struct{}{
 	"casino::coinflip_choice": {},
 	"casino::mega_slots":      {},
 	"market::action":          {},
+	"market::sellitem":        {},
 	"economy::give":           {},
 	"lotto::buy":              {},
 	"delve::puzzle_solve":     {},
 }
 
-// modalOpenerPrefixes covers dynamically registered modal openers, e.g. one
-// gift button per NPC ("npc::gift_<id>").
-var modalOpenerPrefixes = []string{
-	"npc::gift_",
-}
-
+// isModalOpener reports whether a component answers with a modal instead of a
+// message update.
 func isModalOpener(domain, action string) bool {
-	if _, ok := modalOpenerActions[domain+"::"+action]; ok {
-		return true
-	}
-	for _, p := range modalOpenerPrefixes {
-		if strings.HasPrefix(domain+"::"+action, p) {
-			return true
-		}
-	}
-	return false
+	_, ok := modalOpenerActions[domain+"::"+action]
+	return ok
 }
 
 // deferInteraction acknowledges the interaction with a deferred response so the

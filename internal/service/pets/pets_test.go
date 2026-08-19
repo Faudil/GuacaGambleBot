@@ -44,6 +44,15 @@ func TestGetPets(t *testing.T) {
 	assert.Len(t, pets, 2)
 }
 
+func TestGetFeedItemDef(t *testing.T) {
+	for _, id := range []string{"oat", "coffee", "coffee_bean", "tomato", "pumpkin", "golden_apple", "nova_fruit"} {
+		assert.NotNil(t, GetFeedItemDef(id), "expected %s to be feedable", id)
+	}
+	for _, id := range []string{"pebble", "coal", "iron_ore", "wheat_seed"} {
+		assert.Nil(t, GetFeedItemDef(id), "expected %s to NOT be feedable", id)
+	}
+}
+
 func TestAddXPLevelUp(t *testing.T) {
 	svc, _ := testService(t)
 	pet, err := svc.CreatePet(1, "Escargot")

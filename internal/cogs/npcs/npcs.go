@@ -12,6 +12,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
@@ -42,6 +43,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		r.Component("npc", id, c.makeNPCSelect(id))
 		r.Component("npc", "chat_"+id, c.onChat(id))
 		r.Component("npc", "gift_"+id, c.onGiftRequest(id))
+		r.Component("npc", "giftpick_"+id, c.onGiftPick(id))
 		r.Component("npc", "bio_"+id, c.onBio(id))
 		r.Component("npc", "advice_"+id, c.onAdvice(id))
 		r.Component("npc", "rankup_"+id, c.onRankUp(id))
@@ -50,7 +52,6 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 			r.Component("npc", "buy_"+id+"_"+item.ItemID, c.onShopBuy(id, item.ItemID))
 		}
 	}
-	r.Modal("npc", "gift_submit", c.onGiftSubmit)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -275,87 +276,98 @@ func (c *Cog) onGiftRequest(npcID string) func(b *interaction.Bot, i *discordgo.
 		if npcData == nil {
 			return
 		}
-		placeholder := i18n.T("npcs.gift_placeholder", lang)
-		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionResponseModal,
-			Data: &discordgo.InteractionResponseData{
-				CustomID: components.EncodeOwner(userID, "npc", "gift_submit", npcID),
-				Title:    i18n.T("npcs.gift_title", lang, map[string]any{"name": npcData.Name}),
-				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:    "gift_item",
-							Label:       i18n.T("npcs.gift_item_label", lang),
-							Style:       discordgo.TextInputShort,
-							Required:    true,
-							Placeholder: placeholder,
-							MaxLength:   100,
-						},
-					}},
-					discordgo.ActionsRow{Components: []discordgo.MessageComponent{
-						discordgo.TextInput{
-							CustomID:  "gift_qty",
-							Label:     i18n.T("npcs.gift_qty_label", lang),
-							Style:     discordgo.TextInputShort,
-							Required:  false,
-							MaxLength: 3,
-						},
-					}},
-				},
-			},
-		})
+
+		desc := i18n.T("npcs.gift_prompt", lang, map[string]any{"hint": npcData.Hint(lang)})
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
+			),
+		}
+
+		liked := c.svc.LikedItems(userID, npcData)
+		if len(liked) > 0 {
+			options := make([]discordgo.SelectMenuOption, 0, 25)
+			for _, e := range liked {
+				if len(options) >= 25 {
+					break
+				}
+				label := fmt.Sprintf("%s x%d", items.LocalizedName(e.Item.ID, lang), e.Quantity)
+				if len(label) > 100 {
+					label = label[:97] + "..."
+				}
+				options = append(options, discordgo.SelectMenuOption{
+					Label: label,
+					Value: e.Item.ID,
+					Emoji: &discordgo.ComponentEmoji{Name: e.Item.Emoji},
+				})
+			}
+			comps = []discordgo.MessageComponent{
+				components.ActionRow(discordgo.SelectMenu{
+					CustomID:    components.EncodeOwner(userID, "npc", "giftpick_"+npcID),
+					Placeholder: i18n.T("npcs.gift_select_placeholder", lang),
+					Options:     options,
+				}),
+				components.ActionRow(
+					components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
+				),
+			}
+		} else {
+			desc = i18n.T("npcs.gift_none", lang, map[string]any{
+				"name": npcData.Name,
+				"hint": npcData.Hint(lang),
+			})
+		}
+
+		embed := components.Embed(
+			fmt.Sprintf("🎁 %s — %s", npcData.Name, i18n.T("npcs.gift_button", lang)),
+			desc,
+			npcData.Color,
+		)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 	}
 }
 
-func (c *Cog) onGiftSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
-	if len(rest) < 1 {
-		return
-	}
-	npcID := rest[0]
+func (c *Cog) onGiftPick(npcID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
+		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		userID := interaction.ToInt64(interaction.UserID(i))
+		npcData := c.svc.GetNPCData(npcID)
+		if npcData == nil {
+			return
+		}
+		values := i.MessageComponentData().Values
+		if len(values) < 1 {
+			return
+		}
+		itemID := values[0]
 
-	npcData := c.svc.GetNPCData(npcID)
-	if npcData == nil {
-		return
-	}
+		repGained, err := c.svc.GiftItem(userID, npcID, itemID, 1)
+		desc := ""
+		if err != nil {
+			desc = i18n.T("npcs.gift_fail", lang, map[string]any{"error": err.Error()})
+		} else {
+			desc = i18n.T("npcs.gift_success", lang, map[string]any{
+				"name":   npcData.Name,
+				"qty":    1,
+				"item":   items.DisplayName(itemID),
+				"points": repGained,
+			})
+		}
 
-	itemID := i.ModalSubmitData().Components[0].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-	qtyStr := i.ModalSubmitData().Components[1].(*discordgo.ActionsRow).Components[0].(*discordgo.TextInput).Value
-	qty := 1
-	if qtyStr != "" {
-		fmt.Sscanf(qtyStr, "%d", &qty)
+		embed := components.Embed(
+			fmt.Sprintf("🎁 %s — %s", npcData.Name, i18n.T("npcs.gift_button", lang)),
+			desc,
+			npcData.Color,
+		)
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 	}
-	if qty < 1 {
-		qty = 1
-	}
-
-	repGained, err := c.svc.GiftItem(userID, npcID, itemID, qty)
-	desc := ""
-	if err != nil {
-		desc = i18n.T("npcs.gift_fail", lang, map[string]any{"error": err.Error()})
-	} else {
-		desc = i18n.T("npcs.gift_success", lang, map[string]any{
-			"name":   npcData.Name,
-			"qty":    qty,
-			"item":   itemID,
-			"points": repGained,
-		})
-	}
-
-	embed := components.Embed(
-		fmt.Sprintf("🎁 %s — %s", npcData.Name, i18n.T("npcs.gift_button", lang)),
-		desc,
-		npcData.Color,
-	)
-	comps := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
-		),
-	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onBio(npcID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {

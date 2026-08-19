@@ -30,12 +30,8 @@
     "gift_button": "Offrir un cadeau",
     "gift_cap_warning": "\n*(La limite journalière est atteinte, {lost} points perdus)*",
     "gift_fail": "❌ {error}",
-    "gift_item_label": "ID de l'objet",
-    "gift_placeholder": "nom de l'objet (ex. mystery_egg)",
     "gift_prompt": "Que veux-tu offrir ? {hint}",
-    "gift_qty_label": "Quantité (par défaut: 1)",
     "gift_success": "Tu as offert **{qty}x {item}** à {name} !\n📈 Réputation gagnée : **{points}**",
-    "gift_title": "🎁 Offrir un Cadeau à {name}",
     "irian": {
       "advice": "Sois rapide ! La pêche en mer demande d'excellents réflexes, mais c'est là que se cachent les poissons les plus légendaires.",
       "bio": "Je suis Irian, ranger des terres sauvages et gardienne des quais. Je traque les créatures à travers les forêts comme dans les abysses.",
@@ -76,6 +72,8 @@
     "topic_advice": "Des conseils ?",
     "topic_bio": "Qui es-tu ?",
     "topic_chat": "Quoi de neuf ?",
-    "topic_role": "Quel est ton rôle ?"
+    "topic_role": "Quel est ton rôle ?",
+    "gift_select_placeholder": "Choisis un objet à offrir...",
+    "gift_none": "Tu n'as rien que {name} apprécie. {hint}"
   }
 }

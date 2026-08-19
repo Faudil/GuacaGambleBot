@@ -352,3 +352,85 @@ func TestChroniclerLockedUntilTutorialAndRank(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "chronicler_locked", event.ID)
 }
+
+func TestIsLikedItemPartial(t *testing.T) {
+	svc, _ := testService(t)
+
+	elara := svc.GetNPCData("elara")
+	require.NotNil(t, elara)
+	assert.True(t, svc.IsLikedItem(elara, "wheat_seed"), "hint \"seeds\" must match wheat_seed")
+	assert.True(t, svc.IsLikedItem(elara, "zephyr_berries"), "hint \"berries\" must match zephyr_berries")
+	assert.True(t, svc.IsLikedItem(elara, "golden_apple"), "exact id hint must match")
+	assert.False(t, svc.IsLikedItem(elara, "trout"))
+
+	thorek := svc.GetNPCData("thorek")
+	require.NotNil(t, thorek)
+	assert.True(t, svc.IsLikedItem(thorek, "iron_ore"), "hint \"ores\" must match iron_ore")
+	assert.True(t, svc.IsLikedItem(thorek, "rough_diamond"), "hint \"diamond\" must match rough_diamond")
+	assert.True(t, svc.IsLikedItem(thorek, "platinum"), "exact id hint must match")
+	assert.False(t, svc.IsLikedItem(thorek, "coal"))
+
+	irian := svc.GetNPCData("irian")
+	require.NotNil(t, irian)
+	assert.True(t, svc.IsLikedItem(irian, "trout"), "hint \"fish\" must match the Fishing category")
+	assert.True(t, svc.IsLikedItem(irian, "whale"), "exact id hint must match")
+	assert.False(t, svc.IsLikedItem(irian, "wheat_seed"))
+
+	assert.False(t, svc.IsLikedItem(elara, "not_a_real_item"))
+	assert.False(t, svc.IsLikedItem(nil, "wheat_seed"))
+}
+
+func TestLikedItems(t *testing.T) {
+	svc, st := testService(t)
+	elara := svc.GetNPCData("elara")
+	require.NotNil(t, elara)
+
+	assert.Empty(t, svc.LikedItems(1, elara))
+
+	require.NoError(t, svc.inv.AddItem(st.DB, 1, "wheat_seed", 3))
+	require.NoError(t, svc.inv.AddItem(st.DB, 1, "trout", 2))
+	require.NoError(t, svc.inv.AddItem(st.DB, 1, "golden_apple", 1))
+
+	liked := svc.LikedItems(1, elara)
+	require.Len(t, liked, 2) // wheat_seed + golden_apple; trout is not liked by elara
+
+	// Equipment instances are never giftable, even when their base item
+	// matches a hint.
+	sheriff := svc.GetNPCData("sheriff_vance")
+	require.NotNil(t, sheriff)
+	require.NoError(t, st.DB.Create(&model.UserEquipment{
+		UserID: 2, BaseID: "reinforced_badge", Name: "Reinforced Badge", Emoji: "⭐", Rarity: "rare",
+	}).Error)
+	assert.Empty(t, svc.LikedItems(2, sheriff))
+	require.NoError(t, svc.inv.AddItem(st.DB, 2, "wanted_poster", 1))
+	liked = svc.LikedItems(2, sheriff)
+	require.Len(t, liked, 1)
+	assert.Equal(t, "wanted_poster", liked[0].Item.ID)
+
+	assert.Empty(t, svc.LikedItems(1, nil))
+}
+
+func TestGiftItemPartialHint(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, svc.inv.AddItem(st.DB, 1, "iron_ore", 5))
+
+	added, err := svc.GiftItem(1, "thorek", "iron_ore", 1)
+	require.NoError(t, err)
+	assert.Equal(t, 10, added)
+
+	rep, err := svc.GetReputation(1, "thorek")
+	require.NoError(t, err)
+	assert.Equal(t, 10, rep.Reputation)
+
+	assert.False(t, svc.inv.HasItem(1, "iron_ore", 5))
+	assert.True(t, svc.inv.HasItem(1, "iron_ore", 4))
+}
+
+func TestGiftItemRejectsUnliked(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, svc.inv.AddItem(st.DB, 1, "coal", 1))
+
+	_, err := svc.GiftItem(1, "thorek", "coal", 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "item not liked")
+}

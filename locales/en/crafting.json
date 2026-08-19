@@ -1,10 +1,13 @@
 {
   "crafting": {
-    "desc_intro": "Use `!craft \u003cquantity\u003e \u003citem\u003e` to craft an item.\n\n",
+    "desc_intro": "Use `!craft <quantity> <item>` to craft an item.\n\n",
     "invalid_qty": "❌ Quantity must be greater than 0.",
     "level_up": "\n🎉 **Level Up!** You are now a Level {level} Artisan!",
     "lock_line": "**{item}** (Lvl. {level}) - {ingredients}",
     "locked_title": "**🔒 Locked Recipes**\n",
+    "nav_next": "Next ▶",
+    "nav_page": "📄 {page}/{total}",
+    "nav_prev": "◀ Prev",
     "no_args": "❌ You must specify an item to craft. Ex: `!craft 2 coffee`",
     "no_ingredients": "❌ You are missing ingredients: {missing}",
     "no_level": "❌ You do not have the required level (Lvl. {level}) to craft this item.",

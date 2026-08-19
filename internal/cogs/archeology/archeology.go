@@ -516,11 +516,17 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	switch action {
 	case "sell":
 		var price int
-		price, _, serr = c.svc.SellResult(userID, res)
+		var lucky bool
+		var mult float64
+		price, _, lucky, mult, serr = c.svc.SellResult(userID, res)
 		if serr == nil {
+			desc := i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": price})
+			if lucky {
+				desc += "\n\n" + i18n.T("arch.sold_lucky", lang, map[string]any{"mult": fmt.Sprintf("%.2f", mult)})
+			}
 			embed = components.Embed(
 				i18n.T("arch.sold_title", lang),
-				i18n.T("arch.sold_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "coins": price}),
+				desc,
 				0xF1C40F,
 			)
 		}

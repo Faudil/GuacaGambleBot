@@ -149,9 +149,10 @@ func TestDeferringModalOnDeferredIsDropped(t *testing.T) {
 func TestIsModalOpener(t *testing.T) {
 	assert.True(t, isModalOpener("delve", "puzzle_solve"))
 	assert.True(t, isModalOpener("economy", "give"))
-	assert.True(t, isModalOpener("npc", "gift_alchemist"), "dynamic gift openers must match by prefix")
+	assert.True(t, isModalOpener("market", "sellitem"))
 	assert.False(t, isModalOpener("delve", "fight"))
-	assert.False(t, isModalOpener("npc", "chat_alchemist"), "non-gift npc actions must not match the gift prefix")
+	assert.False(t, isModalOpener("npc", "gift_alchemist"), "gift no longer opens a modal")
+	assert.False(t, isModalOpener("npc", "chat_alchemist"))
 }
 
 func TestRouterDefersSlashAndFollowsUp(t *testing.T) {
@@ -244,4 +245,37 @@ func TestRouterDoesNotDeferModalOpener(t *testing.T) {
 	var modal map[string]any
 	require.NoError(t, json.Unmarshal([]byte(bodies[0]), &modal))
 	assert.Equal(t, float64(discordgo.InteractionResponseModal), modal["type"])
+}
+
+func TestRouterMarketSellItemOpensModal(t *testing.T) {
+	rt := &deferRT{}
+	s, err := discordgo.New("test")
+	require.NoError(t, err)
+	s.Client = &http.Client{Transport: rt}
+
+	r := NewRouter(&Bot{Session: s, Prefix: "!"}, nil)
+	r.Component("market", "sellitem", func(b *Bot, i *discordgo.InteractionCreate) {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseModal,
+			Data: &discordgo.InteractionResponseData{CustomID: "market::order::sell::coal", Title: "sell coal"},
+		})
+	})
+
+	r.onInteraction(s, &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+		ID:     "45",
+		Type:   discordgo.InteractionMessageComponent,
+		Token:  "tok",
+		Member: &discordgo.Member{User: &discordgo.User{ID: "200"}},
+		Data:   discordgo.MessageComponentInteractionData{CustomID: "market::sellitem::1", Values: []string{"coal"}},
+	}})
+
+	calls, bodies := rt.snapshot()
+	require.Len(t, calls, 1, "the sell item select must open the amount modal directly, without a deferred ack")
+	assert.Contains(t, calls[0], "/callback")
+	var modal map[string]any
+	require.NoError(t, json.Unmarshal([]byte(bodies[0]), &modal))
+	assert.Equal(t, float64(discordgo.InteractionResponseModal), modal["type"])
+	data, ok := modal["data"].(map[string]any)
+	require.True(t, ok, "modal payload must carry a data object")
+	assert.Equal(t, "market::order::sell::coal", data["custom_id"])
 }

@@ -30,12 +30,8 @@
     "gift_button": "Give a Gift",
     "gift_cap_warning": "\n*(Daily limit reached, {lost} points lost)*",
     "gift_fail": "❌ {error}",
-    "gift_item_label": "Item ID",
-    "gift_placeholder": "item name (e.g. mystery_egg)",
     "gift_prompt": "What would you like to offer? {hint}",
-    "gift_qty_label": "Quantity (default: 1)",
     "gift_success": "You offered **{qty}x {item}** to {name}!\n📈 Reputation gained: **{points}**",
-    "gift_title": "🎁 Give a Gift to {name}",
     "irian": {
       "advice": "Be fast! Ocean fishing has a very narrow bite window, but it's where the most legendary beasts dwell.",
       "bio": "I am Irian, ranger of the wilds and keeper of the docks. I track creatures through the forests and the deep ocean alike.",
@@ -76,6 +72,8 @@
     "topic_advice": "Any advice?",
     "topic_bio": "Who are you?",
     "topic_chat": "What's new?",
-    "topic_role": "What is your role?"
+    "topic_role": "What is your role?",
+    "gift_select_placeholder": "Choose an item to give...",
+    "gift_none": "You have nothing {name} would like. {hint}"
   }
 }
