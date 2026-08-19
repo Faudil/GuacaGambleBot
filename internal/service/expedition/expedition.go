@@ -104,6 +104,12 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			ev.Text = "🐾 **" + pet.Nickname + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
 		case "combat":
 			if petHP <= 0 {
+				// A K.O. pet is defenceless: the encounter still resolves as a
+				// loss with a real opponent so the structured log stays
+				// complete for localized rendering.
+				ev.Enemy = randomPetSpecies()
+				ev.EnemyLevel = max(1, pet.Level-2+rand.Intn(5))
+				ev.CombatResult = "loss"
 				ev.Text = "😵 **" + pet.Nickname + "** is K.O. and cannot fight for now."
 				break
 			}
