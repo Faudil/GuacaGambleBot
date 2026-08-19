@@ -337,3 +337,26 @@ func lastEmbed(t *testing.T, b *interaction.Bot) *discordgo.MessageEmbed {
 	require.Len(t, s.last.Data.Embeds, 1)
 	return s.last.Data.Embeds[0]
 }
+
+func TestCraftFilterSelectIsOwnerEncoded(t *testing.T) {
+	c := testCog(t)
+	_, comps := c.buildCraftMenu(1, "en", "all", 1)
+	var filterID string
+	for _, comp := range comps {
+		row, ok := comp.(discordgo.ActionsRow)
+		if !ok {
+			continue
+		}
+		for _, sub := range row.Components {
+			sel, ok := sub.(discordgo.SelectMenu)
+			if !ok {
+				continue
+			}
+			if strings.HasPrefix(sel.CustomID, "crafting::craft_filter") {
+				filterID = sel.CustomID
+			}
+		}
+	}
+	assert.Equal(t, "crafting::craft_filter::1", filterID,
+		"category select must carry the owner id so the router gates it")
+}

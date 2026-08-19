@@ -420,7 +420,7 @@ func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*di
 	}
 
 	comps := []discordgo.MessageComponent{
-		components.ActionRow(c.categoryFilter(category, lang)),
+		components.ActionRow(c.categoryFilter(userID, category, lang)),
 		components.ActionRow(c.recipeSelect(userID, level, recipes, page, lang)),
 		components.ActionRow(c.craftNavButtons(userID, category, page, totalPages, lang)...),
 	}
@@ -466,7 +466,7 @@ func recipeEmoji(recipe crtsvc.Recipe) string {
 	return "🔨"
 }
 
-func (c *Cog) categoryFilter(category, lang string) discordgo.SelectMenu {
+func (c *Cog) categoryFilter(userID int64, category, lang string) discordgo.SelectMenu {
 	opts := make([]discordgo.SelectMenuOption, 0, len(recipeCategories))
 	for _, cat := range recipeCategories {
 		opts = append(opts, discordgo.SelectMenuOption{
@@ -477,7 +477,7 @@ func (c *Cog) categoryFilter(category, lang string) discordgo.SelectMenu {
 		})
 	}
 	return discordgo.SelectMenu{
-		CustomID:    components.Encode("crafting", "craft_filter"),
+		CustomID:    components.EncodeOwner(userID, "crafting", "craft_filter"),
 		Placeholder: i18n.T("crafting.filter_placeholder", lang),
 		Options:     opts,
 	}
