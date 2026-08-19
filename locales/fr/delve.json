@@ -190,7 +190,9 @@
       "riddle_wrong": "\"Faux,\" gémit la statue. Une fléchette vous frappe depuis l'obscurité. (-10 PV)",
       "artifact_leveled": "💠 **Votre artefact a gagné un niveau !** Utilisez `/artifact` pour attribuer votre nouveau point de statistique.",
       "gravewarden_title": "💀 Boss : Gravewarden Morvain",
-      "gravewarden_desc": "L'air se refroidit. Une figure d'os et d'ombre se dresse devant vous, son armure ancienne grinçant à chaque mouvement. Le Gravewarden attendait."
+      "gravewarden_desc": "L'air se refroidit. Une figure d'os et d'ombre se dresse devant vous, son armure ancienne grinçant à chaque mouvement. Le Gravewarden attendait.",
+      "forge_magnet": "Tu balaies la forge abandonnée avec l'**{item}**. La ferraille s'y accroche : {loot}",
+      "forge_magnet_none": "Tu n'as aucun aimant pour balayer la forge. La ferraille reste à rouiller sur place."
     },
     "ignore_fallen": "Vous ignorez les appels dans l'obscurité et continuez votre chemin.",
     "left_voluntarily": "Vous remontez des profondeurs, votre aventure terminée. Les Tréfonds se souviendront de votre descente.",

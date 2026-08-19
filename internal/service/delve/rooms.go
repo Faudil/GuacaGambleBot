@@ -365,6 +365,7 @@ func roomButtons(rt RoomType, rng *rand.Rand) []RoomButton {
 		return []RoomButton{
 			{Emoji: "⚒️", Label: "Temper Weapon", Action: "forge_temper", Style: discordgo.PrimaryButton, Data: ""},
 			{Emoji: "🔧", Label: "Scavenge Parts", Action: "forge_scavenge", Style: discordgo.SuccessButton, Data: ""},
+			{Emoji: "🧲", Label: "Salvage with Magnet", Action: "forge_magnet", Style: discordgo.SuccessButton, Data: ""},
 			{Emoji: "↩️", Label: "Pass", Action: "leave", Style: discordgo.SecondaryButton, Data: ""},
 		}
 	case RoomRift:

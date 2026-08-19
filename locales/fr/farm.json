@@ -118,7 +118,7 @@
     "seed_option_desc": "{time}min • {price}$",
     "seedmaker_btn": "🌱 Semoir",
     "seedmaker_choose_placeholder": "Choisis un fruit à transformer...",
-    "seedmaker_cmd_usage": "📖 Utilisation : `!seedmaker \u003cculture\u003e [quantité]` — ex : `!seedmaker 3 blé`",
+    "seedmaker_cmd_usage": "📖 Utilisation : `!seedmaker <culture> [quantité]` — ex : `!seedmaker 3 blé`",
     "seedmaker_desc": "Transforme ta récolte en graines !\n**1 fruit → 2-4 graines**",
     "seedmaker_invalid_crop": "❌ **{item}** ne peut pas être transformé en graines.",
     "seedmaker_no_crops": "❌ Tu n'as aucun fruit à transformer !",
@@ -154,6 +154,18 @@
     "zone_greenhouse_desc": "La chaleur t'enveloppe dès l'entrée. La vapeur embue les panneaux de verre. Des plantes étranges et exotiques prospèrent dans l'air tropical.",
     "zone_orchard_desc": "Les îles flottantes du verger dérivent parmi les nuages. Des arbres anciens portent des fruits qui brillent d'une lumière d'un autre monde. L'air vibre de magie.",
     "zone_public_desc": "Les champs communaux s'étendent devant toi, animés par le bavardage des villageois. La terre est bien foulée mais fertile.",
-    "zone_veggie_desc": "Ton potager privé, niché derrière le vieux moulin. Une terre riche et sombre promet des récoltes abondantes. Un épouvantail monte la garde."
+    "zone_veggie_desc": "Ton potager privé, niché derrière le vieux moulin. Une terre riche et sombre promet des récoltes abondantes. Un épouvantail monte la garde.",
+    "event_buried_title": "🧲 Quelque Chose d'Enfoui",
+    "event_buried_desc": "Ta houe gratte quelque chose de dur dans le sol. Un objet en métal — enfoui profondément, mais un aimant pourrait le sortir...",
+    "event_buried_o_rusty": "🧲 Aimant Rouillé",
+    "event_buried_o_magnet": "🧲 Aimant",
+    "event_buried_o_electric": "⚡ Aimant Électrique",
+    "event_buried_o_leave": "↩️ Laisser",
+    "event_buried_win_title": "🧲 Trésor Sorti du Sol !",
+    "event_buried_win_desc": "L'aimant arrache l'objet enfoui de la terre — du minerai s'y accroche en blocs !",
+    "event_buried_no_magnet_title": "🧲 Rien",
+    "event_buried_no_magnet_desc": "Tu fouilles ton sac... tu n'as pas cet aimant sur toi. Le sol garde son secret.",
+    "event_buried_leave_title": "🧲 Laissé Enfoui",
+    "event_buried_leave_desc": "Tu t'éloignes. Certains trésors sont mieux laissés dans la terre."
   }
 }

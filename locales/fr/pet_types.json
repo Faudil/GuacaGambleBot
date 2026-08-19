@@ -6,6 +6,15 @@
     "Aigle": {
       "name": "Aigle"
     },
+    "Ammonite": {
+      "name": "Ammonite"
+    },
+    "Anomalocaris": {
+      "name": "Anomalocaris"
+    },
+    "Archéoptéryx": {
+      "name": "Archéoptéryx"
+    },
     "Bedawang": {
       "name": "Bedawang"
     },
@@ -42,11 +51,20 @@
     "Dauphin": {
       "name": "Dauphin"
     },
+    "Dimétrodon": {
+      "name": "Dimétrodon"
+    },
     "Diplodocus": {
       "name": "Diplodocus"
     },
+    "Doedicurus": {
+      "name": "Doedicurus"
+    },
     "Dragon": {
       "name": "Dragon"
+    },
+    "Entelodon": {
+      "name": "Entelodon"
     },
     "Escargot": {
       "name": "Escargot"
@@ -90,14 +108,26 @@
     "Mamouth": {
       "name": "Mamouth"
     },
+    "Mosasaurus": {
+      "name": "Mosasaurus"
+    },
     "Mouton": {
       "name": "Mouton"
+    },
+    "Mégalocéros": {
+      "name": "Mégalocéros"
     },
     "Mégalodon": {
       "name": "Mégalodon"
     },
+    "Méganeura": {
+      "name": "Méganeura"
+    },
     "Nidhögg": {
       "name": "Nidhögg"
+    },
+    "Orthoceras": {
+      "name": "Orthoceras"
     },
     "Ours": {
       "name": "Ours"
@@ -114,8 +144,14 @@
     "Phoenix": {
       "name": "Phoenix"
     },
+    "Phorusrhacos": {
+      "name": "Phorusrhacos"
+    },
     "Pieuvre": {
       "name": "Pieuvre"
+    },
+    "Ptéranodon": {
+      "name": "Ptéranodon"
     },
     "Putois": {
       "name": "Putois"
@@ -132,11 +168,17 @@
     "Rhino": {
       "name": "Rhino"
     },
+    "Rhinocéros laineux": {
+      "name": "Rhinocéros laineux"
+    },
     "Scorpion": {
       "name": "Scorpion"
     },
     "Singe": {
       "name": "Singe"
+    },
+    "Smilodon": {
+      "name": "Smilodon"
     },
     "Souris": {
       "name": "Souris"
@@ -146,6 +188,12 @@
     },
     "Tigre": {
       "name": "Tigre"
+    },
+    "Titanoboa": {
+      "name": "Titanoboa"
+    },
+    "Trilobite": {
+      "name": "Trilobite"
     },
     "Tyrannosaure": {
       "name": "Tyrannosaure"

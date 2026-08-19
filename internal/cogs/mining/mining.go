@@ -16,6 +16,7 @@ import (
 	"guacagamblebot/internal/items"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
+	"guacagamblebot/internal/service/magnet"
 	miningsvc "guacagamblebot/internal/service/mining"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
@@ -434,6 +435,12 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 	for i, opt := range ev.Options {
+		if opt.Effect != nil && opt.Effect.RequireItem != "" {
+			has, _ := c.store.HasItem(userID, opt.Effect.RequireItem, 1)
+			if !has {
+				continue
+			}
+		}
 		btn := discordgo.Button{
 			Label:    i18n.T(opt.Label, lang),
 			CustomID: components.EncodeOwner(userID, "mine", "event", ev.ID, fmt.Sprint(i)),
@@ -560,6 +567,24 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	eff := c.svc.ApplyEventOption(eventID, optionIdx, sess.depth, sess.bag)
+
+	if eff.ConsumeItem != "" {
+		has, err := c.store.HasItem(userID, eff.ConsumeItem, 1)
+		if err != nil || !has {
+			sessionsMu.Unlock()
+			interaction.RespondError(b, i, lang, "mining.event_no_magnet")
+			return
+		}
+		if err := c.store.RemoveInventoryItem(userID, eff.ConsumeItem, 1); err != nil {
+			slog.Error("mining event consume failed", "user", userID, "item", eff.ConsumeItem, "error", err)
+			sessionsMu.Unlock()
+			interaction.RespondError(b, i, lang, "mining.error")
+			return
+		}
+		for _, id := range magnet.EventPull(eff.ConsumeItem) {
+			eff.Items = append(eff.Items, miningsvc.BagEntry{Name: id, Count: 1})
+		}
+	}
 
 	msg := ""
 	if eff.Message != "" {

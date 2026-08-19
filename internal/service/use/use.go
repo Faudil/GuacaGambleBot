@@ -2,9 +2,13 @@ package use
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
+	"strings"
 
 	"guacagamblebot/internal/config"
+	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/service/magnet"
 	"guacagamblebot/internal/store"
 )
 
@@ -108,27 +112,51 @@ func apply(st *store.Store, userID int64, itemID string) (string, error) {
 		}
 		return "🥠 **Fortune Cookie!** \"" + fortune() + "\" (+$" + itoa(gold) + ")", nil
 
-	case "rusty_magnet":
-		if _, err := st.UpdateBalance(userID, 50); err != nil {
-			return "", err
+	case "rusty_magnet", "magnet", "electric_magnet":
+		picks := magnet.Pull(itemID)
+		if len(picks) == 0 {
+			return "", ErrNotUsable
 		}
-		return "🧲 **Rusty Magnet!** You pull $50 of pocket change from the ground.", nil
-
-	case "magnet":
-		if _, err := st.UpdateBalance(userID, 250); err != nil {
-			return "", err
+		counts := make(map[string]int, len(picks))
+		for _, id := range picks {
+			counts[id]++
 		}
-		return "🧲 **Magnet!** You sweep up $250 in loose coins!", nil
-
-	case "electric_magnet":
-		if _, err := st.UpdateBalance(userID, 1500); err != nil {
-			return "", err
+		for id, qty := range counts {
+			if err := st.AddItemRaw(st.DB, userID, id, qty); err != nil {
+				return "", err
+			}
 		}
-		return "⚡ **Electric Magnet!** A fat wallet of $1,500 clings to it!", nil
+		haul := magnetHaul(counts)
+		switch itemID {
+		case "rusty_magnet":
+			return "🧲 **Rusty Magnet!** You pull some scrap ore from the ground: " + haul + ".", nil
+		case "magnet":
+			return "🧲 **Magnet!** The magnet sweeps up precious ore: " + haul + ".", nil
+		default:
+			return "⚡ **Electric Magnet!** A powerful field drags valuable ore to your pack: " + haul + ".", nil
+		}
 
 	default:
 		return "", ErrNotUsable
 	}
+}
+
+// magnetHaul renders the pulled ore list of a magnet use, e.g.
+// "⛏️ Iron Ore ×2, 🪨 Coal".
+func magnetHaul(counts map[string]int) string {
+	parts := make([]string, 0, len(counts))
+	for id, qty := range counts {
+		it := items.Get(id)
+		if it == nil {
+			continue
+		}
+		if qty > 1 {
+			parts = append(parts, fmt.Sprintf("%s %s ×%d", it.Emoji, it.Name, qty))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s %s", it.Emoji, it.Name))
+		}
+	}
+	return strings.Join(parts, ", ")
 }
 
 var fortunes = []string{

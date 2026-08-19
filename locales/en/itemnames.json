@@ -194,7 +194,7 @@
     },
     "electric_magnet": {
       "name": "Electric Magnet",
-      "description": "Use it to find lots of money!"
+      "description": "Pulls valuable ore from deep underground. In the mine, farm or Undercroft it can unearth rich hoards."
     },
     "emerald": {
       "name": "Emerald",
@@ -390,7 +390,7 @@
     },
     "magnet": {
       "name": "Magnet",
-      "description": "Use it to find money on the ground."
+      "description": "Pulls precious ore from the ground. In the mine, farm or Undercroft it can unearth buried hoards."
     },
     "mask_of_malveillance": {
       "name": "Mask of Malveillance",
@@ -546,7 +546,7 @@
     },
     "rusty_magnet": {
       "name": "Rusty Magnet",
-      "description": "Use it to find some pocket change."
+      "description": "Pulls scrap ore from the ground. In the mine, farm or Undercroft it can unearth buried hoards."
     },
     "salmon": {
       "name": "Salmon",

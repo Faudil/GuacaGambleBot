@@ -24,13 +24,54 @@ const (
 )
 
 var (
-	ErrDigLimit  = errors.New("dig daily limit reached")
-	ErrNoMoney   = errors.New("not enough money")
-	ErrFinished  = errors.New("game already finished")
-	ErrLocked    = errors.New("site locked")
-	ErrNoActions = errors.New("no actions remaining")
-	ErrNoFossils = errors.New("not enough fossils")
+	ErrDigLimit         = errors.New("dig daily limit reached")
+	ErrNoMoney          = errors.New("not enough money")
+	ErrFinished         = errors.New("game already finished")
+	ErrLocked           = errors.New("site locked")
+	ErrNoActions        = errors.New("no actions remaining")
+	ErrNoFossils        = errors.New("not enough fossils")
+	ErrNotGrindable     = errors.New("item cannot be ground into dust")
+	ErrNotEnoughFossils = errors.New("not enough fossils to grind")
+	ErrNoGeneticsLab    = errors.New("genetics lab furniture required")
+	ErrResearchRequired = errors.New("reanimation research required")
 )
+
+// ReanimateResearch maps each reanimation pool tier to the research that must
+// be completed in the genetics lab before it can be used.
+var ReanimateResearch = map[string]string{
+	"common":    "reanimate_common",
+	"rare":      "reanimate_rare",
+	"epic":      "reanimate_epic",
+	"legendary": "reanimate_legendary",
+	"pure_dna":  "reanimate_pure_dna",
+}
+
+// DustRates maps each grindable fossil to the bone dust it yields per unit.
+// The rarer the fossil, the more dust it gives.
+var DustRates = map[string]int{
+	"damaged_fossil":     1,
+	"common_fossil":      2,
+	"rare_fossil":        5,
+	"epic_fossil":        7,
+	"legendary_fragment": 12,
+	"pure_dna":           25,
+	"cursed_artifact":    5,
+	"purified_relic":     15,
+	"shadow_fossil":      30,
+}
+
+// GrindableOrder lists the grindable fossils in display order (ascending rarity).
+var GrindableOrder = []string{
+	"damaged_fossil",
+	"common_fossil",
+	"rare_fossil",
+	"epic_fossil",
+	"legendary_fragment",
+	"pure_dna",
+	"cursed_artifact",
+	"purified_relic",
+	"shadow_fossil",
+}
 
 type LayerType int
 
@@ -691,10 +732,52 @@ func sellPrice(value, qty int, roll float64) (price int, lucky bool, mult float6
 	return int(float64(price) * mult), true, mult
 }
 
+// GrindFossils converts fossils of the given item into bone dust. The dust
+// yield scales with the fossil's rarity (see DustRates).
+func (s *Service) GrindFossils(userID int64, itemID string, quantity int) (int, error) {
+	rate, ok := DustRates[itemID]
+	if !ok {
+		return 0, ErrNotGrindable
+	}
+	if quantity < 1 {
+		return 0, ErrNotEnoughFossils
+	}
+
+	dust := 0
+	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
+		var inv model.Inventory
+		if err := tx.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, itemID, quantity).First(&inv).Error; err != nil {
+			return ErrNotEnoughFossils
+		}
+		if err := tx.Model(&model.Inventory{}).
+			Where("user_id = ? AND item_id = ?", userID, itemID).
+			UpdateColumn("quantity", gorm.Expr("quantity - ?", quantity)).Error; err != nil {
+			return err
+		}
+		dust = rate * quantity
+		return s.store.AddItemRaw(tx, userID, "bone_dust", dust)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return dust, nil
+}
+
 func (s *Service) Reanimate(userID int64, rarity string) (petName string, success bool, err error) {
 	pool, ok := ReanimatePools[rarity]
 	if !ok {
 		return "", false, errors.New("invalid rarity")
+	}
+
+	// Reanimation is gated behind the Genetics Lab furniture and the
+	// one-time research for the fossil tier.
+	if !furnituresvc.HasFurniture(s.store, userID, "genetics_lab") {
+		return "", false, ErrNoGeneticsLab
+	}
+	researchID := ReanimateResearch[rarity]
+	var r model.UserResearch
+	if err := s.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, researchID, true).First(&r).Error; err != nil {
+		return "", false, ErrResearchRequired
 	}
 
 	var inv model.Inventory
@@ -828,9 +911,9 @@ var ReanimatePools = map[string]struct {
 	ItemName string
 	Pets     []string
 }{
-	"common":    {ItemName: "common_fossil", Pets: []string{"Escargot", "Souris", "Cochon", "Grenouille", "Mouton"}},
-	"rare":      {ItemName: "rare_fossil", Pets: []string{"Chien", "Chat", "Cheval", "Renard", "Singe", "Ours"}},
-	"epic":      {ItemName: "epic_fossil", Pets: []string{"Chameau", "Panda", "Tigre", "Pieuvre"}},
+	"common":    {ItemName: "common_fossil", Pets: []string{"Trilobite", "Ammonite", "Anomalocaris", "Orthoceras", "Méganeura"}},
+	"rare":      {ItemName: "rare_fossil", Pets: []string{"Archéoptéryx", "Ptéranodon", "Dimétrodon", "Smilodon", "Mégalocéros", "Doedicurus"}},
+	"epic":      {ItemName: "epic_fossil", Pets: []string{"Mosasaurus", "Titanoboa", "Phorusrhacos", "Rhinocéros laineux", "Entelodon"}},
 	"legendary": {ItemName: "legendary_fragment", Pets: []string{"Dragon", "Tyrannosaure", "Diplodocus", "Mamouth"}},
 	"pure_dna":  {ItemName: "pure_dna", Pets: []string{"Mégalodon", "Kraken", "Licorne", "Phoenix", "Cerbère"}},
 }

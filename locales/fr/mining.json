@@ -118,7 +118,7 @@
     "ev_fungus_r2": "Tu contournes prudemment les champignons. Ils pulsent dans l'obscurité.",
     "ev_fungus_title": "🍄 Caverne Fongique",
     "ev_gem_desc": "Tu défonces un mur et découvres une caverne scintillante de pierres précieuses !",
-    "ev_gem_o1": "🎒 Prends \u0026 Pars",
+    "ev_gem_o1": "🎒 Prends & Pars",
     "ev_gem_o1d": "Prends ce que tu peux et fuis immédiatement.",
     "ev_gem_o2": "⛏️ Reste Encore",
     "ev_gem_o2d": "Creuse plus profond. Plus de gemmes, plus de risque.",
@@ -296,6 +296,21 @@
     "tool_name_steel": "Pioche en Acier",
     "tool_none": "🪨 Pioche en Fer (Gratuite)",
     "tool_owned": "✅ Possédé",
-    "tool_title": "⚒️ Choisis Ton Outil"
+    "tool_title": "⚒️ Choisis Ton Outil",
+    "ev_magnet_hoard_title": "🧲 Trésor Enfoui",
+    "ev_magnet_hoard_desc": "La pioche heurte quelque chose qui n'est pas de la pierre. Un trésor de métal enfoui, pris dans la roche par un vieil effondrement. Tu pourrais le sortir avec un aimant...",
+    "ev_magnet_hoard_o1": "🧲 Aimant Rouillé",
+    "ev_magnet_hoard_o1d": "Consomme un Aimant Rouillé pour arracher de la ferraille du sol.",
+    "ev_magnet_hoard_o2": "🧲 Aimant",
+    "ev_magnet_hoard_o2d": "Consomme un Aimant pour tirer du minerai précieux du trésor.",
+    "ev_magnet_hoard_o3": "⚡ Aimant Électrique",
+    "ev_magnet_hoard_o3d": "Consomme un Aimant Électrique pour arracher le métal le plus riche de la roche.",
+    "ev_magnet_hoard_o4": "↩️ Laisser",
+    "ev_magnet_hoard_o4d": "Certaines choses sont mieux enfouies.",
+    "ev_magnet_hoard_r1": "L'aimant rouillé grince, puis arrache du minerai de ferraille de la roche.",
+    "ev_magnet_hoard_r2": "L'aimant balaie le sol — du minerai précieux s'y accroche en grappes !",
+    "ev_magnet_hoard_r3": "L'aimant électrique hurle de puissance et déchire un riche filon de la pierre !",
+    "ev_magnet_hoard_r4": "Tu continues ta route. Le trésor reste là où il est tombé.",
+    "event_no_magnet": "Il te faut cet aimant dans ton inventaire pour faire ça !"
   }
 }

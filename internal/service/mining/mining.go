@@ -261,8 +261,15 @@ type EventEffect struct {
 	LoreID     string
 	DepthGain  int
 	RemoveItem string
-	Message    string
-	MsgArgs    map[string]any
+	// RequireItem gates the option behind an owned inventory item (e.g. a
+	// magnet). Options whose requirement is not met are hidden from the embed.
+	RequireItem string
+	// ConsumeItem removes one unit of the inventory item when the option is
+	// picked. The player is expected to own it (ownership is checked by the
+	// cog before consuming).
+	ConsumeItem string
+	Message     string
+	MsgArgs     map[string]any
 }
 
 type EventDef struct {
@@ -460,6 +467,16 @@ var eventPool = func() []EventDef {
 			}},
 
 		// ═══ DEEP — RARE ═══
+		{ID: "magnet_hoard", Stage: StageDeep, Rarity: EventRare, MinDepth: 15,
+			Options: []NarrativeOption{
+				o("mining.ev_magnet_hoard_o1", "mining.ev_magnet_hoard_o1d",
+					&EventEffect{RequireItem: "rusty_magnet", ConsumeItem: "rusty_magnet", Message: "mining.ev_magnet_hoard_r1"}),
+				o("mining.ev_magnet_hoard_o2", "mining.ev_magnet_hoard_o2d",
+					&EventEffect{RequireItem: "magnet", ConsumeItem: "magnet", Message: "mining.ev_magnet_hoard_r2"}),
+				o("mining.ev_magnet_hoard_o3", "mining.ev_magnet_hoard_o3d",
+					&EventEffect{RequireItem: "electric_magnet", ConsumeItem: "electric_magnet", Message: "mining.ev_magnet_hoard_r3"}),
+				o("mining.ev_magnet_hoard_o4", "mining.ev_magnet_hoard_o4d", ef("mining.ev_magnet_hoard_r4")),
+			}},
 		{ID: "crystal_rare", Stage: StageDeep, Rarity: EventRare, MinDepth: 15,
 			Options: []NarrativeOption{
 				o("mining.ev_crystal_rare_o1", "mining.ev_crystal_rare_o1d",

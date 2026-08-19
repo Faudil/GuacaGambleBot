@@ -1,6 +1,7 @@
 package archeology
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -16,10 +17,13 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/model"
 	archsvc "guacagamblebot/internal/service/archeology"
+	furnituresvc "guacagamblebot/internal/service/furniture"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -100,6 +104,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("arch", "action", c.onAction)
 	r.Component("arch", "event", c.onEventChoice)
 	r.Component("arch", "post", c.onPostExtract)
+	r.Component("arch", "dust", c.onDustMenu)
+	r.Component("arch", "dustpick", c.onDustPick)
+	r.Modal("arch", "grind", c.onGrindModal)
 	r.Prefix("reanimate", c.onPrefixReanimate)
 	r.Prefix("rl", c.onPrefixReanimateList)
 	r.Prefix("reanimatelist", c.onPrefixReanimateList)
@@ -231,6 +238,9 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 	if len(btns) > 3 {
 		comps = append(comps, components.ActionRow(btns[3:]...))
 	}
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("arch.dust_btn", lang), components.EncodeOwner(userID, "arch", "dust"), discordgo.SecondaryButton),
+	))
 
 	return embed, comps
 }
@@ -575,6 +585,146 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 }
 
+// onDustMenu opens the fossil grinder view: a select menu of the player's
+// grindable fossils with their bone dust rates.
+func (c *Cog) onDustMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.buildGrindView(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) buildGrindView(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	var rateLines []string
+	for _, itemID := range archsvc.GrindableOrder {
+		rateLines = append(rateLines, i18n.T("arch.dust_rate_line", lang, map[string]any{
+			"item": items.LocalizedName(itemID, lang), "rate": archsvc.DustRates[itemID],
+		}))
+	}
+	embed := components.Embed(
+		i18n.T("arch.dust_title", lang),
+		i18n.T("arch.dust_desc", lang, map[string]any{"rates": strings.Join(rateLines, "\n")}),
+		0x8B4513,
+	)
+
+	var inv []model.Inventory
+	c.store.DB.Where("user_id = ? AND quantity > 0", userID).Find(&inv)
+	var opts []discordgo.SelectMenuOption
+	for _, iv := range inv {
+		rate, ok := archsvc.DustRates[iv.ItemID]
+		if !ok {
+			continue
+		}
+		label := fmt.Sprintf("%s (x%d)", items.LocalizedName(iv.ItemID, lang), iv.Quantity)
+		if len(label) > 100 {
+			label = label[:97] + "..."
+		}
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label:       label,
+			Value:       iv.ItemID,
+			Emoji:       &discordgo.ComponentEmoji{Name: "🦴"},
+			Description: i18n.T("arch.dust_rate_desc", lang, map[string]any{"rate": rate}),
+		})
+	}
+	if len(opts) == 0 {
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label:       i18n.T("arch.dust_empty", lang),
+			Value:       "_none",
+			Description: i18n.T("arch.dust_empty_desc", lang),
+			Default:     true,
+		})
+	}
+
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(discordgo.SelectMenu{
+			CustomID:    components.EncodeOwner(userID, "arch", "dustpick"),
+			Placeholder: i18n.T("arch.dust_select_placeholder", lang),
+			Options:     opts,
+		}),
+		components.ActionRow(
+			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	return embed, comps
+}
+
+// onDustPick opens the grind amount modal for the selected fossil.
+func (c *Cog) onDustPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	itemID := i.MessageComponentData().Values[0]
+	if itemID == "_none" {
+		interaction.RespondError(b, i, lang, "arch.dust_empty")
+		return
+	}
+	if _, ok := archsvc.DustRates[itemID]; !ok {
+		interaction.RespondError(b, i, lang, "arch.error")
+		return
+	}
+	modal := components.ModalResponse(
+		components.EncodeOwner(userID, "arch", "grind", itemID),
+		i18n.T("arch.dust_modal_title", lang, map[string]any{"item": items.LocalizedName(itemID, lang)}),
+		components.TextInput("amount",
+			i18n.T("arch.dust_modal_label", lang, map[string]any{"rate": archsvc.DustRates[itemID]}), true, "1",
+			discordgo.TextInputShort, 1, 5),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+// onGrindModal performs the grind and reports the bone dust gained.
+func (c *Cog) onGrindModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
+	if len(rest) < 1 {
+		interaction.RespondError(b, i, lang, "arch.error")
+		return
+	}
+	itemID := rest[0]
+	amountStr := strings.TrimSpace(interaction.ModalValues(i)["amount"])
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil || amount <= 0 || amount > 99999 {
+		interaction.RespondError(b, i, lang, "arch.dust_error_amount")
+		return
+	}
+
+	dust, err := c.svc.GrindFossils(userID, itemID, amount)
+	if err != nil {
+		switch err {
+		case archsvc.ErrNotEnoughFossils:
+			interaction.RespondError(b, i, lang, "arch.dust_error_no_fossils")
+		default:
+			interaction.RespondError(b, i, lang, "arch.error")
+		}
+		return
+	}
+
+	embed := components.Embed(
+		i18n.T("arch.dust_success_title", lang),
+		i18n.T("arch.dust_success_desc", lang, map[string]any{
+			"qty": amount, "item": items.LocalizedName(itemID, lang), "dust": dust,
+		}),
+		0x8B4513,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: comps,
+			Flags:      discordgo.MessageFlagsEphemeral,
+		},
+	})
+}
+
 func (c *Cog) showDigEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, state *archsvc.GameState, feedback string) {
 	userID := interaction.ToInt64(interaction.UserID(i))
 	dug := state.MaxDepth - state.Depth
@@ -785,6 +935,11 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 		rarity = strings.ToLower(parts[1])
 	}
 
+	if rarity == "list" || rarity == "l" {
+		c.sendReanimateList(b, s, lang, userID, m.ChannelID)
+		return
+	}
+
 	if rarity == "" {
 		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 			Content: i18n.T("arch.reanimate_cmd_usage", lang),
@@ -814,8 +969,22 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 
 	petName, success, err := c.svc.Reanimate(userID, resolvedRarity)
 	if err != nil {
+		content := i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)})
+		switch {
+		case errors.Is(err, archsvc.ErrNoGeneticsLab):
+			content = i18n.T("arch.reanimate_no_lab", lang)
+		case errors.Is(err, archsvc.ErrResearchRequired):
+			resName := archsvc.ReanimateResearch[resolvedRarity]
+			if rd := researchsvc.ResearchDefs[resName]; rd != nil {
+				resName = rd.Name
+			}
+			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{
+				"research": resName,
+				"rarity":   i18n.T("arch.quality_"+resolvedRarity, lang),
+			})
+		}
 		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)}),
+			Content: content,
 		})
 		return
 	}
@@ -840,16 +1009,36 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 func (c *Cog) onPrefixReanimateList(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
+	c.sendReanimateList(b, s, lang, userID, m.ChannelID)
+}
+
+func (c *Cog) sendReanimateList(b *interaction.Bot, s *discordgo.Session, lang string, userID int64, channelID string) {
+	hasLab := furnituresvc.HasFurniture(c.store, userID, "genetics_lab")
 
 	desc := ""
 	for rarity, pool := range archsvc.ReanimatePools {
 		count := c.svc.GetFossilCount(userID, pool.ItemName)
 		rarityName := i18n.T("arch.quality_"+rarity, lang)
-		desc += i18n.T("arch.reanimate_list_line", lang, map[string]any{
+		line := i18n.T("arch.reanimate_list_line", lang, map[string]any{
 			"rarity": rarityName,
 			"count":  count,
 			"item":   items.LocalizedName(pool.ItemName, lang),
-		}) + "\n"
+		})
+		if !hasLab {
+			line += " " + i18n.T("arch.reanimate_list_lab", lang)
+		} else {
+			resID := archsvc.ReanimateResearch[rarity]
+			if !c.researchCompleted(userID, resID) {
+				resName := resID
+				if rd := researchsvc.ResearchDefs[resID]; rd != nil {
+					resName = rd.Name
+				}
+				line += " " + i18n.T("arch.reanimate_list_research", lang, map[string]any{"name": resName})
+			} else {
+				line += " ✅"
+			}
+		}
+		desc += line + "\n"
 	}
 
 	if desc == "" {
@@ -861,7 +1050,12 @@ func (c *Cog) onPrefixReanimateList(b *interaction.Bot, s *discordgo.Session, m 
 		desc,
 		0x9B59B6,
 	)
-	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
+	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
+}
+
+func (c *Cog) researchCompleted(userID int64, researchID string) bool {
+	var r model.UserResearch
+	return c.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, researchID, true).First(&r).Error == nil
 }
 
 func itoa(n int) string {

@@ -8,6 +8,7 @@ import (
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/model"
+	"guacagamblebot/internal/service/magnet"
 )
 
 type EventType int
@@ -19,6 +20,7 @@ const (
 	EventBlessing
 	EventMysteriousSeed
 	EventCropCircles
+	EventBuriedMagnet
 )
 
 type EventChoice struct {
@@ -42,9 +44,12 @@ type EventResult struct {
 	Description string
 	ItemGiven   string
 	ItemQty     int
-	CoinChange  int
-	ClearEvent  bool
-	BackToMenu  bool
+	// Items lists multiple granted items (id -> quantity) rendered after the
+	// description. ItemGiven/ItemQty are kept for single-item results.
+	Items      map[string]int
+	CoinChange int
+	ClearEvent bool
+	BackToMenu bool
 }
 
 func (s *Service) RollEvent(userID int64, zoneKey string, plots []PlotInfo) *Event {
@@ -60,6 +65,10 @@ func (s *Service) RollEvent(userID int64, zoneKey string, plots []PlotInfo) *Eve
 
 	if r < 0.20 {
 		return s.rollCropCircles(userID, zoneKey)
+	}
+
+	if r < 0.25 {
+		return s.rollBuriedMagnet(userID, zoneKey)
 	}
 
 	hasGrowing := false
@@ -140,6 +149,30 @@ func (s *Service) rollCropCircles(userID int64, zoneKey string) *Event {
 	return nil
 }
 
+// rollBuriedMagnet returns a buried-object event when the player owns a
+// magnet that could pull it out of the ground.
+func (s *Service) rollBuriedMagnet(userID int64, zoneKey string) *Event {
+	var count int64
+	if err := s.store.DB.Model(&model.Inventory{}).
+		Where("user_id = ? AND item_id IN ? AND quantity > 0", userID, magnet.ItemIDs()).
+		Count(&count).Error; err != nil || count == 0 {
+		return nil
+	}
+	return &Event{
+		Type:        EventBuriedMagnet,
+		Title:       "farm.event_buried_title",
+		Description: "farm.event_buried_desc",
+		ZoneKey:     zoneKey,
+		PlotIndex:   -1,
+		Choices: []EventChoice{
+			{Label: "farm.event_buried_o_rusty", CustomID: "farm::event::buried::rusty_magnet", Style: 1},
+			{Label: "farm.event_buried_o_magnet", CustomID: "farm::event::buried::magnet", Style: 1},
+			{Label: "farm.event_buried_o_electric", CustomID: "farm::event::buried::electric_magnet", Style: 3},
+			{Label: "farm.event_buried_o_leave", CustomID: "farm::event::buried::leave", Style: 2},
+		},
+	}
+}
+
 func (s *Service) rollPest(userID int64, zoneKey string, plot PlotInfo) *Event {
 	return &Event{
 		Type:        EventPest,
@@ -166,6 +199,8 @@ func (s *Service) ResolveEvent(userID int64, evt *Event, choice string) *EventRe
 		return s.resolveBlessing(userID, evt, choice)
 	case EventCropCircles:
 		return s.resolveCropCircles(userID, evt, choice)
+	case EventBuriedMagnet:
+		return s.resolveBuriedMagnet(userID, evt, choice)
 	}
 	return &EventResult{
 		Title:       "farm.event_default_title",
@@ -316,6 +351,53 @@ func (s *Service) resolveCropCircles(userID int64, evt *Event, choice string) *E
 		Title:       "farm.event_crop_circles_result_title",
 		Description: "farm.event_crop_circles_result_desc",
 		BackToMenu:  true,
+	}
+}
+
+func (s *Service) resolveBuriedMagnet(userID int64, evt *Event, choice string) *EventResult {
+	switch choice {
+	case "rusty_magnet", "magnet", "electric_magnet":
+		var inv model.Inventory
+		if err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity > 0", userID, choice).First(&inv).Error; err != nil {
+			return &EventResult{
+				Title:       "farm.event_buried_no_magnet_title",
+				Description: "farm.event_buried_no_magnet_desc",
+				BackToMenu:  true,
+			}
+		}
+		if inv.Quantity <= 1 {
+			s.store.DB.Delete(&inv)
+		} else {
+			s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 1"))
+		}
+
+		pulls := magnet.EventPull(choice)
+		counts := make(map[string]int, len(pulls))
+		for _, id := range pulls {
+			counts[id]++
+		}
+		for id, qty := range counts {
+			if err := s.store.AddItemRaw(s.store.DB, userID, id, qty); err != nil {
+				return &EventResult{
+					Title:       "farm.event_buried_leave_title",
+					Description: "farm.event_buried_leave_desc",
+					BackToMenu:  true,
+				}
+			}
+		}
+		return &EventResult{
+			Title:       "farm.event_buried_win_title",
+			Description: "farm.event_buried_win_desc",
+			Items:       counts,
+			BackToMenu:  true,
+		}
+
+	default:
+		return &EventResult{
+			Title:       "farm.event_buried_leave_title",
+			Description: "farm.event_buried_leave_desc",
+			BackToMenu:  true,
+		}
 	}
 }
 

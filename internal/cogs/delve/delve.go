@@ -91,6 +91,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		"garden_burn":       c.onGardenBurn,
 		"forge_temper":      c.onForgeTemper,
 		"forge_scavenge":    c.onForgeScavenge,
+		"forge_magnet":      c.onForgeMagnet,
 		"rift_gaze":         c.onRiftGaze,
 		"rift_disturb":      c.onRiftDisturb,
 		"locked_key":        c.onLockedKey,

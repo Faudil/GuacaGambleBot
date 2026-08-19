@@ -118,7 +118,7 @@
     "ev_fungus_r2": "You carefully step around the fungi. They pulse in the dark behind you.",
     "ev_fungus_title": "🍄 Fungal Cavern",
     "ev_gem_desc": "You break through into a cavern glittering with precious stones!",
-    "ev_gem_o1": "🎒 Grab \u0026 Go",
+    "ev_gem_o1": "🎒 Grab & Go",
     "ev_gem_o1d": "Take what you can carry and leave immediately.",
     "ev_gem_o2": "⛏️ Stay Longer",
     "ev_gem_o2d": "Mine deeper. More gems, more risk.",
@@ -296,6 +296,21 @@
     "tool_name_steel": "Steel Pickaxe",
     "tool_none": "🪨 Iron Pickaxe (Free)",
     "tool_owned": "✅ Owned",
-    "tool_title": "⚒️ Choose Your Tool"
+    "tool_title": "⚒️ Choose Your Tool",
+    "ev_magnet_hoard_title": "🧲 Buried Hoard",
+    "ev_magnet_hoard_desc": "The pickaxe clinks against something that is not stone. A buried metal hoard, packed into the rock by an old collapse. You could pull it out with a magnet...",
+    "ev_magnet_hoard_o1": "🧲 Rusty Magnet",
+    "ev_magnet_hoard_o1d": "Consume a Rusty Magnet to wrench scrap from the ground.",
+    "ev_magnet_hoard_o2": "🧲 Magnet",
+    "ev_magnet_hoard_o2d": "Consume a Magnet to pull precious ore from the hoard.",
+    "ev_magnet_hoard_o3": "⚡ Electric Magnet",
+    "ev_magnet_hoard_o3d": "Consume an Electric Magnet to tear the richest metal from the rock.",
+    "ev_magnet_hoard_o4": "↩️ Leave It",
+    "ev_magnet_hoard_o4d": "Some things are better left buried.",
+    "ev_magnet_hoard_r1": "The rusty magnet groans, then yanks scrap ore out of the rock.",
+    "ev_magnet_hoard_r2": "The magnet sweeps the ground clean — precious ore clings to it in clusters!",
+    "ev_magnet_hoard_r3": "The electric magnet shrieks with power and rips a rich vein from the stone!",
+    "ev_magnet_hoard_r4": "You walk on. The hoard stays where it fell.",
+    "event_no_magnet": "You need that magnet in your inventory to do this!"
   }
 }

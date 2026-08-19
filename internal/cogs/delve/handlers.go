@@ -17,6 +17,7 @@ import (
 	"guacagamblebot/internal/model"
 	delvesvc "guacagamblebot/internal/service/delve"
 	jsvc "guacagamblebot/internal/service/journal"
+	"guacagamblebot/internal/service/magnet"
 	petsvc "guacagamblebot/internal/service/pets"
 )
 
@@ -1705,6 +1706,60 @@ func (c *Cog) onForgeScavenge(b *interaction.Bot, i *discordgo.InteractionCreate
 		s.Keys++
 		desc += "\n\n" + i18n.T("delve.handler.forge_scavenge_key", lang)
 	}
+	c.saveSession(s)
+	embed, comps := c.buildFloorTransition(s, desc, lang)
+	c.respond(b, i, embed, comps)
+}
+
+func (c *Cog) onForgeMagnet(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+
+	magnetID := magnet.BestOwned(func(id string) bool {
+		ok, _ := c.store.HasItem(userID, id, 1)
+		return ok
+	})
+	if magnetID == "" {
+		c.errorMsg(b, i, i18n.T("delve.handler.forge_magnet_none", lang))
+		return
+	}
+	if err := c.store.RemoveInventoryItem(userID, magnetID, 1); err != nil {
+		c.errorMsg(b, i, i18n.T("delve.handler.forge_magnet_none", lang))
+		return
+	}
+
+	pulls := magnet.EventPull(magnetID)
+	counts := make(map[string]int, len(pulls))
+	for _, id := range pulls {
+		counts[id]++
+	}
+	var lootLines []string
+	for id, qty := range counts {
+		if err := c.store.AddItemRaw(c.store.DB, userID, id, qty); err != nil {
+			c.errorMsg(b, i, i18n.T("inventory.full", lang))
+			return
+		}
+		it := items.Get(id)
+		if it == nil {
+			continue
+		}
+		if qty > 1 {
+			lootLines = append(lootLines, fmt.Sprintf("%s %s ×%d", it.Emoji, it.Name, qty))
+		} else {
+			lootLines = append(lootLines, fmt.Sprintf("%s %s", it.Emoji, it.Name))
+		}
+	}
+
+	desc := i18n.T("delve.handler.forge_magnet", lang, map[string]any{
+		"item": items.LocalizedName(magnetID, lang),
+		"loot": strings.Join(lootLines, ", "),
+	})
+	c.svc.AddFlag(s, "forge_magnet")
 	c.saveSession(s)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)

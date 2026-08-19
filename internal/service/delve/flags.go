@@ -70,6 +70,9 @@ var FlagManifest = map[string]FlagDef{
 	"used_torch": {
 		Sentence: "A torch spent to restore your strength. Light is precious in the darkness.",
 	},
+	"forge_magnet": {
+		Sentence: "A magnet swept the abandoned forge clean. Ore scrap clings to your pack, heavy with the district's memory.",
+	},
 	"slept_unprotected": {
 		Sentence: "You slept without guard. The Undercroft could have taken you, but it let you wake.",
 	},

@@ -9,10 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/store"
 )
+
+func TestAllPetTypesHaveDamageType(t *testing.T) {
+	for name, pt := range PetTypes {
+		_, ok := battle.PetDamageType(name)
+		assert.True(t, ok, "pet %q (%s) has no battle damage type", name, pt.Rarity)
+	}
+}
 
 func testService(t *testing.T) (*Service, *store.Store) {
 	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "p.db")), &gorm.Config{})

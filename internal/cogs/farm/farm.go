@@ -376,6 +376,9 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if result.ItemGiven != "" {
 		desc += "\n\n" + i18n.T("farm.item_received", lang, map[string]any{"item": items.LocalizedName(result.ItemGiven, lang), "qty": result.ItemQty})
 	}
+	for id, qty := range result.Items {
+		desc += "\n\n" + i18n.T("farm.item_received", lang, map[string]any{"item": items.LocalizedName(id, lang), "qty": qty})
+	}
 
 	embed := components.Embed(
 		i18n.T(result.Title, lang),
@@ -1194,6 +1197,8 @@ func eventColor(et farmsvc.EventType) int {
 		return 0x2ECC71
 	case farmsvc.EventCropCircles:
 		return 0x9B59B6
+	case farmsvc.EventBuriedMagnet:
+		return 0x95A5A6
 	}
 	return 0x006400
 }

@@ -101,3 +101,34 @@ func TestUseScratchTicketPaysOut(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, after, before, "payout is never negative")
 }
+
+func TestUseMagnetsConsumeAndPullOre(t *testing.T) {
+	for _, itemID := range []string{"rusty_magnet", "magnet", "electric_magnet"} {
+		svc, st := testService(t)
+		require.NoError(t, st.AddItemRaw(st.DB, 1, itemID, 1))
+
+		desc, err := svc.Apply(1, itemID)
+		require.NoError(t, err)
+		assert.Contains(t, desc, "Magnet")
+
+		has, err := st.HasItem(1, itemID, 1)
+		require.NoError(t, err)
+		assert.False(t, has, "%s consumed from inventory", itemID)
+	}
+}
+
+func TestUseMagnetGrantsMarketableOre(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.AddItemRaw(st.DB, 1, "magnet", 1))
+
+	_, err := svc.Apply(1, "magnet")
+	require.NoError(t, err)
+
+	var invs []struct {
+		ItemID string
+	}
+	require.NoError(t, st.DB.Table("inventory").
+		Where("user_id = ? AND item_id IN ?", 1, []string{"silver_ore", "gold_nugget", "platinum", "emerald", "rough_diamond"}).
+		Find(&invs).Error)
+	assert.NotEmpty(t, invs, "magnet should pull ore into the inventory")
+}

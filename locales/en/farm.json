@@ -118,7 +118,7 @@
     "seed_option_desc": "{time}min • ${price}",
     "seedmaker_btn": "🌱 Seed Maker",
     "seedmaker_choose_placeholder": "Pick a fruit to process...",
-    "seedmaker_cmd_usage": "📖 Usage: `!seedmaker \u003ccrop\u003e [quantity]` — ex: `!seedmaker 3 wheat`",
+    "seedmaker_cmd_usage": "📖 Usage: `!seedmaker <crop> [quantity]` — ex: `!seedmaker 3 wheat`",
     "seedmaker_desc": "Process your harvest into seeds!\n**1 fruit → 2-4 seeds**",
     "seedmaker_invalid_crop": "❌ **{item}** can't be processed into seeds.",
     "seedmaker_no_crops": "❌ You don't have any harvestable fruits to process!",
@@ -154,6 +154,18 @@
     "zone_greenhouse_desc": "Warmth envelops you as you step inside. Steam fogs the glass panels. Strange and exotic plants thrive in the tropical air.",
     "zone_orchard_desc": "The floating islands of the orchard drift among the clouds. Ancient trees bear fruit that glows with otherworldly light. The air hums with magic.",
     "zone_public_desc": "The communal fields stretch before you, alive with the chatter of passing villagers. The soil here is well-trodden but fertile.",
-    "zone_veggie_desc": "Your private patch, tucked behind the old mill. Rich, dark soil promises bountiful harvests. A scarecrow stands watch at the edge."
+    "zone_veggie_desc": "Your private patch, tucked behind the old mill. Rich, dark soil promises bountiful harvests. A scarecrow stands watch at the edge.",
+    "event_buried_title": "🧲 Something Buried",
+    "event_buried_desc": "Your hoe scrapes against something hard in the ground. A metal object — buried deep, but a magnet could pull it out...",
+    "event_buried_o_rusty": "🧲 Rusty Magnet",
+    "event_buried_o_magnet": "🧲 Magnet",
+    "event_buried_o_electric": "⚡ Electric Magnet",
+    "event_buried_o_leave": "↩️ Leave It",
+    "event_buried_win_title": "🧲 Hoard Pulled Up!",
+    "event_buried_win_desc": "The magnet yanks the buried object out of the earth — ore clings to it in clumps!",
+    "event_buried_no_magnet_title": "🧲 Nothing",
+    "event_buried_no_magnet_desc": "You reach into your bag... you don't have that magnet with you. The ground keeps its secret.",
+    "event_buried_leave_title": "🧲 Left Buried",
+    "event_buried_leave_desc": "You walk away. Some hoards are better left in the dirt."
   }
 }

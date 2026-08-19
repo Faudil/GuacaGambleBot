@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -12,9 +13,12 @@ import (
 
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
+	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	petsvc "guacagamblebot/internal/service/pets"
+	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
@@ -33,6 +37,20 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	svc := New(s, cfg, npcSvc)
 	return svc, s
+}
+
+// placeGeneticsLab puts the user in an active house with a genetics lab, the
+// furniture gate required for reanimation.
+func placeGeneticsLab(t *testing.T, db *gorm.DB, userID int64) {
+	t.Helper()
+	require.NoError(t, db.Create(&model.UserHousing{UserID: userID, HouseType: "brick_house", Level: 1, IsActive: true}).Error)
+	require.NoError(t, db.Create(&model.UserFurniture{UserID: userID, HouseType: "brick_house", FurnitureID: "genetics_lab", PlacedAt: time.Now()}).Error)
+}
+
+// completeResearch marks the given research as completed for the user.
+func completeResearch(t *testing.T, db *gorm.DB, userID int64, researchID string) {
+	t.Helper()
+	require.NoError(t, db.Create(&model.UserResearch{UserID: userID, ResearchID: researchID, Completed: true}).Error)
 }
 
 func testServiceInMemory(t *testing.T) *Service {
@@ -304,8 +322,94 @@ func TestSellPriceDeterministic(t *testing.T) {
 	assert.Equal(t, 1058, price)
 }
 
+func TestGrindFossils(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "rare_fossil", 3))
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "bone_dust", 2))
+
+	dust, err := svc.GrindFossils(1, "rare_fossil", 3)
+	require.NoError(t, err)
+	assert.Equal(t, 15, dust) // 3 * 5 per DustRates
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "rare_fossil").First(&inv).Error)
+	assert.Equal(t, 0, inv.Quantity)
+	var dustInv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "bone_dust").First(&dustInv).Error)
+	assert.Equal(t, 17, dustInv.Quantity)
+}
+
+func TestGrindFossilsPartialQuantity(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "epic_fossil", 3))
+
+	dust, err := svc.GrindFossils(1, "epic_fossil", 2)
+	require.NoError(t, err)
+	assert.Equal(t, 14, dust) // 2 * 7
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "epic_fossil").First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity)
+}
+
+func TestGrindFossilsNotEnough(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "common_fossil", 2))
+
+	_, err := svc.GrindFossils(1, "common_fossil", 5)
+	assert.ErrorIs(t, err, ErrNotEnoughFossils)
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "common_fossil").First(&inv).Error)
+	assert.Equal(t, 2, inv.Quantity, "stock must be untouched on failure")
+	var dust model.Inventory
+	assert.Error(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "bone_dust").First(&dust).Error, "no dust granted on failure")
+}
+
+func TestGrindFossilsInvalidItem(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "bone_dust", 5))
+	_, err := svc.GrindFossils(1, "bone_dust", 1)
+	assert.ErrorIs(t, err, ErrNotGrindable)
+}
+
+func TestGrindFossilsInvalidQuantity(t *testing.T) {
+	svc, s := testService(t)
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "common_fossil", 2))
+	_, err := svc.GrindFossils(1, "common_fossil", 0)
+	assert.ErrorIs(t, err, ErrNotEnoughFossils)
+}
+
+func TestDustRatesSanity(t *testing.T) {
+	// Every listed fossil must be a registered item and yield at least 1 dust.
+	for itemID, rate := range DustRates {
+		assert.NotNil(t, items.Get(itemID), "%s must exist in the items registry", itemID)
+		assert.GreaterOrEqual(t, rate, 1, "%s must yield at least 1 bone dust", itemID)
+	}
+	// GrindableOrder and DustRates must agree both ways.
+	for _, itemID := range GrindableOrder {
+		assert.Contains(t, DustRates, itemID)
+	}
+	assert.Len(t, GrindableOrder, len(DustRates))
+}
+
+func TestReanimatePoolsRegistry(t *testing.T) {
+	for rarity, pool := range ReanimatePools {
+		for _, pet := range pool.Pets {
+			pt, ok := petsvc.PetTypes[pet]
+			require.True(t, ok, "reanimate pool %q references unknown pet %q", rarity, pet)
+			switch rarity {
+			case "common", "rare", "epic", "legendary":
+				assert.Equal(t, rarity, pt.Rarity, "pet %q must match the %q pool rarity", pet, rarity)
+			}
+		}
+	}
+}
+
 func TestReanimate(t *testing.T) {
 	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
 	petName, success, err := svc.Reanimate(1, "common")
 	assert.NoError(t, err)
@@ -313,8 +417,45 @@ func TestReanimate(t *testing.T) {
 	_ = success
 }
 
+func TestReanimateRequiresGeneticsLab(t *testing.T) {
+	svc, s := testService(t)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
+	_, _, err := svc.Reanimate(1, "common")
+	assert.ErrorIs(t, err, ErrNoGeneticsLab)
+}
+
+func TestReanimateRequiresResearch(t *testing.T) {
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
+	_, _, err := svc.Reanimate(1, "common")
+	assert.ErrorIs(t, err, ErrResearchRequired)
+}
+
+func TestReanimateWithLabAndResearch(t *testing.T) {
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_rare")
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "rare_fossil", Quantity: 5})
+	petName, success, err := svc.Reanimate(1, "rare")
+	require.NoError(t, err)
+	if success {
+		assert.Contains(t, ReanimatePools["rare"].Pets, petName)
+	}
+}
+
+func TestReanimateResearchDefs(t *testing.T) {
+	for rarity, resID := range ReanimateResearch {
+		rd, ok := researchsvc.ResearchDefs[resID]
+		require.True(t, ok, "research %q for rarity %q must exist", resID, rarity)
+		assert.Equal(t, "genetics_lab", rd.RequiredFurniture, "research %q must require the genetics lab", resID)
+	}
+}
+
 func TestReanimateNoFossils(t *testing.T) {
-	svc, _ := testService(t)
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
 	_, _, err := svc.Reanimate(1, "common")
 	assert.Error(t, err)
 }
@@ -327,6 +468,8 @@ func TestReanimateInvalidRarity(t *testing.T) {
 
 func TestReanimateNotEnoughFossils(t *testing.T) {
 	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 3})
 	_, _, err := svc.Reanimate(1, "common")
 	assert.ErrorIs(t, err, ErrNoFossils)

@@ -79,8 +79,8 @@ var NPCs = map[string]*universe.NPCData{
 		ChatEN: "Clang! Clang! Working on a new pickaxe prototype. Hard work builds character.",
 		ChatFR: "Clang ! Clang ! Je travaille sur un nouveau prototype de pioche. Le travail acharné forge le caractère.",
 
-		HintEN: "gold_nugget,diamond,platinum,ores",
-		HintFR: "gold_nugget,diamond,platinum,ores",
+		HintEN: "gold_nugget,diamond,platinum,ores,magnet",
+		HintFR: "gold_nugget,diamond,platinum,ores,magnet",
 
 		GreetingsEN: []string{"What do you want? If you don't have a pickaxe, you're wasting my time.", "Ah, there you are! Found any good ore lately?", "Hello my friend! My forge is always open for a hard worker like you."},
 		GreetingsFR: []string{"Qu'est-ce que tu veux ? Si t'as pas de pioche, tu perds mon temps.", "Ah, te voilà ! Trouvé du bon minerai récemment ?", "Bonjour mon ami ! Ma forge est toujours ouverte pour un travailleur comme toi."},
@@ -322,8 +322,8 @@ var NPCs = map[string]*universe.NPCData{
 		ChatEN: "Beep boop! Calculating win probability... 99% chance you should play the slot machines.",
 		ChatFR: "Bip boop ! Calcul de probabilité de gain... 99% de chance que vous devriez jouer aux machines à sous.",
 
-		HintEN: "rigged_coin,vip_ticket,golden_chip",
-		HintFR: "rigged_coin,vip_ticket,golden_chip",
+		HintEN: "rigged_coin,vip_ticket,golden_chip,magnet",
+		HintFR: "rigged_coin,vip_ticket,golden_chip,magnet",
 
 		GreetingsEN: []string{"Hello human. Have you tried your luck today?", "Good to see you. Looks like you've bet wisely.", "Hey partner! Who are we fleecing today?"},
 		GreetingsFR: []string{"Bonjour humain. As-tu tenté ta chance aujourd'hui ?", "Content de te voir. On dirait que tu as misé sagement.", "Hé partenaire ! Qui allons-nous plumer aujourd'hui ?"},

@@ -190,7 +190,9 @@
       "riddle_wrong": "\"Wrong,\" groans the statue. A dart hits you from the darkness. (-10 HP)",
       "artifact_leveled": "💠 **Artifact leveled up!** Use `/artifact` to assign your new stat point.",
       "gravewarden_title": "💀 Boss: Gravewarden Morvain",
-      "gravewarden_desc": "The air grows cold. A figure of bone and shadow rises before you, ancient armor creaking with each movement. The Gravewarden has been waiting."
+      "gravewarden_desc": "The air grows cold. A figure of bone and shadow rises before you, ancient armor creaking with each movement. The Gravewarden has been waiting.",
+      "forge_magnet": "You sweep the abandoned forge with the **{item}**. Scrap ore leaps to it: {loot}",
+      "forge_magnet_none": "You have no magnet to sweep the forge with. The scrap stays rusting in place."
     },
     "ignore_fallen": "You turn away from the cries in the darkness and press on.",
     "left_voluntarily": "You ascend from the depths, your adventure complete. The Undercroft will remember your descent.",

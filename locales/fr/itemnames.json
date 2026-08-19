@@ -194,7 +194,7 @@
     },
     "electric_magnet": {
       "name": "Aimant Électrique",
-      "description": "Utilise-le pour trouver beaucoup d'argent !"
+      "description": "Tire du minerai de grande valeur des profondeurs. Dans la mine, la ferme ou les Profondeurs, il peut déterrer de riches trésors."
     },
     "emerald": {
       "name": "Émeraude",
@@ -390,7 +390,7 @@
     },
     "magnet": {
       "name": "Aimant",
-      "description": "Utilise-le pour trouver de l'argent par terre."
+      "description": "Tire du minerai précieux du sol. Dans la mine, la ferme ou les Profondeurs, il peut déterrer des trésors enfouis."
     },
     "mask_of_malveillance": {
       "name": "Masque de Malveillance",
@@ -546,7 +546,7 @@
     },
     "rusty_magnet": {
       "name": "Aimant Rouillé",
-      "description": "Utilise-le pour trouver un peu de monnaie."
+      "description": "Tire du minerai de ferraille du sol. Dans la mine, la ferme ou les Profondeurs, il peut déterrer des trésors enfouis."
     },
     "salmon": {
       "name": "Saumon",

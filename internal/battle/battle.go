@@ -556,13 +556,26 @@ var petDamageTypes = map[string]DamageType{
 	"Phoenix": DamageFire, "Cerbère": DamageFire,
 	"Fenrir": DamageScratch, "Ratatosk": DamageScratch,
 	"Nidhögg": DamagePoison, "Bedawang": DamagePoison,
+	"Trilobite": DamageImpact, "Ammonite": DamageImpact, "Anomalocaris": DamageBite,
+	"Orthoceras": DamageImpact, "Méganeura": DamagePoison,
+	"Archéoptéryx": DamageScratch, "Ptéranodon": DamageScratch,
+	"Dimétrodon": DamageBite, "Smilodon": DamageBite, "Mégalocéros": DamageImpact,
+	"Doedicurus": DamageImpact, "Mosasaurus": DamageBite, "Titanoboa": DamagePoison,
+	"Phorusrhacos": DamageScratch, "Rhinocéros laineux": DamageImpact,
+	"Entelodon": DamageImpact,
 }
 
 func getDamageType(name string) *DamageType {
-	if dt, ok := petDamageTypes[name]; ok {
+	if dt, ok := PetDamageType(name); ok {
 		return &dt
 	}
 	return nil
+}
+
+// PetDamageType returns the damage type of a pet species, if one is registered.
+func PetDamageType(name string) (DamageType, bool) {
+	dt, ok := petDamageTypes[name]
+	return dt, ok
 }
 
 func applyBattleStartSkills(skills []string, owner, opponent *BattlePet) {
