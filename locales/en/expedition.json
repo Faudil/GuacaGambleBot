@@ -14,11 +14,14 @@
     },
     "error": "❌ Something went wrong during the expedition. Please try again.",
     "events": {
+      "combat_ko": "💀 **{pet}** was knocked out by a wild **{enemy}**!",
       "combat_loss": "🤕 **{pet}** encountered a wild **{enemy}** and had to flee...",
       "combat_win": "⚔️ **{pet}** defeated a wild **{enemy}**! (+{xp} XP)",
       "exploration": "🐾 **{pet}** explores **{location}** and gains **{xp} XP**.",
       "loot": "🎁 **{pet}** found a **{item}**!",
-      "rest": "💤 **{pet}** takes a short nap by a stream."
+      "rest": "💤 **{pet}** takes a short nap by a stream.",
+      "rest_heal": "💤 **{pet}** takes a short nap by a stream and recovers **{hp} HP**.",
+      "return_home": "🏠 **{pet}** woke up and limped back home early, beaten but alive."
     },
     "invalid_duration": "❌ Invalid duration. Choose: 1, 4, 8, or 24 hours.",
     "ko_warning": "⚠️ **{name}** is K.O. and cannot leave. Heal it first!",

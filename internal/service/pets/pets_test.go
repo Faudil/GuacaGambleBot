@@ -290,6 +290,51 @@ func TestRollGachaLegendary(t *testing.T) {
 	assert.Equal(t, RarityLegendary, pt.Rarity)
 }
 
+func TestEveryBiomeEggReachesAllRarities(t *testing.T) {
+	rarityWeights := map[string]float64{
+		RarityCommon:    60,
+		RarityRare:      25,
+		RarityEpic:      10,
+		RarityLegendary: 5,
+	}
+	for _, biome := range Biomes {
+		t.Run(biome, func(t *testing.T) {
+			// Every biome must have at least one pet per rarity tier, or eggs
+			// could never roll that tier.
+			for rarity := range rarityWeights {
+				require.NotEmpty(t, petsByBiomeAndRarity(biome, rarity),
+					"biome %q has no %s pets — its egg can never roll that tier", biome, rarity)
+			}
+
+			// The flattened pool must reproduce the fixed 60/25/10/5 odds
+			// regardless of roster composition.
+			names, weights, total := eggGachaPool(biome)
+			require.Len(t, names, len(weights))
+			require.Greater(t, total, 0.0)
+			byTier := map[string]float64{}
+			for i, name := range names {
+				byTier[PetTypes[name].Rarity] += weights[i]
+			}
+			for rarity, want := range rarityWeights {
+				assert.InDelta(t, want, byTier[rarity], 0.001, "biome %q tier %q weight", biome, rarity)
+			}
+
+			// Over many rolls every rarity must be reachable.
+			seen := map[string]bool{}
+			for i := 0; i < 3000; i++ {
+				name := RollGacha("", biome)
+				pt, ok := PetTypes[name]
+				require.True(t, ok, "rolled unknown pet %q", name)
+				assert.Equal(t, biome, pt.Biome, "egg from %q must hatch a %q pet", biome, biome)
+				seen[pt.Rarity] = true
+			}
+			for rarity := range rarityWeights {
+				assert.True(t, seen[rarity], "biome %q never rolled %s in 3000 tries", biome, rarity)
+			}
+		})
+	}
+}
+
 func TestCreatePetAutoActivatesFirst(t *testing.T) {
 	svc, _ := testService(t)
 	first, err := svc.CreatePet(1, "Dragon")

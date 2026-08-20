@@ -113,6 +113,7 @@ func Migrate(db *gorm.DB) error {
 		&model.UserFarming{},
 		&model.UserQuest{},
 		&model.UserQuestData{},
+		&model.UserDailyLog{},
 		&model.QuestNotification{},
 		&model.JournalScene{},
 		&model.DataMigration{},

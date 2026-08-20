@@ -108,11 +108,12 @@ func (svc *Service) StartSession(userID, guildID, channelID int64) (*model.Delve
 	}
 
 	char, err := svc.store.EnsureCharacter(userID)
+	if err != nil || char == nil {
+		return nil, err
+	}
 	if err == nil && char != nil {
 		session.MaxHP = 100 + char.VIT*10
-		session.HP = session.MaxHP
 		session.MaxMana = 50 + char.INT*5
-		session.Mana = session.MaxMana
 	}
 
 	equipped, _ := svc.store.GetEquipped(userID)
@@ -120,12 +121,8 @@ func (svc *Service) StartSession(userID, guildID, channelID int64) (*model.Delve
 		session.MaxHP += eq.StatVIT * 10
 		session.MaxMana += eq.StatINT * 5
 	}
-	if session.HP > session.MaxHP {
-		session.HP = session.MaxHP
-	}
-	if session.Mana > session.MaxMana {
-		session.Mana = session.MaxMana
-	}
+	session.HP = session.MaxHP
+	session.Mana = session.MaxMana
 
 	if err := svc.store.SaveDelveSession(session); err != nil {
 		return nil, err

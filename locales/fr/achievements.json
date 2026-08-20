@@ -125,6 +125,22 @@
       "desc": "Réclame ta paye journalière 50 fois.",
       "name": "Routine Matinale"
     },
+    "daily_quest_1": {
+      "desc": "Termine ta première quête quotidienne.",
+      "name": "Bon Voisin"
+    },
+    "daily_quest_10": {
+      "desc": "Termine 10 quêtes quotidiennes.",
+      "name": "Main Fiable"
+    },
+    "daily_quest_100": {
+      "desc": "Termine 100 quêtes quotidiennes.",
+      "name": "Le Village te Fait Confiance"
+    },
+    "daily_quest_50": {
+      "desc": "Termine 50 quêtes quotidiennes.",
+      "name": "Chouchou du Village"
+    },
     "eco_100k": {
       "desc": "Atteins 100 000 $ sur ton compte.",
       "name": "Millionnaire en Devenir"

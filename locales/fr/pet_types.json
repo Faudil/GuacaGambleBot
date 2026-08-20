@@ -18,6 +18,9 @@
     "Bedawang": {
       "name": "Bedawang"
     },
+    "Béhémoth": {
+      "name": "Béhémoth"
+    },
     "Bison": {
       "name": "Bison"
     },
@@ -57,6 +60,9 @@
     "Diplodocus": {
       "name": "Diplodocus"
     },
+    "Djinn": {
+      "name": "Djinn"
+    },
     "Doedicurus": {
       "name": "Doedicurus"
     },
@@ -84,6 +90,9 @@
     "Hamster": {
       "name": "Hamster"
     },
+    "Homard": {
+      "name": "Homard"
+    },
     "Hérisson": {
       "name": "Hérisson"
     },
@@ -107,6 +116,9 @@
     },
     "Mamouth": {
       "name": "Mamouth"
+    },
+    "Méduse": {
+      "name": "Méduse"
     },
     "Mosasaurus": {
       "name": "Mosasaurus"
@@ -144,11 +156,17 @@
     "Phoenix": {
       "name": "Phoenix"
     },
+    "Phoque": {
+      "name": "Phoque"
+    },
     "Phorusrhacos": {
       "name": "Phorusrhacos"
     },
     "Pieuvre": {
       "name": "Pieuvre"
+    },
+    "Poisson-Clown": {
+      "name": "Poisson-Clown"
     },
     "Ptéranodon": {
       "name": "Ptéranodon"
@@ -197,6 +215,9 @@
     },
     "Tyrannosaure": {
       "name": "Tyrannosaure"
+    },
+    "Wyrm des Dunes": {
+      "name": "Wyrm des Dunes"
     }
   }
 }

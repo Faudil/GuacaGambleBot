@@ -3,6 +3,7 @@ package expedition
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestGenerateStructuredEvents(t *testing.T) {
 	require.NotEmpty(t, res.Log)
 
 	for _, ev := range res.Log {
-		require.Contains(t, []string{"exploration", "combat", "loot", "rest"}, ev.Type, "event type must be one of the known categories")
+		require.Contains(t, []string{"exploration", "combat", "loot", "rest", "return"}, ev.Type, "event type must be one of the known categories")
 		switch ev.Type {
 		case "exploration":
 			assert.NotEmpty(t, ev.Location, "exploration events must carry the location key")
@@ -61,6 +62,10 @@ func TestGenerateStructuredEvents(t *testing.T) {
 			assert.Contains(t, []string{"win", "loss", "stalemate"}, ev.CombatResult)
 		case "loot":
 			assert.NotEmpty(t, ev.Item, "loot events must carry the item id")
+		case "rest":
+			assert.GreaterOrEqual(t, ev.Heal, 0, "rest events must carry the healed amount")
+		case "return":
+			assert.NotEmpty(t, ev.Text, "return events must keep a fallback text")
 		}
 	}
 }
@@ -154,4 +159,91 @@ func TestClaimRecordsExpeditionCompletion(t *testing.T) {
 	var qd model.UserQuestData
 	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "chronicler_legend").First(&qd).Error)
 	assert.Equal(t, 2, qd.ProgressValue, "two claimed expeditions must satisfy the step")
+}
+
+// TestGenerateStopsWhenKO verifies that a pet knocked out mid-adventure stops
+// simulating and gets a final return-home event instead of continuing.
+func TestGenerateStopsWhenKO(t *testing.T) {
+	svc, _ := testService(t)
+	weak := testPet()
+	weak.HP = 1
+
+	for i := 0; i < 50; i++ {
+		res := svc.Generate(weak, 4)
+		if res.PetHP > 0 {
+			continue
+		}
+		last := res.Log[len(res.Log)-1]
+		assert.Equalf(t, "return", last.Type, "a KO'd pet must end its log with a return event (run %d)", i)
+		assert.Equal(t, "loss", res.Log[len(res.Log)-2].CombatResult, "the return must follow the KO combat")
+		assert.True(t, res.ReturnAt > 0, "a KO'd pet must carry an early return time (run %d)", i)
+		for j, ev := range res.Log {
+			if ev.Type == "return" {
+				assert.Equalf(t, len(res.Log)-1, j, "the return event may only be the last one (run %d)", i)
+			}
+		}
+	}
+}
+
+// TestStartTruncatesEndTimeWhenKO verifies that an expedition whose pet was
+// knocked out ends at the return time instead of the full requested window.
+func TestStartTruncatesEndTimeWhenKO(t *testing.T) {
+	svc, st := testService(t)
+	require.NoError(t, st.DB.Create(&model.User{UserID: 1}).Error)
+	require.NoError(t, st.DB.Create(testPet()).Error)
+
+	res := &ExpeditionResult{
+		Log: []ExpeditionEvent{
+			{Time: 60, Type: "combat", CombatResult: "loss", Text: "KO"},
+			{Time: 60, Type: "return", Text: "Home"},
+		},
+		XP:       10,
+		PetHP:    0,
+		ReturnAt: 60 * time.Minute,
+	}
+	exp, err := svc.Start(1, 1, 4, res)
+	require.NoError(t, err)
+	require.NotNil(t, exp)
+
+	assert.Equal(t, 60*time.Minute, exp.EndTime.Sub(exp.StartTime),
+		"a KO'd pet must return home early instead of at the full duration")
+
+	var pet model.UserPet
+	require.NoError(t, st.DB.First(&pet, 1).Error)
+	assert.Equal(t, 0, pet.HP, "the pet must come back knocked out")
+	assert.True(t, pet.OnExpedition)
+
+	// A full-duration run must not be truncated.
+	require.NoError(t, st.DB.Model(&model.UserPet{}).Where("id = ?", 1).
+		Update("hp", testPet().MaxHP).Error)
+	full, err := svc.Start(1, 1, 4, &ExpeditionResult{
+		Log:   []ExpeditionEvent{{Time: 240, Type: "exploration", Text: "ok"}},
+		XP:    10,
+		PetHP: testPet().MaxHP,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 4*time.Hour, full.EndTime.Sub(full.StartTime))
+}
+
+// TestRestHealsPet verifies that rest events restore a rolled amount of HP.
+func TestRestHealsPet(t *testing.T) {
+	svc, _ := testService(t)
+	pet := testPet()
+	pet.HP = pet.MaxHP / 2
+	found := false
+	for i := 0; i < 200; i++ {
+		res := svc.Generate(pet, 1)
+		for _, ev := range res.Log {
+			if ev.Type == "rest" {
+				found = true
+				assert.Greater(t, ev.Heal, 0, "a rest on a wounded pet must heal some HP")
+				assert.LessOrEqual(t, res.PetHP, pet.MaxHP, "healing must never exceed max HP")
+				break
+			}
+		}
+		if found {
+			break
+		}
+	}
+	assert.True(t, found, "a rest event must occur within the samples")
 }

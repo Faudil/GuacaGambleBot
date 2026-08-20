@@ -5,6 +5,7 @@ import "guacagamblebot/internal/universe"
 var NPCs = map[string]*universe.NPCData{
 	"vance": {
 		ID: "vance", Name: "Captain Vance", Emoji: "\U0001f6e1\ufe0f", Color: 0x3498db,
+		Image: "npcs/vance.png",
 
 		DescriptionEN: "Third officer turned captain by attrition. Has kept the Ark running for 47 years through stubbornness and salvage.",
 		DescriptionFR: "Troisième officier devenu capitaine par attrition. Maintient l'Ark en marche depuis 47 ans par obstination et recyclage.",
@@ -26,6 +27,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"zara": {
 		ID: "zara", Name: "ZARA", Emoji: "\U0001f4a0", Color: 0x9b59b6,
+		Image:            "npcs/zara.png",
 		LinkedActivities: []string{"archeology"},
 
 		DescriptionEN: "Fragment 7 of HELIOS. Adrift in the ship's network. She remembers everything except why.",
@@ -48,6 +50,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"okonkwo": {
 		ID: "okonkwo", Name: "Dr. Okonkwo", Emoji: "\U0001f331", Color: 0x2ecc71,
+		Image:            "npcs/okonkwo.png",
 		LinkedActivities: []string{"farming"},
 
 		DescriptionEN: "Chief botanist. Maintains the hydroponic vats that produce the ship's oxygen and food.",
@@ -70,6 +73,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"kellan": {
 		ID: "kellan", Name: "Kellan", Emoji: "\U0001f527", Color: 0xe67e22,
+		Image:            "npcs/kellan.png",
 		LinkedActivities: []string{"mining"},
 
 		DescriptionEN: "Chief engineer. If it breaks, he fixes it. If it hasn't broken yet, he's watching it.",
@@ -92,6 +96,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"arcade": {
 		ID: "arcade", Name: "ARCADE", Emoji: "\U0001f3b0", Color: 0xf1c40f,
+		Image:            "npcs/arcade.png",
 		LinkedActivities: []string{"gambling"},
 
 		DescriptionEN: "Ship entertainment AI. Degraded but functional. It has been shuffling the same playlist for 800 years.",
@@ -115,6 +120,7 @@ var NPCs = map[string]*universe.NPCData{
 
 	"the_chronicler": {
 		ID: "the_chronicler", Name: "The Chronicler", Emoji: "\U0001f56f\ufe0f", Color: 0x2c3e50,
+		Image: "npcs/the_chronicler.png",
 
 		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
 		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",

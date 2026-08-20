@@ -74,6 +74,7 @@
     "topic_chat": "What's new?",
     "topic_role": "What is your role?",
     "gift_select_placeholder": "Choose an item to give...",
-    "gift_none": "You have nothing {name} would like. {hint}"
+    "gift_none": "You have nothing {name} would like. {hint}",
+    "quest_offer_btn": "Accept questline"
   }
 }

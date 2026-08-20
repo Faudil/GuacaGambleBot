@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"testing"
 
@@ -133,20 +134,91 @@ func TestDailyQuest(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, has)
 
-	require.NoError(t, s.StartDailyQuest(1, "blackjack_won", 3, "quests.daily.blackjack"))
+	recipe := DailyRecipe{
+		Requestor: "thorek", TitleKey: "quests.daily.thorek.title", IntroKey: "quests.daily.thorek.intro",
+		Steps: []DailyStep{
+			{Kind: DailyStepActivity, Stat: "items_mined", Count: 3, TextKey: "quests.daily.step.mine"},
+			{Kind: DailyStepTurnIn, Items: map[string]int{"coal": 2}, TextKey: "quests.daily.thorek.turnin_coal"},
+		},
+		Reward: DailyReward{Money: 200, ItemID: "iron_ore", RepNPC: "thorek", RepPoints: 30},
+	}
+	data, err := json.Marshal(recipe)
+	require.NoError(t, err)
+	require.NoError(t, s.StartDailyQuest(1, string(data)))
 	has, err = s.HasDailyQuestToday(1)
 	require.NoError(t, err)
 	assert.True(t, has)
 
-	require.NoError(t, s.RecordActivity(1, "blackjack_won", 2))
-	// not yet complete
-	var q model.UserQuest
-	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&q).Error)
-	assert.Equal(t, "ACTIVE", q.Status)
+	// Partial activity progress does not advance the step.
+	require.NoError(t, s.RecordActivity(1, "items_mined", 2))
+	d, err := s.GetDailyQuestData(1)
+	require.NoError(t, err)
+	assert.Equal(t, 0, d.StepIndex)
+	assert.Equal(t, 2, d.ProgressValue)
 
-	require.NoError(t, s.RecordActivity(1, "blackjack_won", 1))
-	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&q).Error)
-	assert.Equal(t, "COMPLETED", q.Status)
+	// Completing the activity moves to the turn-in step, not to completion.
+	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+	d, err = s.GetDailyQuestData(1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, d.StepIndex)
+	assert.Equal(t, 0, d.ProgressValue)
+	var uq model.UserQuest
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status)
+
+	// Claiming without the items fails with a descriptive error.
+	_, err = s.ClaimDailyTurnIn(1)
+	require.Error(t, err)
+	var missing *DailyMissingItemsError
+	require.ErrorAs(t, err, &missing)
+	require.Len(t, missing.Items, 1)
+	assert.Equal(t, "coal", missing.Items[0].ItemID)
+	assert.Equal(t, 2, missing.Items[0].Needed)
+
+	// Deliver the items: quest completes and the reward is granted.
+	require.NoError(t, s.AddItemRaw(s.DB, 1, "coal", 3))
+	completed, err := s.ClaimDailyTurnIn(1)
+	require.NoError(t, err)
+	assert.True(t, completed)
+
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&uq).Error)
+	assert.Equal(t, "COMPLETED", uq.Status)
+
+	bal, err := s.GetBalance(1)
+	require.NoError(t, err)
+	assert.Equal(t, 300, bal) // 100 starting + 200 reward
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = 'coal'", 1).First(&inv).Error)
+	assert.Equal(t, 1, inv.Quantity, "3 coal added, 2 delivered")
+	var rewardInv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = 'iron_ore'", 1).First(&rewardInv).Error)
+	assert.Equal(t, 1, rewardInv.Quantity, "reward item granted")
+
+	// Claiming again is rejected once the quest is completed.
+	_, err = s.ClaimDailyTurnIn(1)
+	require.ErrorIs(t, err, ErrDailyNotActive)
+}
+
+func TestClaimDailyTurnInNotOnTurnIn(t *testing.T) {
+	s := newStore(t)
+	recipe := DailyRecipe{
+		Steps: []DailyStep{
+			{Kind: DailyStepActivity, Stat: "items_mined", Count: 1, TextKey: "x"},
+			{Kind: DailyStepTurnIn, Items: map[string]int{"coal": 1}, TextKey: "y"},
+		},
+	}
+	data, err := json.Marshal(recipe)
+	require.NoError(t, err)
+	require.NoError(t, s.StartDailyQuest(1, string(data)))
+
+	_, err = s.ClaimDailyTurnIn(1)
+	require.ErrorIs(t, err, ErrDailyNotTurnIn)
+}
+
+func TestClaimDailyTurnInNoActive(t *testing.T) {
+	s := newStore(t)
+	_, err := s.ClaimDailyTurnIn(1)
+	require.ErrorIs(t, err, ErrDailyNotActive)
 }
 
 func TestServerSettingRoundTrip(t *testing.T) {

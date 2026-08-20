@@ -45,6 +45,7 @@ type ExpeditionEvent struct {
 	EnemyLevel   int    `json:"enemy_level,omitempty"`
 	Item         string `json:"item,omitempty"`
 	CombatResult string `json:"combat_result,omitempty"`
+	Heal         int    `json:"heal,omitempty"`
 }
 
 type ExpeditionResult struct {
@@ -52,6 +53,10 @@ type ExpeditionResult struct {
 	XP    int
 	Items []string
 	PetHP int
+	// ReturnAt is set when the pet was knocked out mid-adventure: the
+	// expedition ends there and the pet limps home early. Zero means the
+	// expedition runs for the full requested duration.
+	ReturnAt time.Duration
 }
 
 func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionResult {
@@ -76,6 +81,8 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 		petHP = pet.MaxHP
 	}
 
+	result := &ExpeditionResult{}
+simLoop:
 	for i := 0; i < numEvents; i++ {
 		eventTime := int(float64(i+1) * float64(durationHours*60) / float64(numEvents+1))
 
@@ -103,16 +110,6 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			ev.XP = xp
 			ev.Text = "🐾 **" + pet.Nickname + "** explores " + loc + " and gains **" + itoa(xp) + " XP**."
 		case "combat":
-			if petHP <= 0 {
-				// A K.O. pet is defenceless: the encounter still resolves as a
-				// loss with a real opponent so the structured log stays
-				// complete for localized rendering.
-				ev.Enemy = randomPetSpecies()
-				ev.EnemyLevel = max(1, pet.Level-2+rand.Intn(5))
-				ev.CombatResult = "loss"
-				ev.Text = "😵 **" + pet.Nickname + "** is K.O. and cannot fight for now."
-				break
-			}
 			enemySpecies := randomPetSpecies()
 			enemyLvl := max(1, pet.Level-2+rand.Intn(5))
 			ev.Enemy = enemySpecies
@@ -154,9 +151,19 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 					ev.Loot = item
 				}
 			case !petBP.IsAlive():
+				// The pet is knocked out: log the KO, then end the adventure.
+				// It limps back home instead of continuing while dead.
 				ev.CombatResult = "loss"
 				ev.Text = "💀 **" + pet.Nickname + "** was knocked out by a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ")!"
 				totalXP += 10
+				events = append(events, ev)
+				result.ReturnAt = time.Duration(eventTime) * time.Minute
+				events = append(events, ExpeditionEvent{
+					Time: eventTime,
+					Type: "return",
+					Text: "🏠 **" + pet.Nickname + "** woke up and limped back home early.",
+				})
+				break simLoop
 			default:
 				ev.CombatResult = "stalemate"
 				ev.Text = "🤕 **" + pet.Nickname + "** fought a wild **" + enemySpecies + "** (Lvl " + itoa(enemyLvl) + ") to a stalemate and withdrew."
@@ -179,13 +186,26 @@ func (s *Service) Generate(pet *model.UserPet, durationHours int) *ExpeditionRes
 			ev.Text = "🎁 **" + pet.Nickname + "** found a **" + item + "**!"
 			ev.Loot = item
 		case "rest":
-			ev.Text = "💤 **" + pet.Nickname + "** takes a short nap by a stream."
+			heal := 0
+			if petHP < pet.MaxHP {
+				heal = pet.MaxHP/5 + rand.Intn(pet.MaxHP/5+1)
+				if petHP+heal > pet.MaxHP {
+					heal = pet.MaxHP - petHP
+				}
+				petHP += heal
+			}
+			ev.Heal = heal
+			ev.Text = "💤 **" + pet.Nickname + "** takes a short nap by a stream and recovers **" + itoa(heal) + " HP**."
 		}
 
 		events = append(events, ev)
 	}
 
-	return &ExpeditionResult{Log: events, XP: totalXP, Items: items, PetHP: petHP}
+	result.Log = events
+	result.XP = totalXP
+	result.Items = items
+	result.PetHP = petHP
+	return result
 }
 
 // petBattlePet converts a pet into its battle form with its learned skills.
@@ -251,6 +271,11 @@ func (s *Service) Start(userID, petID int64, durationHours int, result *Expediti
 	}
 	now := time.Now()
 	duration := time.Duration(durationHours) * time.Hour
+	if result.ReturnAt > 0 {
+		// The pet was knocked out: it returns home when it died, not at the
+		// end of the requested window.
+		duration = result.ReturnAt
+	}
 
 	logJSON, _ := json.Marshal(result.Log)
 	itemsJSON, _ := json.Marshal(result.Items)

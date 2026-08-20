@@ -120,10 +120,6 @@
       "name": "Cocoa Seed",
       "description": "Plant to get cocoa (12h)."
     },
-    "coelacanth_egg": {
-      "name": "Coelacanth Egg",
-      "description": "An egg that seems prehistoric. It pulses faintly."
-    },
     "coffee": {
       "name": "Coffee",
       "description": "Wakes you up. Resets !daily cooldown. Pet food: +1 SPD."

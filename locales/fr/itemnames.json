@@ -120,10 +120,6 @@
       "name": "Graine de Cacao",
       "description": "À planter pour obtenir du cacao (12h)."
     },
-    "coelacanth_egg": {
-      "name": "Œuf de Cœlacanthe",
-      "description": "Un œuf d'apparence préhistorique. Il pulse faiblement."
-    },
     "coffee": {
       "name": "Café",
       "description": "Réveille tes sens. Réinitialise le cooldown du !daily. Nourriture pour animal : +1 VIT."

@@ -220,5 +220,7 @@ func (s *Service) Apply(userID int64, itemID string) (string, error) {
 	if err := s.store.RemoveInventoryItem(userID, itemID, 1); err != nil {
 		return "", err
 	}
+	// Use-item activity stat, used by procedural daily quests ("use N items").
+	_ = s.store.RecordActivity(userID, "items_used", 1)
 	return desc, nil
 }

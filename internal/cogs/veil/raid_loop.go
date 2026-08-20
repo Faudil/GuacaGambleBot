@@ -198,7 +198,7 @@ func (c *Cog) handleBreachAction(b *interaction.Bot, i *discordgo.InteractionCre
 		res := veilsvc.StartBossPhase(raid, 1, lang)
 		res.Embed.Description = i18n.T("veil.encounter.breach_boon_prepend", lang, map[string]any{"boon": boon, "desc": res.Embed.Description})
 		c.svc.Store().SaveVeilRaid(raid)
-		c.respond(b, i, res.Embed, res.Comps)
+		c.respondBoss(b, i, raid, res.Embed, res.Comps)
 	} else {
 		c.errorEphemeral(b, i, i18n.T("veil.encounter.vote_waiting", lang, map[string]any{"choice": vote, "cast": cast, "total": total}))
 	}

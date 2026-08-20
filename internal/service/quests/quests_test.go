@@ -658,3 +658,133 @@ func TestChroniclerQuestStartHelper(t *testing.T) {
 	// Second start is rejected (already active).
 	assert.Error(t, StartQuestForUser(st, 1, "chronicler_legend"))
 }
+
+// ─── Questline guidance ─────────────────────────────────────────
+
+func completeTutorial(t *testing.T, st *store.Store, userID int64) {
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: userID, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
+}
+
+func TestQuestlineOrderReservedEntries(t *testing.T) {
+	assert.Contains(t, QuestlineOrder, "chronicler_legend")
+	assert.Contains(t, QuestlineOrder, "elara_first_bloom")
+	assert.NotContains(t, QuestlineOrder, "gamblebot_secret", "abandoned questline must not be listed")
+	// No questline is implemented yet; the reserved ones stay out of the registry.
+	assert.Nil(t, QuestRegistry["elara_first_bloom"])
+}
+
+func TestTutorialCompleted(t *testing.T) {
+	_, st := testService(t)
+	assert.False(t, TutorialCompleted(st, 1))
+	completeTutorial(t, st, 1)
+	assert.True(t, TutorialCompleted(st, 1))
+}
+
+func TestStarterQuestlineGate(t *testing.T) {
+	_, st := testService(t)
+	def := &QuestDef{ID: "reserved_starter", NPCID: "elara", Starter: true}
+
+	assert.False(t, QuestlineUnlocked(st, 1, def), "locked while the tutorial runs")
+
+	// Once the tutorial is done, a starter questline opens immediately.
+	completeTutorial(t, st, 1)
+	assert.True(t, QuestlineUnlocked(st, 1, def))
+}
+
+func TestAvailableQuestlinesAfterTutorial(t *testing.T) {
+	_, st := testService(t)
+	assert.Empty(t, AvailableQuestlines(st, 1), "nothing before the tutorial")
+
+	// With no questline implemented yet, nothing is available after the
+	// tutorial either — the chronicler stays gated.
+	completeTutorial(t, st, 1)
+	assert.Empty(t, AvailableQuestlines(st, 1))
+	assert.Nil(t, SuggestedNext(st, 1))
+}
+
+func TestLockedQuestlinesIncludesChronicler(t *testing.T) {
+	_, st := testService(t)
+	completeTutorial(t, st, 1)
+
+	locked := LockedQuestlines(st, 1)
+	require.Len(t, locked, 1)
+	assert.Equal(t, "chronicler_legend", locked[0].ID)
+	assert.Equal(t, "quests.unlock_hint.chronicler", locked[0].HintKey)
+}
+
+func TestQuestlineOfferForNPC(t *testing.T) {
+	_, st := testService(t)
+
+	// No questline is implemented, so no NPC offers anything — before or
+	// after the tutorial.
+	assert.Nil(t, QuestlineOfferForNPC(st, 1, "gamblebot"))
+	completeTutorial(t, st, 1)
+	assert.Nil(t, QuestlineOfferForNPC(st, 1, "gamblebot"))
+	assert.Nil(t, QuestlineOfferForNPC(st, 1, "elara"))
+}
+
+func TestQuestlineAffinityGate(t *testing.T) {
+	_, st := testService(t)
+	completeTutorial(t, st, 1)
+	def := &QuestDef{ID: "thorek_heartstone", NPCID: "thorek", RepReq: 2}
+
+	// No reputation yet.
+	assert.False(t, QuestlineUnlocked(st, 1, def))
+	// Affinity level 1 is not enough.
+	require.NoError(t, st.DB.Create(&model.UserNPCReputation{
+		UserID: 1, NPCID: "thorek", Reputation: 0, Level: 1,
+	}).Error)
+	assert.False(t, QuestlineUnlocked(st, 1, def))
+	// Level 2 unlocks it.
+	require.NoError(t, st.DB.Model(&model.UserNPCReputation{}).
+		Where("user_id = 1 AND npc_id = 'thorek'").
+		Update("level", 2).Error)
+	assert.True(t, QuestlineUnlocked(st, 1, def))
+}
+
+func TestQuestlineBossGate(t *testing.T) {
+	_, st := testService(t)
+	completeTutorial(t, st, 1)
+	def := &QuestDef{ID: "irian_leviathan", NPCID: "irian", RepReq: 2, BossReq: 3}
+	require.NoError(t, st.DB.Create(&model.UserNPCReputation{
+		UserID: 1, NPCID: "irian", Reputation: 0, Level: 2,
+	}).Error)
+
+	assert.False(t, QuestlineUnlocked(st, 1, def), "boss not yet defeated")
+
+	// Beat the 3rd boss (battle step index 5 in the boss_league quest).
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "boss_league", Status: "ACTIVE",
+	}).Error)
+	require.NoError(t, st.DB.Create(&model.UserQuestData{
+		UserID: 1, QuestID: "boss_league", StepIndex: 5,
+	}).Error)
+	assert.False(t, QuestlineUnlocked(st, 1, def), "still ON the battle step")
+
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = 1 AND quest_id = 'boss_league'").
+		Update("step_index", 6).Error)
+	assert.True(t, QuestlineUnlocked(st, 1, def), "past the battle step")
+}
+
+func TestQuestlinePathGate(t *testing.T) {
+	_, st := testService(t)
+	completeTutorial(t, st, 1)
+	shadowDef := &QuestDef{ID: "whisper_vault_contract", NPCID: "the_whisper", RepReq: 2, PathReq: "shadow"}
+	require.NoError(t, st.DB.Create(&model.UserNPCReputation{
+		UserID: 1, NPCID: "the_whisper", Reputation: 0, Level: 2,
+	}).Error)
+
+	assert.False(t, QuestlineUnlocked(st, 1, shadowDef), "no criminality alignment")
+	require.NoError(t, st.DB.Create(&model.UserCriminality{
+		UserID: 1, Alignment: "hunter",
+	}).Error)
+	assert.False(t, QuestlineUnlocked(st, 1, shadowDef), "hunter does not open the shadow questline")
+
+	require.NoError(t, st.DB.Model(&model.UserCriminality{}).
+		Where("user_id = 1").
+		Update("alignment", "shadow").Error)
+	assert.True(t, QuestlineUnlocked(st, 1, shadowDef))
+}

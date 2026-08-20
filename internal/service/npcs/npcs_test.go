@@ -255,6 +255,24 @@ func TestChatSecretBonusOnce(t *testing.T) {
 	assert.Equal(t, 25, event.RepBonus)
 }
 
+func TestChatNoQuestOfferWithoutImplementedQuestlines(t *testing.T) {
+	svc, st := testService(t)
+	svc.cfg.NPCChatCooldownHours = 0
+
+	// With no questline implemented, no NPC offers one — before or after
+	// the tutorial; chatting stays a regular interaction.
+	require.NoError(t, st.DB.Create(&model.UserQuest{
+		UserID: 1, QuestID: "tutorial", Status: "COMPLETED",
+	}).Error)
+
+	for _, npcID := range []string{"gamblebot", "elara"} {
+		event, err := svc.Chat(1, npcID, "en")
+		require.NoError(t, err)
+		assert.Equal(t, "", event.QuestOffer)
+		assert.Equal(t, 50, event.RepBonus)
+	}
+}
+
 func TestNPCIDForActivity(t *testing.T) {
 	svc, _ := testService(t)
 	assert.Equal(t, "thorek", svc.NPCIDForActivity("mining"))

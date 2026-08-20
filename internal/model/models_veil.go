@@ -15,6 +15,7 @@ type VeilRaid struct {
 	BossHP         int        `gorm:"column:boss_hp;default:1500"`
 	BossMaxHP      int        `gorm:"column:boss_max_hp;default:1500"`
 	BossPhase      int        `gorm:"column:boss_phase;default:1"`
+	BossImage      string     `gorm:"column:boss_image;default:''"`
 	Mechanics      string     `gorm:"column:mechanics;type:text"`
 	AddHP          string     `gorm:"column:add_hp;type:text"`
 	CrystalUsed    bool       `gorm:"column:crystal_used;default:false"`

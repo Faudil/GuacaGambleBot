@@ -2,11 +2,13 @@ package boss
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
 	"guacagamblebot/internal/achievement"
+	"guacagamblebot/internal/assets"
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
@@ -42,9 +44,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	embed, comps := c.show(userID, lang)
+	embed, comps, image := c.show(userID, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+		assets.ResponseThumbnail(discordgo.InteractionResponseChannelMessageWithSource, embed, comps, image))
 }
 
 func (c *Cog) onPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
@@ -64,19 +66,15 @@ func (c *Cog) onPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Me
 			})
 			return
 		}
-		sent, _ := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Embeds: []*discordgo.MessageEmbed{o.spawn},
-		})
+		sent, _ := s.ChannelMessageSendComplex(m.ChannelID, assets.Send(o.spawn, nil, o.image))
 		msgID := ""
 		if sent != nil {
 			msgID = sent.ID
 		}
 		go c.animateFight(nil, nil, s, m.ChannelID, msgID, o, lang)
 	default:
-		embed, _ := c.show(interaction.ToInt64(m.Author.ID), lang)
-		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Embeds: []*discordgo.MessageEmbed{embed},
-		})
+		embed, _, image := c.show(interaction.ToInt64(m.Author.ID), lang)
+		_, _ = s.ChannelMessageSendComplex(m.ChannelID, assets.SendThumbnail(embed, nil, image))
 	}
 }
 
@@ -112,7 +110,9 @@ func (c *Cog) findBossBattleQuest(userID int64) (string, *questssvc.QuestDef, *m
 	return "", nil, nil, nil
 }
 
-func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+// show renders the current boss quest step. It returns the boss picture asset
+// name (empty when the step has none) so callers can upload it with the embed.
+func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent, string) {
 	qid, def, uq, uqd := c.findBossBattleQuest(userID)
 	if qid == "" {
 		// Try to auto-start boss_league if any pet is level 20+
@@ -136,7 +136,7 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 			i18n.T("boss_league.locked", lang),
 			0x992d22,
 		)
-		return embed, nil
+		return embed, nil, ""
 	}
 	stepIdx := 0
 	if uqd != nil {
@@ -152,15 +152,16 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 	if uq.Status == "COMPLETED" {
 		if qid == "boss_league" {
 			embed := components.Embed(title, i18n.T("boss_league.champion", lang), 0xf1c40f)
-			return embed, nil
+			return embed, nil, ""
 		}
 		embed := components.Embed(title, "✅ Quest completed!", 0x2ecc71)
-		return embed, nil
+		return embed, nil, ""
 	}
 
 	step := def.Steps[stepIdx]
 	var desc string
 	var btns []discordgo.MessageComponent
+	var bossImage string
 
 	switch step.Type {
 	case questssvc.StepDialogue:
@@ -184,6 +185,7 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 			statsTxt := fmt.Sprintf("Lvl %d | %s | HP: %d | ATK: %d | DEF: %d | SPD: %d",
 				boss.Level, boss.Species, boss.HP, boss.Atk, boss.Defense, boss.Speed)
 			desc += fmt.Sprintf("🐾 %s\n", statsTxt)
+			bossImage = boss.Image
 		} else {
 			desc = i18n.T(step.TextKey, lang)
 		}
@@ -209,7 +211,7 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 	for _, btn := range btns {
 		comps = append(comps, components.ActionRow(btn))
 	}
-	return embed, comps
+	return embed, comps, bossImage
 }
 
 func (c *Cog) onFightButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -222,16 +224,16 @@ func (c *Cog) onFightButton(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, o.spawn, nil))
+		assets.Response(discordgo.InteractionResponseUpdateMessage, o.spawn, nil, o.image))
 	go c.animateFight(b, i, nil, "", "", o, lang)
 }
 
 func (c *Cog) onShowButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	embed, comps := c.show(userID, lang)
+	embed, comps, image := c.show(userID, lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+		assets.ResponseThumbnail(discordgo.InteractionResponseUpdateMessage, embed, comps, image))
 }
 
 // fightOutcome carries the frames and data needed to animate a boss fight.
@@ -240,6 +242,7 @@ type fightOutcome struct {
 	final *discordgo.MessageEmbed
 	comps []discordgo.MessageComponent
 	turns []battle.BattleTurn
+	image string // boss picture asset uploaded with the spawn/final frames
 
 	petD  components.DisplayPet
 	bossD components.DisplayPet
@@ -315,6 +318,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 			HP: bossPet.MaxHP, MaxHP: bossPet.MaxHP,
 		},
 		turns: result.Turns,
+		image: bossCfg.Image,
 	}
 	o.comps = []discordgo.MessageComponent{
 		components.ActionRow(
@@ -327,6 +331,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 			"pet_emoji": o.petD.Emoji, "pet_name": o.petD.Name,
 			"boss_name": o.bossD.Name, "boss_emoji": o.bossD.Emoji,
 		})}, lang)
+	assets.Image(o.spawn, o.image)
 
 	if userBP.HP > 0 && bossPet.HP <= 0 {
 		_, _ = c.svc.UpdateBalance(userID, bossCfg.RewardMoney)
@@ -335,6 +340,8 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 
 		// Record boss victory in quest system (grants quest step rewards + trinket)
 		_ = c.qsvc.RecordBossVictory(userID, bossStage)
+		// Per-stage stat so procedural daily quests can target the current boss.
+		_ = c.store.RecordActivity(userID, "boss_stage_"+strconv.Itoa(bossStage), 1)
 
 		o.final = c.bossRetroFrame(o, userBP.HP, bossPet.HP, result.Log, lang)
 		o.final.Title = i18n.T("boss_league.victory", lang, map[string]any{"boss_name": o.bossD.Name})
@@ -376,7 +383,6 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 		o.final.Title = i18n.T("boss_league.defeat", lang, map[string]any{"pet_name": o.petD.Name, "boss_name": o.bossD.Name})
 		o.final.Color = 0xe74c3c
 		o.final.Description += "\n\n" + i18n.T("boss_league.try_again", lang)
-
 		// A defeat may unlock an optional side quest line with an NPC mentor
 		// (see questssvc.BossLossUnlocks). Notify the player and offer a
 		// button that opens the mentor's NPC menu directly.
@@ -392,6 +398,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 			}
 		}
 	}
+	assets.Image(o.final, o.image)
 	return o, nil, nil
 }
 
@@ -419,13 +426,26 @@ func (c *Cog) animateFight(b *interaction.Bot, i *discordgo.InteractionCreate, s
 	}
 	edit := func(frame *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
 		if msgID == "" {
+			// Discord drops attachments absent from an edit payload, so the
+			// boss picture is only re-uploaded on frames that carry it (the
+			// final result frame), never on the ~12 animation frames.
+			if frame.Image != nil {
+				_, _ = b.Session.InteractionResponseEdit(i.Interaction, assets.EditResponse(frame, comps, o.image))
+				return
+			}
 			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(frame, comps))
 		} else {
-			_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+			data := &discordgo.MessageEdit{
 				Channel: channelID,
 				ID:      msgID,
 				Embeds:  &[]*discordgo.MessageEmbed{frame},
-			})
+			}
+			if frame.Image != nil {
+				if f := assets.File(o.image); f != nil {
+					data.Files = []*discordgo.File{f}
+				}
+			}
+			_, _ = s.ChannelMessageEditComplex(data)
 		}
 	}
 	interaction.AnimateFight(

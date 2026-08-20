@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/model"
 	furnituresvc "guacagamblebot/internal/service/furniture"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 )
 
@@ -34,6 +35,8 @@ var (
 	ErrNotEnoughFossils = errors.New("not enough fossils to grind")
 	ErrNoGeneticsLab    = errors.New("genetics lab furniture required")
 	ErrResearchRequired = errors.New("reanimation research required")
+	ErrPetSlotsFull     = errors.New("no free pet slot")
+	ErrReanimateFailed  = errors.New("reanimation failed to create pet")
 )
 
 // ReanimateResearch maps each reanimation pool tier to the research that must
@@ -197,7 +200,6 @@ type DigResult struct {
 	Value       int
 	Quality     string
 	Integrity   int
-	IsEgg       bool
 	IsShadow    bool
 	IsCursed    bool
 	JournalPage string
@@ -267,10 +269,11 @@ type Service struct {
 	store  *store.Store
 	cfg    *config.Config
 	npcSvc *npcsvc.Service
+	pets   *petsvc.Service
 }
 
-func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service) *Service {
-	return &Service{store: s, cfg: cfg, npcSvc: npcSvc}
+func New(s *store.Store, cfg *config.Config, npcSvc *npcsvc.Service, petsSvc *petsvc.Service) *Service {
+	return &Service{store: s, cfg: cfg, npcSvc: npcSvc, pets: petsSvc}
 }
 
 func (s *Service) NewGame(userID int64, siteKey string) (*GameState, error) {
@@ -458,13 +461,6 @@ func (s *Service) Resolve(state *GameState) *DigResult {
 	digLuck := furnituresvc.EffectValue(s.store, state.UserID, "dig_luck")
 
 	rarityPool := state.Site.FossilRarities
-
-	if state.Integrity >= 95 && state.LastTool == "brush" {
-		if rand.Float64() < 0.02+digLuck {
-			xp := 200
-			return &DigResult{ItemName: "coelacanth_egg", Value: 2500, Quality: "living", Integrity: state.Integrity, XP: xp, IsEgg: true, Quantity: 1}
-		}
-	}
 
 	if state.Integrity < 15 && state.Integrity > 5 && state.LastTool != "brush" {
 		if rand.Float64() < 0.15+digLuck {
@@ -662,7 +658,6 @@ func (s *Service) addDigReputation(userID int64, quality string) {
 		"epic":      3,
 		"journal":   3,
 		"legendary": 4,
-		"living":    5,
 		"cursed":    5,
 		"pure_dna":  5,
 		"shadow":    10,
@@ -785,6 +780,10 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 		return "", false, ErrNoFossils
 	}
 
+	if !s.pets.CanCreatePet(userID) {
+		return "", false, ErrPetSlotsFull
+	}
+
 	level := s.GetArcheologistLevel(userID)
 	successRate := 0.50 + float64(level)*0.02
 	if successRate > 0.90 {
@@ -799,25 +798,9 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 		}
 
 		petName := pool.Pets[rand.Intn(len(pool.Pets))]
-		pet := model.UserPet{
-			UserID:   userID,
-			PetType:  petName,
-			Nickname: petName,
-			Level:    1,
-			XP:       0,
-			MaxHP:    50,
-			HP:       50,
-			Atk:      10,
-			Defense:  5,
-			Speed:    10,
-			DGE:      5,
-			ACC:      0,
-			CritC:    5,
-			CritD:    1.5,
-			IsActive: false,
-		}
-		if err := s.store.DB.Create(&pet).Error; err != nil {
-			return "", false, err
+		pet, err := s.pets.CreateReanimatedPet(userID, petName)
+		if err != nil || pet == nil {
+			return "", false, ErrReanimateFailed
 		}
 		s.addArcheologistXP(s.store.DB, userID, 100)
 		return petName, true, nil

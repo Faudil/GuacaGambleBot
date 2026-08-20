@@ -29,12 +29,12 @@ func TestDecodeDigResultLegacyPayload(t *testing.T) {
 }
 
 func TestDecodeDigResultSellPayload(t *testing.T) {
-	rest := []string{"sell", "coelacanth_egg", "2500", "living", "100", "200", "1", "a1b2c3d4", "123"}
+	rest := []string{"sell", "shadow_fossil", "5000", "shadow", "100", "200", "1", "a1b2c3d4", "123"}
 	res := decodeDigResult(rest)
 	assert.NotNil(t, res)
-	assert.Equal(t, "coelacanth_egg", res.ItemName)
-	assert.Equal(t, 2500, res.Value)
-	assert.Equal(t, "living", res.Quality)
+	assert.Equal(t, "shadow_fossil", res.ItemName)
+	assert.Equal(t, 5000, res.Value)
+	assert.Equal(t, "shadow", res.Quality)
 	assert.Equal(t, 200, res.XP)
 	assert.Equal(t, "a1b2c3d4", collectToken(rest))
 }

@@ -169,6 +169,7 @@ func (svc *Service) StartRaid(raid *model.VeilRaid, leaderID int64, lang string)
 	scaled := ScaleForPlayers(len(ids))
 	raid.BossMaxHP = int(float64(1500) * scaled)
 	raid.BossHP = raid.BossMaxHP
+	raid.BossImage = "bosses/vault_guardian.png"
 	raid.Status = "active"
 	raid.Phase = "whispering"
 

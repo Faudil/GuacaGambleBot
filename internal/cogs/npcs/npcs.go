@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/assets"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -16,6 +17,7 @@ import (
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
@@ -50,6 +52,13 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		r.Component("npc", "shop_"+id, c.onShop(id))
 		for _, item := range n.ShopItems {
 			r.Component("npc", "buy_"+id+"_"+item.ItemID, c.onShopBuy(id, item.ItemID))
+		}
+	}
+	// Questline offers are accepted through the NPC menu: one handler per
+	// defined questline, so future questlines only need a QuestRegistry entry.
+	for _, qid := range questssvc.QuestlineOrder {
+		if def := questssvc.QuestRegistry[qid]; def != nil && def.NPCID != "" {
+			r.Component("npc", "acceptquest_"+qid, c.onAcceptQuestline(qid))
 		}
 	}
 }
@@ -191,7 +200,7 @@ func (c *Cog) makeNPCSelect(npcID string) func(b *interaction.Bot, i *discordgo.
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, true))
 	}
 }
 
@@ -239,7 +248,7 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 					),
 				}
 				_ = b.Session.InteractionRespond(i.Interaction,
-					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+					c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 			}
 			return
 		}
@@ -263,8 +272,54 @@ func (c *Cog) onChat(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 				components.Button("↩️", components.EncodeOwner(userID, "npc", npcID), discordgo.SecondaryButton),
 			),
 		}
+		if event.QuestOffer != "" {
+			comps = append(comps, components.ActionRow(
+				components.Button("📜 "+i18n.T("npcs.quest_offer_btn", lang),
+					components.EncodeOwner(userID, "npc", "acceptquest_"+event.QuestOffer),
+					discordgo.SuccessButton),
+			))
+		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
+	}
+}
+
+// onAcceptQuestline starts the offered questline and reveals its first step,
+// so the story continues without leaving the NPC menu.
+// npcResponse attaches the NPC's picture to an interaction response, shown
+// large on the profile and as a compact thumbnail on secondary views.
+func (c *Cog) npcResponse(responseType discordgo.InteractionResponseType, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent, npcData *universe.NPCData, big bool) *discordgo.InteractionResponse {
+	image := ""
+	if npcData != nil {
+		image = npcData.Image
+	}
+	if big {
+		return assets.Response(responseType, embed, comps, image)
+	}
+	return assets.ResponseThumbnail(responseType, embed, comps, image)
+}
+
+func (c *Cog) onAcceptQuestline(questID string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
+		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+		userID := interaction.ToInt64(interaction.UserID(i))
+		def := questssvc.QuestRegistry[questID]
+		if def == nil || len(def.Steps) == 0 {
+			return
+		}
+		_ = questssvc.StartQuestForUser(c.store, userID, questID)
+		title := i18n.T(def.TitleKey, lang)
+		text := i18n.T(def.Steps[0].TextKey, lang)
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button(i18n.T("quests.continue_label", lang),
+					components.EncodeOwner(userID, "quest", "advance", questID),
+					discordgo.SuccessButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+				components.Embed(title, text, 0x2ecc71), comps))
 	}
 }
 
@@ -324,7 +379,7 @@ func (c *Cog) onGiftRequest(npcID string) func(b *interaction.Bot, i *discordgo.
 			npcData.Color,
 		)
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -366,7 +421,7 @@ func (c *Cog) onGiftPick(npcID string) func(b *interaction.Bot, i *discordgo.Int
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -389,7 +444,7 @@ func (c *Cog) onBio(npcID string) func(b *interaction.Bot, i *discordgo.Interact
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -412,7 +467,7 @@ func (c *Cog) onAdvice(npcID string) func(b *interaction.Bot, i *discordgo.Inter
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -467,7 +522,7 @@ func (c *Cog) onRankUp(npcID string) func(b *interaction.Bot, i *discordgo.Inter
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -532,7 +587,7 @@ func (c *Cog) onShop(npcID string) func(b *interaction.Bot, i *discordgo.Interac
 		))
 
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 
@@ -565,7 +620,7 @@ func (c *Cog) onShopBuy(npcID string, itemID string) func(b *interaction.Bot, i 
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
-			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			c.npcResponse(discordgo.InteractionResponseUpdateMessage, embed, comps, npcData, false))
 	}
 }
 

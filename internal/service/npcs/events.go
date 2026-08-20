@@ -19,10 +19,11 @@ import (
 )
 
 type ChatEvent struct {
-	ID       string
-	Text     string
-	RepBonus int
-	ItemID   string
+	ID         string
+	Text       string
+	RepBonus   int
+	ItemID     string
+	QuestOffer string // questline offered to the player (accept via UI)
 }
 
 // ChatCooldownError is returned when a player tries to chat with an NPC
@@ -70,6 +71,18 @@ func (s *Service) Chat(userID int64, npcID string, lang string) (*ChatEvent, err
 	// a one-time cinematic introduction. Neither burns the chat cooldown.
 	if npcID == jsvc.ChroniclerID {
 		return s.chroniclerChat(userID, lang)
+	}
+
+	// A questline offer takes priority over regular chatting: it is a story
+	// moment, so it neither consumes the chat cooldown nor grants reputation.
+	// It keeps being offered until the player accepts (or the questline is
+	// completed).
+	if offer := questssvc.QuestlineOfferForNPC(s.store, userID, npcID); offer != nil {
+		return &ChatEvent{
+			ID:         "quest_offer_" + offer.ID,
+			Text:       i18n.T("quests.questline_offer", lang, map[string]any{"npc": npcData.Name, "title": i18n.T(offer.TitleKey, lang)}),
+			QuestOffer: offer.ID,
+		}, nil
 	}
 
 	cooldown := time.Duration(s.cfg.NPCChatCooldownHours) * time.Hour

@@ -230,3 +230,84 @@ func TestRiddleQuestionsFitModalLimits(t *testing.T) {
 		}
 	}
 }
+
+// TestFloorLeaveShowsRunSummary ensures leaving the delve replies with a run
+// summary (stats, loot, deeds) and ends the session.
+func TestFloorLeaveShowsRunSummary(t *testing.T) {
+	c, b, rt := merchantTestCog(t)
+	s, err := c.svc.StartSession(merchantTestUser, 1, 1)
+	require.NoError(t, err)
+	s.Gold = 120
+	s.RoomsCleared = 3
+	s.Torches = 1
+	s.Keys = 2
+	s.Potions = 0
+	c.svc.AddItem(s, merchantOfferCommon()[0])
+	c.svc.AddFlag(s, "solved_riddle")
+	c.saveSession(s)
+	c.store.SetCooldown(merchantTestUser, "journal_ambient")
+
+	c.onFloorLeave(b, merchantBuyInteraction("delve::floor_leave"))
+
+	bodies := rt.snapshot()
+	require.Len(t, bodies, 1, "leaving must produce exactly one response")
+	lang := c.store.GetLanguage(1)
+	assert.Contains(t, bodies[0], i18n.T("delve.summary.title", lang), "the reply must use the summary title")
+	assert.Contains(t, bodies[0], i18n.T("delve.summary.gold", lang, map[string]any{"gold": "120"}), "the summary must show collected gold")
+	assert.Contains(t, bodies[0], "Test Common", "the summary must list the looted item")
+	assert.Contains(t, bodies[0], i18n.T("delve.flags.solved_riddle", lang), "the summary must list the riddle deed")
+	got, err := c.svc.GetSession(merchantTestUser)
+	require.NoError(t, err)
+	assert.Nil(t, got, "the delve session must be ended after leaving")
+}
+
+// TestVaultKeyShowsRunSummary ensures the tutorial vault-key ending also
+// carries the run summary.
+func TestVaultKeyShowsRunSummary(t *testing.T) {
+	c, b, rt := merchantTestCog(t)
+	s, err := c.svc.StartSession(merchantTestUser, 1, 1)
+	require.NoError(t, err)
+	s.Gold = 60
+	s.RoomsCleared = 1
+	c.svc.AddItem(s, merchantOfferCommon()[0])
+	c.saveSession(s)
+	c.store.SetCooldown(merchantTestUser, "journal_ambient")
+
+	c.onKeyTake(b, merchantBuyInteraction("delve::key_take"))
+
+	bodies := rt.snapshot()
+	require.Len(t, bodies, 1)
+	lang := c.store.GetLanguage(1)
+	assert.Contains(t, bodies[0], i18n.T("delve.summary.gold", lang, map[string]any{"gold": "60"}))
+	assert.Contains(t, bodies[0], "Test Common")
+	got, err := c.svc.GetSession(merchantTestUser)
+	require.NoError(t, err)
+	assert.Nil(t, got, "the delve session must be ended after taking the vault key")
+}
+
+// TestDeathEmbedsRunSummary ensures the fallen embed carries the run summary
+// (kept loot and stats) and the session is marked fallen.
+func TestDeathEmbedsRunSummary(t *testing.T) {
+	c, b, rt := merchantTestCog(t)
+	s, err := c.svc.StartSession(merchantTestUser, 1, 1)
+	require.NoError(t, err)
+	s.Gold = 100
+	s.HP = 0
+	s.RoomsCleared = 2
+	soulbound := merchantOfferCommon()[0]
+	soulbound.IsSoulbound = true
+	c.svc.AddItem(s, soulbound)
+	c.saveSession(s)
+	lang := c.store.GetLanguage(1)
+
+	c.applyFallenPenalties(b, merchantBuyInteraction("delve::combat_flee"), s, merchantTestUser, lang)
+
+	bodies := rt.snapshot()
+	require.Len(t, bodies, 1)
+	assert.Contains(t, bodies[0], i18n.T("delve.handler.death_fallen_title", lang), "the death embed must keep its fallen title")
+	assert.Contains(t, bodies[0], "Test Common", "the summary must list the kept loot")
+	assert.Contains(t, bodies[0], i18n.T("delve.summary.title", lang), "the death embed must carry the run summary")
+	got, err := c.svc.GetSession(merchantTestUser)
+	require.NoError(t, err)
+	assert.Equal(t, "fallen", got.Status, "the session must be marked fallen")
+}

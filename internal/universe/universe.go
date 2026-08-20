@@ -46,6 +46,10 @@ type NPCData struct {
 	Emoji string
 	Color int
 
+	// Image is the asset file (e.g. "npcs/elara.png") shown in this NPC's
+	// embeds. Empty means no picture.
+	Image string
+
 	DescriptionEN string
 	DescriptionFR string
 	RoleEN        string

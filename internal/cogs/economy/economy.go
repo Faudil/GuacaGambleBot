@@ -2,8 +2,10 @@ package economy
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -12,9 +14,14 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
+	dailyquestsvc "guacagamblebot/internal/service/dailyquest"
 	economysvc "guacagamblebot/internal/service/economy"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 var one = float64(1)
@@ -25,11 +32,19 @@ type Cog struct {
 	store *store.Store
 	cfg   *config.Config
 	svc   *economysvc.Service
+	dq    *dailyquestsvc.Service
 }
 
 // Register wires the cog into the router under both slash and prefix triggers.
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: economysvc.New(s, cfg)}
+	def := universe.Get(cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	inv := invsvc.New(s, cfg)
+	npc := npcsvc.New(s, cfg, def, inv)
+	dq := dailyquestsvc.New(s, npc)
+	c := &Cog{store: s, cfg: cfg, svc: economysvc.New(s, cfg, dq), dq: dq}
 	r.Slash("economy", "Économie : solde, daily, don.", c.onSlashMenu)
 	r.Slash("eco", "Économie : solde, daily, don.", c.onSlashMenu)
 	r.Slash("bal", "Voir ton solde économique.", c.onSlashBalance)
@@ -62,6 +77,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		c.onSlashGive)
 	r.Component("economy", "balance", c.onBalance)
 	r.Component("economy", "daily", c.onDaily)
+	r.Component("economy", "daily_view", c.onDailyView)
+	r.Component("economy", "daily_deliver", c.onDailyDeliver)
 	r.Component("economy", "give", c.onGiveOpen)
 	r.Modal("economy", "give_submit", c.onGiveSubmit)
 }
@@ -151,8 +168,20 @@ func (c *Cog) onSlashDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if res.LeveledUp {
 		embed.Description = i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
+	var comps []discordgo.MessageComponent
+	if res.Recipe != nil {
+		if embed.Description != "" {
+			embed.Description += "\n"
+		}
+		embed.Description += i18n.T("quests.daily.new_quest", lang, map[string]any{"title": i18n.T(res.Recipe.TitleKey, lang)})
+		comps = append(comps, components.ActionRow(
+			components.Button("📜 "+i18n.T("quests.daily.view_btn", lang),
+				components.EncodeOwner(userID, "economy", "daily_view"),
+				discordgo.SuccessButton),
+		))
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
@@ -192,6 +221,9 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
 	if res.LeveledUp {
 		embed.Description = i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
+	if res.Recipe != nil {
+		embed.Description += "\n\n" + i18n.T("quests.daily.new_quest", lang, map[string]any{"title": i18n.T(res.Recipe.TitleKey, lang)})
 	}
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		embed.Description += "\n\n" + questssvc.QuestNotificationMsg(n, lang)
@@ -301,6 +333,16 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed.Fields = fields
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.daily_footer", lang)}
 	_, comps := c.menu(lang, userID)
+	if res.Recipe != nil {
+		embed.Description = i18n.T("quests.daily.new_quest", lang, map[string]any{"title": i18n.T(res.Recipe.TitleKey, lang)})
+		comps = append([]discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("📜 "+i18n.T("quests.daily.view_btn", lang),
+					components.EncodeOwner(userID, "economy", "daily_view"),
+					discordgo.SuccessButton),
+			),
+		}, comps...)
+	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 
@@ -409,4 +451,200 @@ func (c *Cog) onSlashGive(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = sb
 	_ = rb
+}
+
+// ─── Procedural daily quest view ────────────────────────────────
+
+// onDailyView renders the active daily quest with its steps, progress and the
+// delivery button when the turn-in step is current.
+func (c *Cog) onDailyView(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.buildDailyEmbed(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// onDailyDeliver claims the current turn-in step of the daily quest.
+func (c *Cog) onDailyDeliver(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+
+	recipe, completed, err := c.dq.Claim(userID)
+	if err != nil {
+		var missing *store.DailyMissingItemsError
+		if errors.As(err, &missing) {
+			var lines []string
+			for _, m := range missing.Items {
+				lines = append(lines, i18n.T("quests.daily.missing_item", lang, map[string]any{
+					"item": items.LocalizedName(m.ItemID, lang), "needed": m.Needed, "have": m.Have,
+				}))
+			}
+			embed := components.Embed("❌ "+i18n.T("quests.daily.title", lang),
+				i18n.T("quests.daily.missing_items", lang)+"\n"+strings.Join(lines, "\n"), 0xe74c3c)
+			comps := []discordgo.MessageComponent{
+				components.ActionRow(
+					components.Button("↩️", components.EncodeOwner(userID, "economy", "daily_view"), discordgo.SecondaryButton),
+				),
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+			return
+		}
+		interaction.RespondError(b, i, lang, "quests.daily.title")
+		return
+	}
+
+	if completed {
+		desc := ""
+		if recipe.ThankKey != "" {
+			desc += "*" + i18n.T(recipe.ThankKey, lang) + "*\n\n"
+		}
+		desc += i18n.T("quests.daily.completed", lang, map[string]any{
+			"title": i18n.T(recipe.TitleKey, lang), "rewards": c.dailyRewardText(lang, recipe.Reward),
+		})
+		comps := []discordgo.MessageComponent{
+			components.ActionRow(
+				components.Button("↩️", components.EncodeOwner(userID, "economy", "daily"), discordgo.SecondaryButton),
+			),
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
+				components.Embed("✅ "+i18n.T("quests.daily.title", lang), desc, 0x2ecc71), comps))
+		return
+	}
+
+	embed, comps := c.buildDailyEmbed(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// buildDailyEmbed renders the active daily quest: requestor intro, each step
+// with state/progress, the reward preview and a Deliver button on the turn-in.
+func (c *Cog) buildDailyEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	recipe, data, err := c.dq.Current(userID)
+	if err != nil {
+		return components.Embed(i18n.T("quests.daily.title", lang), i18n.T("quests.daily.no_active", lang), 0x2ecc71), nil
+	}
+	uq, _, uerr := c.store.GetUserQuest(userID, "daily_quest")
+	if uerr != nil || uq == nil || uq.Status == "COMPLETED" {
+		return components.Embed(i18n.T("quests.daily.title", lang),
+			i18n.T("quests.daily.completed_short", lang, map[string]any{"title": i18n.T(recipe.TitleKey, lang)}), 0x2ecc71), nil
+	}
+
+	npcName := c.npcName(recipe.Requestor)
+	desc := ""
+	if recipe.MoodKey != "" {
+		desc += i18n.T(recipe.MoodKey, lang) + "\n\n"
+	}
+	desc += i18n.T(recipe.IntroKey, lang, map[string]any{"npc": npcName}) + "\n\n"
+	for idx, st := range recipe.Steps {
+		state := "⬜"
+		if idx < data.StepIndex {
+			state = "✅"
+		} else if idx == data.StepIndex {
+			state = "🔵"
+		}
+		line := c.dailyStepText(lang, st)
+		if st.Kind == store.DailyStepActivity && idx == data.StepIndex {
+			line += fmt.Sprintf(" (%d/%d)", data.ProgressValue, st.Count)
+		}
+		desc += fmt.Sprintf("%s **%d.** %s\n", state, idx+1, line)
+	}
+	desc += "\n" + i18n.T("quests.daily.reward_label", lang) + " " + c.dailyRewardText(lang, recipe.Reward)
+	if streak := c.dq.Streak(userID); streak > 0 {
+		desc += "\n" + i18n.T("quests.daily.streak", lang, map[string]any{"n": streak})
+	}
+	desc += "\n" + i18n.T("quests.daily.jackpot_odds", lang, map[string]any{
+		"pct": c.dq.JackpotChance(userID),
+	})
+	if isSunday() && recipe.Reward.RepNPC != "" {
+		desc += "\n" + i18n.T("quests.daily.special_rep", lang, map[string]any{"npc": npcName})
+	}
+
+	npcData := c.npcData(recipe.Requestor)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("↩️", components.EncodeOwner(userID, "economy", "daily"), discordgo.SecondaryButton),
+		),
+	}
+	if npcData != nil {
+		comps = append(comps, components.ActionRow(
+			components.Button("💬 "+i18n.T("npcs.chat_btn", lang),
+				components.EncodeOwner(userID, "npc", recipe.Requestor), discordgo.PrimaryButton),
+		))
+	}
+	if data.StepIndex < len(recipe.Steps) && recipe.Steps[data.StepIndex].Kind == store.DailyStepTurnIn {
+		comps = append(comps, components.ActionRow(
+			components.Button("📦 "+i18n.T("quests.daily.deliver_btn", lang),
+				components.EncodeOwner(userID, "economy", "daily_deliver"), discordgo.SuccessButton),
+		))
+	}
+	return components.Embed(i18n.T("quests.daily.title", lang)+" — "+i18n.T(recipe.TitleKey, lang), desc, 0x2ecc71), comps
+}
+
+// dailyStepText renders one recipe step's line with its placeholders.
+func (c *Cog) dailyStepText(lang string, st store.DailyStep) string {
+	switch st.Kind {
+	case store.DailyStepActivity:
+		vars := map[string]any{"n": st.Count}
+		if st.Zone != "" {
+			vars["zone"] = i18n.T("hunt."+st.Zone+"_zone", lang)
+		}
+		return i18n.T(st.TextKey, lang, vars)
+	case store.DailyStepTurnIn:
+		for itemID, qty := range st.Items {
+			return i18n.T(st.TextKey, lang, map[string]any{"n": qty, "item": items.LocalizedName(itemID, lang)})
+		}
+	}
+	return ""
+}
+
+// dailyRewardText renders the recipe reward as a single display string.
+func (c *Cog) dailyRewardText(lang string, r store.DailyReward) string {
+	var parts []string
+	if r.Money > 0 {
+		parts = append(parts, i18n.T("quests.reward_money", lang, map[string]any{"amount": r.Money}))
+	}
+	if r.Crowns > 0 {
+		parts = append(parts, i18n.T("quests.reward_crowns", lang, map[string]any{"amount": r.Crowns}))
+	}
+	if r.ItemID != "" {
+		if it := items.Get(r.ItemID); it != nil {
+			parts = append(parts, it.Emoji+" "+items.LocalizedName(it.ID, lang))
+		}
+	}
+	if r.RepPoints > 0 {
+		parts = append(parts, i18n.T("quests.daily.reward_rep", lang, map[string]any{"points": r.RepPoints}))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// npcData resolves an NPC's display data for the configured universe, or nil
+// when the universe has no such NPC (e.g. the Town Board).
+func (c *Cog) npcData(npcID string) *universe.NPCData {
+	def := universe.Get(c.cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	if def != nil {
+		if n, ok := def.NPCs[npcID]; ok {
+			return n
+		}
+	}
+	return nil
+}
+
+// npcName resolves an NPC's display name for the configured universe, falling
+// back to the NPC id when the universe is unknown.
+func (c *Cog) npcName(npcID string) string {
+	if n := c.npcData(npcID); n != nil {
+		return n.Name
+	}
+	return npcID
+}
+
+// isSunday reports whether today is Sunday (the day-of-week special).
+func isSunday() bool {
+	return time.Now().Weekday() == time.Sunday
 }

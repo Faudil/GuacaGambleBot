@@ -564,6 +564,18 @@
         "answer": "clock"
       }
     },
+    "summary": {
+      "title": "📜 Run Summary",
+      "rooms_cleared": "🚪 Rooms cleared: {n}",
+      "deepest": "⛏️ Reached Floor {floor} — {zone}",
+      "gold": "💰 Gold collected: {gold}",
+      "supplies": "🧭 Supplies left: {torches} torches · {keys} keys · {potions} potions",
+      "duration": "⏱️ Run duration: {duration}",
+      "loot_header": "🎒 **Looted items**",
+      "no_loot": "🎒 Looted items: none",
+      "more_loot": "…and {n} more",
+      "deeds_header": "🏅 **Deeds**"
+    },
     "chronicle": {
       "title": "📖 Personal Chronicle",
       "empty": "No chronicle entries yet. Begin your journey with `/delve`!",

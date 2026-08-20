@@ -7,3 +7,7 @@ services:
       - .env
     volumes:
       - ./data:/app/data
+      # Live assets (NPC/boss art): drop a file in ./assets and restart the
+      # container — no image rebuild needed. The Dockerfile also bakes a copy
+      # in, so fresh clones without this mount still get the pictures.
+      - ./assets:/app/assets:ro

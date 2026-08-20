@@ -247,10 +247,11 @@ var zoneBosses = []struct {
 	AtkMult float64
 	DefMult float64
 	Zone    string
+	Image   string
 }{
-	{Floor: 3, Name: "Crypt Lord", Emoji: "👑", HPBonus: 100, AtkMult: 1.75, DefMult: 1.75, Zone: "crypt"},
-	{Floor: 6, Name: "Spore Tyrant", Emoji: "🍄", HPBonus: 150, AtkMult: 1.75, DefMult: 1.75, Zone: "fungal_wilds"},
-	{Floor: 9, Name: "Forge Master", Emoji: "⚒️", HPBonus: 200, AtkMult: 1.75, DefMult: 1.75, Zone: "forge_district"},
+	{Floor: 3, Name: "Crypt Lord", Emoji: "👑", HPBonus: 100, AtkMult: 1.75, DefMult: 1.75, Zone: "crypt", Image: "delve/crypt_lord.png"},
+	{Floor: 6, Name: "Spore Tyrant", Emoji: "🍄", HPBonus: 150, AtkMult: 1.75, DefMult: 1.75, Zone: "fungal_wilds", Image: "delve/spore_tyrant.png"},
+	{Floor: 9, Name: "Forge Master", Emoji: "⚒️", HPBonus: 200, AtkMult: 1.75, DefMult: 1.75, Zone: "forge_district", Image: "delve/forge_master.png"},
 }
 
 func BossForFloor(floor int) *struct {
@@ -261,6 +262,7 @@ func BossForFloor(floor int) *struct {
 	AtkMult float64
 	DefMult float64
 	Zone    string
+	Image   string
 } {
 	for _, b := range zoneBosses {
 		if b.Floor == floor {

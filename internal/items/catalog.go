@@ -323,7 +323,6 @@ var all = []Item{
 	{ID: "cursed_artifact", Source: SourceShop, Name: "Cursed Artifact", Emoji: "🔮", Price: 800, Description: "An ancient relic pulsing with dark energy.", EffectType: "resource", Droppable: true, Category: Archeology},
 	{ID: "purified_relic", Source: SourceShop, Name: "Purified Relic", Emoji: "✨", Price: 1500, Description: "A relic cleansed of its dark curse.", EffectType: "resource", Droppable: true, Category: Archeology},
 	{ID: "fossilized_egg", Source: SourceShop, Name: "Fossilized Egg", Emoji: "🥚", Price: 500, Description: "A stone egg with ancient patterns. Who knows what's inside?", EffectType: "consumable", Droppable: false, Category: Special},
-	{ID: "coelacanth_egg", Source: SourceShop, Name: "Coelacanth Egg", Emoji: "🥚", Price: 2500, Description: "An egg that seems prehistoric. It pulses faintly.", EffectType: "consumable", Droppable: false, Category: Special},
 	{ID: "excavator_hat", Source: SourceQuest, Name: "Excavator's Hat", Emoji: "🎩", Price: 0, Description: "A worn expedition hat. It carries centuries of stories.", EffectType: "collectible", Droppable: false, Category: Special},
 	{ID: "journal_page_1", Source: SourceQuest, Name: "Journal Page #1", Emoji: "📄", Price: 1, Description: "A torn page from an ancient excavator's journal.", EffectType: "resource", Droppable: false, Category: Archeology},
 	{ID: "journal_page_2", Source: SourceQuest, Name: "Journal Page #2", Emoji: "📄", Price: 1, Description: "A torn page from an ancient excavator's journal.", EffectType: "resource", Droppable: false, Category: Archeology},

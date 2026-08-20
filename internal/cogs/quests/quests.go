@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/items"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
@@ -79,6 +80,8 @@ var activityLabels = map[string]string{
 	"zone_bosses_defeated":   "👑 Zone Boss",
 	"expedition_completions": "🐾 Expedition",
 	"pets_fed":               "🐾 Pet Care",
+	"blackjack_won":          "🃏 Blackjack",
+	"wagers_won":             "🎲 Wager",
 }
 
 // activityCommands maps an activity target stat to the slash command the player
@@ -260,7 +263,7 @@ func progressBar(current, target int) string {
 
 func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	quests, err := c.svc.GetAllActiveQuests(userID)
-	if err != nil || len(quests) == 0 {
+	if err != nil {
 		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), 0x2ecc71), nil
 	}
 
@@ -275,12 +278,30 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 		desc += i18n.T("quests.tutorial_egg_hint", lang) + "\n\n"
 	}
 
+	// Post-tutorial questline directory: suggested next, available questlines
+	// and locked ones with their unlock hints.
+	hubDesc, hubBtns := c.questlineHubSection(lang, userID)
+	desc += hubDesc
+	btns = append(btns, hubBtns...)
+
+	if len(quests) == 0 && strings.TrimSpace(desc) == "" {
+		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), 0x2ecc71), nil
+	}
+
 	for _, q := range quests {
 		def := c.svc.GetQuestDef(q.QuestID)
 		if def == nil {
 			continue
 		}
 		title := i18n.T(def.TitleKey, lang)
+
+		// Procedural daily quests are rendered from their recipe (custom data)
+		// and managed in /daily — see the economy cog.
+		if q.QuestID == "daily_quest" {
+			desc += c.dailyQuestLine(lang, q) + "\n\n"
+			continue
+		}
+
 		stepStr := i18n.T("quests.step_progress", lang, map[string]any{
 			"current": q.StepIndex + 1,
 			"total":   q.TotalSteps,
@@ -400,6 +421,159 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 	return components.Embed(i18n.T("quests.title", lang), desc, 0x2ecc71), comps
 }
 
+// dailyQuestLine renders the daily quest compactly for /quest. The full view
+// with steps and the delivery button lives in /daily (economy cog).
+func (c *Cog) dailyQuestLine(lang string, q questssvc.QuestInfo) string {
+	cd := q.CustomData
+	if cd == nil {
+		return i18n.T("quests.daily.title", lang)
+	}
+	title := i18n.T("quests.daily.title", lang)
+	if tk, ok := cd["title_key"].(string); ok && tk != "" {
+		title = i18n.T(tk, lang)
+	}
+	stepsAny, _ := cd["steps"].([]any)
+	if len(stepsAny) == 0 {
+		return "📅 " + title
+	}
+	if q.StepIndex >= len(stepsAny) {
+		return "✅ " + title
+	}
+	st, _ := stepsAny[q.StepIndex].(map[string]any)
+	line := ""
+	if tk, ok := st["text_key"].(string); ok && tk != "" {
+		vars := map[string]any{"n": toInt(st["count"])}
+		if kind, _ := st["kind"].(string); kind == "turnin" {
+			if itemsMap, ok := st["items"].(map[string]any); ok {
+				for itemID, qty := range itemsMap {
+					vars["n"] = toInt(qty)
+					vars["item"] = items.LocalizedName(itemID, lang)
+				}
+			}
+		} else if zone, ok := st["zone"].(string); ok && zone != "" {
+			vars["zone"] = i18n.T("hunt."+zone+"_zone", lang)
+		}
+		line = i18n.T(tk, lang, vars)
+	}
+	prog := ""
+	if kind, _ := st["kind"].(string); kind == "activity" {
+		if target := toInt(st["count"]); target > 0 {
+			prog = fmt.Sprintf(" (%d/%d)", q.Progress, target)
+		}
+	}
+	stepStr := i18n.T("quests.step_progress", lang, map[string]any{
+		"current": q.StepIndex + 1,
+		"total":   len(stepsAny),
+	})
+	return fmt.Sprintf("📅 **%s** (%s) — %s%s", title, stepStr, line, prog)
+}
+
+// questlineHubSection builds the post-tutorial questline directory shown at
+// the top of /quest: a suggested-next breadcrumb, the available questlines
+// (each with a button that opens the offering NPC's menu) and the locked ones
+// with their unlock hint. It returns empty when the tutorial is not done or
+// every questline is started or completed.
+func (c *Cog) questlineHubSection(lang string, userID int64) (string, []discordgo.MessageComponent) {
+	if !questssvc.TutorialCompleted(c.store, userID) {
+		return "", nil
+	}
+	avail := questssvc.AvailableQuestlines(c.store, userID)
+	locked := questssvc.LockedQuestlines(c.store, userID)
+	if len(avail) == 0 && len(locked) == 0 {
+		return "", nil
+	}
+
+	var desc string
+	var btns []discordgo.MessageComponent
+
+	if sug := questssvc.SuggestedNext(c.store, userID); sug != nil {
+		npc := c.npcData(sug.NPCID)
+		desc += i18n.T("quests.hub_suggested", lang, map[string]any{
+			"emoji": npc.Emoji, "npc": npc.Name, "title": i18n.T(sug.TitleKey, lang),
+		}) + "\n\n"
+	}
+
+	if len(avail) > 0 {
+		desc += i18n.T("quests.hub_available", lang) + "\n"
+		for _, d := range avail {
+			npc := c.npcData(d.NPCID)
+			desc += fmt.Sprintf("%s **%s** — %s\n", npc.Emoji, i18n.T(d.TitleKey, lang), npc.Name)
+			btns = append(btns, components.Button(
+				i18n.T("quests.talk_to_npc", lang, map[string]any{"npc": npc.Name}),
+				components.EncodeOwner(userID, "npc", d.NPCID),
+				discordgo.PrimaryButton))
+		}
+		desc += "\n"
+	}
+
+	if len(locked) > 0 {
+		desc += i18n.T("quests.hub_locked", lang) + "\n"
+		for _, d := range locked {
+			desc += fmt.Sprintf("🔒 **%s** — %s\n", i18n.T(d.TitleKey, lang), c.unlockHint(lang, d))
+		}
+		desc += "\n"
+	}
+
+	return desc, btns
+}
+
+// npcData resolves an NPC's display data for the configured universe, falling
+// back to the NPC id when the universe is unknown.
+func (c *Cog) npcData(npcID string) *universe.NPCData {
+	def := universe.Get(c.cfg.Universe)
+	if def == nil {
+		def = universe.Get("hoakhaven")
+	}
+	if def != nil {
+		if n, ok := def.NPCs[npcID]; ok {
+			return n
+		}
+	}
+	return &universe.NPCData{ID: npcID, Name: npcID, Emoji: "❔"}
+}
+
+// unlockHint renders why a locked questline is not yet available.
+func (c *Cog) unlockHint(lang string, d *questssvc.QuestDef) string {
+	npc := c.npcData(d.NPCID)
+	switch {
+	case d.HintKey != "":
+		return i18n.T(d.HintKey, lang, map[string]any{"npc": npc.Name})
+	case d.PathReq == "hunter":
+		return i18n.T("quests.unlock_hint.hunter", lang, map[string]any{"npc": npc.Name})
+	case d.PathReq == "shadow":
+		return i18n.T("quests.unlock_hint.shadow", lang, map[string]any{"npc": npc.Name})
+	case d.BossReq > 0:
+		return i18n.T("quests.unlock_hint.boss", lang, map[string]any{"stage": d.BossReq})
+	case d.RepReq > 0:
+		return i18n.T("quests.unlock_hint.affinity", lang, map[string]any{"npc": npc.Name, "level": d.RepReq})
+	}
+	return ""
+}
+
+// completionResponse renders a quest's completion message. Completing the
+// tutorial swaps the plain message for a "what now" epilogue that points at
+// the first questline and the /quest hub.
+func (c *Cog) completionResponse(lang string, def *questssvc.QuestDef, userID int64) (string, []discordgo.MessageComponent) {
+	if def.ID != "tutorial" {
+		return c.completedText(lang, def), nil
+	}
+	text := i18n.T("quests.tutorial_epilogue", lang)
+	if sug := questssvc.SuggestedNext(c.store, userID); sug != nil {
+		npc := c.npcData(sug.NPCID)
+		text += "\n\n" + i18n.T("quests.hub_suggested", lang, map[string]any{
+			"emoji": npc.Emoji, "npc": npc.Name, "title": i18n.T(sug.TitleKey, lang),
+		})
+	}
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("📜 "+i18n.T("quests.view_questlines_btn", lang),
+				components.EncodeOwner(userID, "quest", "show"),
+				discordgo.SuccessButton),
+		),
+	}
+	return text, comps
+}
+
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -467,9 +641,10 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
 			if uq2.Status == "COMPLETED" {
+				text, comps := c.completionResponse(lang, def, userID)
 				_ = b.Session.InteractionRespond(i.Interaction,
 					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-						components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
+						components.Embed("✅", text, 0x2ecc71), comps))
 				return
 			}
 			nextIdx := 0
@@ -528,9 +703,10 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
 		if uq2.Status == "COMPLETED" {
+			text, comps := c.completionResponse(lang, def, userID)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
+					components.Embed("✅", text, 0x2ecc71), comps))
 			return
 		}
 		nextStep := def.Steps[uqd2.StepIndex]
@@ -562,9 +738,10 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
 	if uq2.Status == "COMPLETED" {
+		text, comps := c.completionResponse(lang, def, userID)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("✅", c.completedText(lang, def), 0x2ecc71), nil))
+				components.Embed("✅", text, 0x2ecc71), comps))
 		return
 	}
 

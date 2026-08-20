@@ -275,6 +275,8 @@ func (s *Service) Craft(userID int64, recipeKey string, amount int) (bool, int, 
 	}
 
 	leveled, lvl := charsvc.AddXP(s.store, userID, charXP)
+	// Craft activity stat, used by procedural daily quests ("craft N items").
+	_ = s.store.RecordActivity(userID, "items_crafted", amount)
 	return leveled, lvl, nil
 }
 

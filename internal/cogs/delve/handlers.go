@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/assets"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
@@ -60,7 +61,8 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			abilities := delvesvc.GetCombatAbilities(playerLevel)
 			weaponEmoji, weaponName := delvesvc.GetWeaponDisplay(c.store, userID)
 			comps := delvesvc.CombatRoomButtons(lang, abilities, weaponEmoji, weaponName)
-			c.respond(b, i, embed, comps)
+			_ = b.Session.InteractionRespond(i.Interaction,
+				assets.Response(discordgo.InteractionResponseUpdateMessage, embed, comps, bossData.Image))
 			return
 		}
 	}
@@ -85,6 +87,94 @@ func (c *Cog) onFloorDeeper(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	c.respond(b, i, embed, comps)
 }
 
+// summarySkipFlags are run bookkeeping flags never shown as deeds in the
+// end-of-run summary.
+var summarySkipFlags = map[string]bool{
+	"first_descent":      true,
+	"escaped_alive":      true,
+	"left_voluntarily":   true,
+	"vault_key_found":    true,
+	"fell_in_battle":     true,
+	"set_item_collected": true,
+}
+
+const (
+	summaryMaxLootLines = 8
+	summaryMaxDeeds     = 5
+)
+
+func formatRunDuration(d time.Duration) string {
+	d = d.Round(time.Second)
+	if h := int(d.Hours()); h > 0 {
+		return fmt.Sprintf("%dh %02dm", h, int(d.Minutes())%60)
+	}
+	if m := int(d.Minutes()); m > 0 {
+		return fmt.Sprintf("%dm %02ds", m, int(d.Seconds())%60)
+	}
+	return fmt.Sprintf("%ds", int(d.Seconds()))
+}
+
+// runSummaryText renders a compact end-of-run report: stats, remaining
+// supplies, run duration, looted items and notable deeds.
+func (c *Cog) runSummaryText(s *model.DelveSession, lang string) string {
+	var sb strings.Builder
+
+	sb.WriteString(i18n.T("delve.summary.rooms_cleared", lang, map[string]any{"n": fmt.Sprintf("%d", s.RoomsCleared)}) + "\n")
+	zoneName := i18n.T("delve.room.zone."+s.Zone, lang)
+	if zoneName == "delve.room.zone."+s.Zone {
+		zoneName = s.Zone
+	}
+	sb.WriteString(i18n.T("delve.summary.deepest", lang, map[string]any{
+		"floor": fmt.Sprintf("%d", s.Floor),
+		"zone":  zoneName,
+	}) + "\n")
+	sb.WriteString(i18n.T("delve.summary.gold", lang, map[string]any{"gold": fmt.Sprintf("%d", s.Gold)}) + "\n")
+	sb.WriteString(i18n.T("delve.summary.supplies", lang, map[string]any{
+		"torches": fmt.Sprintf("%d", s.Torches),
+		"keys":    fmt.Sprintf("%d", s.Keys),
+		"potions": fmt.Sprintf("%d", s.Potions),
+	}) + "\n")
+	sb.WriteString(i18n.T("delve.summary.duration", lang, map[string]any{"duration": formatRunDuration(time.Since(s.CreatedAt))}) + "\n")
+
+	inv := c.svc.GetInventory(s)
+	sb.WriteString("\n")
+	if len(inv) == 0 {
+		sb.WriteString(i18n.T("delve.summary.no_loot", lang) + "\n")
+	} else {
+		sb.WriteString(i18n.T("delve.summary.loot_header", lang) + "\n")
+		for i, it := range inv {
+			if i >= summaryMaxLootLines {
+				sb.WriteString(i18n.T("delve.summary.more_loot", lang, map[string]any{"n": fmt.Sprintf("%d", len(inv)-summaryMaxLootLines)}))
+				break
+			}
+			sb.WriteString(fmt.Sprintf("%s %s ×%d\n", delvesvc.RarityEmoji[it.Rarity], delvesvc.DelveItemName(it, lang), it.Quantity))
+		}
+	}
+
+	var deeds []string
+	var flags []string
+	json.Unmarshal([]byte(s.Flags), &flags)
+	for _, f := range flags {
+		if summarySkipFlags[f] {
+			continue
+		}
+		if sentence := delvesvc.GetFlagSentence(f, lang); sentence != "" {
+			deeds = append(deeds, sentence)
+		}
+	}
+	if len(deeds) > 0 {
+		sb.WriteString("\n" + i18n.T("delve.summary.deeds_header", lang) + "\n")
+		for i, d := range deeds {
+			if i >= summaryMaxDeeds {
+				break
+			}
+			sb.WriteString("• " + d + "\n")
+		}
+	}
+
+	return sb.String()
+}
+
 func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	userID := interaction.ToInt64(i.Member.User.ID)
 	s := c.loadSession(userID)
@@ -96,9 +186,9 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.AddFlag(s, "left_voluntarily")
 	c.svc.EndSession(s, "left")
 	c.deleteSession(userID)
-	desc := i18n.T("delve.left_voluntarily", lang)
+	desc := i18n.T("delve.left_voluntarily", lang) + "\n\n" + c.runSummaryText(s, lang)
 	embed := &discordgo.MessageEmbed{
-		Title:       "🌅 " + i18n.T("delve.floor_leave", lang),
+		Title:       "📜 " + i18n.T("delve.summary.title", lang),
 		Description: desc,
 		Color:       0x2ecc71,
 	}
@@ -127,10 +217,9 @@ func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.AddFlag(s, "vault_key_found")
 	c.svc.EndSession(s, "vault key")
 	c.deleteSession(userID)
-
 	embed := &discordgo.MessageEmbed{
 		Title:       "🔑 " + i18n.T("delve.vault_key_title", lang),
-		Description: i18n.T("delve.vault_key_taken", lang),
+		Description: i18n.T("delve.vault_key_taken", lang) + "\n\n" + c.runSummaryText(s, lang),
 		Color:       0x2ecc71,
 	}
 	c.respond(b, i, embed, nil)
@@ -138,6 +227,7 @@ func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
+
 	if text, dm := jsvc.SceneLine(c.store, userID, "delve", lang); text != "" {
 		interaction.SendJournalScene(b, i, text, dm)
 	}
@@ -537,7 +627,7 @@ func (c *Cog) applyFallenPenalties(b *interaction.Bot, i *discordgo.InteractionC
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "💀 " + i18n.T("delve.handler.death_fallen_title", lang),
-		Description: i18n.T("delve.handler.death_fallen_desc", lang) + "\n" + lootDesc + rescueMsg,
+		Description: i18n.T("delve.handler.death_fallen_desc", lang) + "\n" + lootDesc + rescueMsg + "\n\n" + i18n.T("delve.summary.title", lang) + "\n" + c.runSummaryText(s, lang),
 		Color:       0xe74c3c,
 	}
 	c.respond(b, i, embed, nil)

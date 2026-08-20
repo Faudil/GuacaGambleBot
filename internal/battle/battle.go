@@ -563,6 +563,9 @@ var petDamageTypes = map[string]DamageType{
 	"Doedicurus": DamageImpact, "Mosasaurus": DamageBite, "Titanoboa": DamagePoison,
 	"Phorusrhacos": DamageScratch, "Rhinocéros laineux": DamageImpact,
 	"Entelodon": DamageImpact,
+	"Homard":    DamageBite, "Méduse": DamagePoison, "Phoque": DamageImpact,
+	"Poisson-Clown":  DamageBite,
+	"Wyrm des Dunes": DamageFire, "Béhémoth": DamageImpact, "Djinn": DamageScratch,
 }
 
 func getDamageType(name string) *DamageType {

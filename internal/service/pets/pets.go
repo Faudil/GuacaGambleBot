@@ -99,24 +99,59 @@ func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*m
 	if !ok {
 		return nil, nil
 	}
-
-	history := []model.PetHistoryEntry{
-		{Time: time.Now(), Event: "hatched", Detail: pt.Emoji + " A wild **" + petType + "** emerged from its egg! It looks at you with curious eyes."},
-	}
-	hJSON, _ := json.Marshal(history)
-
 	sid := int64(0)
 	if len(serverID) > 0 {
 		sid = serverID[0]
 	}
+	pet := s.newPet(userID, pt, sid, "hatched",
+		pt.Emoji+" A wild **"+petType+"** emerged from its egg! It looks at you with curious eyes.")
+	if pet == nil {
+		return nil, nil
+	}
+	err := s.store.DB.Create(pet).Error
+	if err != nil {
+		return nil, err
+	}
+	return pet, nil
+}
+
+// CreateReanimatedPet creates a pet reanimated from fossils: same stats and
+// activation rules as CreatePet, but with reanimation history instead of the
+// hatching event.
+func (s *Service) CreateReanimatedPet(userID int64, petType string) (*model.UserPet, error) {
+	pt, ok := PetTypes[petType]
+	if !ok {
+		return nil, nil
+	}
+	pet := s.newPet(userID, pt, 0, "reanimated",
+		pt.Emoji+" **"+petType+"** was reanimated in the genetics lab! It twitches to life and scans its surroundings.")
+	if pet == nil {
+		return nil, nil
+	}
+	err := s.store.DB.Create(pet).Error
+	if err != nil {
+		return nil, err
+	}
+	return pet, nil
+}
+
+// newPet builds a level-1 pet entity from its species definition with the
+// given history event. The first pet the player owns is activated; later
+// pets are stored inactive. Returns nil when the species is unknown.
+func (s *Service) newPet(userID int64, pt *PetType, serverID int64, event, detail string) *model.UserPet {
+	history := []model.PetHistoryEntry{
+		{Time: time.Now(), Event: event, Detail: detail},
+	}
+	hJSON, _ := json.Marshal(history)
+
 	var activeCount int64
 	s.store.DB.Model(&model.UserPet{}).Where("user_id = ? AND is_active = ?", userID, true).Count(&activeCount)
 
-	pet := model.UserPet{
+	return &model.UserPet{
 		UserID:      userID,
-		ServerID:    sid,
-		PetType:     petType,
-		Nickname:    petType,
+		ServerID:    serverID,
+		PetType:     pt.Name,
+		Nickname:    pt.Name,
 		IsActive:    activeCount == 0,
 		MaxHP:       pt.MaxHP,
 		HP:          pt.MaxHP,
@@ -133,11 +168,6 @@ func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*m
 		Personality: RandomPersonality(),
 		History:     string(hJSON),
 	}
-	err := s.store.DB.Create(&pet).Error
-	if err != nil {
-		return nil, err
-	}
-	return &pet, nil
 }
 
 func (s *Service) UpdatePet(pet *model.UserPet) error {

@@ -14,11 +14,14 @@
     },
     "error": "❌ Quelque chose a mal tourné pendant l'expédition. Réessaie.",
     "events": {
+      "combat_ko": "💀 **{pet}** a été assommé par un **{enemy}** sauvage !",
       "combat_loss": "🤕 **{pet}** a croisé un **{enemy}** sauvage et a dû fuir...",
       "combat_win": "⚔️ **{pet}** a vaincu un **{enemy}** sauvage ! (+{xp} XP)",
       "exploration": "🐾 **{pet}** explore **{location}** et gagne **{xp} XP**.",
       "loot": "🎁 **{pet}** a déniché un(e) **{item}** !",
-      "rest": "💤 **{pet}** fait une petite sieste au bord d'un ruisseau."
+      "rest": "💤 **{pet}** fait une petite sieste au bord d'un ruisseau.",
+      "rest_heal": "💤 **{pet}** fait une petite sieste au bord d'un ruisseau et récupère **{hp} PV**.",
+      "return_home": "🏠 **{pet}** s'est réveillé et est rentré en boitillant, vaincu mais vivant."
     },
     "invalid_duration": "❌ Durée invalide. Choisis : 1, 4, 8 ou 24 heures.",
     "ko_warning": "⚠️ **{name}** est K.O. et ne peut pas partir. Soigne-le d'abord !",

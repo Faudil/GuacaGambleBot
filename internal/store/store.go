@@ -619,13 +619,89 @@ func (s *Store) cachedServerSettings(serverID int64) serverSettingsEntry {
 	return e
 }
 
-// StartDailyQuest initialises (or resets) the active daily quest for a user.
-func (s *Store) StartDailyQuest(userID int64, stat string, count int, textKey string) error {
-	custom, _ := json.Marshal(map[string]any{
-		"target_stat":  stat,
-		"target_count": count,
-		"text_key":     textKey,
-	})
+// ─── Procedural daily quests ────────────────────────────────────
+// The daily quest's generated recipe is stored as JSON in the daily_quest
+// custom_data column. The recipe is data-driven: a requestor NPC, 2-3 steps
+// (activity steps then a final turn-in) and a small reward.
+
+// DailyStepKind discriminates the two daily quest step shapes.
+type DailyStepKind string
+
+const (
+	DailyStepActivity DailyStepKind = "activity"
+	DailyStepTurnIn   DailyStepKind = "turnin"
+)
+
+// DailyStep is one step of a generated daily quest recipe.
+type DailyStep struct {
+	Kind    DailyStepKind  `json:"kind"`
+	Stat    string         `json:"stat,omitempty"`  // activity steps
+	Count   int            `json:"count,omitempty"` // activity steps
+	Zone    string         `json:"zone,omitempty"`  // hunt_<zone> steps
+	Items   map[string]int `json:"items,omitempty"` // turn-in steps: item id -> qty
+	TextKey string         `json:"text_key"`        // i18n key for this step's line
+}
+
+// DailyReward is the reward attached to a generated daily quest.
+type DailyReward struct {
+	Money     int    `json:"money"`
+	ItemID    string `json:"item_id,omitempty"` // small item, or the jackpot egg
+	Crowns    int    `json:"crowns"`
+	RepNPC    string `json:"rep_npc,omitempty"` // NPC gaining reputation
+	RepPoints int    `json:"rep_points"`
+}
+
+// DailyRecipe is the full generated daily quest.
+type DailyRecipe struct {
+	Requestor string      `json:"requestor"`
+	TitleKey  string      `json:"title_key"`
+	IntroKey  string      `json:"intro_key"`
+	MoodKey   string      `json:"mood_key,omitempty"`  // atmospheric intro prefix
+	ThankKey  string      `json:"thank_key,omitempty"` // requestor's completion line
+	Steps     []DailyStep `json:"steps"`               // last step is always a turn-in
+	Reward    DailyReward `json:"reward"`
+}
+
+// TurnInItem returns the item id requested by the final turn-in step, or ""
+// when the recipe has no turn-in.
+func (r *DailyRecipe) TurnInItem() string {
+	if len(r.Steps) == 0 {
+		return ""
+	}
+	last := r.Steps[len(r.Steps)-1]
+	for id := range last.Items {
+		return id
+	}
+	return ""
+}
+
+var (
+	// ErrDailyNotActive is returned when no active daily quest exists.
+	ErrDailyNotActive = errors.New("no active daily quest")
+	// ErrDailyNotTurnIn is returned when the current daily step is not a turn-in.
+	ErrDailyNotTurnIn = errors.New("current daily step is not a turn-in")
+)
+
+// DailyMissingItem describes one item the player lacks for a turn-in step.
+type DailyMissingItem struct {
+	ItemID string
+	Needed int
+	Have   int
+}
+
+// DailyMissingItemsError is returned by ClaimDailyTurnIn when the player does
+// not hold the requested items yet.
+type DailyMissingItemsError struct {
+	Items []DailyMissingItem
+}
+
+func (e *DailyMissingItemsError) Error() string {
+	return "daily turn-in items missing"
+}
+
+// StartDailyQuest initialises (or resets) the active daily quest for a user
+// with a generated recipe (JSON).
+func (s *Store) StartDailyQuest(userID int64, recipeJSON string) error {
 	return s.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "quest_id"}},
@@ -635,17 +711,40 @@ func (s *Store) StartDailyQuest(userID int64, stat string, count int, textKey st
 		}
 		return tx.Clauses(clause.OnConflict{
 			Columns:   []clause.Column{{Name: "user_id"}, {Name: "quest_id"}},
-			DoUpdates: clause.Assignments(map[string]any{"step_index": 0, "progress_value": 0, "custom_data": string(custom)}),
-		}).Create(&model.UserQuestData{UserID: userID, QuestID: "daily_quest", StepIndex: 0, ProgressValue: 0, CustomData: string(custom)}).Error
+			DoUpdates: clause.Assignments(map[string]any{"step_index": 0, "progress_value": 0, "custom_data": recipeJSON}),
+		}).Create(&model.UserQuestData{UserID: userID, QuestID: "daily_quest", StepIndex: 0, ProgressValue: 0, CustomData: recipeJSON}).Error
 	})
 }
 
-// HasDailyQuestToday reports whether the user already has an active daily quest
-// started today.
+// GetDailyRecipe loads and parses the user's daily quest recipe. Returns
+// ErrDailyNotActive when no daily quest row exists.
+func (s *Store) GetDailyRecipe(userID int64) (*DailyRecipe, error) {
+	var d model.UserQuestData
+	if err := s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", userID).First(&d).Error; err != nil {
+		return nil, ErrDailyNotActive
+	}
+	var recipe DailyRecipe
+	if err := json.Unmarshal([]byte(d.CustomData), &recipe); err != nil {
+		return nil, err
+	}
+	return &recipe, nil
+}
+
+// GetDailyQuestData returns the user's daily quest progress row.
+func (s *Store) GetDailyQuestData(userID int64) (*model.UserQuestData, error) {
+	var d model.UserQuestData
+	if err := s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", userID).First(&d).Error; err != nil {
+		return nil, err
+	}
+	return &d, nil
+}
+
+// HasDailyQuestToday reports whether the user already received a daily quest
+// today, whether it is still active or already completed — one quest per day.
 func (s *Store) HasDailyQuestToday(userID int64) (bool, error) {
 	var count int64
 	if err := s.DB.Model(&model.UserQuest{}).
-		Where("user_id = ? AND quest_id = 'daily_quest' AND status = 'ACTIVE' AND date(started_at, 'localtime') = date('now', 'localtime')", userID).
+		Where("user_id = ? AND quest_id = 'daily_quest' AND date(started_at, 'localtime') = date('now', 'localtime')", userID).
 		Count(&count).Error; err != nil {
 		return false, err
 	}
@@ -673,17 +772,22 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 }
 
 // recordActivityForQuest atomically increments the quest progress inside a
-// transaction. Only daily_quest is marked completed here (guarded by the status
-// transition so it completes exactly once); other quests (e.g. tutorial) keep
-// their ACTIVE status and the step advancement/completion is delegated to the
-// quest advancement hook, which runs outside the transaction because it uses
-// the store's own connection, which would deadlock inside it.
+// transaction. The daily quest advances step by step (activity steps move to
+// the next step, the final turn-in is handled by ClaimDailyTurnIn); other
+// quests (e.g. tutorial) keep their ACTIVE status and the step
+// advancement/completion is delegated to the quest advancement hook, which
+// runs outside the transaction because it uses the store's own connection,
+// which would deadlock inside it.
 func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat string, amount int) error {
 	var reached, daily bool
+	var nextKey string
 	err := s.DB.Transaction(func(tx *gorm.DB) error {
 		var d model.UserQuestData
 		if err := tx.Where("user_id = ? AND quest_id = ?", userID, q.QuestID).First(&d).Error; err != nil {
 			return err
+		}
+		if q.QuestID == "daily_quest" {
+			return s.recordDailyActivity(tx, userID, d, stat, amount, &reached, &daily, &nextKey)
 		}
 		var cd map[string]any
 		if err := json.Unmarshal([]byte(d.CustomData), &cd); err != nil {
@@ -709,21 +813,8 @@ func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat str
 			return nil
 		}
 		reached = true
-		daily = q.QuestID == "daily_quest"
-		if !daily {
-			return nil
-		}
-		res := tx.Model(&model.UserQuest{}).
-			Where("user_id = ? AND quest_id = ? AND status = 'ACTIVE'", userID, q.QuestID).
-			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()})
-		if res.Error != nil {
-			return res.Error
-		}
-		if res.RowsAffected == 0 {
-			reached = false
-			return nil
-		}
-		return s.grantDailyQuestReward(tx, userID)
+		daily = false
+		return nil
 	})
 	if err != nil {
 		return err
@@ -735,6 +826,9 @@ func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat str
 		s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: true})
 		return nil
 	}
+	if nextKey != "" {
+		s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: false, NextStepKey: nextKey})
+	}
 	if s.questAdvanceFn == nil {
 		return nil
 	}
@@ -745,6 +839,142 @@ func (s *Store) recordActivityForQuest(userID int64, q model.UserQuest, stat str
 		s.pushQuestNotification(userID, QuestNotification{QuestID: q.QuestID, Completed: completed, NextStepKey: nextKey})
 	}
 	return nil
+}
+
+// recordDailyActivity advances the procedural daily quest when the current
+// step is an activity step matching the recorded stat. On reaching the step
+// target the quest moves to the next step (out flags: reached=true when the
+// final step completed, daily=true, nextKey the following step's text key).
+func (s *Store) recordDailyActivity(tx *gorm.DB, userID int64, d model.UserQuestData, stat string, amount int, reached, daily *bool, nextKey *string) error {
+	var recipe DailyRecipe
+	if err := json.Unmarshal([]byte(d.CustomData), &recipe); err != nil {
+		slog.Warn("recordDailyActivity: json unmarshal failed", "user_id", userID, "custom_data", d.CustomData, "err", err)
+		return nil
+	}
+	if d.StepIndex >= len(recipe.Steps) {
+		return nil
+	}
+	step := recipe.Steps[d.StepIndex]
+	if step.Kind != DailyStepActivity || step.Stat != stat {
+		return nil
+	}
+	if err := tx.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = 'daily_quest'", userID).
+		UpdateColumn("progress_value", gorm.Expr("progress_value + ?", amount)).Error; err != nil {
+		return err
+	}
+	var newVal int
+	if err := tx.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = 'daily_quest'", userID).
+		Pluck("progress_value", &newVal).Error; err != nil {
+		return err
+	}
+	if newVal < step.Count {
+		return nil
+	}
+	next := d.StepIndex + 1
+	if next >= len(recipe.Steps) {
+		res := tx.Model(&model.UserQuest{}).
+			Where("user_id = ? AND quest_id = 'daily_quest' AND status = 'ACTIVE'", userID).
+			Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return nil
+		}
+		*reached = true
+		*daily = true
+		return s.grantDailyQuestReward(tx, userID, &recipe.Reward)
+	}
+	if err := tx.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = 'daily_quest'", userID).
+		Updates(map[string]any{"step_index": next, "progress_value": 0}).Error; err != nil {
+		return err
+	}
+	// Step texts carry requestor/item placeholders, so the notification uses a
+	// generic "one objective done" line and the detail lives in /daily.
+	*reached = true
+	*nextKey = "quests.daily.step_done"
+	return nil
+}
+
+// ClaimDailyTurnIn delivers the current turn-in step's items and advances the
+// daily quest. When the turn-in was the final step the quest is completed and
+// its reward granted inside the same transaction. Returns completed=true and a
+// notification is queued in that case.
+func (s *Store) ClaimDailyTurnIn(userID int64) (completed bool, err error) {
+	err = s.DB.Transaction(func(tx *gorm.DB) error {
+		var uq model.UserQuest
+		if err := tx.Where("user_id = ? AND quest_id = 'daily_quest' AND status = 'ACTIVE'", userID).First(&uq).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrDailyNotActive
+			}
+			return err
+		}
+		var d model.UserQuestData
+		if err := tx.Where("user_id = ? AND quest_id = 'daily_quest'", userID).First(&d).Error; err != nil {
+			return err
+		}
+		var recipe DailyRecipe
+		if err := json.Unmarshal([]byte(d.CustomData), &recipe); err != nil {
+			return err
+		}
+		if d.StepIndex >= len(recipe.Steps) {
+			return ErrDailyNotActive
+		}
+		step := recipe.Steps[d.StepIndex]
+		if step.Kind != DailyStepTurnIn {
+			return ErrDailyNotTurnIn
+		}
+		var missing []DailyMissingItem
+		for itemID, qty := range step.Items {
+			var inv model.Inventory
+			err := tx.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error
+			have := 0
+			if err == nil {
+				have = inv.Quantity
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
+			if have < qty {
+				missing = append(missing, DailyMissingItem{ItemID: itemID, Needed: qty, Have: have})
+			}
+		}
+		if len(missing) > 0 {
+			return &DailyMissingItemsError{Items: missing}
+		}
+		for itemID, qty := range step.Items {
+			if err := tx.Model(&model.Inventory{}).
+				Where("user_id = ? AND item_id = ?", userID, itemID).
+				UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+				return err
+			}
+		}
+		next := d.StepIndex + 1
+		if next >= len(recipe.Steps) {
+			if err := tx.Model(&model.UserQuest{}).
+				Where("user_id = ? AND quest_id = 'daily_quest'", userID).
+				Updates(map[string]any{"status": "COMPLETED", "completed_at": time.Now()}).Error; err != nil {
+				return err
+			}
+			if err := s.grantDailyQuestReward(tx, userID, &recipe.Reward); err != nil {
+				return err
+			}
+			completed = true
+			return nil
+		}
+		return tx.Model(&model.UserQuestData{}).
+			Where("user_id = ? AND quest_id = 'daily_quest'", userID).
+			Updates(map[string]any{"step_index": next, "progress_value": 0}).Error
+	})
+	if err != nil {
+		return false, err
+	}
+	if completed {
+		s.pushQuestNotification(userID, QuestNotification{QuestID: "daily_quest", Completed: true})
+	}
+	return completed, nil
 }
 
 // pushQuestNotification queues a quest event so the user's next command can
@@ -785,10 +1015,35 @@ func (s *Store) PopQuestNotification(userID int64) (QuestNotification, bool) {
 	return QuestNotification{QuestID: rows[0].QuestID, Completed: rows[0].Completed, NextStepKey: rows[0].NextStepKey}, true
 }
 
-// grantDailyQuestReward hands out the reward promised by the daily quest
-// completion message (a hatchable egg).
-func (s *Store) grantDailyQuestReward(tx *gorm.DB, userID int64) error {
-	return s.AddItemRaw(tx, userID, "forest_egg", 1)
+// grantDailyQuestReward hands out the reward promised by a daily quest recipe:
+// credits, a small item and crowns, all idempotently inside the same
+// transaction as the completion. Reputation is granted by the dailyquest
+// service (it lives outside the store's transaction).
+func (s *Store) grantDailyQuestReward(tx *gorm.DB, userID int64, r *DailyReward) error {
+	if r == nil {
+		return nil
+	}
+	if r.Money > 0 {
+		if err := s.UpdateBalanceTx(tx, userID, r.Money); err != nil {
+			return err
+		}
+	}
+	if r.Crowns > 0 {
+		if err := s.ensureUserTx(tx, userID); err != nil {
+			return err
+		}
+		if err := tx.Model(&model.User{}).
+			Where("user_id = ?", userID).
+			UpdateColumn("crowns", gorm.Expr("crowns + ?", r.Crowns)).Error; err != nil {
+			return err
+		}
+	}
+	if r.ItemID != "" {
+		if err := s.AddItemRaw(tx, userID, r.ItemID, 1); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CreateQuest creates a new quest entry and its step data for a user.

@@ -74,6 +74,7 @@
     "topic_chat": "Quoi de neuf ?",
     "topic_role": "Quel est ton rôle ?",
     "gift_select_placeholder": "Choisis un objet à offrir...",
-    "gift_none": "Tu n'as rien que {name} apprécie. {hint}"
+    "gift_none": "Tu n'as rien que {name} apprécie. {hint}",
+    "quest_offer_btn": "Accepter la quête"
   }
 }

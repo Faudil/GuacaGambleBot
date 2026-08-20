@@ -5,6 +5,7 @@ import "guacagamblebot/internal/universe"
 var NPCs = map[string]*universe.NPCData{
 	"elara": {
 		ID: "elara", Name: "Elara", Emoji: "\U0001f33f", Color: 0x2ecc71,
+		Image:            "npcs/elara.png",
 		LinkedActivities: []string{"farming", "pets"},
 
 		DescriptionEN: "Guardian of the village gardens and stables.",
@@ -65,6 +66,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"thorek": {
 		ID: "thorek", Name: "Thorek", Emoji: "\u26cf\ufe0f", Color: 0xe67e22,
+		Image:            "npcs/thorek.png",
 		LinkedActivities: []string{"mining"},
 
 		DescriptionEN: "Village blacksmith and miner.",
@@ -125,6 +127,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"irian": {
 		ID: "irian", Name: "Irian", Emoji: "\U0001f3a3", Color: 0x3498db,
+		Image:            "npcs/irian.png",
 		LinkedActivities: []string{"fishing", "hunting"},
 
 		DescriptionEN: "Veteran fisherman and guardian of the docks.",
@@ -186,6 +189,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"sheriff_vance": {
 		ID: "sheriff_vance", Name: "Sheriff Aldric Vance", Emoji: "⚖️", Color: 0x3498db,
+		Image: "npcs/sheriff_vance.png",
 
 		DescriptionEN: "The iron-willed sheriff of the frontier town. Wears a weathered duster and a badge polished by duty.",
 		DescriptionFR: "Le shérif de la ville frontière, à la volonté de fer. Porte un manteau usé et un insigne poli par le devoir.",
@@ -247,6 +251,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"the_whisper": {
 		ID: "the_whisper", Name: "The Whisper", Emoji: "🕶️", Color: 0x8e44ad,
+		Image: "npcs/the_whisper.png",
 
 		DescriptionEN: "A hooded figure whose face is never seen. Their voice is soft, like wind through a cracked window.",
 		DescriptionFR: "Une figure encapuchonnée dont on ne voit jamais le visage. Leur voix est douce, comme le vent à travers une fenêtre fissurée.",
@@ -308,6 +313,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"gamblebot": {
 		ID: "gamblebot", Name: "GambleBot", Emoji: "\U0001f916", Color: 0xf1c40f,
+		Image:            "npcs/gamblebot.png",
 		LinkedActivities: []string{"gambling"},
 
 		DescriptionEN: "A state-of-the-art robot dealer.",
@@ -367,6 +373,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"the_chronicler": {
 		ID: "the_chronicler", Name: "The Chronicler", Emoji: "\U0001f56f\ufe0f", Color: 0x2c3e50,
+		Image: "npcs/the_chronicler.png",
 
 		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
 		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",

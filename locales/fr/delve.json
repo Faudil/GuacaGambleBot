@@ -564,6 +564,18 @@
         "answer": "horloge"
       }
     },
+    "summary": {
+      "title": "📜 Résumé de l'expédition",
+      "rooms_cleared": "🚪 Salles franchies : {n}",
+      "deepest": "⛏️ Étage {floor} atteint — {zone}",
+      "gold": "💰 Or récolté : {gold}",
+      "supplies": "🧭 Provisions restantes : {torches} torches · {keys} clés · {potions} potions",
+      "duration": "⏱️ Durée de l'expédition : {duration}",
+      "loot_header": "🎒 **Butin récupéré**",
+      "no_loot": "🎒 Butin : aucun",
+      "more_loot": "…et {n} de plus",
+      "deeds_header": "🏅 **Exploits**"
+    },
     "chronicle": {
       "title": "📖 Chronique Personnelle",
       "empty": "Aucune entrée de chronique. Commencez votre voyage avec `/delve` !",

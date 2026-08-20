@@ -24,15 +24,19 @@ import (
 
 func testService(t *testing.T) (*Service, *store.Store) {
 	d := testutil.NewDB(t)
-	cfg := &config.Config{StartingBalance: 100}
+	cfg := testCfg()
 	s := store.New(d, cfg)
 	hoakhaven.Register()
 	def := universe.Get("hoakhaven")
 	require.NotNil(t, def)
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
-	svc := New(s, cfg, npcSvc)
+	svc := New(s, cfg, npcSvc, petsvc.New(s, cfg, npcSvc))
 	return svc, s
+}
+
+func testCfg() *config.Config {
+	return &config.Config{StartingBalance: 100}
 }
 
 // placeGeneticsLab puts the user in an active house with a genetics lab, the
@@ -51,14 +55,14 @@ func completeResearch(t *testing.T, db *gorm.DB, userID int64, researchID string
 
 func testServiceInMemory(t *testing.T) *Service {
 	d := testutil.NewDB(t)
-	cfg := &config.Config{StartingBalance: 100}
+	cfg := testCfg()
 	s := store.New(d, cfg)
 	hoakhaven.Register()
 	def := universe.Get("hoakhaven")
 	require.NotNil(t, def)
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
-	return New(s, cfg, npcSvc)
+	return New(s, cfg, npcSvc, petsvc.New(s, cfg, npcSvc))
 }
 
 func TestNewGameRiverbed(t *testing.T) {
@@ -433,6 +437,81 @@ func TestReanimateWithLabAndResearch(t *testing.T) {
 	if success {
 		assert.Contains(t, ReanimatePools["rare"].Pets, petName)
 	}
+}
+
+// reanimateUntilSuccess drives Reanimate until a success so the created pet
+// can be inspected. The archeologist starts at level 0 (50% success rate), so
+// a few attempts are usually enough.
+func reanimateUntilSuccess(t *testing.T, svc *Service, s *store.Store, rarity string) string {
+	t.Helper()
+	item := ReanimatePools[rarity].ItemName
+	for i := 0; i < 20; i++ {
+		var inv model.Inventory
+		if err := s.DB.Where("user_id = ? AND item_id = ?", 1, item).First(&inv).Error; err != nil {
+			_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: item, Quantity: 5})
+		} else if inv.Quantity < 5 {
+			_ = s.DB.Model(&inv).UpdateColumn("quantity", 5)
+		}
+		petName, success, err := svc.Reanimate(1, rarity)
+		require.NoError(t, err)
+		if success {
+			return petName
+		}
+	}
+	t.Fatal("reanimation never succeeded after 20 attempts")
+	return ""
+}
+
+func TestReanimateUsesPetTypeStats(t *testing.T) {
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
+	petName := reanimateUntilSuccess(t, svc, s, "common")
+
+	var pet model.UserPet
+	require.NoError(t, s.DB.Where("user_id = ? AND pet_type = ?", 1, petName).Order("id DESC").First(&pet).Error)
+	pt := petsvc.PetTypes[petName]
+	require.NotNil(t, pt)
+	assert.Equal(t, pt.MaxHP, pet.MaxHP, "reanimated pet must use its species MaxHP")
+	assert.Equal(t, pt.MaxHP, pet.HP)
+	assert.Equal(t, pt.Atk, pet.Atk)
+	assert.Equal(t, pt.Defense, pet.Defense)
+	assert.Equal(t, pt.Speed, pet.Speed)
+	assert.Equal(t, pt.DGE, pet.DGE)
+	assert.Equal(t, pt.ACC, pet.ACC)
+	assert.Equal(t, pt.CritC, pet.CritC)
+	assert.InDelta(t, pt.CritD, pet.CritD, 0.001)
+}
+
+func TestReanimateFirstPetIsActive(t *testing.T) {
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
+	petName := reanimateUntilSuccess(t, svc, s, "common")
+
+	var pet model.UserPet
+	require.NoError(t, s.DB.Where("user_id = ? AND pet_type = ?", 1, petName).Order("id DESC").First(&pet).Error)
+	assert.True(t, pet.IsActive, "the first reanimated pet must be auto-activated")
+}
+
+func TestReanimateRespectsPetSlots(t *testing.T) {
+	svc, s := testService(t)
+	placeGeneticsLab(t, s.DB, 1)
+	completeResearch(t, s.DB, 1, "reanimate_common")
+	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
+
+	petsSvc := petsvc.New(s, testCfg())
+	for i := 0; i < petsvc.BasePetSlots; i++ {
+		_, err := petsSvc.CreatePet(1, "Escargot")
+		require.NoError(t, err)
+	}
+
+	_, _, err := svc.Reanimate(1, "common")
+	assert.ErrorIs(t, err, ErrPetSlotsFull)
+
+	var inv model.Inventory
+	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "common_fossil").First(&inv).Error)
+	assert.Equal(t, 5, inv.Quantity, "fossils must not be consumed when pet slots are full")
 }
 
 func TestReanimateResearchDefs(t *testing.T) {

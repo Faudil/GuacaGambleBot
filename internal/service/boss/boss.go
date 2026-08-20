@@ -42,6 +42,9 @@ type BossStage struct {
 	RewardItems map[string]int
 	XP          int
 	Achievement string
+	// Image is the asset file (e.g. "bosses/vezir.png") shown on the boss
+	// fight embeds. Empty means no picture.
+	Image string
 }
 
 var BossLeague = []BossStage{
@@ -52,7 +55,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Un éclaireur vif comme l'éclair. Ses attaques surviennent sans prévenir. Ne sous-estime pas sa petite taille.",
 		DescEN:      "A scout quick as lightning. His attacks come without warning. Don't underestimate his size.",
 		RewardMoney: 200, RewardItems: map[string]int{"coffee": 1},
-		XP: 50, Achievement: "boss_league_1",
+		XP: 50, Achievement: "boss_league_1", Image: "bosses/vezir.png",
 	},
 	{
 		Stage: 2, NameFR: "Tal'Rok, le Gardien de Pierre", NameEN: "Tal'Rok, the Stone Sentinel",
@@ -61,7 +64,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Une muraille vivante. Perce sa défense ou il t'épuisera. Pas de pitié.",
 		DescEN:      "A living wall. Break his defense or he'll wear you down. No mercy.",
 		RewardMoney: 500, RewardItems: map[string]int{"vip_ticket": 1},
-		XP: 100, Achievement: "boss_league_2",
+		XP: 100, Achievement: "boss_league_2", Image: "bosses/talrok.png",
 	},
 	{
 		Stage: 3, NameFR: "Kael, le Foudroyeur", NameEN: "Kael, the Storm Striker",
@@ -70,7 +73,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Il frappe comme la tempête. Un coup critique et c'est fini. Vitesse et précision — riposte ou meurs.",
 		DescEN:      "He strikes like the storm. One crit and it's over. Speed and precision — counter or fall.",
 		RewardMoney: 1000, RewardItems: map[string]int{"fortune_cookie": 2},
-		XP: 150, Achievement: "boss_league_3",
+		XP: 150, Achievement: "boss_league_3", Image: "bosses/kael.png",
 	},
 	{
 		Stage: 4, NameFR: "Vorgath, l'Abyssal", NameEN: "Vorgath, the Abyssal",
@@ -79,7 +82,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Des profondeurs il t'observe. Son poison te ronge à chaque tour. Un combat d'endurance.",
 		DescEN:      "From the deep he watches. His poison eats at you each turn. A battle of endurance.",
 		RewardMoney: 2500, RewardItems: map[string]int{"forget_potion": 1},
-		XP: 200, Achievement: "boss_league_4",
+		XP: 200, Achievement: "boss_league_4", Image: "bosses/vorgath.png",
 	},
 	{
 		Stage: 5, NameFR: "Solaris, le Phénix Éternel", NameEN: "Solaris, the Eternal Phoenix",
@@ -88,7 +91,7 @@ var BossLeague = []BossStage{
 		DescFR:      "L'ultime gardien de la Ligue. Il renaît de ses cendres. Pour le vaincre, il faut tout donner.",
 		DescEN:      "The League's final guardian. He rises from his ashes. To win, you must give everything.",
 		RewardMoney: 5000, RewardItems: map[string]int{},
-		XP: 250, Achievement: "boss_league_5",
+		XP: 250, Achievement: "boss_league_5", Image: "bosses/solaris.png",
 	},
 	{
 		Stage: 6, NameFR: "Le Gardien du Coffre", NameEN: "The Vault Guardian",
@@ -97,7 +100,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Un mécha de combat ancestral émerge du Coffre. Ses plaques d'acier noir brillent d'une lueur bleue. Il ne reconnaît plus ami ou ennemi — seulement les ordres gravés dans son noyau.",
 		DescEN:      "An ancient combat mech rises from the Vault. Its black steel plates glow with blue light. It no longer knows friend from foe — only the orders etched into its core.",
 		RewardMoney: 0, RewardItems: map[string]int{},
-		Achievement: "",
+		Achievement: "", Image: "bosses/vault_guardian.png",
 	},
 	{
 		Stage: 7, NameFR: "Krag, le Champion de l'Arène", NameEN: "Krag, the Arena Champion",
@@ -106,7 +109,7 @@ var BossLeague = []BossStage{
 		DescFR:      "Le roi de l'arène. Aucun challenger n'a survécu à son rugissement. Son regard perçant jauge chaque adversaire — montre-lui de quoi ton familier est fait.",
 		DescEN:      "The king of the arena. No challenger has survived his roar. His piercing gaze sizes up every opponent — show him what your pet is made of.",
 		RewardMoney: 0, RewardItems: map[string]int{},
-		XP: 0, Achievement: "",
+		XP: 0, Achievement: "", Image: "bosses/krag.png",
 	},
 }
 

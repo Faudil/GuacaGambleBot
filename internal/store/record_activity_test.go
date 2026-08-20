@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,25 +203,40 @@ func TestPopQuestNotificationQueuesMultiple(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestDailyQuestCompletionGrantsEgg(t *testing.T) {
+func TestDailyQuestActivityAdvancesNotCompletes(t *testing.T) {
 	s := newStore(t)
 
-	require.NoError(t, s.CreateQuest(1, "daily_quest"))
-	require.NoError(t, s.DB.Model(&model.UserQuestData{}).
-		Where("user_id = ? AND quest_id = ?", 1, "daily_quest").
-		Updates(map[string]any{
-			"step_index":     0,
-			"progress_value": 0,
-			"custom_data":    `{"target_count":1,"target_stat":"items_mined"}`,
-		}).Error)
+	recipe := DailyRecipe{
+		Requestor: "thorek", TitleKey: "quests.daily.thorek.title", IntroKey: "quests.daily.thorek.intro",
+		Steps: []DailyStep{
+			{Kind: DailyStepActivity, Stat: "items_mined", Count: 2, TextKey: "quests.daily.step.mine"},
+			{Kind: DailyStepTurnIn, Items: map[string]int{"coal": 1}, TextKey: "quests.daily.thorek.turnin_coal"},
+		},
+		Reward: DailyReward{Money: 100},
+	}
+	data, err := json.Marshal(recipe)
+	require.NoError(t, err)
+	require.NoError(t, s.StartDailyQuest(1, string(data)))
 
-	require.NoError(t, s.RecordActivity(1, "items_mined", 1))
+	// Reaching an activity target advances the step; the quest stays active.
+	require.NoError(t, s.RecordActivity(1, "items_mined", 2))
 
+	var uq model.UserQuest
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&uq).Error)
+	assert.Equal(t, "ACTIVE", uq.Status, "activity completion must not complete the daily quest")
+	var d model.UserQuestData
+	require.NoError(t, s.DB.Where("user_id = ? AND quest_id = 'daily_quest'", 1).First(&d).Error)
+	assert.Equal(t, 1, d.StepIndex, "activity completion moves to the turn-in step")
+	assert.Equal(t, 0, d.ProgressValue)
+
+	// A "step done" notification is queued (not a completion one).
 	n, ok := s.PopQuestNotification(1)
 	require.True(t, ok)
-	assert.True(t, n.Completed)
+	assert.False(t, n.Completed)
+	assert.Equal(t, "quests.daily.step_done", n.NextStepKey)
 
-	var inv model.Inventory
-	require.NoError(t, s.DB.Where("user_id = ? AND item_id = ?", 1, "forest_egg").First(&inv).Error)
-	assert.Equal(t, 1, inv.Quantity)
+	// No reward was granted for the step.
+	bal, err := s.GetBalance(1)
+	require.NoError(t, err)
+	assert.Equal(t, 100, bal)
 }

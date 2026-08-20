@@ -65,7 +65,7 @@ func realViews(unlocked bool) []achievementsvc.View {
 func TestListViewStaysWithinEmbedLimit(t *testing.T) {
 	c := testCog(t)
 	views := realViews(false)
-	require.Len(t, views, 96, "fixture must reproduce the full achievements registry")
+	require.Len(t, views, 100, "fixture must reproduce the full achievements registry")
 
 	for _, lang := range []string{"en", "fr"} {
 		for page := 1; page <= 4; page++ {

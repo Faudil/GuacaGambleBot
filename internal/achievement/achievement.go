@@ -117,6 +117,10 @@ func init() {
 	register("daily_50", "📅", 50, func(s map[string]any) bool { return num(s, "daily_uses") >= 50 })
 	register("daily_100", "📅", 100, func(s map[string]any) bool { return num(s, "daily_uses") >= 100 })
 	register("daily_365", "📅", 500, func(s map[string]any) bool { return num(s, "daily_uses") >= 365 })
+	register("daily_quest_1", "📜", 10, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 1 })
+	register("daily_quest_10", "📜", 20, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 10 })
+	register("daily_quest_50", "📜", 50, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 50 })
+	register("daily_quest_100", "📜", 100, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 100 })
 
 	register("pet_collector_common", "🦋", 50, func(s map[string]any) bool { return num(s, "collected_common_pets") >= 8 })
 	register("pet_collector_rare", "🦁", 150, func(s map[string]any) bool { return num(s, "collected_rare_pets") >= 6 })
@@ -320,6 +324,7 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 		stats["roulette_money_won"] = us.RouletteMoneyWon
 		stats["roulette_money_lost"] = us.RouletteMoneyLost
 		stats["daily_uses"] = us.DailyUses
+		stats["daily_quests_completed"] = us.DailyQuestsCompleted
 	}
 
 	// Pet collection stats (computed from PetTypes rarity map)

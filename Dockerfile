@@ -16,6 +16,7 @@ RUN addgroup -S bot && adduser -S bot -G bot
 
 COPY --from=builder /build/bot ./bot
 COPY --from=builder /build/locales ./locales
+COPY --from=builder /build/assets ./assets
 
 # The bot's watchdog touches /tmp/bot.heartbeat on every healthy check. A stale
 # heartbeat first reports unhealthy (passive), then escalates to a full reboot
@@ -28,4 +29,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
     [ "$age" -gt 90 ] && kill -QUIT 1; \
     exit 1'
 
-ENTRYPOINT ["/bin/sh", "-c", "chown -R bot:bot /app/data 2>/dev/null || true && exec su-exec bot ./bot"]
+ENTRYPOINT ["/bin/sh", "-c", "chown -R bot:bot /app/data /app/assets 2>/dev/null || true && exec su-exec bot ./bot"]

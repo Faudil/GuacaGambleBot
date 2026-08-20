@@ -23,6 +23,7 @@ import (
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
+	petsvc "guacagamblebot/internal/service/pets"
 	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
@@ -95,7 +96,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	}
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
-	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg, npcSvc)}
+	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg, npcSvc, petsvc.New(s, cfg, npcSvc))}
 	r.Slash("dig", "Archaeology fossil excavation", c.onSlashMenu)
 	r.Prefix("dig", c.onPrefixMenu)
 	r.Prefix("arch", c.onPrefixMenu)
@@ -185,6 +186,8 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 		"totalfossils": totalFossils,
 		"remaining":    remaining,
 		"tip":          i18n.T(tipKey, lang),
+		"bureau_howto": i18n.T("arch.bureau_howto", lang),
+		"bureau_pick":  i18n.T("arch.bureau_pick", lang),
 	})
 
 	embed := components.Embed(
@@ -855,8 +858,6 @@ func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 		color = 0x000000
 	case "cursed":
 		color = 0x8B0000
-	case "living":
-		color = 0x00CED1
 	case "journal":
 		color = 0x8B4513
 	case "pure_dna":
@@ -917,8 +918,6 @@ func outcomeDesc(res *archsvc.DigResult, lang string) string {
 		return i18n.T("arch.shadow_msg", lang) + "\n" + received
 	case "cursed":
 		return i18n.T("arch.cursed_msg", lang) + "\n" + received
-	case "living":
-		return i18n.T("arch.living_msg", lang) + "\n" + received
 	case "journal":
 		return i18n.T("arch.journal_msg", lang) + "\n" + received
 	default:
@@ -982,6 +981,8 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 				"research": resName,
 				"rarity":   i18n.T("arch.quality_"+resolvedRarity, lang),
 			})
+		case errors.Is(err, archsvc.ErrPetSlotsFull):
+			content = i18n.T("arch.reanimate_no_slots", lang)
 		}
 		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 			Content: content,

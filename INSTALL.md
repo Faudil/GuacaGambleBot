@@ -122,6 +122,8 @@ To stop the bot:
 docker compose down
 ```
 
+> **NPC & boss art:** the images in `./assets/` (NPC profiles, Boss League, delve and Vault Guardian art) are baked into the image at build time and also bind-mounted at runtime, so updating a file in `./assets/` followed by `docker compose restart` is enough — no rebuild required. The folder must exist on the host (it ships with the repo).
+
 #### Option 2: Running the binary directly
 
 **You need Go 1.23+ installed.**

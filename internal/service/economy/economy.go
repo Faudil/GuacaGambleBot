@@ -1,40 +1,27 @@
 package economy
 
 import (
+	"encoding/json"
 	"errors"
-	"math/rand"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	charsvc "guacagamblebot/internal/service/character"
+	dailyquest "guacagamblebot/internal/service/dailyquest"
 	"guacagamblebot/internal/store"
 )
 
 var ErrAlreadyClaimed = errors.New("daily already claimed today")
 
-// DailyObjective mirrors the Python DailyQuest objectives.
-type DailyObjective struct {
-	Stat    string
-	Count   int
-	TextKey string
-}
-
-var DailyObjectives = []DailyObjective{
-	{Stat: "blackjack_won", Count: 3, TextKey: "quests.daily.blackjack"},
-	{Stat: "items_mined", Count: 10, TextKey: "quests.daily.mining"},
-	{Stat: "items_fished", Count: 10, TextKey: "quests.daily.fishing"},
-	{Stat: "slots_won", Count: 5, TextKey: "quests.daily.slots"},
-	{Stat: "wagers_won", Count: 2, TextKey: "quests.daily.betting"},
-}
-
 // Service holds the Economy cog business logic.
 type Service struct {
 	store *store.Store
 	cfg   *config.Config
+	dq    *dailyquest.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, dq *dailyquest.Service) *Service {
+	return &Service{store: s, cfg: cfg, dq: dq}
 }
 
 // BalanceResult holds the data shown by the balance view.
@@ -62,6 +49,9 @@ type DailyResult struct {
 	Unlocks    []*achievement.Achievement
 	LeveledUp  bool
 	NewLevel   int
+	// Recipe is the day's generated daily quest, when one was started (or
+	// already active).
+	Recipe *store.DailyRecipe
 }
 
 // Daily pays the daily salary, applies debt repayment, starts a daily quest and
@@ -111,11 +101,22 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	var recipe *store.DailyRecipe
 	if !has {
-		obj := DailyObjectives[rand.Intn(len(DailyObjectives))]
-		if err := s.store.StartDailyQuest(userID, obj.Stat, obj.Count, obj.TextKey); err != nil {
+		gen, err := s.dq.Generate(userID)
+		if err != nil {
 			return nil, err
 		}
+		data, err := json.Marshal(gen)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.store.StartDailyQuest(userID, string(data)); err != nil {
+			return nil, err
+		}
+		recipe = &gen
+	} else if r, err := s.store.GetDailyRecipe(userID); err == nil {
+		recipe = r
 	}
 
 	if err := achievement.IncrementStat(s.store.DB, userID, "daily_uses", 1); err != nil {
@@ -143,6 +144,7 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 		Unlocks:    unlocks,
 		LeveledUp:  leveled,
 		NewLevel:   lvl,
+		Recipe:     recipe,
 	}, nil
 }
 

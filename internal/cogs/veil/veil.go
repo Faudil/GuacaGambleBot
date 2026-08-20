@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/assets"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -80,6 +81,17 @@ func (c *Cog) getRaidByID(raidID int64) *model.VeilRaid {
 func (c *Cog) respond(b *interaction.Bot, i *discordgo.InteractionCreate, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+// respondBoss is respond but uploads the raid boss's picture (Vault Guardian)
+// with the embed. A raid without a picture degrades to a plain respond.
+func (c *Cog) respondBoss(b *interaction.Bot, i *discordgo.InteractionCreate, raid *model.VeilRaid, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
+	image := ""
+	if raid != nil {
+		image = raid.BossImage
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		assets.Response(discordgo.InteractionResponseUpdateMessage, embed, comps, image))
 }
 
 func (c *Cog) respondEphemeral(b *interaction.Bot, i *discordgo.InteractionCreate, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {

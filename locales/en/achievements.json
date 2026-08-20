@@ -125,6 +125,22 @@
       "desc": "Claim your daily pay 50 times.",
       "name": "Morning Routine"
     },
+    "daily_quest_1": {
+      "desc": "Complete your first daily quest.",
+      "name": "Neighbourly"
+    },
+    "daily_quest_10": {
+      "desc": "Complete 10 daily quests.",
+      "name": "Reliable Hand"
+    },
+    "daily_quest_100": {
+      "desc": "Complete 100 daily quests.",
+      "name": "The Village Trusts You"
+    },
+    "daily_quest_50": {
+      "desc": "Complete 50 daily quests.",
+      "name": "Town's Favourite"
+    },
     "eco_100k": {
       "desc": "Reach $100,000 in your account.",
       "name": "Millionaire in the Making"

@@ -15,6 +15,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	jsvc "guacagamblebot/internal/service/journal"
 	"guacagamblebot/internal/store"
 )
 
@@ -74,6 +75,15 @@ type QuestDef struct {
 	Steps    []QuestStep
 	RepReq   int
 	Unlocks  []string
+
+	// Questline guidance gates. Starter questlines open as soon as the
+	// tutorial is complete; the others unlock once the player meets their
+	// affinity (RepReq), Boss League (BossReq) or criminality path (PathReq)
+	// gate. HintKey overrides the auto-derived "how to unlock" hint.
+	Starter bool
+	BossReq int    // Boss League stage (1-based ordinal) to defeat, 0 = none
+	PathReq string // criminality alignment required: "hunter" or "shadow"
+	HintKey string // i18n key of the locked hint ("" = derived from the gates)
 }
 
 var QuestRegistry = map[string]*QuestDef{
@@ -153,6 +163,11 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.day8_sprout.step4_dialogue", Rewards: &QuestReward{Money: 1500, Crowns: 25, ItemIDs: []string{"zenith_blade", "boss_trophy"}, AchievementID: "signal_complete"}},
 		},
 	},
+	// --- Main NPC questlines (see questlines.md) ---
+	// Offered to the player after the tutorial by their NPC. Starter
+	// questlines are available immediately; the rest unlock through the
+	// RepReq / BossReq / PathReq gates evaluated by QuestlineUnlocked. The
+	// /quest hub and the NPC chat offer both build on QuestlineOrder.
 	"daily_quest": {
 		ID: "daily_quest", Type: "daily", TitleKey: "quests.daily_challenge.title", DescKey: "quests.daily_challenge.description",
 		Steps: []QuestStep{
@@ -230,6 +245,7 @@ var QuestRegistry = map[string]*QuestDef{
 	"chronicler_legend": {
 		ID: "chronicler_legend", Type: "side", NPCID: "the_chronicler",
 		TitleKey: "quests.chronicler_legend.title", DescKey: "quests.chronicler_legend.description",
+		HintKey: "quests.unlock_hint.chronicler",
 		Steps: []QuestStep{
 			{Type: StepDialogue, TextKey: "quests.chronicler_legend.step0_intro", Rewards: &QuestReward{Crowns: 5}},
 			{Type: StepActivity, TextKey: "quests.chronicler_legend.step1_delve", Extra: map[string]any{"target_stat": "delve_completions", "target_count": 3}},
@@ -898,6 +914,152 @@ func CompletedMainQuestlines(st *store.Store, userID int64) int {
 		}
 	}
 	return n
+}
+
+// ─── Questline guidance ─────────────────────────────────────────
+
+// QuestlineOrder lists the main NPC questlines in the recommended order used
+// by the /quest hub and the "suggested next" breadcrumb. Only questlines
+// present in QuestRegistry surface in the hub; the remaining IDs are reserved
+// for upcoming story content (see questlines.md).
+var QuestlineOrder = []string{
+	"elara_first_bloom",
+	"thorek_heartstone",
+	"irian_leviathan",
+	"vance_cinder_boys",
+	"whisper_vault_contract",
+	"chronicler_legend",
+}
+
+// TutorialCompleted reports whether the player finished the tutorial quest
+// ("The Signal"), the entry gate for every main NPC questline.
+func TutorialCompleted(st *store.Store, userID int64) bool {
+	var n int64
+	st.DB.Table("user_quests").
+		Where("user_id = ? AND quest_id = ? AND status = ?", userID, "tutorial", "COMPLETED").
+		Count(&n)
+	return n > 0
+}
+
+func questRowExists(st *store.Store, userID int64, questID string) bool {
+	var n int64
+	st.DB.Table("user_quests").Where("user_id = ? AND quest_id = ?", userID, questID).Count(&n)
+	return n > 0
+}
+
+// affinityLevel returns the player's reputation level with an NPC, or 0 when
+// they have never interacted with them (used by RepReq unlock gates).
+func affinityLevel(st *store.Store, userID int64, npcID string) int {
+	var rep model.UserNPCReputation
+	if err := st.DB.Where("user_id = ? AND npc_id = ?", userID, npcID).First(&rep).Error; err != nil {
+		return 0
+	}
+	return rep.Level
+}
+
+// BossStageDefeated reports whether the player beat the given Boss League
+// stage (1-based ordinal). Victories advance the boss_league quest past the
+// corresponding battle step, so the quest's step index is the source of truth.
+func BossStageDefeated(st *store.Store, userID int64, stage int) bool {
+	// The boss_league quest's battles sit at step indices 1, 3, 5, 7, 9 for
+	// boss_stage indices 0..4; a step index past the battle step means the
+	// boss was beaten.
+	battleStep := 1 + (stage-1)*2
+	var uqd model.UserQuestData
+	if err := st.DB.Where("user_id = ? AND quest_id = ?", userID, "boss_league").First(&uqd).Error; err != nil {
+		return false
+	}
+	return uqd.StepIndex > battleStep
+}
+
+// chroniclerGatePassed mirrors the Chronicler's reveal conditions: journal
+// rank 2, the tutorial's final boss defeated, and three main questlines done.
+func chroniclerGatePassed(st *store.Store, userID int64) bool {
+	return jsvc.HighestRank(st, userID) >= 2 &&
+		jsvc.TutorialFinalBossDone(st, userID) &&
+		CompletedMainQuestlines(st, userID) >= 3
+}
+
+// QuestlineUnlocked reports whether the player may start the given questline:
+// the tutorial must be complete and every unlock gate (Starter, RepReq,
+// BossReq, PathReq) satisfied.
+func QuestlineUnlocked(st *store.Store, userID int64, def *QuestDef) bool {
+	if !TutorialCompleted(st, userID) {
+		return false
+	}
+	if def.ID == "chronicler_legend" {
+		return chroniclerGatePassed(st, userID)
+	}
+	if def.Starter {
+		return true
+	}
+	if def.RepReq > 0 && affinityLevel(st, userID, def.NPCID) < def.RepReq {
+		return false
+	}
+	if def.BossReq > 0 && !BossStageDefeated(st, userID, def.BossReq) {
+		return false
+	}
+	if def.PathReq != "" {
+		var c model.UserCriminality
+		if err := st.DB.Where("user_id = ?", userID).First(&c).Error; err != nil || c.Alignment != def.PathReq {
+			return false
+		}
+	}
+	return true
+}
+
+// AvailableQuestlines returns the unlocked questlines the player has not yet
+// started or completed, in QuestlineOrder.
+func AvailableQuestlines(st *store.Store, userID int64) []*QuestDef {
+	var out []*QuestDef
+	for _, id := range QuestlineOrder {
+		def := QuestRegistry[id]
+		if def == nil || questRowExists(st, userID, id) || !QuestlineUnlocked(st, userID, def) {
+			continue
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+// LockedQuestlines returns the questlines that are still gated and not yet
+// started or completed, so the hub can show how to unlock them.
+func LockedQuestlines(st *store.Store, userID int64) []*QuestDef {
+	var out []*QuestDef
+	for _, id := range QuestlineOrder {
+		def := QuestRegistry[id]
+		if def == nil || questRowExists(st, userID, id) || QuestlineUnlocked(st, userID, def) {
+			continue
+		}
+		out = append(out, def)
+	}
+	return out
+}
+
+// SuggestedNext returns the first available questline in the recommended
+// order, or nil when every questline is started or completed.
+func SuggestedNext(st *store.Store, userID int64) *QuestDef {
+	avail := AvailableQuestlines(st, userID)
+	if len(avail) == 0 {
+		return nil
+	}
+	return avail[0]
+}
+
+// QuestlineOfferForNPC returns the unlocked, unstarted questline owned by the
+// given NPC — the one the NPC should offer in chat — or nil.
+func QuestlineOfferForNPC(st *store.Store, userID int64, npcID string) *QuestDef {
+	for _, id := range QuestlineOrder {
+		def := QuestRegistry[id]
+		if def == nil || def.NPCID != npcID {
+			continue
+		}
+		if questRowExists(st, userID, id) || !QuestlineUnlocked(st, userID, def) {
+			continue
+		}
+		return def
+	}
+	return nil
 }
 
 // QuestCompletedMsg returns a localized string to notify the user that a quest

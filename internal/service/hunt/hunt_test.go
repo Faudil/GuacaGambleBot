@@ -1,6 +1,7 @@
 package hunt
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -307,4 +308,57 @@ func TestRecordZoneBossKill(t *testing.T) {
 	progress, err := svc.store.GetZoneProgress(1)
 	require.NoError(t, err)
 	assert.Equal(t, 0, progress["forest"], "boss kills must not affect win progress")
+}
+
+func TestExecuteHuntRecordsZoneStat(t *testing.T) {
+	svc, s := testServiceWithCfg(t, &config.Config{StartingBalance: 100, HuntMaxPerDay: 10})
+	addActivePet(t, s, 1)
+
+	// A daily quest waiting on a forest hunt step must advance on a hunt.
+	recipe := store.DailyRecipe{
+		Requestor: "thorek", TitleKey: "quests.daily.thorek.title", IntroKey: "quests.daily.thorek.intro",
+		Steps: []store.DailyStep{
+			{Kind: store.DailyStepActivity, Stat: "hunt_forest", Count: 2, TextKey: "quests.daily.step.hunt_zone"},
+			{Kind: store.DailyStepTurnIn, Items: map[string]int{"coal": 1}, TextKey: "quests.daily.thorek.turnin_coal"},
+		},
+		Reward: store.DailyReward{Money: 100},
+	}
+	data, err := json.Marshal(recipe)
+	require.NoError(t, err)
+	require.NoError(t, s.StartDailyQuest(1, string(data)))
+
+	_, err = svc.ExecuteHunt(1, "forest")
+	require.NoError(t, err)
+
+	var d model.UserQuestData
+	require.NoError(t, s.DB.Where("user_id = 1 AND quest_id = 'daily_quest'").First(&d).Error)
+	assert.Equal(t, 1, d.ProgressValue, "forest hunt must count towards the zone step")
+
+	// A hunt in another zone must not count.
+	require.NoError(t, s.DB.Model(&model.UserPet{}).
+		Where("user_id = 1").Update("hp", gorm.Expr("max_hp")).Error, "heal the pet between hunts")
+	_, err = svc.ExecuteHunt(1, "cave")
+	require.NoError(t, err)
+	require.NoError(t, s.DB.Where("user_id = 1 AND quest_id = 'daily_quest'").First(&d).Error)
+	assert.Equal(t, 1, d.ProgressValue, "cave hunt must not advance a forest objective")
+}
+
+func TestEggDropChancesScaleDownByProgression(t *testing.T) {
+	zoneOrder := []string{"forest", "cave", "desert", "mountain", "ocean", "tundra", "volcano"}
+	var prev float64 = 1.0
+	for _, key := range zoneOrder {
+		zone, ok := Zones[key]
+		require.True(t, ok, "zone %q must exist", key)
+		eggChance := 0.0
+		for _, loot := range zone.LootTable {
+			if strings.HasSuffix(loot.Item, "_egg") {
+				eggChance = loot.Chance
+				break
+			}
+		}
+		assert.Greater(t, eggChance, 0.0, "zone %q must drop its biome egg", key)
+		assert.LessOrEqual(t, eggChance, prev,
+			"later zones must not drop eggs more often (zone %q)", key)
+		prev = eggChance
+	}
 }

@@ -12,7 +12,12 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
+	dailyquest "guacagamblebot/internal/service/dailyquest"
+	invsvc "guacagamblebot/internal/service/inventory"
+	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/universe"
+	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
@@ -21,7 +26,12 @@ func testService(t *testing.T) (*Service, *store.Store) {
 	require.NoError(t, db.Migrate(d))
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	s := store.New(d, cfg)
-	return New(s, cfg), s
+	hoakhaven.Register()
+	def := universe.Get("hoakhaven")
+	inv := invsvc.New(s, cfg)
+	npc := npcsvc.New(s, cfg, def, inv)
+	dq := dailyquest.New(s, npc)
+	return New(s, cfg, dq), s
 }
 
 func TestBalance(t *testing.T) {

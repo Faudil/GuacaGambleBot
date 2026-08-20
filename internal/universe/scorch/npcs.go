@@ -5,6 +5,7 @@ import "guacagamblebot/internal/universe"
 var NPCs = map[string]*universe.NPCData{
 	"wexler": {
 		ID: "wexler", Name: "Wexler", Emoji: "\U0001f3aa", Color: 0x8B7355,
+		Image: "npcs/wexler.png",
 
 		DescriptionEN: "Runs the trading post. Knows everyone by what they carry.",
 		DescriptionFR: "Tient le comptoir d'échange. Connaît tout le monde à ce qu'ils transportent.",
@@ -26,6 +27,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"riggs": {
 		ID: "riggs", Name: "Riggs", Emoji: "\U0001f441\ufe0f\u200d\U0001f5e8\ufe0f", Color: 0x607B8B,
+		Image:            "npcs/riggs.png",
 		LinkedActivities: []string{"hunting"},
 
 		DescriptionEN: "Settlement security. Patrols the perimeter. He's been out past the treeline more times than anyone.",
@@ -48,6 +50,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"mother": {
 		ID: "mother", Name: "Mother Glitch", Emoji: "\u2699\ufe0f", Color: 0x8B4789,
+		Image:            "npcs/mother.png",
 		LinkedActivities: []string{"fishing"},
 
 		DescriptionEN: "Maintains the water filters. Talks to the machines. Water is always clean.",
@@ -70,6 +73,7 @@ var NPCs = map[string]*universe.NPCData{
 	},
 	"pyke": {
 		ID: "pyke", Name: "Pyke", Emoji: "\U0001f52a", Color: 0xCC5500,
+		Image: "npcs/pyke.png",
 
 		DescriptionEN: "Former raider. Knows the dead zones. Doesn't sleep without a knife.",
 		DescriptionFR: "Ancien pillard. Connaît les zones mortes. Ne dort pas sans un couteau.",
@@ -92,6 +96,7 @@ var NPCs = map[string]*universe.NPCData{
 
 	"the_chronicler": {
 		ID: "the_chronicler", Name: "The Chronicler", Emoji: "\U0001f56f\ufe0f", Color: 0x2c3e50,
+		Image: "npcs/the_chronicler.png",
 
 		DescriptionEN: "A hooded figure who writes in a book that never runs out of pages.",
 		DescriptionFR: "Une silhouette encapuchonnée qui écrit dans un livre aux pages inépuisables.",

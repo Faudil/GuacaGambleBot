@@ -265,6 +265,9 @@ func (c *Cog) eventLine(ev expeditionsvc.ExpeditionEvent, pet *model.UserPet, la
 			params["xp"] = ev.XP
 			return i18n.T("expedition.events.combat_win", lang, params)
 		}
+		if ev.CombatResult == "loss" {
+			return i18n.T("expedition.events.combat_ko", lang, params)
+		}
 		return i18n.T("expedition.events.combat_loss", lang, params)
 	case "loot":
 		if ev.Item == "" {
@@ -273,7 +276,13 @@ func (c *Cog) eventLine(ev expeditionsvc.ExpeditionEvent, pet *model.UserPet, la
 		params["item"] = items.LocalizedName(ev.Item, lang)
 		return i18n.T("expedition.events.loot", lang, params)
 	case "rest":
+		if ev.Heal > 0 {
+			params["hp"] = ev.Heal
+			return i18n.T("expedition.events.rest_heal", lang, params)
+		}
 		return i18n.T("expedition.events.rest", lang, params)
+	case "return":
+		return i18n.T("expedition.events.return_home", lang, params)
 	}
 	return ev.Text
 }

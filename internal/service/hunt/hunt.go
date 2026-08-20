@@ -91,7 +91,7 @@ var Zones = map[string]Zone{
 			{Item: "wheat", Chance: 0.25, MaxQty: 2},
 			{Item: "tomato_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "worm", Chance: 0.15, MaxQty: 2},
-			{Item: "forest_egg", Chance: 0.02, MaxQty: 1},
+			{Item: "forest_egg", Chance: 0.03, MaxQty: 1},
 		},
 	},
 	"cave": {
@@ -109,7 +109,7 @@ var Zones = map[string]Zone{
 			{Item: "carrot_seed", Chance: 0.12, MaxQty: 1},
 			{Item: "worm", Chance: 0.20, MaxQty: 2},
 			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
-			{Item: "cave_egg", Chance: 0.02, MaxQty: 1},
+			{Item: "cave_egg", Chance: 0.025, MaxQty: 1},
 		},
 	},
 	"desert": {
@@ -127,7 +127,7 @@ var Zones = map[string]Zone{
 			{Item: "corn", Chance: 0.15, MaxQty: 2},
 			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
-			{Item: "desert_egg", Chance: 0.025, MaxQty: 1},
+			{Item: "desert_egg", Chance: 0.022, MaxQty: 1},
 		},
 	},
 	"mountain": {
@@ -145,7 +145,7 @@ var Zones = map[string]Zone{
 			{Item: "oat", Chance: 0.15, MaxQty: 2},
 			{Item: "coffee_seed", Chance: 0.08, MaxQty: 1},
 			{Item: "crayfish", Chance: 0.04, MaxQty: 1},
-			{Item: "mountain_egg", Chance: 0.025, MaxQty: 1},
+			{Item: "mountain_egg", Chance: 0.02, MaxQty: 1},
 		},
 	},
 	"ocean": {
@@ -164,7 +164,7 @@ var Zones = map[string]Zone{
 			{Item: "worm", Chance: 0.20, MaxQty: 2},
 			{Item: "crayfish", Chance: 0.08, MaxQty: 1},
 			{Item: "golden_lure", Chance: 0.02, MaxQty: 1},
-			{Item: "ocean_egg", Chance: 0.025, MaxQty: 1},
+			{Item: "ocean_egg", Chance: 0.018, MaxQty: 1},
 		},
 	},
 	"tundra": {
@@ -181,7 +181,7 @@ var Zones = map[string]Zone{
 			{Item: "pumpkin_seed", Chance: 0.10, MaxQty: 1},
 			{Item: "golden_apple_seed", Chance: 0.04, MaxQty: 1},
 			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
-			{Item: "tundra_egg", Chance: 0.03, MaxQty: 1},
+			{Item: "tundra_egg", Chance: 0.016, MaxQty: 1},
 		},
 	},
 	"volcano": {
@@ -199,7 +199,7 @@ var Zones = map[string]Zone{
 			{Item: "star_fruit_seed", Chance: 0.04, MaxQty: 1},
 			{Item: "crayfish", Chance: 0.05, MaxQty: 1},
 			{Item: "golden_lure", Chance: 0.02, MaxQty: 1},
-			{Item: "volcano_egg", Chance: 0.03, MaxQty: 1},
+			{Item: "volcano_egg", Chance: 0.015, MaxQty: 1},
 		},
 	},
 }
@@ -513,6 +513,8 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 	_ = s.store.IncrementGameLimit(userID, "hunt")
 	_ = s.store.SetCooldown(userID, "hunt")
 	_ = s.store.RecordActivity(userID, "items_hunted", 1)
+	// Zone-specific stat so daily/quest objectives can target one hunt zone.
+	_ = s.store.RecordActivity(userID, "hunt_"+zoneKey, 1)
 
 	unlocks, err := achievement.CheckAndUnlock(s.store.DB, userID)
 	if err != nil {

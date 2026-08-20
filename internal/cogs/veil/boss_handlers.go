@@ -114,14 +114,14 @@ func (c *Cog) finishBossTurn(b *interaction.Bot, i *discordgo.InteractionCreate,
 			c.mu.Lock()
 			delete(c.turnActions, raid.ID)
 			c.mu.Unlock()
-			c.respond(b, i, r.Embed, r.Comps)
+			c.respondBoss(b, i, raid, r.Embed, r.Comps)
 		}
 		return
 	}
 
 	c.svc.Store().SaveVeilRaid(raid)
 	embed := veilsvc.RenderBossEmbed(raid, res.Desc, lang)
-	c.respond(b, i, embed, nil)
+	c.respondBoss(b, i, raid, embed, nil)
 }
 
 func (c *Cog) mapBossAction(action string) string {
