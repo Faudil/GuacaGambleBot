@@ -3,7 +3,6 @@ package economy
 import (
 	"errors"
 	"math/rand"
-	"time"
 
 	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
@@ -68,7 +67,7 @@ type DailyResult struct {
 // Daily pays the daily salary, applies debt repayment, starts a daily quest and
 // evaluates achievements.
 func (s *Service) Daily(userID int64) (*DailyResult, error) {
-	ready, err := s.store.CheckCooldown(userID, "daily", 24*time.Hour)
+	ready, _, err := s.store.CheckGameLimit(userID, "daily", 1)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +131,7 @@ func (s *Service) Daily(userID int64) (*DailyResult, error) {
 
 	leveled, lvl := charsvc.AddXP(s.store, userID, 5)
 
-	if err := s.store.SetCooldown(userID, "daily"); err != nil {
+	if err := s.store.IncrementGameLimit(userID, "daily"); err != nil {
 		return nil, err
 	}
 

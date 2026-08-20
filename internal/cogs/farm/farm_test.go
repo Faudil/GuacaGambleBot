@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,19 +11,17 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	farmcog "guacagamblebot/internal/cogs/farm"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
 )
@@ -94,9 +91,7 @@ type resp struct {
 
 func newFarmBot(t *testing.T) (*interaction.Router, *store.Store, *bodyRT) {
 	require.NoError(t, i18n.Load("../../../locales"))
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "farm.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100}
 	st := store.New(d, cfg)
 	hoakhaven.Register()

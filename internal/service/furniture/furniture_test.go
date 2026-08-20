@@ -1,24 +1,19 @@
 package furniture
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	housingsvc "guacagamblebot/internal/service/housing"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func testService(t *testing.T) (*Service, *housingsvc.Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "furn.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 1000, DailyAmount: 50}
 	s := store.New(d, cfg)
 	hsvc := housingsvc.New(s, cfg)

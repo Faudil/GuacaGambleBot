@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/items"
+	"guacagamblebot/internal/logger"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	"guacagamblebot/internal/store"
@@ -148,6 +150,12 @@ func (c *Cog) onPerkPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 // --- Equipment ---
 
+// maxEquipMenuOptions caps the equip select menu at Discord's hard limit of 25
+// options. Players routinely hold dozens of unequipped pieces (weapons above
+// all), and a menu beyond the cap is rejected by Discord, making the equip
+// silently fail.
+const maxEquipMenuOptions = 25
+
 func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	return func(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
@@ -165,26 +173,9 @@ func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.I
 		if char != nil {
 			charLevel = char.Level
 		}
-		opts := make([]discordgo.SelectMenuOption, 0, len(items))
-		for _, eq := range items {
-			label := fmt.Sprintf("[%s] %s", eq.Rarity, eq.Name)
-			desc := statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
-			if eq.MinLevel > charLevel {
-				desc = i18n.T("character.requires_level_lbl", lang, map[string]any{"level": eq.MinLevel}) + " · " + desc
-			}
-			if len(desc) > 100 {
-				desc = desc[:100]
-			}
-			rarEmoji := rarityEmoji(eq.Rarity)
-			opts = append(opts, discordgo.SelectMenuOption{
-				Label:       label,
-				Value:       fmt.Sprintf("%d", eq.ID),
-				Description: desc,
-				Emoji:       &discordgo.ComponentEmoji{Name: rarEmoji},
-			})
-		}
+		opts := equipSelectOptions(items, charLevel, lang)
 
-		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		if err := b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: i18n.T("character.equip_select_title", lang, map[string]any{"slot": slotName}),
@@ -200,8 +191,63 @@ func (c *Cog) onEquipSelect(slot string) func(b *interaction.Bot, i *discordgo.I
 					),
 				},
 			},
+		}); err != nil {
+			logger.Log().Warn("failed to send equip select menu",
+				"error", err,
+				"user", interaction.UserID(i),
+				"guild", i.GuildID,
+			)
+		}
+	}
+}
+
+// equipSelectOptions turns unequipped equipment rows into select menu options,
+// capped at Discord's 25-option limit. Usable pieces (at or below the player's
+// level) are listed first, then locked ones; within each group items are sorted
+// by rarity, required level and name so the best gear is visible.
+func equipSelectOptions(rows []model.UserEquipment, charLevel int, lang string) []discordgo.SelectMenuOption {
+	sorted := make([]model.UserEquipment, len(rows))
+	copy(sorted, rows)
+	sort.SliceStable(sorted, func(a, b int) bool {
+		eqA, eqB := sorted[a], sorted[b]
+		usableA, usableB := eqA.MinLevel <= charLevel, eqB.MinLevel <= charLevel
+		if usableA != usableB {
+			return usableA
+		}
+		rarA, rarB := items.Rarity(eqA.Rarity).Rank(), items.Rarity(eqB.Rarity).Rank()
+		if rarA != rarB {
+			return rarA > rarB
+		}
+		if eqA.MinLevel != eqB.MinLevel {
+			return eqA.MinLevel > eqB.MinLevel
+		}
+		return eqA.Name < eqB.Name
+	})
+
+	opts := make([]discordgo.SelectMenuOption, 0, min(len(sorted), maxEquipMenuOptions))
+	for _, eq := range sorted {
+		if len(opts) >= maxEquipMenuOptions {
+			break
+		}
+		label := fmt.Sprintf("[%s] %s", eq.Rarity, eq.Name)
+		if len(label) > 100 {
+			label = label[:100]
+		}
+		desc := statSummaryLine(eq.StatSTR, eq.StatDEX, eq.StatINT, eq.StatVIT, eq.StatLUK)
+		if eq.MinLevel > charLevel {
+			desc = i18n.T("character.requires_level_lbl", lang, map[string]any{"level": eq.MinLevel}) + " · " + desc
+		}
+		if len(desc) > 100 {
+			desc = desc[:100]
+		}
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label:       label,
+			Value:       fmt.Sprintf("%d", eq.ID),
+			Description: desc,
+			Emoji:       &discordgo.ComponentEmoji{Name: rarityEmoji(eq.Rarity)},
 		})
 	}
+	return opts
 }
 
 func (c *Cog) onEquipPick(b *interaction.Bot, i *discordgo.InteractionCreate) {

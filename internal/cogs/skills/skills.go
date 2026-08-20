@@ -99,9 +99,9 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	switch skillID {
 	case "overclock":
-		// Immediate effect: reset fishing/hunting cooldowns and refund mining descends.
-		_ = c.store.ClearCooldown(userID, "fish")
-		_ = c.store.ClearCooldown(userID, "hunt")
+		// Immediate effect: grant extra fishing/hunting uses and mining descends.
+		_ = c.store.GrantGameLimitCredit(userID, "fish", 3)
+		_ = c.store.GrantGameLimitCredit(userID, "hunt", 3)
 		_ = c.store.GrantGameLimitCredit(userID, "mine_descend", 3)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(
@@ -203,30 +203,41 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 		if st.Reason == "locked" {
 			continue
 		}
+		desc := st.Description
+		if t := i18n.T("skills.desc_"+st.ID, lang); t != "skills.desc_"+st.ID {
+			desc = t
+		}
 		switch st.Reason {
 		case "available":
 			fmt.Fprintf(sb, "%s **%s** — *%s*\n> %s | CD: %dm\n\n",
-				st.Emoji, st.Name, st.Description, i18n.T("skills.uses_left", lang, map[string]any{"left": st.UsesLeft, "max": st.DailyLimit}), st.CooldownMins)
+				st.Emoji, st.Name, desc, i18n.T("skills.uses_left", lang, map[string]any{"left": st.UsesLeft, "max": st.DailyLimit}), st.CooldownMins)
 			availButtons = append(availButtons,
 				components.Button(st.Emoji+" "+st.Name, components.EncodeOwner(userID, "skills", "activate", st.ID), discordgo.SuccessButton))
 		case "on cooldown":
 			fmt.Fprintf(sb, "⏳ **%s** — *%s*\n> %s %dm\n\n",
-				st.Name, st.Description, i18n.T("skills.on_cooldown", lang), st.CooldownMins)
+				st.Name, desc, i18n.T("skills.on_cooldown", lang), st.CooldownMins)
 		case "daily limit reached":
 			fmt.Fprintf(sb, "📊 **%s** — *%s*\n> %s (%d/%d)\n\n",
-				st.Name, st.Description, i18n.T("skills.limit_reached", lang), 0, st.DailyLimit)
+				st.Name, desc, i18n.T("skills.limit_reached", lang), 0, st.DailyLimit)
 		}
 	}
 
-	// Build components: refresh button + up to 10 activate buttons
+	// Build components: refresh button + activate buttons packed 4 per row
+	// (max 4 skill rows, within Discord's 5-row limit).
 	var comps []discordgo.MessageComponent
 	comps = append(comps, components.ActionRow(
 		components.Button(i18n.T("skills.btn_refresh", lang), components.EncodeOwner(userID, "skills", "refresh"), discordgo.SecondaryButton),
 	))
-	for _, b := range availButtons {
-		if len(comps) < 4 { // max 4 rows (1 refresh + 3 skill rows)
-			comps = append(comps, components.ActionRow(b))
+	for i := 0; i < len(availButtons) && len(comps) < 5; i += 4 {
+		end := i + 4
+		if end > len(availButtons) {
+			end = len(availButtons)
 		}
+		row := make([]discordgo.MessageComponent, 0, end-i)
+		for _, b := range availButtons[i:end] {
+			row = append(row, b)
+		}
+		comps = append(comps, components.ActionRow(row...))
 	}
 
 	return components.Embed(

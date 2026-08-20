@@ -41,6 +41,7 @@ import (
 	expeditioncog "guacagamblebot/internal/cogs/expedition"
 	farmcog "guacagamblebot/internal/cogs/farm"
 	fishingcog "guacagamblebot/internal/cogs/fishing"
+	forgecog "guacagamblebot/internal/cogs/forge"
 	helpcog "guacagamblebot/internal/cogs/help"
 	housingcog "guacagamblebot/internal/cogs/housing"
 	huntcog "guacagamblebot/internal/cogs/hunt"
@@ -129,6 +130,7 @@ func main() {
 	expeditioncog.Register(router, str, cfg)
 	farmcog.Register(router, str, cfg)
 	fishingcog.Register(router, str, cfg)
+	forgecog.Register(router, str, cfg)
 	housingcog.Register(router, str, cfg)
 	huntcog.Register(router, str, cfg)
 	helpcog.Register(router, str, cfg)

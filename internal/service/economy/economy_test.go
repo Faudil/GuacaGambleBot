@@ -59,6 +59,15 @@ func TestDailyNoDebt(t *testing.T) {
 	assert.True(t, unlockIDs["daily_1"])
 }
 
+func TestDailyOncePerDay(t *testing.T) {
+	svc, _ := testService(t)
+	_, err := svc.Daily(1)
+	require.NoError(t, err)
+
+	_, err = svc.Daily(1)
+	assert.ErrorIs(t, err, ErrAlreadyClaimed)
+}
+
 func TestDailyWithDebt(t *testing.T) {
 	svc, st := testService(t)
 	// Pre-create accounts with a known balance. A direct Create ignores a

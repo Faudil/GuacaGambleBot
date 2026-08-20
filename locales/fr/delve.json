@@ -517,9 +517,10 @@
     "failed_chronicle": "Échec du chargement de la chronique : {err}",
     "riddle": {
       "modal_title": "🧩 Résoudre l'Énigme",
+      "modal_label": "🔮 Votre réponse",
       "placeholder": "Tapez votre réponse...",
       "echo": {
-        "question": "Je parle sans bouche et j'entends sans oreilles. Je n'ai pas de corps, mais je m'anime avec le vent. Qui suis-je ?",
+        "question": "Je parle sans bouche et entends sans oreilles. Sans corps, je vis avec le vent. Qui suis-je ?",
         "answer": "écho"
       },
       "footsteps": {
@@ -527,15 +528,15 @@
         "answer": "pas"
       },
       "map": {
-        "question": "J'ai des villes, mais pas de maisons. J'ai des montagnes, mais pas d'arbres. J'ai de l'eau, mais pas de poissons. Qui suis-je ?",
+        "question": "Des villes sans maisons, des montagnes sans arbres, de l'eau sans poissons. Qui suis-je ?",
         "answer": "carte"
       },
       "river": {
-        "question": "Qu'est-ce qui court mais ne marche jamais, a une bouche mais ne parle jamais, a une tête mais ne pleure jamais, a un lit mais ne dort jamais ?",
+        "question": "Court sans marcher, une bouche sans parler, une tête sans pleurer, un lit sans dormir.",
         "answer": "rivière"
       },
       "fire": {
-        "question": "Je ne suis pas vivant, mais je grandis ; je n'ai pas de poumons, mais j'ai besoin d'air. Qui suis-je ?",
+        "question": "Je ne suis pas vivant, mais je grandis. Sans poumons, j'ai besoin d'air. Qui suis-je ?",
         "answer": "feu"
       },
       "piano": {

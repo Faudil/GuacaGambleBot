@@ -21,7 +21,7 @@ func (s Skill) CooldownDur() time.Duration {
 var allSkills = []Skill{
 	{
 		ID: "overclock", Name: "Overclock",
-		Description: "Resets the fishing and hunting cooldowns and grants 3 extra mining descends.",
+		Description: "Grants 3 extra fishing, hunting, and mining actions.",
 		Emoji:       "⚡", UnlockLevel: 3, DailyLimit: 3, CooldownMins: 120,
 	},
 	{

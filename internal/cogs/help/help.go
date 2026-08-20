@@ -79,6 +79,7 @@ func (c *Cog) embed() *discordgo.MessageEmbed {
 				true),
 			components.Field("\U0001f3e0 Social & RPG",
 				"`"+prefix+"house` / `/house` — Buy & upgrade home\n"+
+					"`"+prefix+"forge` / `/forge` — Fuse or scrap equipment\n"+
 					"`"+prefix+"character` / `/character` — Player profile\n"+
 					"`"+prefix+"skills` / `/skills` — Activate skills\n"+
 					"`"+prefix+"inventory` / `/inventory` — Your bag\n"+

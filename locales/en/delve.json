@@ -517,9 +517,10 @@
     "failed_chronicle": "Failed to load chronicle: {err}",
     "riddle": {
       "modal_title": "🧩 Solve the Riddle",
+      "modal_label": "🔮 Your answer",
       "placeholder": "Type your answer...",
       "echo": {
-        "question": "I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I?",
+        "question": "I speak without a mouth and hear without ears. No body, but I come alive with wind. What am I?",
         "answer": "echo"
       },
       "footsteps": {
@@ -531,7 +532,7 @@
         "answer": "map"
       },
       "river": {
-        "question": "What can run but never walks, has a mouth but never talks, has a head but never weeps, has a bed but never sleeps?",
+        "question": "Runs but never walks, has a mouth but never talks, a head but never weeps, a bed but never sleeps.",
         "answer": "river"
       },
       "fire": {

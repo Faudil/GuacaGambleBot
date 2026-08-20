@@ -43,6 +43,7 @@ var ownerGatedDomains = map[string]struct{}{
 	"fish":         {},
 	"arch":         {},
 	"hunt":         {},
+	"forge":        {},
 	"expedition":   {},
 	"jobs":         {},
 	"skills":       {},

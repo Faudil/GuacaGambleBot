@@ -969,17 +969,31 @@ func (c *Cog) onDesecrate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.respond(b, i, embed, comps)
 }
 
-func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	userID := interaction.ToInt64(i.Member.User.ID)
-	s := c.loadSession(userID)
-	if s == nil {
-		c.errorMsg(b, i, c.noSessionMsg(i))
-		return
-	}
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+func delvePrice(price, mult int) int {
+	return price * mult / 100
+}
 
-	var items []delvesvc.DelveItem
+// merchantMultiplier returns the active haggle multiplier for a player:
+// 70 for a successful haggle (discount), 120 for a failed one (markup),
+// 100 otherwise.
+func (c *Cog) merchantMultiplier(userID int64) int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if extra, ok := c.merchantExtra[userID]; ok {
+		if extra["haggle_discount"] > 0 {
+			return 70
+		}
+		if extra["haggle_markup"] > 0 {
+			return 120
+		}
+	}
+	return 100
+}
+
+// merchantOffersFor rolls the merchant's item offer list for a player.
+func (c *Cog) merchantOffersFor(s *model.DelveSession) []delvesvc.DelveItem {
 	rarities := []delvesvc.Rarity{delvesvc.Common, delvesvc.Uncommon, delvesvc.Rare}
+	var items []delvesvc.DelveItem
 	for _, r := range rarities {
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
 		loot.Item.Rarity = r
@@ -988,20 +1002,37 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	items = append(items, delvesvc.DelveItem{
 		ID: "depth_shard", Name: "Depth Shard", Emoji: "💎", Rarity: delvesvc.Rare, Quantity: 1,
 	})
-	potionPrice := delvesvc.PotionPrice(s.Floor)
-	torchPrice := delvesvc.TorchPrice(s.Floor)
-	cachePrice := delvesvc.MysteryCachePrice(s.Floor)
+	return items
+}
+
+// showMerchantShop renders the merchant's wares with any active haggle
+// discount/markup applied. An optional note (e.g. the haggle outcome) is
+// shown above the wares.
+func (c *Cog) showMerchantShop(b *interaction.Bot, i *discordgo.InteractionCreate, s *model.DelveSession, lang, note string) {
+	userID := s.UserID
+	mult := c.merchantMultiplier(userID)
 
 	c.mu.Lock()
-	c.merchantOffers[userID] = items
+	offers, ok := c.merchantOffers[userID]
+	if !ok || len(offers) == 0 {
+		offers = c.merchantOffersFor(s)
+		c.merchantOffers[userID] = offers
+	}
+	if c.merchantExtra[userID] == nil {
+		c.merchantExtra[userID] = make(map[string]int)
+	}
 	c.mu.Unlock()
 
 	basePrice := delvesvc.MerchantPriceBase(s.Floor)
-	desc := i18n.T("delve.handler.merchant_welcome", lang) + "\n\n"
+	desc := ""
+	if note != "" {
+		desc += note + "\n\n"
+	}
+	desc += i18n.T("delve.handler.merchant_welcome", lang) + "\n\n"
 	var comps []discordgo.MessageComponent
 
-	for idx, item := range items {
-		p := (item.Rarity.Rank() + 1) * basePrice
+	for idx, item := range offers {
+		p := delvePrice((item.Rarity.Rank()+1)*basePrice, mult)
 		desc += i18n.T("delve.handler.merchant_item_line", lang, map[string]any{
 			"n":     fmt.Sprintf("%d", idx+1),
 			"emoji": delvesvc.RarityEmoji[item.Rarity],
@@ -1011,20 +1042,11 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 	}
 	desc += i18n.T("delve.handler.merchant_shard_line", lang, map[string]any{
 		"item":  i18n.T("delve.loot.depth_shard", lang),
-		"price": fmt.Sprintf("%d", basePrice*4),
+		"price": fmt.Sprintf("%d", delvePrice(basePrice*4, mult)),
 	}) + "\n"
-	desc += i18n.T("delve.handler.merchant_potion_line", lang, map[string]any{"price": fmt.Sprintf("%d", potionPrice)}) + "\n"
-	desc += i18n.T("delve.handler.merchant_torch_line", lang, map[string]any{"price": fmt.Sprintf("%d", torchPrice)}) + "\n"
-	desc += i18n.T("delve.handler.merchant_cache_line", lang, map[string]any{"price": fmt.Sprintf("%d", cachePrice)})
-
-	// Store extra items for buy handler
-	c.mu.Lock()
-	c.merchantExtra[userID] = map[string]int{
-		"potion_price": potionPrice,
-		"torch_price":  torchPrice,
-		"cache_price":  cachePrice,
-	}
-	c.mu.Unlock()
+	desc += i18n.T("delve.handler.merchant_potion_line", lang, map[string]any{"price": fmt.Sprintf("%d", delvePrice(delvesvc.PotionPrice(s.Floor), mult))}) + "\n"
+	desc += i18n.T("delve.handler.merchant_torch_line", lang, map[string]any{"price": fmt.Sprintf("%d", delvePrice(delvesvc.TorchPrice(s.Floor), mult))}) + "\n"
+	desc += i18n.T("delve.handler.merchant_cache_line", lang, map[string]any{"price": fmt.Sprintf("%d", delvePrice(delvesvc.MysteryCachePrice(s.Floor), mult))})
 
 	comps = append(comps, components.ActionRow(
 		components.Button(i18n.T("delve.merchant.buy1", lang), components.Encode("delve", "merchant_buy", "0"), discordgo.PrimaryButton),
@@ -1048,6 +1070,17 @@ func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreat
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.handler.merchant_gold", lang, map[string]any{"gold": fmt.Sprintf("%d", s.Gold)})},
 	}
 	c.respond(b, i, embed, comps)
+}
+
+func (c *Cog) onMerchantBrowse(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(i.Member.User.ID)
+	s := c.loadSession(userID)
+	if s == nil {
+		c.errorMsg(b, i, c.noSessionMsg(i))
+		return
+	}
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	c.showMerchantShop(b, i, s, lang, "")
 }
 
 func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -1077,69 +1110,55 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	basePrice := delvesvc.MerchantPriceBase(s.Floor)
+	mult := c.merchantMultiplier(userID)
 
 	var price int
 	var desc string
+	var grantItem *delvesvc.DelveItem
+	grantPotion := false
+	grantTorch := false
 
 	switch idx {
 	case 0, 1, 2:
 		item := offers[idx]
 		price = (item.Rarity.Rank() + 1) * basePrice
-		if s.Gold < price {
-			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
-			return
-		}
-		s.Gold -= price
-		c.svc.AddItem(s, item)
-		desc = i18n.T("delve.handler.purchase", lang, map[string]any{"item": delvesvc.DelveItemName(item, lang), "gold": fmt.Sprintf("%d", price)})
+		grantItem = &item
+		desc = i18n.T("delve.handler.purchase", lang, map[string]any{
+			"item": delvesvc.DelveItemName(item, lang),
+			"gold": fmt.Sprintf("%d", delvePrice(price, mult)),
+		})
 
 	case 3: // Depth Shard
 		price = basePrice * 4
-		if s.Gold < price {
-			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
-			return
-		}
-		s.Gold -= price
 		shard := delvesvc.DelveItem{
 			ID: "depth_shard", Name: "Depth Shard", Emoji: "💎", Rarity: delvesvc.Rare, Quantity: 1,
 		}
-		c.svc.AddItem(s, shard)
-		desc = i18n.T("delve.handler.purchase", lang, map[string]any{"item": i18n.T("delve.loot.depth_shard", lang), "gold": fmt.Sprintf("%d", price)})
+		grantItem = &shard
+		desc = i18n.T("delve.handler.purchase", lang, map[string]any{
+			"item": i18n.T("delve.loot.depth_shard", lang),
+			"gold": fmt.Sprintf("%d", delvePrice(price, mult)),
+		})
 
 	case 4: // Potion
 		price = delvesvc.PotionPrice(s.Floor)
-		if s.Gold < price {
-			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
-			return
-		}
-		s.Gold -= price
-		s.Potions++
-		if s.Potions > 3 {
-			s.Potions = 3
+		grantPotion = true
+		p := s.Potions + 1
+		if p > 3 {
+			p = 3
 		}
 		desc = i18n.T("delve.handler.purchase_potion", lang, map[string]any{
-			"gold": fmt.Sprintf("%d", price), "p": fmt.Sprintf("%d", s.Potions), "m": "3",
+			"gold": fmt.Sprintf("%d", delvePrice(price, mult)), "p": fmt.Sprintf("%d", p), "m": "3",
 		})
 
 	case 5: // Torch
 		price = delvesvc.TorchPrice(s.Floor)
-		if s.Gold < price {
-			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
-			return
-		}
-		s.Gold -= price
-		s.Torches++
+		grantTorch = true
 		desc = i18n.T("delve.handler.purchase_torch", lang, map[string]any{
-			"gold": fmt.Sprintf("%d", price), "t": fmt.Sprintf("%d", s.Torches),
+			"gold": fmt.Sprintf("%d", delvePrice(price, mult)), "t": fmt.Sprintf("%d", s.Torches+1),
 		})
 
 	case 6: // Mystery Cache
 		price = delvesvc.MysteryCachePrice(s.Floor)
-		if s.Gold < price {
-			c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
-			return
-		}
-		s.Gold -= price
 		char, _ := c.store.EnsureCharacter(userID)
 		luk := 0.0
 		if char != nil {
@@ -1147,7 +1166,7 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, luk)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
+			grantItem = &loot.Item
 			desc = i18n.T("delve.handler.cache_open", lang, map[string]any{
 				"item": delvesvc.DelveItemName(loot.Item, lang),
 				"text": delvesvc.LootRewardText(loot.Item, lang),
@@ -1161,22 +1180,25 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	// Apply haggle discount/markup
-	c.mu.RLock()
-	if extra, ok := c.merchantExtra[userID]; ok {
-		if extra["haggle_discount"] > 0 {
-			price = price * 70 / 100
-		} else if extra["haggle_markup"] > 0 {
-			price = price * 120 / 100
-		}
-	}
-	c.mu.RUnlock()
-
+	price = delvePrice(price, mult)
 	if s.Gold < price {
 		c.errorMsg(b, i, i18n.T("delve.not_enough_gold", lang))
 		return
 	}
 	s.Gold -= price
+
+	if grantItem != nil {
+		c.svc.AddItem(s, *grantItem)
+	}
+	if grantPotion {
+		s.Potions++
+		if s.Potions > 3 {
+			s.Potions = 3
+		}
+	}
+	if grantTorch {
+		s.Torches++
+	}
 
 	c.svc.AddFlag(s, "merchant_purchase")
 	c.saveSession(s)
@@ -1209,7 +1231,7 @@ func (c *Cog) onPuzzleSolve(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		Data: components.ModalResponse(
 			components.Encode("delve", "puzzle_answer"),
 			i18n.T("delve.riddle.modal_title", lang),
-			components.TextInput("answer", i18n.T("delve.riddle."+riddle.ID+".question", lang), true, i18n.T("delve.riddle.placeholder", lang), discordgo.TextInputShort, 1, 100),
+			components.TextInput("answer", i18n.T("delve.riddle.modal_label", lang), true, i18n.T("delve.riddle."+riddle.ID+".question", lang), discordgo.TextInputShort, 1, 100),
 		),
 	})
 }
@@ -2019,27 +2041,23 @@ func (c *Cog) onMerchantHaggle(b *interaction.Bot, i *discordgo.InteractionCreat
 		luk = char.LUK
 	}
 	dc := delvesvc.ShrinePrayDC(s.Floor)
-	if rand.Intn(20)+luk >= dc {
-		c.mu.Lock()
-		if c.merchantExtra[userID] == nil {
-			c.merchantExtra[userID] = make(map[string]int)
-		}
-		c.merchantExtra[userID]["haggle_discount"] = 1
-		c.mu.Unlock()
-		desc := i18n.T("delve.handler.merchant_haggle_success", lang)
-		embed, comps := c.buildFloorTransition(s, desc, lang)
-		c.respond(b, i, embed, comps)
-	} else {
-		c.mu.Lock()
-		if c.merchantExtra[userID] == nil {
-			c.merchantExtra[userID] = make(map[string]int)
-		}
-		c.merchantExtra[userID]["haggle_markup"] = 1
-		c.mu.Unlock()
-		desc := i18n.T("delve.handler.merchant_haggle_fail", lang)
-		embed, comps := c.buildFloorTransition(s, desc, lang)
-		c.respond(b, i, embed, comps)
+	discount := rand.Intn(20)+luk >= dc
+	c.mu.Lock()
+	if c.merchantExtra[userID] == nil {
+		c.merchantExtra[userID] = make(map[string]int)
 	}
+	if discount {
+		c.merchantExtra[userID]["haggle_discount"] = 1
+	} else {
+		c.merchantExtra[userID]["haggle_markup"] = 1
+	}
+	c.mu.Unlock()
+
+	desc := i18n.T("delve.handler.merchant_haggle_fail", lang)
+	if discount {
+		desc = i18n.T("delve.handler.merchant_haggle_success", lang)
+	}
+	c.showMerchantShop(b, i, s, lang, desc)
 }
 
 func (c *Cog) onRestBandage(b *interaction.Bot, i *discordgo.InteractionCreate) {

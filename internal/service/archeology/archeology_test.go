@@ -2,17 +2,14 @@ package archeology
 
 import (
 	"math/rand"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
@@ -20,14 +17,13 @@ import (
 	petsvc "guacagamblebot/internal/service/pets"
 	researchsvc "guacagamblebot/internal/service/research"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "a.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	hoakhaven.Register()
@@ -54,12 +50,7 @@ func completeResearch(t *testing.T, db *gorm.DB, userID int64, researchID string
 }
 
 func testServiceInMemory(t *testing.T) *Service {
-	d, err := gorm.Open(sqlite.Open("file:simdb?mode=memory&cache=shared"), &gorm.Config{})
-	require.NoError(t, err)
-	sqlDB, err := d.DB()
-	require.NoError(t, err)
-	sqlDB.SetMaxOpenConns(1)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	hoakhaven.Register()

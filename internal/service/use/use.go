@@ -57,10 +57,10 @@ func apply(st *store.Store, userID int64, itemID string) (string, error) {
 		return "🪝 **Hook!** The fishing cooldown is reset.", nil
 
 	case "coffee":
-		if err := st.ClearCooldown(userID, "daily"); err != nil {
+		if err := st.ResetGameLimit(userID, "daily"); err != nil {
 			return "", err
 		}
-		return "☕ **Coffee!** The daily claim cooldown is reset.", nil
+		return "☕ **Coffee!** Your daily claim is available again.", nil
 
 	case "bow":
 		if err := st.ClearCooldown(userID, "hunt"); err != nil {

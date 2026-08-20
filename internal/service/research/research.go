@@ -144,6 +144,37 @@ var ResearchDefs = map[string]*ResearchDef{
 		BonusDesc:         "Unlocks: Legendary equipment crafting (coming soon)",
 	},
 
+	// --- Fusion Refinement Research (forge) ---
+	//
+	// Each tier unlocks fusing 5 equipment pieces of one rarity into 1 random
+	// piece of the next rarity. Material costs are doubled against a base
+	// proposal and use a diverse material set per tier so higher fusions feel
+	// progressively more expensive.
+	"fusion_common": {
+		ID: "fusion_common", Name: "Fusion: Common → Uncommon", Description: "Learn to smelt 5 Common items into 1 Uncommon.",
+		TimeHours: 2, CostMoney: 3000, CostItems: map[string]int{"coal": 20, "pebble": 20, "iron_ore": 10},
+		RequiredFurniture: "forge",
+		BonusDesc:         "Unlocks: Fusing Common → Uncommon",
+	},
+	"fusion_uncommon": {
+		ID: "fusion_uncommon", Name: "Fusion: Uncommon → Rare", Description: "Refine Uncommon gear into Rare equipment.",
+		TimeHours: 4, CostMoney: 8000, CostItems: map[string]int{"iron_ore": 40, "copper_ore": 20, "silver_ore": 10},
+		RequiredFurniture: "forge",
+		BonusDesc:         "Unlocks: Fusing Uncommon → Rare",
+	},
+	"fusion_rare": {
+		ID: "fusion_rare", Name: "Fusion: Rare → Epic", Description: "Forge Rare equipment into Epic gear.",
+		TimeHours: 8, CostMoney: 20000, CostItems: map[string]int{"silver_ore": 20, "gold_nugget": 12, "emerald": 6, "bone_dust": 10},
+		RequiredFurniture: "forge",
+		BonusDesc:         "Unlocks: Fusing Rare → Epic",
+	},
+	"fusion_epic": {
+		ID: "fusion_epic", Name: "Fusion: Epic → Legendary", Description: "The pinnacle of the forge — fuse Epic gear into Legendary.",
+		TimeHours: 16, CostMoney: 40000, CostItems: map[string]int{"platinum": 20, "rough_diamond": 12, "ancient_alloy": 6, "kethari_crystal": 4},
+		RequiredFurniture: "arcane_forge",
+		BonusDesc:         "Unlocks: Fusing Epic → Legendary",
+	},
+
 	// --- Set Research ---
 	"set_dragon_slayer": {
 		ID: "set_dragon_slayer", Name: "Dragon Slayer Set", Description: "Study the remains of ancient dragons to craft their slayer's gear.",

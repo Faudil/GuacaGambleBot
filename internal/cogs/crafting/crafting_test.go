@@ -2,24 +2,22 @@ package crafting
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
 	crtsvc "guacagamblebot/internal/service/crafting"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func TestMain(m *testing.M) {
@@ -29,9 +27,7 @@ func TestMain(m *testing.M) {
 
 func testCog(t *testing.T) *Cog {
 	t.Helper()
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "crafting_cog.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	require.NoError(t, s.SaveServerSetting(&model.ServerSetting{ServerID: 100, Language: "en"}))
