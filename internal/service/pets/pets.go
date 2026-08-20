@@ -348,8 +348,11 @@ func (s *Service) tutorialCompleted(userID int64) bool {
 	return uq.Status == "COMPLETED"
 }
 
+// xpForLevel returns the XP needed to go from `level` to `level+1`. The
+// multiplier ramps smoothly from 8 at level 1 to 15 at level 50, so early
+// levels come noticeably faster while the endgame grind stays meaningful.
 func xpForLevel(level int, rMult float64) int {
-	return int(float64(level*level) * rMult * 15)
+	return int(float64(level*level) * rMult * (8.0 + 7.0*float64(level)/50.0))
 }
 
 // ─── Bond System ───────────────────────────────────────────────

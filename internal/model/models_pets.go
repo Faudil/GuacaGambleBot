@@ -18,15 +18,15 @@ type UserPet struct {
 	FoodEaten    int     `gorm:"column:food_eaten;default:0"`
 	Bonus        int     `gorm:"column:bonus;default:0"`
 	XP           int     `gorm:"column:xp;default:0"`
-	MaxHP        int     `gorm:"column:max_hp;default:50"`
-	HP           int     `gorm:"column:hp;default:50"`
-	Atk          int     `gorm:"column:atk;default:10"`
-	Defense      int     `gorm:"column:defense;default:5"`
-	Speed        int     `gorm:"column:speed;default:10"`
-	DGE          int     `gorm:"column:dge;default:5"`
-	ACC          int     `gorm:"column:acc;default:0"`
-	CritC        int     `gorm:"column:crit_c;default:5"`
-	CritD        float64 `gorm:"column:crit_d;default:1.5"`
+	MaxHP        int     `gorm:"column:max_hp;default:(-)"`
+	HP           int     `gorm:"column:hp;default:(-)"`
+	Atk          int     `gorm:"column:atk;default:(-)"`
+	Defense      int     `gorm:"column:defense;default:(-)"`
+	Speed        int     `gorm:"column:speed;default:(-)"`
+	DGE          int     `gorm:"column:dge;default:(-)"`
+	ACC          int     `gorm:"column:acc;default:(-)"`
+	CritC        int     `gorm:"column:crit_c;default:(-)"`
+	CritD        float64 `gorm:"column:crit_d;default:(-)"`
 	SpcC         int     `gorm:"column:spc_c;default:0"`
 	TrsLvl       int     `gorm:"column:trs_lvl;default:0"`
 	Elo          int     `gorm:"column:elo;default:1000"`

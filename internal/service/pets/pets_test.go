@@ -205,6 +205,51 @@ func TestAddXPLevelUp(t *testing.T) {
 	assert.Greater(t, pet.Level, 1)
 }
 
+func TestXPForLevelCurve(t *testing.T) {
+	// Early levels are the fast part of the ramp: the cost multiplier runs
+	// from 8 at level 1 up to 15 at level 50 (rare rarity shown).
+	exact := map[int]int{
+		1:  8,
+		2:  33,
+		5:  217,
+		10: 940,
+		20: 4320,
+		24: 6543,
+		25: 7187,
+		49: 35678,
+	}
+	for lvl, want := range exact {
+		assert.Equal(t, want, xpForLevel(lvl, RarityXP[RarityRare]), "xp cost for level %d", lvl)
+	}
+
+	// Common rarity keeps its halved curve.
+	assert.Equal(t, 4, xpForLevel(1, RarityXP[RarityCommon]))
+
+	// Cumulative XP to level 25 must be ~30% lower than the old 73,500.
+	to25 := 0
+	for l := 1; l < 25; l++ {
+		to25 += xpForLevel(l, RarityXP[RarityRare])
+	}
+	assert.InDelta(t, 51_790, to25, 1_000, "cumulative XP to level 25")
+
+	// Max level must stay a meaningful grind (old: 606,375).
+	to50 := to25
+	for l := 25; l < 50; l++ {
+		to50 += xpForLevel(l, RarityXP[RarityRare])
+	}
+	assert.InDelta(t, 533_465, to50, 5_000, "cumulative XP to level 50")
+
+	// Per-level costs must keep rising monotonically at every rarity.
+	for _, rMult := range []float64{0.5, 1.0, 1.5, 2.0} {
+		prev := 0
+		for l := 1; l < 50; l++ {
+			cost := xpForLevel(l, rMult)
+			assert.Greater(t, cost, prev, "rarity %.1f level %d must cost more than the previous level", rMult, l)
+			prev = cost
+		}
+	}
+}
+
 func TestUpdateElo(t *testing.T) {
 	svc, _ := testService(t)
 	p1, _ := svc.CreatePet(1, "Dragon")

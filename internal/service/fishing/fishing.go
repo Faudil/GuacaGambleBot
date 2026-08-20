@@ -142,7 +142,7 @@ func (s *Service) CheckCooldown(userID int64) (time.Duration, error) {
 		return 0, err
 	}
 	elapsed := time.Since(cd.LastUsed)
-	cooldown := 5 * time.Minute
+	cooldown := 5 * time.Second
 	if elapsed >= cooldown {
 		return 0, nil
 	}

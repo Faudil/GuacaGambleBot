@@ -919,10 +919,9 @@ func (c *Cog) onDisarm(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			luk = char.LUK
 		}
 		desc = i18n.T("delve.handler.disarm_success", lang)
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, float64(luk)*0.01)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, float64(luk)*0.01)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc += "\n\n" + c.grantRunLoot(s, loot, lang)
 			c.svc.AddFlag(s, "disarmed_treasure")
 		}
 	} else {
@@ -964,10 +963,9 @@ func (c *Cog) onOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		c.svc.AddFlag(s, "spared_mimic")
 	} else if roll < mimicChance+30 {
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
-			desc = i18n.T("delve.handler.chest_open", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc = i18n.T("delve.handler.chest_open", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 			c.svc.AddFlag(s, "opened_treasure_trap")
 		}
 	} else {
@@ -1018,18 +1016,13 @@ func (c *Cog) onSacrifice(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		s.HP = s.MaxHP
 	}
 
-	loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.15)
-	c.svc.AddItem(s, loot.Item)
+	loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.15)
 	c.svc.AddFlag(s, "sacrificed_hp")
 
 	c.saveSession(s)
 
 	desc := i18n.T("delve.handler.sacrifice_desc", lang, map[string]any{"cost": fmt.Sprintf("%d", hpCost)}) + "\n"
-	desc += i18n.T("delve.handler.sacrifice_reward", lang, map[string]any{
-		"rarity": delvesvc.RarityName(loot.Item.Rarity, lang),
-		"item":   delvesvc.DelveItemName(loot.Item, lang),
-	}) + "\n\n"
-	desc += delvesvc.LootRewardText(loot.Item, lang)
+	desc += "\n" + c.grantRunLoot(s, loot, lang)
 
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
@@ -1061,6 +1054,31 @@ func (c *Cog) onDesecrate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 func delvePrice(price, mult int) int {
 	return price * mult / 100
+}
+
+// grantRunLoot applies a room loot roll to the run and returns the reward
+// text describing what was found (gold, heal, item or a combination).
+func (c *Cog) grantRunLoot(s *model.DelveSession, loot *delvesvc.LootResult, lang string) string {
+	if loot == nil {
+		return ""
+	}
+	var parts []string
+	if loot.Gold > 0 {
+		s.Gold += loot.Gold
+		parts = append(parts, i18n.T("delve.loot.gold_found", lang, map[string]any{"gold": fmt.Sprintf("%d", loot.Gold)}))
+	}
+	if loot.Heal > 0 {
+		s.HP += loot.Heal
+		if s.HP > s.MaxHP {
+			s.HP = s.MaxHP
+		}
+		parts = append(parts, i18n.T("delve.loot.heal_found", lang, map[string]any{"hp": fmt.Sprintf("%d", loot.Heal)}))
+	}
+	if loot.Item.ID != "" {
+		c.svc.AddItem(s, loot.Item)
+		parts = append(parts, strings.TrimSpace(delvesvc.LootRewardText(loot.Item, lang)))
+	}
+	return strings.Join(parts, "\n")
 }
 
 // merchantMultiplier returns the active haggle multiplier for a player:
@@ -1351,10 +1369,9 @@ func (c *Cog) onPuzzleAnswer(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	var desc string
 	if answer == normalizeAnswer(i18n.T("delve.riddle."+riddle.ID+".answer", lang)) {
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.1)
-		c.svc.AddItem(s, loot.Item)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.1)
 		c.svc.AddFlag(s, "solved_riddle")
-		desc = i18n.T("delve.handler.riddle_correct", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		desc = i18n.T("delve.handler.riddle_correct", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 	} else {
 		s.HP -= delvesvc.RiddleFailDamage()
 		if s.HP < 0 {
@@ -1468,8 +1485,7 @@ func (c *Cog) onNpcHelp(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
-	c.svc.AddItem(s, loot.Item)
+	loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.05)
 	c.svc.AddFlag(s, "freed_prisoner")
 	gold := delvesvc.GoldReward(s.Zone, s.Floor)
 	s.Gold += gold
@@ -1477,7 +1493,7 @@ func (c *Cog) onNpcHelp(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	desc := i18n.T("delve.handler.npc_help", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)}) + "\n"
-	desc += "\n" + delvesvc.LootRewardText(loot.Item, lang)
+	desc += "\n" + c.grantRunLoot(s, loot, lang)
 	embed, comps := c.buildFloorTransition(s, desc, lang)
 	c.respond(b, i, embed, comps)
 }
@@ -1698,12 +1714,11 @@ func (c *Cog) onTombOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	var desc string
 	if rand.Intn(100) < 40 {
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0)
 		if loot != nil {
 			delvesvc.AssignSetName(&loot.Item, s.Zone)
-			c.svc.AddItem(s, loot.Item)
 			c.svc.AddFlag(s, "tomb_raider")
-			desc = i18n.T("delve.handler.tomb_open_success", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc = i18n.T("delve.handler.tomb_open_success", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 		} else {
 			desc = i18n.T("delve.handler.tomb_open_empty", lang)
 		}
@@ -1812,12 +1827,11 @@ func (c *Cog) onGardenBurn(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if s.HP > s.MaxHP {
 		s.HP = s.MaxHP
 	}
-	loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+	loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.05)
 	desc := i18n.T("delve.handler.garden_burn", lang, map[string]any{"heal": heal})
 	if loot != nil {
 		delvesvc.AssignSetName(&loot.Item, s.Zone)
-		c.svc.AddItem(s, loot.Item)
-		desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		desc += "\n\n" + c.grantRunLoot(s, loot, lang)
 	}
 	if rand.Float64() < 0.30 {
 		seed := randomGardenSeed()
@@ -2028,14 +2042,13 @@ func (c *Cog) onLockedKey(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	s.Keys--
-	loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+	loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.05)
 	desc := i18n.T("delve.handler.locked_key_success", lang)
 	if loot != nil {
 		gold := delvesvc.GoldReward(s.Zone, s.Floor)
 		s.Gold += gold
-		c.svc.AddItem(s, loot.Item)
 		c.svc.AddFlag(s, "key_master")
-		desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+		desc += "\n\n" + c.grantRunLoot(s, loot, lang)
 		desc += "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 	}
 	c.saveSession(s)
@@ -2060,13 +2073,12 @@ func (c *Cog) onLockedForce(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	dc := delvesvc.ForceDoorDC(s.Floor)
 	var desc string
 	if rand.Intn(20)+str >= dc {
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0)
 		desc = i18n.T("delve.handler.locked_force_success", lang)
 		if loot != nil {
 			gold := delvesvc.GoldReward(s.Zone, s.Floor)
 			s.Gold += gold
-			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc += "\n\n" + c.grantRunLoot(s, loot, lang)
 			desc += "\n" + i18n.T("delve.handler.gold_gain", lang, map[string]any{"gold": fmt.Sprintf("%d", gold)})
 		}
 	} else {
@@ -2102,11 +2114,10 @@ func (c *Cog) onNpcIntimidate(b *interaction.Bot, i *discordgo.InteractionCreate
 	}
 	dc := delvesvc.IntimidateDC(s.Floor)
 	if rand.Intn(20)+str >= dc {
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0)
 		desc := i18n.T("delve.handler.npc_intimidate_success", lang)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
-			desc += "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc += "\n\n" + c.grantRunLoot(s, loot, lang)
 		}
 		c.saveSession(s)
 		embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -2236,10 +2247,9 @@ func (c *Cog) onArchiveSearch(b *interaction.Bot, i *discordgo.InteractionCreate
 	var desc string
 	switch {
 	case roll < 50:
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.05)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
-			desc = i18n.T("delve.handler.archive_search_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc = i18n.T("delve.handler.archive_search_loot", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 		} else {
 			desc = i18n.T("delve.handler.archive_search_empty", lang)
 		}
@@ -2298,10 +2308,9 @@ func (c *Cog) onFountainCoin(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		desc = i18n.T("delve.handler.fountain_potion", lang, map[string]any{"p": s.Potions, "m": 3})
 	case roll < 80:
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0.05)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0.05)
 		if loot != nil {
-			c.svc.AddItem(s, loot.Item)
-			desc = i18n.T("delve.handler.fountain_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc = i18n.T("delve.handler.fountain_loot", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 		} else {
 			desc = i18n.T("delve.handler.fountain_empty", lang)
 		}
@@ -2358,11 +2367,10 @@ func (c *Cog) onOssuarySearch(b *interaction.Bot, i *discordgo.InteractionCreate
 	roll := rand.Intn(100)
 	switch {
 	case roll < 45:
-		loot := delvesvc.GenerateLoot(s.Zone, s.Floor, 0)
+		loot := delvesvc.GenerateRoomLoot(s.Zone, s.Floor, 0)
 		if loot != nil {
 			delvesvc.AssignSetName(&loot.Item, s.Zone)
-			c.svc.AddItem(s, loot.Item)
-			desc := i18n.T("delve.handler.ossuary_search_loot", lang) + "\n\n" + delvesvc.LootRewardText(loot.Item, lang)
+			desc := i18n.T("delve.handler.ossuary_search_loot", lang) + "\n\n" + c.grantRunLoot(s, loot, lang)
 			c.saveSession(s)
 			embed, comps := c.buildFloorTransition(s, desc, lang)
 			c.respond(b, i, embed, comps)

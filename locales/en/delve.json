@@ -389,6 +389,9 @@
     "loot": {
       "name_format": "{prefix} {base} {suffix}",
       "depth_shard": "Depth Shard",
+      "ancient_coins": "Ancient Coins",
+      "gold_found": "💰 You found {gold} gold.",
+      "heal_found": "❤️ A restorative herb heals {hp} HP.",
       "veil_key": "Veil Key",
       "veil_key_desc": "A shimmering key that tears the fabric of reality. Required to enter the Veil Rift.",
       "dungeon_key": "Dungeon Key",

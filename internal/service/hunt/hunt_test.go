@@ -143,7 +143,13 @@ func TestHuntGrantsHunterJobXPMultiple(t *testing.T) {
 	var job model.Job
 	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "hunter").First(&job).Error)
 	assert.GreaterOrEqual(t, job.Level, 2, "existing hunter job must keep its level")
-	assert.Greater(t, job.XP, 10, "existing hunter job must gain XP")
+	// The leftover XP may be 0 when the hunt lands exactly on a level-up
+	// boundary, so compare total invested XP instead.
+	totalXP := job.XP
+	for l := 2; l < job.Level; l++ {
+		totalXP += jobssvc.XPForLevel(l)
+	}
+	assert.Greater(t, totalXP, 10, "existing hunter job must gain XP")
 }
 
 func TestNewEnemy(t *testing.T) {

@@ -311,3 +311,48 @@ func TestDeathEmbedsRunSummary(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "fallen", got.Status, "the session must be marked fallen")
 }
+
+// TestGrantRunLoot covers the three non-equipment reward kinds (gold, heal,
+// misc item) applied by the room loot helper.
+func TestGrantRunLoot(t *testing.T) {
+	c, _, _ := merchantTestCog(t)
+	s, err := c.svc.StartSession(merchantTestUser, 1, 1)
+	require.NoError(t, err)
+	lang := c.store.GetLanguage(1)
+
+	t.Run("gold", func(t *testing.T) {
+		s.Gold = 10
+		text := c.grantRunLoot(s, &delvesvc.LootResult{Gold: 42}, lang)
+		assert.Equal(t, 10+42, s.Gold, "gold finds must credit the run's gold")
+		assert.Equal(t, i18n.T("delve.loot.gold_found", lang, map[string]any{"gold": "42"}), text)
+		assert.Empty(t, c.svc.GetInventory(s))
+	})
+
+	t.Run("heal", func(t *testing.T) {
+		s.HP = 50
+		text := c.grantRunLoot(s, &delvesvc.LootResult{Heal: 40}, lang)
+		assert.Equal(t, 90, s.HP, "heals must restore HP")
+		assert.Equal(t, i18n.T("delve.loot.heal_found", lang, map[string]any{"hp": "40"}), text)
+	})
+
+	t.Run("heal capped at max", func(t *testing.T) {
+		s.HP = s.MaxHP - 5
+		c.grantRunLoot(s, &delvesvc.LootResult{Heal: 40}, lang)
+		assert.Equal(t, s.MaxHP, s.HP, "heals must not exceed max HP")
+	})
+
+	t.Run("misc item", func(t *testing.T) {
+		s.Inventory = "[]"
+		item := delvesvc.DelveItem{ID: "depth_shard", Name: "Depth Shard", Emoji: "💎", Rarity: delvesvc.Rare, Quantity: 3}
+		text := c.grantRunLoot(s, &delvesvc.LootResult{Item: item}, lang)
+		inv := c.svc.GetInventory(s)
+		require.Len(t, inv, 1)
+		assert.Equal(t, "depth_shard", inv[0].ID)
+		assert.Equal(t, 3, inv[0].Quantity)
+		assert.Contains(t, text, delvesvc.DelveItemName(item, lang))
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		assert.Equal(t, "", c.grantRunLoot(s, nil, lang))
+	})
+}

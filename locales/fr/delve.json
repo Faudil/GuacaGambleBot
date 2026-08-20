@@ -389,6 +389,9 @@
     "loot": {
       "name_format": "{base} {prefix} {suffix}",
       "depth_shard": "Éclat des Profondeurs",
+      "ancient_coins": "Pièces antiques",
+      "gold_found": "💰 Vous avez trouvé {gold} pièces d'or.",
+      "heal_found": "❤️ Une herbe réparatrice vous soigne de {hp} PV.",
       "veil_key": "Clé du Voile",
       "veil_key_desc": "Une clé scintillante qui déchire le tissu de la réalité. Requise pour entrer dans la Faille du Voile.",
       "dungeon_key": "Clé de Donjon",

@@ -264,7 +264,9 @@ func (svc *Service) AddItem(session *model.DelveSession, item DelveItem) {
 			return
 		}
 	}
-	item.Quantity = 1
+	if item.Quantity < 1 {
+		item.Quantity = 1
+	}
 	if item.SetName != "" {
 		svc.AddFlag(session, "set_item_collected")
 	}

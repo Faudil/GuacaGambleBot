@@ -6,6 +6,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+# Guarantee the assets directory exists even in checkouts without it (e.g.
+# CI before the images are committed), so stage-1's COPY never breaks.
+RUN mkdir -p /build/assets
 RUN go build -o /build/bot ./cmd/bot
 
 FROM alpine:3.21

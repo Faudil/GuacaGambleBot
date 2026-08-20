@@ -11,7 +11,55 @@ import (
 
 type LootResult struct {
 	Item  DelveItem
+	Gold  int
+	Heal  int
 	Value int
+}
+
+// equipmentDropChance is the share of delve room loot rolls that yield
+// equipment; the rest become a non-equipment reward (gold, misc items or
+// a small heal).
+const equipmentDropChance = 0.55
+
+// GenerateRoomLoot rolls a cleared room's reward. Equipment is rarer than
+// the other finds: 55% of rolls produce gear (GenerateLoot), the rest are
+// gold, misc items or a small heal.
+func GenerateRoomLoot(zone string, floor int, lukBonus float64) *LootResult {
+	if rand.Float64() < equipmentDropChance {
+		return GenerateLoot(zone, floor, lukBonus)
+	}
+	return generateNonEquipmentLoot(zone, floor)
+}
+
+func generateNonEquipmentLoot(zone string, floor int) *LootResult {
+	switch r := rand.Intn(100); {
+	case r < 35: // gold find
+		return &LootResult{Gold: GoldReward(zone, floor) * 3}
+	case r < 65: // misc items
+		return &LootResult{Item: randomMiscItem()}
+	default: // small heal
+		heal := 15 + floor*2
+		if heal > 40 {
+			heal = 40
+		}
+		return &LootResult{Heal: heal}
+	}
+}
+
+// randomMiscItem rolls a stackable non-equipment find (depth shards or
+// ancient coins).
+func randomMiscItem() DelveItem {
+	switch rand.Intn(2) {
+	case 0:
+		return DelveItem{
+			ID: "depth_shard", Name: "Depth Shard", Emoji: "💎", Rarity: Rare, Quantity: 2 + rand.Intn(3),
+		}
+	default:
+		return DelveItem{
+			ID: "ancient_coins", Name: "Ancient Coins", Emoji: "🪙", Rarity: Uncommon, Quantity: 3 + rand.Intn(4),
+			Description: "Coins minted long before the Undercroft swallowed the city.",
+		}
+	}
 }
 
 // minLevelForRarity maps a delve loot rarity to the minimum character level
@@ -185,6 +233,9 @@ func LootRewardText(item DelveItem, lang string) string {
 	rarEmoji := RarityEmoji[item.Rarity]
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("%s **%s** %s\n", rarEmoji, DelveItemName(item, lang), item.Emoji))
+	if item.EquipSlot == "" {
+		return sb.String()
+	}
 	slot := i18n.T("delve.loot.slot."+item.EquipSlot, lang)
 	if slot == "delve.loot.slot."+item.EquipSlot {
 		slot = item.EquipSlot
