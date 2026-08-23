@@ -500,13 +500,11 @@ func TestArenaRivalRegistry(t *testing.T) {
 
 	assert.Equal(t, StepDialogue, def.Steps[4].Type)
 
-	assert.Equal(t, StepActivity, def.Steps[5].Type)
-	assert.Equal(t, "artifact_leveled", def.Steps[5].Extra["target_stat"])
-	assert.Equal(t, 1, def.Steps[5].Extra["target_count"])
+	assert.Equal(t, StepRequirement, def.Steps[5].Type)
+	assert.Equal(t, 2, toInt(def.Steps[5].Extra["req_artifact_level"]))
 
-	assert.Equal(t, StepActivity, def.Steps[6].Type)
-	assert.Equal(t, "artifact_point_spent", def.Steps[6].Extra["target_stat"])
-	assert.Equal(t, 1, def.Steps[6].Extra["target_count"])
+	assert.Equal(t, StepRequirement, def.Steps[6].Type)
+	assert.Equal(t, 1, toInt(def.Steps[6].Extra["req_artifact_points_spent"]))
 
 	assert.Equal(t, StepBossBattle, def.Steps[7].Type)
 	assert.Equal(t, 6, def.Steps[7].Extra["boss_stage"])

@@ -405,11 +405,100 @@ func TestLoreAtDepth(t *testing.T) {
 }
 
 func TestLootAtDepth(t *testing.T) {
-	assert.Len(t, lootAtDepth(1), 3)
-	assert.Contains(t, lootAtDepth(1), MineItem{"pebble", 1})
-	assert.Len(t, lootAtDepth(15), 3)
-	assert.Len(t, lootAtDepth(20), 3)
-	assert.Len(t, lootAtDepth(30), 2)
+	// Procedural curve: lootAtDepth returns 2-3 nearby candidates, rollOre gives Count
+	a := lootAtDepth(1)
+	assert.GreaterOrEqual(t, len(a), 2)
+	assert.LessOrEqual(t, len(a), 3)
+	// rollOre shallow should often be pebble/coal
+	foundLow := false
+	for i := 0; i < 20; i++ {
+		it := rollOre(1)
+		if it.Name == "pebble" || it.Name == "coal" {
+			foundLow = true
+			break
+		}
+	}
+	assert.True(t, foundLow, "shallow roll should sometimes be pebble/coal")
+	assert.GreaterOrEqual(t, len(lootAtDepth(15)), 2)
+	assert.GreaterOrEqual(t, len(lootAtDepth(20)), 2)
+	b := lootAtDepth(30)
+	assert.GreaterOrEqual(t, len(b), 2)
+	assert.LessOrEqual(t, len(b), 3)
+	// rollOre deep should tend to high-value ores
+	it := rollOre(30)
+	assert.GreaterOrEqual(t, it.Value, 1000, "deep roll should be high value")
+	assert.GreaterOrEqual(t, it.Count, 1)
+}
+
+func TestRollOreCountVariance(t *testing.T) {
+	seenMulti := false
+	for i := 0; i < 50; i++ {
+		it := rollOre(1)
+		if it.Count > 1 {
+			seenMulti = true
+			break
+		}
+	}
+	assert.True(t, seenMulti, "shallow ore should sometimes drop 2-3")
+	// high-value ore should always be 1
+	for i := 0; i < 20; i++ {
+		it := rollOre(30)
+		if it.Value >= 300 {
+			assert.Equal(t, 1, it.Count, "gem+ ore should be single")
+			break
+		}
+	}
+}
+
+func TestOreValueCurveMonotonic(t *testing.T) {
+	prev := oreValueCurve(1)
+	for d := 2; d <= 30; d++ {
+		cur := oreValueCurve(d)
+		assert.GreaterOrEqual(t, cur, prev, "curve must be non-decreasing at depth %d", d)
+		prev = cur
+	}
+	assert.Greater(t, oreValueCurve(15), oreValueCurve(5), "deep should exceed shallow")
+}
+
+func TestRollOreGating(t *testing.T) {
+	for i := 0; i < 200; i++ {
+		it := rollOre(19)
+		assert.NotEqual(t, "rough_diamond", it.Name, "diamond must not appear before depth 20")
+		assert.NotContains(t, []string{"kethari_crystal", "primordial_geode", "resonance_core"}, it.Name, "ultra-rare must not appear before depth 30")
+	}
+	for i := 0; i < 200; i++ {
+		it := rollOre(29)
+		assert.NotContains(t, []string{"kethari_crystal", "primordial_geode", "resonance_core"}, it.Name, "ultra-rare must not appear before depth 30")
+	}
+	foundDiamond := false
+	foundUltra := false
+	for i := 0; i < 200; i++ {
+		if rollOre(20).Name == "rough_diamond" {
+			foundDiamond = true
+		}
+		if rollOre(30).Value >= 1000 {
+			foundUltra = true
+		}
+		if foundDiamond && foundUltra {
+			break
+		}
+	}
+	assert.True(t, foundDiamond, "diamond should appear at depth 20+")
+	assert.True(t, foundUltra, "ultra-rare should appear at depth 30+")
+}
+
+func TestWagerEVZero(t *testing.T) {
+	for _, risk := range []int{10, 25, 50, 75} {
+		rate := WagerPayoutRateFromRisk(risk)
+		ev := float64(100-risk)/100*rate - float64(risk)/100*1
+		assert.InDelta(t, 0, ev, 0.001, "wager EV should be 0 at risk %d", risk)
+	}
+	// High risk is clamped to 3.0 for safety, so EV becomes house-favoured
+	rate90 := WagerPayoutRateFromRisk(90)
+	assert.Equal(t, 3.0, rate90)
+	ev90 := float64(10)/100*rate90 - float64(90)/100*1
+	assert.Less(t, ev90, 0.0, "high risk clamped => negative EV (house edge)")
+	assert.Equal(t, 0.0, WagerPayoutRateFromRisk(0), "no risk = no profit")
 }
 
 func TestPickNarrativeEvent(t *testing.T) {

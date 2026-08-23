@@ -478,6 +478,13 @@ func (s *Service) ExecuteHunt(userID int64, zoneKey string) (*BattleResult, erro
 			}
 			lootItems = append(lootItems, gear.ID)
 		}
+		// Guaranteed boss trophy for any hunt boss victory (farmable, per spec).
+		if isBoss {
+			if err := s.store.AddItemRaw(s.store.DB, userID, "boss_trophy", 1); err != nil {
+				return nil, err
+			}
+			lootItems = append(lootItems, "boss_trophy")
+		}
 	} else if enemyWon {
 		baseXP := enemy.Level * (15 + rand.Intn(11)) / 10
 		xp = baseXP

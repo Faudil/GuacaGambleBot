@@ -39,12 +39,16 @@ type MissingItem struct {
 // RequirementError carries structured information about which quest
 // requirements are not yet satisfied, so handlers can show helpful guidance.
 type RequirementError struct {
-	MoneyNeeded    int
-	MoneyHave      int
-	MissingItems   []MissingItem
-	NeedsHouse     bool
-	PetLevelNeeded int
-	PetLevelHave   int
+	MoneyNeeded          int
+	MoneyHave            int
+	MissingItems         []MissingItem
+	NeedsHouse           bool
+	PetLevelNeeded       int
+	PetLevelHave         int
+	ArtifactLevelNeeded  int
+	ArtifactLevelHave    int
+	ArtifactPointsNeeded int
+	ArtifactPointsHave   int
 }
 
 func (e *RequirementError) Error() string {
@@ -201,8 +205,8 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.arena_rival.step2_feed_dialogue"},
 			{Type: StepRequirement, TextKey: "quests.arena_rival.step3_level", Extra: map[string]any{"req_pet_level": 10}},
 			{Type: StepDialogue, TextKey: "quests.arena_rival.step4_artifact_dialogue"},
-			{Type: StepActivity, TextKey: "quests.arena_rival.step5_artifact_level", Extra: map[string]any{"target_stat": "artifact_leveled", "target_count": 1}},
-			{Type: StepActivity, TextKey: "quests.arena_rival.step6_artifact_point", Extra: map[string]any{"target_stat": "artifact_point_spent", "target_count": 1}},
+			{Type: StepRequirement, TextKey: "quests.arena_rival.step5_artifact_level", Extra: map[string]any{"req_artifact_level": 2}},
+			{Type: StepRequirement, TextKey: "quests.arena_rival.step6_artifact_point", Extra: map[string]any{"req_artifact_points_spent": 1}},
 			{Type: StepBossBattle, TextKey: "quests.arena_rival.step7_boss", Extra: map[string]any{"boss_stage": 6}, Rewards: &QuestReward{Money: 2000, XP: 200}},
 			{Type: StepDialogue, TextKey: "quests.arena_rival.step8_outro", Rewards: &QuestReward{ItemIDs: []string{"gale_draught"}}},
 		},
@@ -678,10 +682,12 @@ func toInt(v any) int {
 type RequirementChecker func(s *Service, userID int64, extra map[string]any, reqErr *RequirementError)
 
 var requirementCheckers = map[string]RequirementChecker{
-	"req_money":      checkMoneyRequirement,
-	"req_items":      checkItemsRequirement,
-	"req_owns_house": checkHouseRequirement,
-	"req_pet_level":  checkPetLevelRequirement,
+	"req_money":                 checkMoneyRequirement,
+	"req_items":                 checkItemsRequirement,
+	"req_owns_house":            checkHouseRequirement,
+	"req_pet_level":             checkPetLevelRequirement,
+	"req_artifact_level":        checkArtifactLevelRequirement,
+	"req_artifact_points_spent": checkArtifactPointsSpentRequirement,
 }
 
 func checkMoneyRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
@@ -755,6 +761,44 @@ func checkPetLevelRequirement(s *Service, userID int64, extra map[string]any, re
 	}
 }
 
+func checkArtifactLevelRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	needed := toInt(extra["req_artifact_level"])
+	if needed <= 0 {
+		return
+	}
+	var art model.UserPetArtifact
+	if err := s.store.DB.Where("user_id = ?", userID).First(&art).Error; err != nil {
+		reqErr.ArtifactLevelNeeded = needed
+		reqErr.ArtifactLevelHave = 0
+		return
+	}
+	if art.Level < needed {
+		reqErr.ArtifactLevelNeeded = needed
+		reqErr.ArtifactLevelHave = art.Level
+	}
+}
+
+func checkArtifactPointsSpentRequirement(s *Service, userID int64, extra map[string]any, reqErr *RequirementError) {
+	needed := toInt(extra["req_artifact_points_spent"])
+	if needed <= 0 {
+		return
+	}
+	var art model.UserPetArtifact
+	if err := s.store.DB.Where("user_id = ?", userID).First(&art).Error; err != nil {
+		reqErr.ArtifactPointsNeeded = needed
+		reqErr.ArtifactPointsHave = 0
+		return
+	}
+	spent := (art.Level - 1) - art.UnspentPoints
+	if spent < 0 {
+		spent = 0
+	}
+	if spent < needed {
+		reqErr.ArtifactPointsNeeded = needed
+		reqErr.ArtifactPointsHave = spent
+	}
+}
+
 func (s *Service) CheckRequirement(userID int64, questID string) error {
 	def := QuestRegistry[questID]
 	if def == nil {
@@ -784,7 +828,7 @@ func (s *Service) CheckRequirement(userID int64, questID string) error {
 		}
 	}
 
-	if reqErr.MoneyNeeded > 0 || len(reqErr.MissingItems) > 0 || reqErr.NeedsHouse || reqErr.PetLevelNeeded > 0 {
+	if reqErr.MoneyNeeded > 0 || len(reqErr.MissingItems) > 0 || reqErr.NeedsHouse || reqErr.PetLevelNeeded > 0 || reqErr.ArtifactLevelNeeded > 0 || reqErr.ArtifactPointsNeeded > 0 {
 		return reqErr
 	}
 

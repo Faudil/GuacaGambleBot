@@ -159,6 +159,8 @@
     "req_missing_item": "🎒 {item}: {have} / {needed}",
     "req_missing_money": "💰 You need **${needed}** (you have ${have}).",
     "req_missing_pet_level": "🐾 Your active pet must reach **level {level}** (currently level {have}). Feed it and hunt with it to level up!",
+    "req_missing_artifact_level": "💠 Your artifact must reach **level {level}** (currently level {have}). Hunt, delve or do expeditions to earn artifact XP!",
+    "req_missing_artifact_points": "💠 You must spend **{needed}** artifact point(s) with `/artifact` (spent: {have}).",
     "req_money_status": "💰 Money: ${current} / ${required}",
     "reward_crowns": "👑 {amount} Crowns",
     "reward_money": "💰 {amount} credits",

@@ -13,6 +13,8 @@ type MiningSession struct {
 	RiskMod        int       `gorm:"column:risk_mod;default:0"`
 	RiskTurns      int       `gorm:"column:risk_turns;default:0"`
 	Bag            string    `gorm:"column:bag;type:text"`
+	Wager          int       `gorm:"column:wager;default:0"`
+	Contract       string    `gorm:"column:contract;type:text"`
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at"`
 }

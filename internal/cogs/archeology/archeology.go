@@ -89,6 +89,16 @@ type Cog struct {
 	svc   *archsvc.Service
 }
 
+var reanimateRarityAliases = map[string]string{
+	"common": "common", "commun": "common",
+	"rare": "rare",
+	"epic": "epic", "epique": "epic",
+	"legendary": "legendary", "legendaire": "legendary",
+	"pure": "pure_dna", "pur": "pure_dna", "dna": "pure_dna", "pure_dna": "pure_dna",
+}
+
+var reanimateOrder = []string{"common", "rare", "epic", "legendary", "pure_dna"}
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	def := universe.Get(cfg.Universe)
 	if def == nil {
@@ -108,6 +118,26 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("arch", "dust", c.onDustMenu)
 	r.Component("arch", "dustpick", c.onDustPick)
 	r.Modal("arch", "grind", c.onGrindModal)
+	r.Component("arch", "reanimate", c.onReanimateButton)
+	r.Component("arch", "reanimate_menu", c.onReanimateMenu)
+	r.Component("arch", "reanimate_refresh", c.onReanimateMenu)
+	r.SlashWithOptions("reanimate", "Reanimate 5 fossils into a pet (needs Genetics Lab + research)", []*discordgo.ApplicationCommandOption{
+		{
+			Type:        discordgo.ApplicationCommandOptionString,
+			Name:        "rarity",
+			Description: "Rarity to reanimate: common, rare, epic, legendary, pure_dna or list",
+			Required:    false,
+			Choices: []*discordgo.ApplicationCommandOptionChoice{
+				{Name: "common", Value: "common"},
+				{Name: "rare", Value: "rare"},
+				{Name: "epic", Value: "epic"},
+				{Name: "legendary", Value: "legendary"},
+				{Name: "pure_dna", Value: "pure_dna"},
+				{Name: "list", Value: "list"},
+			},
+		},
+	}, c.onSlashReanimate)
+	r.Slash("reanimatelist", "Show reanimation lab progress", c.onSlashReanimateList)
 	r.Prefix("reanimate", c.onPrefixReanimate)
 	r.Prefix("rl", c.onPrefixReanimateList)
 	r.Prefix("reanimatelist", c.onPrefixReanimateList)
@@ -934,90 +964,53 @@ func (c *Cog) onPrefixReanimate(b *interaction.Bot, s *discordgo.Session, m *dis
 		rarity = strings.ToLower(parts[1])
 	}
 
-	if rarity == "list" || rarity == "l" {
-		c.sendReanimateList(b, s, lang, userID, m.ChannelID)
-		return
-	}
-
-	if rarity == "" {
-		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: i18n.T("arch.reanimate_cmd_usage", lang),
+	// No rarity or list => show interactive lab menu with buttons.
+	if rarity == "" || rarity == "list" || rarity == "l" {
+		embed, comps := c.reanimateLabView(lang, userID)
+		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: comps,
 		})
 		return
 	}
 
-	rarityMap := map[string]string{
-		"common": "common", "commun": "common",
-		"rare": "rare",
-		"epic": "epic", "epique": "epic",
-		"legendary": "legendary", "legendaire": "legendary",
-		"pure": "pure_dna", "pur": "pure_dna", "dna": "pure_dna",
-	}
-	resolvedRarity, ok := rarityMap[rarity]
+	resolvedRarity, ok := reanimateRarityAliases[rarity]
 	if !ok {
 		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 			Content: i18n.T("arch.reanimate_cmd_invalid", lang),
 		})
 		return
 	}
-
-	pool, ok := archsvc.ReanimatePools[resolvedRarity]
-	if !ok {
-		return
-	}
-
-	petName, success, err := c.svc.Reanimate(userID, resolvedRarity)
-	if err != nil {
-		content := i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)})
-		switch {
-		case errors.Is(err, archsvc.ErrNoGeneticsLab):
-			content = i18n.T("arch.reanimate_no_lab", lang)
-		case errors.Is(err, archsvc.ErrResearchRequired):
-			resName := archsvc.ReanimateResearch[resolvedRarity]
-			if rd := researchsvc.ResearchDefs[resName]; rd != nil {
-				resName = rd.Name
-			}
-			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{
-				"research": resName,
-				"rarity":   i18n.T("arch.quality_"+resolvedRarity, lang),
-			})
-		case errors.Is(err, archsvc.ErrPetSlotsFull):
-			content = i18n.T("arch.reanimate_no_slots", lang)
-		}
-		_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-			Content: content,
-		})
-		return
-	}
-
-	if success {
-		embed := components.Embed(
-			i18n.T("arch.reanimate_success_title", lang),
-			i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}),
-			0x9B59B6,
-		)
-		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
-	} else {
-		embed := components.Embed(
-			i18n.T("arch.reanimate_fail_title", lang),
-			i18n.T("arch.reanimate_fail_desc", lang),
-			0xE74C3C,
-		)
-		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
-	}
+	c.handleReanimatePrefix(s, m.ChannelID, lang, userID, resolvedRarity)
 }
 
 func (c *Cog) onPrefixReanimateList(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
-	c.sendReanimateList(b, s, lang, userID, m.ChannelID)
+	embed, comps := c.reanimateLabView(lang, userID)
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: comps,
+	})
 }
 
 func (c *Cog) sendReanimateList(b *interaction.Bot, s *discordgo.Session, lang string, userID int64, channelID string) {
+	embed, comps := c.reanimateLabView(lang, userID)
+	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}, Components: comps})
+}
+
+// reanimateLabView builds the interactive genetics lab embed and its button rows.
+// It is used by both slash and prefix zero-arg flows and by the refresh handler.
+func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	hasLab := furnituresvc.HasFurniture(c.store, userID, "genetics_lab")
 
+	// Deterministic order for UI stability.
 	desc := ""
-	for rarity, pool := range archsvc.ReanimatePools {
+	for _, rarity := range reanimateOrder {
+		pool, ok := archsvc.ReanimatePools[rarity]
+		if !ok {
+			continue
+		}
 		count := c.svc.GetFossilCount(userID, pool.ItemName)
 		rarityName := i18n.T("arch.quality_"+rarity, lang)
 		line := i18n.T("arch.reanimate_list_line", lang, map[string]any{
@@ -1036,22 +1029,269 @@ func (c *Cog) sendReanimateList(b *interaction.Bot, s *discordgo.Session, lang s
 				}
 				line += " " + i18n.T("arch.reanimate_list_research", lang, map[string]any{"name": resName})
 			} else {
-				line += " ✅"
+				if count >= 5 {
+					line += " ✅"
+				} else {
+					line += fmt.Sprintf(" (%d/5)", count)
+				}
 			}
 		}
 		desc += line + "\n"
 	}
-
 	if desc == "" {
 		desc = i18n.T("arch.reanimate_list_empty", lang)
 	}
+	// Header / footer for the interactive menu.
+	header := i18n.T("arch.reanimate_menu_desc", lang)
+	if header == "arch.reanimate_menu_desc" {
+		header = ""
+	}
+	footer := i18n.T("arch.reanimate_menu_footer", lang)
+	if footer == "arch.reanimate_menu_footer" {
+		footer = ""
+	}
+	fullDesc := desc
+	if header != "" {
+		fullDesc = header + "\n\n" + desc
+	}
+	if footer != "" {
+		fullDesc += "\n" + footer
+	}
+	// Success rate hint based on archeologist level.
+	level := c.svc.GetArcheologistLevel(userID)
+	rate := 50 + level*2
+	if rate > 90 {
+		rate = 90
+	}
+	fullDesc += "\n" + i18n.T("arch.reanimate_menu_rate", lang, map[string]any{"rate": rate, "level": level})
 
 	embed := components.Embed(
 		i18n.T("arch.reanimate_list_title", lang),
-		desc,
+		fullDesc,
 		0x9B59B6,
 	)
-	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
+
+	// Build rarity buttons (max 5 per row).
+	var rarityBtns []discordgo.MessageComponent
+	for _, rarity := range reanimateOrder {
+		pool := archsvc.ReanimatePools[rarity]
+		count := c.svc.GetFossilCount(userID, pool.ItemName)
+		resID := archsvc.ReanimateResearch[rarity]
+		ready := hasLab && c.researchCompleted(userID, resID) && count >= 5
+		label := i18n.T("arch.quality_"+rarity, lang)
+		// Shorten label for button (Discord 80 char limit); fallback to rarity key.
+		if len(label) > 20 {
+			label = rarity
+		}
+		emoji := "🧬"
+		switch rarity {
+		case "common":
+			emoji = "🦴"
+		case "rare":
+			emoji = "💎"
+		case "epic":
+			emoji = "🔮"
+		case "legendary":
+			emoji = "👑"
+		case "pure_dna":
+			emoji = "🧪"
+		}
+		btnLabel := fmt.Sprintf("%s %s (%d/5)", emoji, label, count)
+		style := discordgo.SecondaryButton
+		if ready {
+			style = discordgo.SuccessButton
+		}
+		rarityBtns = append(rarityBtns, components.ButtonDisabled(btnLabel, components.EncodeOwner(userID, "arch", "reanimate", rarity), style, !ready))
+	}
+
+	var comps []discordgo.MessageComponent
+	if len(rarityBtns) > 0 {
+		// Split into 3+2 to respect 5-per-row limit gracefully.
+		if len(rarityBtns) <= 3 {
+			comps = append(comps, components.ActionRow(rarityBtns...))
+		} else {
+			comps = append(comps, components.ActionRow(rarityBtns[:3]...))
+			comps = append(comps, components.ActionRow(rarityBtns[3:]...))
+		}
+	}
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("arch.reanimate_btn_refresh", lang), components.EncodeOwner(userID, "arch", "reanimate_refresh"), discordgo.SecondaryButton),
+		components.Button(i18n.T("arch.reanimate_btn_dig", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.PrimaryButton),
+	))
+
+	return embed, comps
+}
+
+// reanimateListEmbed is kept for backwards-compat; now delegates to lab view (embed only).
+func (c *Cog) reanimateListEmbed(lang string, userID int64) *discordgo.MessageEmbed {
+	embed, _ := c.reanimateLabView(lang, userID)
+	return embed
+}
+
+func (c *Cog) handleReanimatePrefix(s *discordgo.Session, channelID, lang string, userID int64, rarity string) {
+	pool, ok := archsvc.ReanimatePools[rarity]
+	if !ok {
+		return
+	}
+	petName, success, err := c.svc.Reanimate(userID, rarity)
+	if err != nil {
+		content := i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)})
+		switch {
+		case errors.Is(err, archsvc.ErrNoGeneticsLab):
+			content = i18n.T("arch.reanimate_no_lab", lang)
+		case errors.Is(err, archsvc.ErrResearchRequired):
+			resName := archsvc.ReanimateResearch[rarity]
+			if rd := researchsvc.ResearchDefs[resName]; rd != nil {
+				resName = rd.Name
+			}
+			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{
+				"research": resName,
+				"rarity":   i18n.T("arch.quality_"+rarity, lang),
+			})
+		case errors.Is(err, archsvc.ErrPetSlotsFull):
+			content = i18n.T("arch.reanimate_no_slots", lang)
+		}
+		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Content: content})
+		return
+	}
+	if success {
+		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
+	} else {
+		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
+	}
+}
+
+func (c *Cog) onSlashReanimate(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	opts := i.ApplicationCommandData().Options
+	rarity := ""
+	if len(opts) > 0 {
+		rarity = strings.ToLower(strings.TrimSpace(opts[0].StringValue()))
+	}
+
+	if rarity == "" || rarity == "list" || rarity == "l" {
+		embed, comps := c.reanimateLabView(lang, userID)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+		return
+	}
+
+	resolvedRarity, ok := reanimateRarityAliases[rarity]
+	if !ok {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("arch.reanimate_cmd_invalid", lang)},
+		})
+		return
+	}
+
+	pool, ok := archsvc.ReanimatePools[resolvedRarity]
+	if !ok {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("arch.reanimate_cmd_invalid", lang)},
+		})
+		return
+	}
+
+	petName, success, err := c.svc.Reanimate(userID, resolvedRarity)
+	if err != nil {
+		content := i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)})
+		switch {
+		case errors.Is(err, archsvc.ErrNoGeneticsLab):
+			content = i18n.T("arch.reanimate_no_lab", lang)
+		case errors.Is(err, archsvc.ErrResearchRequired):
+			resName := archsvc.ReanimateResearch[resolvedRarity]
+			if rd := researchsvc.ResearchDefs[resName]; rd != nil {
+				resName = rd.Name
+			}
+			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{"research": resName, "rarity": i18n.T("arch.quality_"+resolvedRarity, lang)})
+		case errors.Is(err, archsvc.ErrPetSlotsFull):
+			content = i18n.T("arch.reanimate_no_slots", lang)
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: content},
+		})
+		return
+	}
+
+	if success {
+		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+		_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+	} else {
+		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+		_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+	}
+}
+
+func (c *Cog) onSlashReanimateList(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.reanimateLabView(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) onReanimateButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 1 {
+		interaction.RespondError(b, i, lang, "arch.error")
+		return
+	}
+	rarity := strings.ToLower(rest[0])
+	if _, ok := archsvc.ReanimatePools[rarity]; !ok {
+		interaction.RespondError(b, i, lang, "arch.reanimate_cmd_invalid")
+		return
+	}
+	pool := archsvc.ReanimatePools[rarity]
+	petName, success, err := c.svc.Reanimate(userID, rarity)
+	if err != nil {
+		content := i18n.T("arch.reanimate_cmd_no_fossils", lang, map[string]any{"count": 5, "item": items.LocalizedName(pool.ItemName, lang)})
+		switch {
+		case errors.Is(err, archsvc.ErrNoGeneticsLab):
+			content = i18n.T("arch.reanimate_no_lab", lang)
+		case errors.Is(err, archsvc.ErrResearchRequired):
+			resName := archsvc.ReanimateResearch[rarity]
+			if rd := researchsvc.ResearchDefs[resName]; rd != nil {
+				resName = rd.Name
+			}
+			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{"research": resName, "rarity": i18n.T("arch.quality_"+rarity, lang)})
+		case errors.Is(err, archsvc.ErrPetSlotsFull):
+			content = i18n.T("arch.reanimate_no_slots", lang)
+		}
+		// Surface error ephemerally then refresh lab view via follow-up? Use ephemeral response.
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: content, Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	var embed *discordgo.MessageEmbed
+	if success {
+		embed = components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+	} else {
+		embed = components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+	}
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(components.Button(i18n.T("arch.reanimate_btn_back_lab", lang), components.EncodeOwner(userID, "arch", "reanimate_menu"), discordgo.SecondaryButton)),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onReanimateMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.reanimateLabView(lang, userID)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 func (c *Cog) researchCompleted(userID int64, researchID string) bool {

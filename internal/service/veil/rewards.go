@@ -46,6 +46,8 @@ func GenerateRewards(raid *model.VeilRaid, lang string) (shards map[int64]int, c
 		shards[ps.UserID] = shardCount
 
 		svc.store.AddItemRaw(svc.store.DB, ps.UserID, "dimensional_shard", shardCount)
+		// Guaranteed boss trophy for any Veil boss victory - one per participant (farmable).
+		svc.store.AddItemRaw(svc.store.DB, ps.UserID, "boss_trophy", 1)
 
 		drop := rollLegendaryForPlayer(ps.UserID)
 		if drop != nil {

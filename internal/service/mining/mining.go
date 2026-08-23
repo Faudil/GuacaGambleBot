@@ -3,6 +3,7 @@ package mining
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"math/rand"
 	"time"
 
@@ -22,33 +23,157 @@ var ErrMineLimit = errors.New("mining daily limit reached")
 type MineItem struct {
 	Name  string
 	Value int
+	Count int
 }
 
-func lootAtDepth(depth int) []MineItem {
-	switch {
-	case depth <= 1:
-		return []MineItem{{"pebble", 1}, {"coal", 5}, {"worm", 5}}
-	case depth <= 3:
-		return []MineItem{{"coal", 5}, {"iron_ore", 10}, {"copper_ore", 15}, {"worm", 5}}
-	case depth == 4:
-		return []MineItem{{"copper_ore", 15}, {"silver_ore", 25}, {"gold_nugget", 50}, {"crayfish", 25}}
-	case depth == 5:
-		return []MineItem{{"silver_ore", 25}, {"gold_nugget", 50}, {"emerald", 100}, {"crayfish", 25}}
-	case depth <= 7:
-		return []MineItem{{"gold_nugget", 50}, {"platinum", 75}, {"emerald", 100}, {"crayfish", 25}}
-	case depth <= 9:
-		return []MineItem{{"platinum", 75}, {"emerald", 100}, {"rough_diamond", 300}, {"golden_lure", 100}}
-	case depth <= 14:
-		return []MineItem{{"emerald", 100}, {"rough_diamond", 300}, {"ancient_alloy", 500}}
-	case depth <= 19:
-		return []MineItem{{"rough_diamond", 300}, {"ancient_alloy", 500}, {"kethari_crystal", 1000}}
-	case depth <= 24:
-		return []MineItem{{"ancient_alloy", 500}, {"kethari_crystal", 1000}, {"primordial_geode", 2000}}
-	case depth <= 29:
-		return []MineItem{{"kethari_crystal", 1000}, {"primordial_geode", 2000}, {"resonance_core", 5000}}
-	default:
-		return []MineItem{{"primordial_geode", 2000}, {"resonance_core", 5000}}
+// oreTable is the canonical mining ores sorted by value (catalog Price).
+var oreTable = []MineItem{
+	{Name: "pebble", Value: 1},
+	{Name: "coal", Value: 5},
+	{Name: "iron_ore", Value: 10},
+	{Name: "copper_ore", Value: 15},
+	{Name: "silver_ore", Value: 25},
+	{Name: "gold_nugget", Value: 50},
+	{Name: "platinum", Value: 75},
+	{Name: "emerald", Value: 100},
+	{Name: "rough_diamond", Value: 300},
+	{Name: "ancient_alloy", Value: 500},
+	{Name: "kethari_crystal", Value: 1000},
+	{Name: "primordial_geode", Value: 2000},
+	{Name: "resonance_core", Value: 5000},
+}
+
+var oreMinDepth = map[string]int{
+	"pebble":           1,
+	"coal":             1,
+	"iron_ore":         2,
+	"copper_ore":       3,
+	"silver_ore":       6,
+	"gold_nugget":      9,
+	"platinum":         12,
+	"emerald":          15,
+	"rough_diamond":    20,
+	"ancient_alloy":    24,
+	"kethari_crystal":  30,
+	"primordial_geode": 30,
+	"resonance_core":   30,
+}
+
+// oreValueCurve returns the expected ore value at depth.
+// Continuous exponential curve: ~5@d1, ~20@d4, ~63@d7, ~161@d9, ~368@d11, ~600@d12, ~2200@d15, >5000@d24.
+func oreValueCurve(depth int) int {
+	if depth < 1 {
+		depth = 1
 	}
+	v := 5 * math.Pow(1.55, float64(depth-1))
+	if v > 6000 {
+		v = 6000
+	}
+	return int(v)
+}
+
+// EstimatedValue exposes the curve for wager payout calculations.
+func EstimatedValue(depth int) int { return oreValueCurve(depth) }
+
+// WagerPayoutRate returns the profit multiplier for a surviving wagered dig.
+// Deprecated: use WagerPayoutRateFromRisk for EV=0 fairness.
+func WagerPayoutRate(depth int) float64 {
+	risk := (depth - 1) * 5
+	if risk < 0 {
+		risk = 0
+	}
+	if risk > 90 {
+		risk = 90
+	}
+	return WagerPayoutRateFromRisk(risk)
+}
+
+// WagerPayoutRateFromRisk returns the profit multiplier that makes the wager EV=0
+// given the true collapse risk (0-99). Profit = risk/(100-risk), clamped to [0, 3.0].
+func WagerPayoutRateFromRisk(risk int) float64 {
+	if risk <= 0 {
+		return 0
+	}
+	if risk >= 95 {
+		return 3.0
+	}
+	r := float64(risk) / float64(100-risk)
+	if r > 3.0 {
+		r = 3.0
+	}
+	return r
+}
+
+// eligibleOres returns ores whose depth gate is satisfied.
+func eligibleOres(depth int) []MineItem {
+	var out []MineItem
+	for _, o := range oreTable {
+		if oreMinDepth[o.Name] <= depth {
+			out = append(out, o)
+		}
+	}
+	if len(out) == 0 {
+		return oreTable[:2]
+	}
+	return out
+}
+
+// rollOre procedurally picks an ore for depth with noise + rare tier shifts + quantity variance.
+// Ores whose min depth is not yet reached are never eligible (e.g. diamond <20).
+func rollOre(depth int) MineItem {
+	target := float64(oreValueCurve(depth)) * (0.45 + rand.Float64()*1.15)
+	// Rare tier shifts for overlap: jackpot up, poor vein down
+	shift := rand.Float64()
+	if shift < 0.03 {
+		target *= 1.8
+	} else if shift < 0.11 {
+		target *= 0.55
+	}
+	eligible := eligibleOres(depth)
+	best := eligible[0]
+	bestDiff := math.Abs(float64(best.Value) - target)
+	for _, o := range eligible[1:] {
+		diff := math.Abs(float64(o.Value) - target)
+		if diff < bestDiff {
+			best = o
+			bestDiff = diff
+		}
+	}
+	count := 1
+	if best.Value < 100 {
+		count = 1 + rand.Intn(3)
+	} else if best.Value < 300 {
+		count = 1 + rand.Intn(2)
+	}
+	return MineItem{Name: best.Name, Value: best.Value, Count: count}
+}
+
+// lootAtDepth remains for backward compat / tests: returns nearby candidates around the curve.
+func lootAtDepth(depth int) []MineItem {
+	it := rollOre(depth)
+	// Build a small candidate slice around the rolled tier for legacy callers.
+	idx := 0
+	for i, o := range oreTable {
+		if o.Name == it.Name {
+			idx = i
+			break
+		}
+	}
+	var out []MineItem
+	for d := -1; d <= 1; d++ {
+		j := idx + d
+		if j < 0 || j >= len(oreTable) {
+			continue
+		}
+		if oreMinDepth[oreTable[j].Name] > depth {
+			continue
+		}
+		out = append(out, MineItem{Name: oreTable[j].Name, Value: oreTable[j].Value})
+	}
+	if len(out) == 0 {
+		out = append(out, MineItem{Name: it.Name, Value: it.Value})
+	}
+	return out
 }
 
 const (
@@ -268,8 +393,125 @@ type EventEffect struct {
 	// picked. The player is expected to own it (ownership is checked by the
 	// cog before consuming).
 	ConsumeItem string
-	Message     string
-	MsgArgs     map[string]any
+	// Wager is the credit stake required for this option (0 = no wager).
+	Wager int
+	// WagerWin is the credit payout on success (0 = no payout, stake lost).
+	WagerWin int
+	// RepairTool restores this many durability points to the active tool.
+	RepairTool int
+	Message    string
+	MsgArgs    map[string]any
+}
+
+// ─── Contracts (in-run mine charters) ─────────────────────────────────────
+
+type ContractType string
+
+const (
+	ContractReachDepth  ContractType = "reach_depth"
+	ContractCollectGems ContractType = "collect_gems"
+	ContractDigCount    ContractType = "dig_count"
+	ContractEventCount  ContractType = "event_count"
+)
+
+type Contract struct {
+	Type          ContractType `json:"type"`
+	Target        int          `json:"target"`
+	RewardCredits int          `json:"reward_credits"`
+	RewardXP      int          `json:"reward_xp"`
+}
+
+func RollContracts() []Contract {
+	pool := []Contract{
+		{Type: ContractReachDepth, Target: 12, RewardCredits: 150, RewardXP: 20},
+		{Type: ContractReachDepth, Target: 18, RewardCredits: 250, RewardXP: 35},
+		{Type: ContractReachDepth, Target: 25, RewardCredits: 400, RewardXP: 50},
+		{Type: ContractDigCount, Target: 8, RewardCredits: 120, RewardXP: 15},
+		{Type: ContractDigCount, Target: 12, RewardCredits: 200, RewardXP: 25},
+		{Type: ContractCollectGems, Target: 3, RewardCredits: 180, RewardXP: 20},
+		{Type: ContractCollectGems, Target: 5, RewardCredits: 300, RewardXP: 35},
+		{Type: ContractEventCount, Target: 2, RewardCredits: 150, RewardXP: 15},
+		{Type: ContractEventCount, Target: 3, RewardCredits: 220, RewardXP: 25},
+	}
+	rand.Shuffle(len(pool), func(i, j int) { pool[i], pool[j] = pool[j], pool[i] })
+	out := make([]Contract, 0, 3)
+	for i := 0; i < 3 && i < len(pool); i++ {
+		out = append(out, pool[i])
+	}
+	return out
+}
+
+func ContractCompleted(c *Contract, depth int, bag []BagEntry, digs int, events int) bool {
+	if c == nil {
+		return false
+	}
+	switch c.Type {
+	case ContractReachDepth:
+		return depth >= c.Target
+	case ContractDigCount:
+		return digs >= c.Target
+	case ContractCollectGems:
+		cnt := 0
+		for _, e := range bag {
+			// gems = value >= 100
+			price := 0
+			for _, o := range oreTable {
+				if o.Name == e.Name {
+					price = o.Value
+					break
+				}
+			}
+			if price >= 100 {
+				cnt += e.Count
+			}
+		}
+		return cnt >= c.Target
+	case ContractEventCount:
+		return events >= c.Target
+	}
+	return false
+}
+
+func ContractProgress(c *Contract, depth int, bag []BagEntry, digs int, events int) (int, int) {
+	if c == nil {
+		return 0, 0
+	}
+	switch c.Type {
+	case ContractReachDepth:
+		if depth > c.Target {
+			depth = c.Target
+		}
+		return depth, c.Target
+	case ContractDigCount:
+		if digs > c.Target {
+			digs = c.Target
+		}
+		return digs, c.Target
+	case ContractCollectGems:
+		cnt := 0
+		for _, e := range bag {
+			price := 0
+			for _, o := range oreTable {
+				if o.Name == e.Name {
+					price = o.Value
+					break
+				}
+			}
+			if price >= 100 {
+				cnt += e.Count
+			}
+		}
+		if cnt > c.Target {
+			cnt = c.Target
+		}
+		return cnt, c.Target
+	case ContractEventCount:
+		if events > c.Target {
+			events = c.Target
+		}
+		return events, c.Target
+	}
+	return 0, c.Target
 }
 
 type EventDef struct {
@@ -298,12 +540,14 @@ type DescendResult struct {
 }
 
 type LeaveResult struct {
-	XP        int
-	Bag       []BagEntry
-	Unlocks   []*achievement.Achievement
-	ToolID    string
-	LeveledUp bool
-	NewLevel  int
+	XP             int
+	Bag            []BagEntry
+	Unlocks        []*achievement.Achievement
+	ToolID         string
+	LeveledUp      bool
+	NewLevel       int
+	ContractDone   bool
+	ContractReward *Contract
 }
 
 // eventPool holds all narrative events by rarity × stage.
@@ -515,6 +759,91 @@ var eventPool = func() []EventDef {
 				o("mining.ev_crystal_leg_o2", "mining.ev_crystal_leg_o2d",
 					&EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "kethari_crystal", Count: 3}, {Name: "ancient_alloy", Count: 2}, {Name: "resonance_core", Count: 1}}, Message: "mining.ev_crystal_leg_r2"}),
 			}},
+
+		// ═══ NEW — SHALLOW COMMON ═══
+		{ID: "spider_nest", Stage: StageShallow, Rarity: EventCommon, MinDepth: 3,
+			Options: []NarrativeOption{
+				o("mining.ev_spider_o1", "mining.ev_spider_o1d", &EventEffect{RiskMod: -10, RiskTurns: 3, Message: "mining.ev_spider_r1"}),
+				o("mining.ev_spider_o2", "mining.ev_spider_o2d", &EventEffect{RemoveItem: "random", RiskMod: 10, RiskTurns: 3, Message: "mining.ev_spider_r2"}),
+			}},
+		{ID: "ore_spring", Stage: StageShallow, Rarity: EventCommon, MinDepth: 4,
+			Options: []NarrativeOption{
+				o("mining.ev_ore_spring_o1", "mining.ev_ore_spring_o1d", &EventEffect{Items: []BagEntry{{Name: "copper_ore", Count: 2}, {Name: "silver_ore", Count: 1}}, Message: "mining.ev_ore_spring_r1"}),
+				o("mining.ev_ore_spring_o2", "mining.ev_ore_spring_o2d", &EventEffect{Items: []BagEntry{{Name: "coal", Count: 3}}, RiskMod: -10, RiskTurns: 2, Message: "mining.ev_ore_spring_r2"}),
+			}},
+		{ID: "dugout", Stage: StageShallow, Rarity: EventCommon, MinDepth: 4,
+			Options: []NarrativeOption{
+				o("mining.ev_dugout_o1", "mining.ev_dugout_o1d", &EventEffect{Items: []BagEntry{{Name: "iron_ore", Count: 2}}, RepairTool: 5, Message: "mining.ev_dugout_r1"}),
+				o("mining.ev_dugout_o2", "mining.ev_dugout_o2d", efr("mining.ev_dugout_r2", -15, 3)),
+			}},
+
+		// ═══ NEW — SHALLOW RARE ═══
+		{ID: "old_dynamite", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
+			Options: []NarrativeOption{
+				o("mining.ev_dynamite_o1", "mining.ev_dynamite_o1d", &EventEffect{RiskMod: -10, RiskTurns: 5, Items: []BagEntry{{Name: "iron_ore", Count: 2}}, Message: "mining.ev_dynamite_r1"}),
+				o("mining.ev_dynamite_o2", "mining.ev_dynamite_o2d", &EventEffect{DepthGain: 2, RiskMod: 20, RiskTurns: 3, Items: []BagEntry{{Name: "gold_nugget", Count: 2}}, Message: "mining.ev_dynamite_r2"}),
+			}},
+		{ID: "goblin_trader", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
+			Options: []NarrativeOption{
+				o("mining.ev_goblin_o1", "mining.ev_goblin_o1d", &EventEffect{Wager: 100, WagerWin: 250, Message: "mining.ev_goblin_r1"}),
+				o("mining.ev_goblin_o2", "mining.ev_goblin_o2d", ef("mining.ev_goblin_r2")),
+			}},
+
+		// ═══ NEW — DEPTH COMMON ═══
+		{ID: "geode_cluster", Stage: StageDepth, Rarity: EventCommon, MinDepth: 10,
+			Options: []NarrativeOption{
+				o("mining.ev_geode_o1", "mining.ev_geode_o1d", &EventEffect{Items: []BagEntry{{Name: "emerald", Count: 1}, {Name: "platinum", Count: 1}}, Message: "mining.ev_geode_r1"}),
+				o("mining.ev_geode_o2", "mining.ev_geode_o2d", &EventEffect{RiskMod: 10, RiskTurns: 3, Items: []BagEntry{{Name: "rough_diamond", Count: 1}}, Message: "mining.ev_geode_r2"}),
+			}},
+		{ID: "fossil_bed", Stage: StageDepth, Rarity: EventCommon, MinDepth: 11,
+			Options: []NarrativeOption{
+				o("mining.ev_fossil_o1", "mining.ev_fossil_o1d", &EventEffect{WagerWin: 300, Message: "mining.ev_fossil_r1"}),
+				o("mining.ev_fossil_o2", "mining.ev_fossil_o2d", &EventEffect{Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, LoreID: "mine_lore_fracture", Message: "mining.ev_fossil_r2"}),
+			}},
+
+		// ═══ NEW — DEPTH RARE ═══
+		{ID: "kethari_pump", Stage: StageDepth, Rarity: EventRare, MinDepth: 10,
+			Options: []NarrativeOption{
+				o("mining.ev_pump_o1", "mining.ev_pump_o1d", &EventEffect{RiskMod: -20, RiskTurns: 5, Message: "mining.ev_pump_r1"}),
+				o("mining.ev_pump_o2", "mining.ev_pump_o2d", &EventEffect{Items: []BagEntry{{Name: "ancient_alloy", Count: 1}, {Name: "kethari_crystal", Count: 1}}, RiskMod: 15, RiskTurns: 5, Message: "mining.ev_pump_r2"}),
+			}},
+		{ID: "mushroom_forest", Stage: StageDepth, Rarity: EventRare, MinDepth: 10,
+			Options: []NarrativeOption{
+				o("mining.ev_mushroom_o1", "mining.ev_mushroom_o1d", &EventEffect{RiskMod: -15, RiskTurns: 3, Items: []BagEntry{{Name: "emerald", Count: 1}}, Message: "mining.ev_mushroom_r1"}),
+				o("mining.ev_mushroom_o2", "mining.ev_mushroom_o2d", &EventEffect{Items: []BagEntry{{Name: "gold_nugget", Count: 2}}, RemoveItem: "random", Message: "mining.ev_mushroom_r2"}),
+			}},
+
+		// ═══ NEW — DEEP COMMON ═══
+		{ID: "gas_pocket", Stage: StageDeep, Rarity: EventCommon, MinDepth: 16,
+			Options: []NarrativeOption{
+				o("mining.ev_gas_o1", "mining.ev_gas_o1d", efr("mining.ev_gas_r1", -10, 3)),
+				o("mining.ev_gas_o2", "mining.ev_gas_o2d", &EventEffect{RiskMod: 20, RiskTurns: 5, Message: "mining.ev_gas_r2"}),
+			}},
+
+		// ═══ NEW — DEEP RARE ═══
+		{ID: "dice_ghost", Stage: StageDeep, Rarity: EventRare, MinDepth: 17,
+			Options: []NarrativeOption{
+				o("mining.ev_dice_o1", "mining.ev_dice_o1d", &EventEffect{Wager: 250, WagerWin: 500, Message: "mining.ev_dice_r1"}),
+				o("mining.ev_dice_o2", "mining.ev_dice_o2d", efr("mining.ev_dice_r2", -15, 5)),
+			}},
+		{ID: "anvil", Stage: StageDeep, Rarity: EventRare, MinDepth: 16,
+			Options: []NarrativeOption{
+				o("mining.ev_anvil_o1", "mining.ev_anvil_o1d", &EventEffect{RepairTool: 15, Message: "mining.ev_anvil_r1"}),
+				o("mining.ev_anvil_o2", "mining.ev_anvil_o2d", &EventEffect{Items: []BagEntry{{Name: "ancient_alloy", Count: 2}}, Message: "mining.ev_anvil_r2"}),
+			}},
+
+		// ═══ NEW — DEEP LEGENDARY ═══
+		{ID: "vault_lock", Stage: StageDeep, Rarity: EventLegendary, MinDepth: 18,
+			Options: []NarrativeOption{
+				o("mining.ev_vault_o1", "mining.ev_vault_o1d", &EventEffect{Wager: 500, WagerWin: 1500, Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_vault_r1"}),
+				o("mining.ev_vault_o2", "mining.ev_vault_o2d", &EventEffect{RiskMod: 20, RiskTurns: 5, Items: []BagEntry{{Name: "kethari_crystal", Count: 2}}, Message: "mining.ev_vault_r2"}),
+				o("mining.ev_vault_o3", "mining.ev_vault_o3d", ef("mining.ev_vault_r3")),
+			}},
+		{ID: "rift_tear", Stage: StageDeep, Rarity: EventLegendary, MinDepth: 19,
+			Options: []NarrativeOption{
+				o("mining.ev_rift_o1", "mining.ev_rift_o1d", &EventEffect{RiskMod: 15, RiskTurns: 10, Items: []BagEntry{{Name: "resonance_core", Count: 1}, {Name: "primordial_geode", Count: 1}}, Message: "mining.ev_rift_r1"}),
+				o("mining.ev_rift_o2", "mining.ev_rift_o2d", &EventEffect{RiskMod: -20, RiskTurns: 5, LoreID: "mine_lore_king", Message: "mining.ev_rift_r2"}),
+			}},
 	}
 }()
 
@@ -615,13 +944,47 @@ func (s *Service) ApplyEventOption(eventID string, optionIdx int, depth int, bag
 		}
 	}
 
-	// Glow common "investigate" 50/50 reward
+	// Glow common "investigate" 50/50 reward — procedural ore
 	if eventID == "glow" && optionIdx == 0 && rand.Intn(100) < 50 {
-		pool := lootAtDepth(depth)
-		if len(pool) > 0 {
-			it := pool[rand.Intn(len(pool))]
-			eff.Items = append(eff.Items, BagEntry{Name: it.Name, Count: 1})
-			eff.Message = "mining.ev_glow_r1g"
+		it := rollOre(depth)
+		eff.Items = append(eff.Items, BagEntry{Name: it.Name, Count: it.Count})
+		eff.Message = "mining.ev_glow_r1g"
+	}
+
+	// Goblin trader: 45% win extra ore + credits, else just lose stake
+	if eventID == "goblin_trader" && optionIdx == 0 {
+		if rand.Intn(100) < 45 {
+			if rand.Intn(100) < 50 {
+				eff.Items = []BagEntry{{Name: "gold_nugget", Count: 2}, {Name: "emerald", Count: 1}}
+			} else {
+				eff.Items = []BagEntry{{Name: "silver_ore", Count: 3}, {Name: "platinum", Count: 1}}
+			}
+			eff.Message = "mining.ev_goblin_r1_win"
+		} else {
+			eff.WagerWin = 0
+			eff.Items = nil
+			eff.Message = "mining.ev_goblin_r1_lose"
+		}
+	}
+
+	// Dice ghost: 50/50 double or lose
+	if eventID == "dice_ghost" && optionIdx == 0 {
+		if rand.Intn(100) < 50 {
+			eff.Message = "mining.ev_dice_r1_win"
+		} else {
+			eff.WagerWin = 0
+			eff.Message = "mining.ev_dice_r1_lose"
+		}
+	}
+
+	// Vault lock: 40% success on lockpick (wager), else lose stake
+	if eventID == "vault_lock" && optionIdx == 0 {
+		if rand.Intn(100) < 40 {
+			eff.Message = "mining.ev_vault_r1_win"
+		} else {
+			eff.WagerWin = 0
+			eff.Items = nil
+			eff.Message = "mining.ev_vault_r1_lose"
 		}
 	}
 
@@ -874,21 +1237,18 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 	} else if depth >= 6 && eRoll <= 3 {
 		easterEgg = &MiningEvent{Type: "ghost_miner", Buff: ghostVeilBuff}
 	} else if depth >= 7 && eRoll <= 6 && !hiddenChamber {
-		extra := lootAtDepth(depth)
-		if len(extra) > 0 {
-			it := extra[rand.Intn(len(extra))]
-			easterEgg = &MiningEvent{Type: "whispering_runes", Items: []BagEntry{{Name: it.Name, Count: 1}}}
-			found := false
-			for i, e := range bag {
-				if e.Name == it.Name {
-					bag[i].Count++
-					found = true
-					break
-				}
+		it := rollOre(depth)
+		easterEgg = &MiningEvent{Type: "whispering_runes", Items: []BagEntry{{Name: it.Name, Count: it.Count}}}
+		found := false
+		for i, e := range bag {
+			if e.Name == it.Name {
+				bag[i].Count += it.Count
+				found = true
+				break
 			}
-			if !found {
-				bag = append(bag, BagEntry{Name: it.Name, Count: 1})
-			}
+		}
+		if !found {
+			bag = append(bag, BagEntry{Name: it.Name, Count: it.Count})
 		}
 	}
 
@@ -907,30 +1267,29 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 	if hiddenChamber {
 		bonusCount := 2 + rand.Intn(4)
 		var chamberItems []BagEntry
-		pool := lootAtDepth(depth)
-		for i := 0; i < bonusCount && len(pool) > 0; i++ {
-			it := pool[rand.Intn(len(pool))]
+		for i := 0; i < bonusCount; i++ {
+			it := rollOre(depth)
 			found := false
 			for j, e := range chamberItems {
 				if e.Name == it.Name {
-					chamberItems[j].Count++
+					chamberItems[j].Count += it.Count
 					found = true
 					break
 				}
 			}
 			if !found {
-				chamberItems = append(chamberItems, BagEntry{Name: it.Name, Count: 1})
+				chamberItems = append(chamberItems, BagEntry{Name: it.Name, Count: it.Count})
 			}
 			found2 := false
 			for j, e := range bag {
 				if e.Name == it.Name {
-					bag[j].Count++
+					bag[j].Count += it.Count
 					found2 = true
 					break
 				}
 			}
 			if !found2 {
-				bag = append(bag, BagEntry{Name: it.Name, Count: 1})
+				bag = append(bag, BagEntry{Name: it.Name, Count: it.Count})
 			}
 		}
 		easterEgg = &MiningEvent{Type: "hidden_chamber", Items: chamberItems}
@@ -942,43 +1301,42 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 	if lvl < 1 {
 		lvl = 1
 	}
-	pool := lootAtDepth(lvl)
-
+	item := rollOre(lvl)
+	// Midas / nose buffs: re-roll until threshold if needed
 	if charsvc.HasBuff(s.store, userID, "midas_touch") {
-		var filtered []MineItem
-		for _, it := range pool {
-			if it.Value >= 50 {
-				filtered = append(filtered, it)
+		if item.Value < 50 {
+			for tries := 0; tries < 5; tries++ {
+				cand := rollOre(lvl)
+				if cand.Value >= 50 {
+					item = cand
+					break
+				}
 			}
 		}
-		if len(filtered) > 0 {
-			pool = filtered
-			charsvc.ConsumeBuff(s.store, userID, "midas_touch")
-		}
+		charsvc.ConsumeBuff(s.store, userID, "midas_touch")
 	} else if charsvc.HasBuff(s.store, userID, "nose_for_treasure") {
-		var filtered []MineItem
-		for _, it := range pool {
-			if it.Value >= 100 {
-				filtered = append(filtered, it)
+		if item.Value < 100 {
+			for tries := 0; tries < 5; tries++ {
+				cand := rollOre(lvl)
+				if cand.Value >= 100 {
+					item = cand
+					break
+				}
 			}
-		}
-		if len(filtered) > 0 {
-			pool = filtered
 		}
 		charsvc.ConsumeBuff(s.store, userID, "nose_for_treasure")
 	}
 
-	item := pool[rand.Intn(len(pool))]
 	found := false
 	for i, e := range bag {
 		if e.Name == item.Name {
-			bag[i].Count++
+			bag[i].Count += item.Count
 			found = true
 			break
 		}
 	}
 	if !found {
-		bag = append(bag, BagEntry{Name: item.Name, Count: 1})
+		bag = append(bag, BagEntry{Name: item.Name, Count: item.Count})
 	}
 
 	var nEvent *NarrativeEvent
@@ -1098,6 +1456,34 @@ type PersistedSession struct {
 	RiskMod        int
 	RiskTurns      int
 	Bag            []BagEntry
+	Wager          int
+	Contract       *Contract
+	EventCount     int
+}
+
+// RepairTool restores durability to the active tool.
+func (s *Service) RepairTool(userID int64, toolID string, amount int) error {
+	if toolID == "" || amount <= 0 {
+		return nil
+	}
+	max := toolDurabilityMax(toolID)
+	if max <= 0 {
+		return nil
+	}
+	var inv model.Inventory
+	err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, toolID).First(&inv).Error
+	if err != nil {
+		return nil
+	}
+	dur := inv.Durability
+	if dur <= 0 {
+		dur = max
+	}
+	dur += amount
+	if dur > max {
+		dur = max
+	}
+	return s.store.DB.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", userID, toolID).UpdateColumn("durability", dur).Error
 }
 
 // SaveSession persists an in-progress expedition for the user.
@@ -1105,6 +1491,13 @@ func (s *Service) SaveSession(userID int64, ps *PersistedSession) error {
 	bagJSON, err := json.Marshal(ps.Bag)
 	if err != nil {
 		return err
+	}
+	contractJSON := ""
+	if ps.Contract != nil {
+		b, err := json.Marshal(ps.Contract)
+		if err == nil {
+			contractJSON = string(b)
+		}
 	}
 	return s.store.SaveMiningSession(&model.MiningSession{
 		UserID:         userID,
@@ -1114,6 +1507,8 @@ func (s *Service) SaveSession(userID int64, ps *PersistedSession) error {
 		RiskMod:        ps.RiskMod,
 		RiskTurns:      ps.RiskTurns,
 		Bag:            string(bagJSON),
+		Wager:          ps.Wager,
+		Contract:       contractJSON,
 		UpdatedAt:      time.Now(),
 	})
 }
@@ -1139,6 +1534,18 @@ func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
 				return nil, err
 			}
 		}
+		var contract *Contract
+		if m.Contract != "" {
+			var c Contract
+			if err := json.Unmarshal([]byte(m.Contract), &c); err == nil {
+				contract = &c
+			}
+		}
+		// Grant contract reward if completed on stale auto-grant
+		if contract != nil && ContractCompleted(contract, m.Depth, bag, m.Depth-1, 0) {
+			_, _ = s.store.UpdateBalance(userID, contract.RewardCredits)
+			_, _ = charsvc.AddXP(s.store, userID, contract.RewardXP)
+		}
 		if _, err := s.LeaveMine(userID, bag, m.ToolID); err != nil {
 			return nil, err
 		}
@@ -1150,6 +1557,13 @@ func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
 			return nil, err
 		}
 	}
+	var contract *Contract
+	if m.Contract != "" {
+		var c Contract
+		if err := json.Unmarshal([]byte(m.Contract), &c); err == nil {
+			contract = &c
+		}
+	}
 	return &PersistedSession{
 		Depth:          m.Depth,
 		ToolID:         m.ToolID,
@@ -1157,6 +1571,9 @@ func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
 		RiskMod:        m.RiskMod,
 		RiskTurns:      m.RiskTurns,
 		Bag:            bag,
+		Wager:          m.Wager,
+		Contract:       contract,
+		EventCount:     0,
 	}, nil
 }
 

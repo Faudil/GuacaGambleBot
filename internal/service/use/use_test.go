@@ -74,18 +74,27 @@ func TestUseRiggedCoinSetsBuff(t *testing.T) {
 	assert.True(t, ok)
 }
 
-func TestUseHookResetsFishCooldown(t *testing.T) {
+func TestUseHookGrantsFishCredit(t *testing.T) {
 	svc, st := testService(t)
 	require.NoError(t, st.AddItemRaw(st.DB, 1, "hook", 1))
-	require.NoError(t, st.SetCooldown(1, "fish"))
+	require.NoError(t, st.IncrementGameLimit(1, "fish"))
+	require.NoError(t, st.IncrementGameLimit(1, "fish"))
 
 	_, err := svc.Apply(1, "hook")
 	require.NoError(t, err)
 
-	ready, err := st.CheckCooldown(1, "fish", 24*3600*1e9)
+	ok, remaining, err := st.CheckGameLimit(1, "fish", 10)
 	require.NoError(t, err)
-	assert.True(t, ready, "cooldown was cleared")
+	assert.True(t, ok)
+	assert.Equal(t, 10, remaining, "2 uses minus 2 hook credits = 0 -> full limit")
+
+	has, err := st.HasItem(1, "hook", 1)
+	require.NoError(t, err)
+	assert.False(t, has, "hook consumed from inventory")
 }
+
+// Deprecated alias – old name expected “cooldown” but hook now grants +2 fish uses.
+func TestUseHookResetsFishCooldown(t *testing.T) { TestUseHookGrantsFishCredit(t) }
 
 func TestUseScratchTicketPaysOut(t *testing.T) {
 	svc, st := testService(t)

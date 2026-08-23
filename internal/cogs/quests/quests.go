@@ -61,6 +61,18 @@ func (c *Cog) requirementErrorDesc(reqErr *questssvc.RequirementError, lang stri
 			"have":  reqErr.PetLevelHave,
 		}))
 	}
+	if reqErr.ArtifactLevelNeeded > 0 {
+		lines = append(lines, i18n.T("quests.req_missing_artifact_level", lang, map[string]any{
+			"level": reqErr.ArtifactLevelNeeded,
+			"have":  reqErr.ArtifactLevelHave,
+		}))
+	}
+	if reqErr.ArtifactPointsNeeded > 0 {
+		lines = append(lines, i18n.T("quests.req_missing_artifact_points", lang, map[string]any{
+			"needed": reqErr.ArtifactPointsNeeded,
+			"have":   reqErr.ArtifactPointsHave,
+		}))
+	}
 	desc := strings.Join(lines, "\n")
 	desc += "\n\n" + i18n.T("quests.req_farm_hint", lang)
 	return desc
@@ -145,6 +157,12 @@ func requirementCommands(step questssvc.QuestStep) string {
 	}
 	if _, ok := step.Extra["req_money"]; ok {
 		cmds = append(cmds, "/daily", "/market")
+	}
+	if _, ok := step.Extra["req_artifact_level"]; ok {
+		cmds = append(cmds, "/artifact", "/hunt")
+	}
+	if _, ok := step.Extra["req_artifact_points_spent"]; ok {
+		cmds = append(cmds, "/artifact")
 	}
 	if reqItems, ok := step.Extra["req_items"].(map[string]any); ok {
 		itemIDs := make([]string, 0, len(reqItems))

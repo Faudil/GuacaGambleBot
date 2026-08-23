@@ -53,11 +53,11 @@ var Buildings = map[string]*BuildingDef{
 			case 1:
 				return map[string]int{"money": 10000, "pebble": 200}
 			case 2:
-				return map[string]int{"money": 50000, "pebble": 1000, "oat": 200}
+				return map[string]int{"money": 50000, "iron_ore": 1000, "oat": 200}
 			case 3:
-				return map[string]int{"money": 150000, "oat": 500, "primordial_geode": 500}
+				return map[string]int{"money": 150000, "oat": 500, "silver_ore": 500}
 			case 4:
-				return map[string]int{"money": 500000, "primordial_geode": 1500, "iron_ore": 500}
+				return map[string]int{"money": 500000, "primordial_geode": 200, "copper_ore": 2500}
 			case 5:
 				return map[string]int{"money": 1000000, "iron_ore": 2000, "gold_nugget": 200}
 			case 6:
@@ -86,9 +86,9 @@ var Buildings = map[string]*BuildingDef{
 		CostFunc: func(level int) map[string]int {
 			switch level {
 			case 1:
-				return map[string]int{"money": 15000, "coal": 100}
+				return map[string]int{"money": 15000, "coal": 1000}
 			case 2:
-				return map[string]int{"money": 60000, "iron_ore": 100}
+				return map[string]int{"money": 60000, "iron_ore": 3500, "copper_ore": 2000}
 			case 3:
 				return map[string]int{"money": 200000, "gold_nugget": 100}
 			case 4:

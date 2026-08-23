@@ -1,7 +1,6 @@
 package pets
 
 import (
-	"encoding/json"
 	"path/filepath"
 	"testing"
 
@@ -293,32 +292,58 @@ func TestAddXPAutoStartsArenaRival(t *testing.T) {
 
 func TestArtifactActivityAdvancesArenaRival(t *testing.T) {
 	svc, st := testService(t)
-	_ = questssvc.New(st, &config.Config{}) // wires the quest advance hook
+	qs := questssvc.New(st, &config.Config{}) // wires the quest advance hook
 
 	require.NoError(t, st.CreateQuest(1, "arena_rival"))
-	custom, _ := json.Marshal(map[string]any{"target_stat": "artifact_leveled", "target_count": 1})
 	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
 		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
-		Updates(map[string]any{"step_index": 5, "custom_data": string(custom)}).Error)
+		Updates(map[string]any{"step_index": 5}).Error)
 
-	// Leveling the artifact must advance the quest to the perk step.
+	// Artifact level requirement (2) is not yet satisfied at level 1.
+	require.Error(t, qs.CheckRequirement(1, "arena_rival"))
+
+	// Leveling the artifact to level 2 must satisfy the requirement.
 	_, leveled, err := svc.AddArtifactXP(1, 50)
 	require.NoError(t, err)
 	require.True(t, leveled)
+	require.NoError(t, qs.CheckRequirement(1, "arena_rival"))
+	require.NoError(t, qs.FulfillRequirement(1, "arena_rival"))
 	var uqd model.UserQuestData
 	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
-	assert.Equal(t, 6, uqd.StepIndex, "artifact level-up must advance to the perk step")
+	assert.Equal(t, 6, uqd.StepIndex, "artifact level requirement must advance to the perk step")
 
-	// Spending the point must advance the quest to the boss step.
-	custom2, _ := json.Marshal(map[string]any{"target_stat": "artifact_point_spent", "target_count": 1})
-	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
-		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
-		Updates(map[string]any{"step_index": 6, "progress_value": 0, "custom_data": string(custom2)}).Error)
-
+	// Spending the point must satisfy the next requirement.
+	require.Error(t, qs.CheckRequirement(1, "arena_rival"), "no point spent yet")
 	_, err = svc.LevelArtifactStat(1, 0)
 	require.NoError(t, err)
+	require.NoError(t, qs.CheckRequirement(1, "arena_rival"))
+	require.NoError(t, qs.FulfillRequirement(1, "arena_rival"))
 	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
 	assert.Equal(t, 7, uqd.StepIndex, "spending the artifact point must advance to the boss step")
+}
+
+func TestArtifactMaxLevelSatisfiesArenaRivalRequirements(t *testing.T) {
+	_, st := testService(t)
+	qs := questssvc.New(st, &config.Config{})
+	require.NoError(t, st.CreateQuest(1, "arena_rival"))
+	// Simulate a max-level artifact with all points spent.
+	require.NoError(t, st.DB.Create(&model.UserPetArtifact{
+		UserID: 1, Level: 10, XP: 0, UnspentPoints: 0,
+		Stat1: "impact", Stat1Lvl: 4, Stat2: "haste", Stat2Lvl: 4, Stat3: "fortune", Stat3Lvl: 4,
+	}).Error)
+	require.NoError(t, st.DB.Model(&model.UserQuestData{}).
+		Where("user_id = ? AND quest_id = ?", 1, "arena_rival").
+		Updates(map[string]any{"step_index": 5}).Error)
+	require.NoError(t, qs.CheckRequirement(1, "arena_rival"), "max level artifact must satisfy level requirement")
+	require.NoError(t, qs.FulfillRequirement(1, "arena_rival"))
+	var uqd model.UserQuestData
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
+	assert.Equal(t, 6, uqd.StepIndex)
+	// Spent points (Level-1 - Unspent = 9) already satisfies the next step.
+	require.NoError(t, qs.CheckRequirement(1, "arena_rival"))
+	require.NoError(t, qs.FulfillRequirement(1, "arena_rival"))
+	require.NoError(t, st.DB.Where("user_id = ? AND quest_id = ?", 1, "arena_rival").First(&uqd).Error)
+	assert.Equal(t, 7, uqd.StepIndex, "max artifact with spent points must pass point requirement")
 }
 
 func TestRollGacha(t *testing.T) {

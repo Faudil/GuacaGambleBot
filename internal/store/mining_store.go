@@ -14,7 +14,7 @@ func (s *Store) SaveMiningSession(session *model.MiningSession) error {
 		Columns: []clause.Column{{Name: "user_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
 			"depth", "tool_id", "ghost_veil_turns", "risk_mod", "risk_turns",
-			"bag", "updated_at",
+			"bag", "wager", "contract", "updated_at",
 		}),
 	}).Create(session).Error
 }

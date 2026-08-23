@@ -217,7 +217,7 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	ok, _, err := c.store.CheckGameLimit(userID, "farm", 20)
+	ok, _, err := c.store.CheckGameLimit(userID, "farm", 100)
 	if err != nil || !ok {
 		interaction.RespondError(b, i, lang, "farm.limit_reached")
 		return

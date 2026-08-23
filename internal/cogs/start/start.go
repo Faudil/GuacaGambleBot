@@ -111,6 +111,12 @@ func requirementCommands(step questssvc.QuestStep) string {
 	if _, ok := step.Extra["req_money"]; ok {
 		cmds = append(cmds, "/daily", "/market")
 	}
+	if _, ok := step.Extra["req_artifact_level"]; ok {
+		cmds = append(cmds, "/artifact", "/hunt")
+	}
+	if _, ok := step.Extra["req_artifact_points_spent"]; ok {
+		cmds = append(cmds, "/artifact")
+	}
 	if reqItems, ok := step.Extra["req_items"].(map[string]any); ok {
 		itemIDs := make([]string, 0, len(reqItems))
 		for id := range reqItems {

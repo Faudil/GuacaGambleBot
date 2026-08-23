@@ -159,6 +159,8 @@
     "req_missing_item": "🎒 {item} : {have} / {needed}",
     "req_missing_money": "💰 Il te faut **{needed}$** (tu as {have}$).",
     "req_missing_pet_level": "🐾 Ton familier actif doit atteindre le **niveau {level}** (niveau actuel : {have}). Nourris-le et chasse avec lui pour monter de niveau !",
+    "req_missing_artifact_level": "💠 Ton artefact doit atteindre le **niveau {level}** (niveau actuel : {have}). Chasse, explore le donjon ou lance des expéditions pour gagner de l'XP d'artefact !",
+    "req_missing_artifact_points": "💠 Tu dois dépenser **{needed}** point(s) d'artefact avec `/artifact` (dépensés : {have}).",
     "req_money_status": "💰 Argent : ${current} / ${required}",
     "reward_crowns": "👑 {amount} Couronnes",
     "reward_money": "💰 {amount} crédits",

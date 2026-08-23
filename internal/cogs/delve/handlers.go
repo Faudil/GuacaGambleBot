@@ -114,6 +114,29 @@ func formatRunDuration(d time.Duration) string {
 	return fmt.Sprintf("%ds", int(d.Seconds()))
 }
 
+func truncateString(s string, max int) string {
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	if max <= 1 {
+		return string(runes[:max])
+	}
+	return string(runes[:max-1]) + "…"
+}
+
+func truncateEmbedDesc(s string) string {
+	return truncateString(s, 4000)
+}
+
+func truncateModalLabel(s string) string {
+	return truncateString(s, 45)
+}
+
+func truncateModalPlaceholder(s string) string {
+	return truncateString(s, 100)
+}
+
 // runSummaryText renders a compact end-of-run report: stats, remaining
 // supplies, run duration, looted items and notable deeds.
 func (c *Cog) runSummaryText(s *model.DelveSession, lang string) string {
@@ -186,7 +209,7 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.svc.AddFlag(s, "left_voluntarily")
 	c.svc.EndSession(s, "left")
 	c.deleteSession(userID)
-	desc := i18n.T("delve.left_voluntarily", lang) + "\n\n" + c.runSummaryText(s, lang)
+	desc := truncateEmbedDesc(i18n.T("delve.left_voluntarily", lang) + "\n\n" + c.runSummaryText(s, lang))
 	embed := &discordgo.MessageEmbed{
 		Title:       "📜 " + i18n.T("delve.summary.title", lang),
 		Description: desc,
@@ -219,7 +242,7 @@ func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	c.deleteSession(userID)
 	embed := &discordgo.MessageEmbed{
 		Title:       "🔑 " + i18n.T("delve.vault_key_title", lang),
-		Description: i18n.T("delve.vault_key_taken", lang) + "\n\n" + c.runSummaryText(s, lang),
+		Description: truncateEmbedDesc(i18n.T("delve.vault_key_taken", lang) + "\n\n" + c.runSummaryText(s, lang)),
 		Color:       0x2ecc71,
 	}
 	c.respond(b, i, embed, nil)
@@ -627,7 +650,7 @@ func (c *Cog) applyFallenPenalties(b *interaction.Bot, i *discordgo.InteractionC
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "💀 " + i18n.T("delve.handler.death_fallen_title", lang),
-		Description: i18n.T("delve.handler.death_fallen_desc", lang) + "\n" + lootDesc + rescueMsg + "\n\n" + i18n.T("delve.summary.title", lang) + "\n" + c.runSummaryText(s, lang),
+		Description: truncateEmbedDesc(i18n.T("delve.handler.death_fallen_desc", lang) + "\n" + lootDesc + rescueMsg + "\n\n" + i18n.T("delve.summary.title", lang) + "\n" + c.runSummaryText(s, lang)),
 		Color:       0xe74c3c,
 	}
 	c.respond(b, i, embed, nil)
@@ -709,7 +732,8 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 		}
 
 		// Check for Gravewarden Morvain victory → grant Mask of Malveillance
-		if res.EnemyName == "Gravewarden Morvain" {
+		isGravewarden := res.EnemyName == "Gravewarden Morvain"
+		if isGravewarden {
 			announcement, err := c.crimsvc.GrantMaskToPlayer(userID, interaction.ToInt64(i.GuildID), lang)
 			if err == nil && announcement != nil {
 				desc += "\n\n🎭 **The Mask of Malveillance pulses with dark energy!**"
@@ -730,6 +754,11 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 			c.svc.AddFlag(s, "defeated_zone_boss")
 			c.store.RecordActivity(userID, "zone_bosses_defeated", 1)
 			desc += "\n\n" + i18n.T("delve.handler.boss_victory", lang, map[string]any{"name": delvesvc.BossName(bossData.Name, lang)})
+		}
+		// Guaranteed boss trophy for any delve boss victory (farmable, per spec).
+		if bossData != nil || isGravewarden {
+			_ = c.store.AddItemRaw(c.store.DB, userID, "boss_trophy", 1)
+			desc += "\n🏆 Boss Trophy x1"
 		}
 
 		embed, comps := c.buildFloorTransition(s, desc, lang)
@@ -1339,7 +1368,7 @@ func (c *Cog) onPuzzleSolve(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		Data: components.ModalResponse(
 			components.Encode("delve", "puzzle_answer"),
 			i18n.T("delve.riddle.modal_title", lang),
-			components.TextInput("answer", i18n.T("delve.riddle.modal_label", lang), true, i18n.T("delve.riddle."+riddle.ID+".question", lang), discordgo.TextInputShort, 1, 100),
+			components.TextInput("answer", truncateModalLabel(i18n.T("delve.riddle.modal_label", lang)), true, truncateModalPlaceholder(i18n.T("delve.riddle."+riddle.ID+".question", lang)), discordgo.TextInputShort, 1, 100),
 		),
 	})
 }

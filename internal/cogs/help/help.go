@@ -75,6 +75,7 @@ func (c *Cog) embed() *discordgo.MessageEmbed {
 					"`"+prefix+"fish` / `/fish` — Fishing minigame\n"+
 					"`"+prefix+"farm` / `/farm` — Farming\n"+
 					"`"+prefix+"dig` / `/dig` — Fossil excavation\n"+
+					"`"+prefix+"reanimate` / `/reanimate` — Hatch fossil pet\n"+
 					"`"+prefix+"craft` / `/craft` — Crafting recipes",
 				true),
 			components.Field("\U0001f3e0 Social & RPG",

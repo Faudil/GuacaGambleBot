@@ -51,10 +51,10 @@ func apply(st *store.Store, userID int64, itemID string) (string, error) {
 		return "🍺 **Beer!** The miner's spirits lift — +2 mining descends granted.", nil
 
 	case "hook":
-		if err := st.ClearCooldown(userID, "fish"); err != nil {
+		if err := st.GrantGameLimitCredit(userID, "fish", 2); err != nil {
 			return "", err
 		}
-		return "🪝 **Hook!** The fishing cooldown is reset.", nil
+		return "🪝 **Hook!** You can fish again 2 more times", nil
 
 	case "coffee":
 		if err := st.ResetGameLimit(userID, "daily"); err != nil {
@@ -63,10 +63,10 @@ func apply(st *store.Store, userID int64, itemID string) (string, error) {
 		return "☕ **Coffee!** Your daily claim is available again.", nil
 
 	case "bow":
-		if err := st.ClearCooldown(userID, "hunt"); err != nil {
+		if err := st.GrantGameLimitCredit(userID, "hunt", 2); err != nil {
 			return "", err
 		}
-		return "🏹 **Bow!** The hunting cooldown is reset.", nil
+		return "🏹 **Bow!** You can hunt too more times today", nil
 
 	case "rigged_coin":
 		if err := st.SetActiveBuff(userID, "rigged_coin"); err != nil {

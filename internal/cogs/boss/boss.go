@@ -340,6 +340,8 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 
 		// Record boss victory in quest system (grants quest step rewards + trinket)
 		_ = c.qsvc.RecordBossVictory(userID, bossStage)
+		// Guaranteed boss trophy for any boss victory (farmable, per spec).
+		_ = c.store.AddItemRaw(c.svc.DB(), userID, "boss_trophy", 1)
 		// Per-stage stat so procedural daily quests can target the current boss.
 		_ = c.store.RecordActivity(userID, "boss_stage_"+strconv.Itoa(bossStage), 1)
 
@@ -353,6 +355,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 		for item, qty := range bossCfg.RewardItems {
 			o.final.Description += fmt.Sprintf("\n📦 %s x%d", items.LocalizedName(item, lang), qty)
 		}
+		o.final.Description += fmt.Sprintf("\n🏆 %s x1", items.LocalizedName("boss_trophy", lang))
 		if bossCfg.XP > 0 {
 			charLeveled, charLvl := charsvc.AddXP(c.store, userID, bossCfg.XP)
 			o.final.Description += fmt.Sprintf("\n✨ +%d XP", bossCfg.XP)
