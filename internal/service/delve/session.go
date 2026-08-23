@@ -163,6 +163,11 @@ func (svc *Service) EndSession(session *model.DelveSession, outcome string) erro
 		svc.store.AddDelveFlag(session.UserID, fid, fmt.Sprintf(`{"run":%d}`, session.RoomsCleared))
 	}
 
+	// Promote to touched_by_shadow once the run's flags are persisted. This
+	// was previously dead code (CheckAndGrantTouchedByShadow had no callers)
+	// which prevented the Gravewarden from ever spawning.
+	_ = svc.maybeGrantTouchedByShadow(session.UserID)
+
 	var inv []DelveItem
 	json.Unmarshal([]byte(session.Inventory), &inv)
 	for _, di := range inv {
@@ -314,4 +319,46 @@ func (svc *Service) StatusEffects(session *model.DelveSession) []string {
 	var effects []string
 	json.Unmarshal([]byte(session.StatusEffects), &effects)
 	return effects
+}
+
+// shadowQualifyingFlags mirrors criminality.ShadowQualifyingFlags. Kept locally
+// to avoid import cycle (cogs/delve already imports both services). Must stay
+// in sync — see awakening.go:ShadowQualifyingFlags.
+var shadowQualifyingFlags = []string{
+	"betrayed_npc",
+	"desecrated_altar",
+	"slept_unprotected",
+	"sacrificed_hp",
+	"freed_prisoner",
+	"ambushed_while_sleeping",
+}
+
+const shadowRequiredCount = 2
+
+func (svc *Service) maybeGrantTouchedByShadow(userID int64) error {
+	has, err := svc.store.HasDelveFlag(userID, "touched_by_shadow")
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+	flags, err := svc.store.GetDelveFlags(userID)
+	if err != nil {
+		return err
+	}
+	owned := make(map[string]bool, len(flags))
+	for _, f := range flags {
+		owned[f.FlagID] = true
+	}
+	count := 0
+	for _, qf := range shadowQualifyingFlags {
+		if owned[qf] {
+			count++
+		}
+	}
+	if count >= shadowRequiredCount {
+		return svc.store.AddDelveFlag(userID, "touched_by_shadow", `{"source":"criminality_awakening"}`)
+	}
+	return nil
 }

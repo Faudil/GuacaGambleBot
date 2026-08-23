@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1003,6 +1004,7 @@ func (c *Cog) sendReanimateList(b *interaction.Bot, s *discordgo.Session, lang s
 // It is used by both slash and prefix zero-arg flows and by the refresh handler.
 func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	hasLab := furnituresvc.HasFurniture(c.store, userID, "genetics_lab")
+	bal, _ := c.store.GetBalance(userID)
 
 	// Deterministic order for UI stability.
 	desc := ""
@@ -1018,6 +1020,20 @@ func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmb
 			"count":  count,
 			"item":   items.LocalizedName(pool.ItemName, lang),
 		})
+		// Show resource costs per tier (sorted for deterministic UI)
+		if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+			costStr := fmt.Sprintf("💰%d", cost.Money)
+			keys := make([]string, 0, len(cost.Items))
+			for k := range cost.Items {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, itemID := range keys {
+				qty := cost.Items[itemID]
+				costStr += fmt.Sprintf(" + %s×%d", items.LocalizedName(itemID, lang), qty)
+			}
+			line += " — " + costStr
+		}
 		if !hasLab {
 			line += " " + i18n.T("arch.reanimate_list_lab", lang)
 		} else {
@@ -1033,6 +1049,19 @@ func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmb
 					line += " ✅"
 				} else {
 					line += fmt.Sprintf(" (%d/5)", count)
+				}
+				// Money / items readiness hints
+				if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+					if bal < cost.Money {
+						line += fmt.Sprintf(" ⛔$%d", cost.Money)
+					}
+					for itemID, qty := range cost.Items {
+						var inv model.Inventory
+						if err := c.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil || inv.Quantity < qty {
+							line += " ⛔" + items.LocalizedName(itemID, lang)
+							break
+						}
+					}
 				}
 			}
 		}
@@ -1078,6 +1107,19 @@ func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmb
 		count := c.svc.GetFossilCount(userID, pool.ItemName)
 		resID := archsvc.ReanimateResearch[rarity]
 		ready := hasLab && c.researchCompleted(userID, resID) && count >= 5
+		if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+			if bal < cost.Money {
+				ready = false
+			} else {
+				for itemID, qty := range cost.Items {
+					var inv model.Inventory
+					if err := c.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&inv).Error; err != nil || inv.Quantity < qty {
+						ready = false
+						break
+					}
+				}
+			}
+		}
 		label := i18n.T("arch.quality_"+rarity, lang)
 		// Shorten label for button (Discord 80 char limit); fallback to rarity key.
 		if len(label) > 20 {
@@ -1150,6 +1192,25 @@ func (c *Cog) handleReanimatePrefix(s *discordgo.Session, channelID, lang string
 			})
 		case errors.Is(err, archsvc.ErrPetSlotsFull):
 			content = i18n.T("arch.reanimate_no_slots", lang)
+		case errors.Is(err, archsvc.ErrReanimateNoMoney):
+			if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+				bal, _ := c.store.GetBalance(userID)
+				content = i18n.T("arch.reanimate_no_money", lang, map[string]any{"money": cost.Money, "have": bal, "rarity": i18n.T("arch.quality_"+rarity, lang)})
+			}
+		case errors.Is(err, archsvc.ErrReanimateNoItems):
+			if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+				missingItem, qty := "", 0
+				for id, need := range cost.Items {
+					var inv model.Inventory
+					if err2 := c.store.DB.Where("user_id = ? AND item_id = ?", userID, id).First(&inv).Error; err2 != nil || inv.Quantity < need {
+						missingItem, qty = id, need
+						break
+					}
+				}
+				if missingItem != "" {
+					content = i18n.T("arch.reanimate_no_items", lang, map[string]any{"count": qty, "item": items.LocalizedName(missingItem, lang), "rarity": i18n.T("arch.quality_"+rarity, lang)})
+				}
+			}
 		}
 		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Content: content})
 		return
@@ -1211,6 +1272,25 @@ func (c *Cog) onSlashReanimate(b *interaction.Bot, i *discordgo.InteractionCreat
 			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{"research": resName, "rarity": i18n.T("arch.quality_"+resolvedRarity, lang)})
 		case errors.Is(err, archsvc.ErrPetSlotsFull):
 			content = i18n.T("arch.reanimate_no_slots", lang)
+		case errors.Is(err, archsvc.ErrReanimateNoMoney):
+			if cost, ok := archsvc.ReanimateCosts[resolvedRarity]; ok {
+				bal, _ := c.store.GetBalance(userID)
+				content = i18n.T("arch.reanimate_no_money", lang, map[string]any{"money": cost.Money, "have": bal, "rarity": i18n.T("arch.quality_"+resolvedRarity, lang)})
+			}
+		case errors.Is(err, archsvc.ErrReanimateNoItems):
+			if cost, ok := archsvc.ReanimateCosts[resolvedRarity]; ok {
+				missingItem, qty := "", 0
+				for id, need := range cost.Items {
+					var inv model.Inventory
+					if err2 := c.store.DB.Where("user_id = ? AND item_id = ?", userID, id).First(&inv).Error; err2 != nil || inv.Quantity < need {
+						missingItem, qty = id, need
+						break
+					}
+				}
+				if missingItem != "" {
+					content = i18n.T("arch.reanimate_no_items", lang, map[string]any{"count": qty, "item": items.LocalizedName(missingItem, lang), "rarity": i18n.T("arch.quality_"+resolvedRarity, lang)})
+				}
+			}
 		}
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1265,6 +1345,25 @@ func (c *Cog) onReanimateButton(b *interaction.Bot, i *discordgo.InteractionCrea
 			content = i18n.T("arch.reanimate_no_research", lang, map[string]any{"research": resName, "rarity": i18n.T("arch.quality_"+rarity, lang)})
 		case errors.Is(err, archsvc.ErrPetSlotsFull):
 			content = i18n.T("arch.reanimate_no_slots", lang)
+		case errors.Is(err, archsvc.ErrReanimateNoMoney):
+			if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+				bal, _ := c.store.GetBalance(userID)
+				content = i18n.T("arch.reanimate_no_money", lang, map[string]any{"money": cost.Money, "have": bal, "rarity": i18n.T("arch.quality_"+rarity, lang)})
+			}
+		case errors.Is(err, archsvc.ErrReanimateNoItems):
+			if cost, ok := archsvc.ReanimateCosts[rarity]; ok {
+				missingItem, qty := "", 0
+				for id, need := range cost.Items {
+					var inv model.Inventory
+					if err2 := c.store.DB.Where("user_id = ? AND item_id = ?", userID, id).First(&inv).Error; err2 != nil || inv.Quantity < need {
+						missingItem, qty = id, need
+						break
+					}
+				}
+				if missingItem != "" {
+					content = i18n.T("arch.reanimate_no_items", lang, map[string]any{"count": qty, "item": items.LocalizedName(missingItem, lang), "rarity": i18n.T("arch.quality_"+rarity, lang)})
+				}
+			}
 		}
 		// Surface error ephemerally then refresh lab view via follow-up? Use ephemeral response.
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{

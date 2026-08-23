@@ -39,6 +39,20 @@ func testCfg() *config.Config {
 	return &config.Config{StartingBalance: 100}
 }
 
+func fundReanimate(t *testing.T, s *store.Store, rarity string) {
+	t.Helper()
+	cost, ok := ReanimateCosts[rarity]
+	if !ok {
+		return
+	}
+	_, _ = s.UpdateBalance(1, cost.Money*5) // ensure plenty for multiple attempts
+	for item, qty := range cost.Items {
+		_ = s.AddItemRaw(s.DB, 1, item, qty*5)
+	}
+	// also ensure fossil item itself will be topped up by caller; ensure some extra
+	require.NoError(t, s.DB.Where("user_id = ?", 1).First(&model.User{}).Error)
+}
+
 // placeGeneticsLab puts the user in an active house with a genetics lab, the
 // furniture gate required for reanimation.
 func placeGeneticsLab(t *testing.T, db *gorm.DB, userID int64) {
@@ -405,6 +419,7 @@ func TestReanimate(t *testing.T) {
 	svc, s := testService(t)
 	placeGeneticsLab(t, s.DB, 1)
 	completeResearch(t, s.DB, 1, "reanimate_common")
+	fundReanimate(t, s, "common")
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "common_fossil", Quantity: 5})
 	petName, success, err := svc.Reanimate(1, "common")
 	assert.NoError(t, err)
@@ -431,6 +446,7 @@ func TestReanimateWithLabAndResearch(t *testing.T) {
 	svc, s := testService(t)
 	placeGeneticsLab(t, s.DB, 1)
 	completeResearch(t, s.DB, 1, "reanimate_rare")
+	fundReanimate(t, s, "rare")
 	_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: "rare_fossil", Quantity: 5})
 	petName, success, err := svc.Reanimate(1, "rare")
 	require.NoError(t, err)
@@ -445,12 +461,20 @@ func TestReanimateWithLabAndResearch(t *testing.T) {
 func reanimateUntilSuccess(t *testing.T, svc *Service, s *store.Store, rarity string) string {
 	t.Helper()
 	item := ReanimatePools[rarity].ItemName
+	cost, hasCost := ReanimateCosts[rarity]
 	for i := 0; i < 20; i++ {
 		var inv model.Inventory
 		if err := s.DB.Where("user_id = ? AND item_id = ?", 1, item).First(&inv).Error; err != nil {
 			_ = s.DB.Create(&model.Inventory{UserID: 1, ItemID: item, Quantity: 5})
 		} else if inv.Quantity < 5 {
 			_ = s.DB.Model(&inv).UpdateColumn("quantity", 5)
+		}
+		if hasCost {
+			// top up money and cost items each attempt (they are consumed even on fail)
+			_, _ = s.UpdateBalance(1, cost.Money+5000)
+			for itm, qty := range cost.Items {
+				_ = s.AddItemRaw(s.DB, 1, itm, qty)
+			}
 		}
 		petName, success, err := svc.Reanimate(1, rarity)
 		require.NoError(t, err)

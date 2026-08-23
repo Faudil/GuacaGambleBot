@@ -2,6 +2,7 @@ package archeology
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 
 	"gorm.io/gorm"
@@ -37,7 +38,22 @@ var (
 	ErrResearchRequired = errors.New("reanimation research required")
 	ErrPetSlotsFull     = errors.New("no free pet slot")
 	ErrReanimateFailed  = errors.New("reanimation failed to create pet")
+	ErrReanimateNoMoney = errors.New("not enough money for reanimation")
+	ErrReanimateNoItems = errors.New("not enough items for reanimation")
 )
+
+// ReanimateCosts defines the additional money + item sink per rarity.
+// Money is kept tiered (2.5k→80k) but all item stacks are doubled vs initial design per request.
+var ReanimateCosts = map[string]struct {
+	Money int
+	Items map[string]int
+}{
+	"common":    {Money: 2500, Items: map[string]int{"bone_dust": 20, "coal": 10}},
+	"rare":      {Money: 7500, Items: map[string]int{"bone_dust": 50, "iron_ore": 20}},
+	"epic":      {Money: 15000, Items: map[string]int{"bone_dust": 100, "platinum": 10}},
+	"legendary": {Money: 40000, Items: map[string]int{"bone_dust": 200, "emerald": 10, "rough_diamond": 10}},
+	"pure_dna":  {Money: 80000, Items: map[string]int{"bone_dust": 400, "platinum": 20, "kethari_crystal": 4}},
+}
 
 // ReanimateResearch maps each reanimation pool tier to the research that must
 // be completed in the genetics lab before it can be used.
@@ -763,6 +779,7 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 	if !ok {
 		return "", false, errors.New("invalid rarity")
 	}
+	cost, hasCost := ReanimateCosts[rarity]
 
 	// Reanimation is gated behind the Genetics Lab furniture and the
 	// one-time research for the fossil tier.
@@ -784,34 +801,104 @@ func (s *Service) Reanimate(userID int64, rarity string) (petName string, succes
 		return "", false, ErrPetSlotsFull
 	}
 
+	// Check money and extra item costs before RNG so we can fail fast
+	// without consuming fossils on insufficient resources.
+	if hasCost && cost.Money > 0 {
+		bal, err := s.store.GetBalance(userID)
+		if err != nil {
+			return "", false, err
+		}
+		if bal < cost.Money {
+			return "", false, fmt.Errorf("%w: need %d have %d", ErrReanimateNoMoney, cost.Money, bal)
+		}
+	}
+	if hasCost {
+		for itemID, qty := range cost.Items {
+			var cInv model.Inventory
+			if err := s.store.DB.Where("user_id = ? AND item_id = ?", userID, itemID).First(&cInv).Error; err != nil || cInv.Quantity < qty {
+				return "", false, fmt.Errorf("%w: %s x%d", ErrReanimateNoItems, itemID, qty)
+			}
+		}
+	}
+
 	level := s.GetArcheologistLevel(userID)
 	successRate := 0.50 + float64(level)*0.02
 	if successRate > 0.90 {
 		successRate = 0.90
 	}
+	success = rand.Float64() < successRate
+	fossilLoss := 3
+	xpGain := 25
+	if success {
+		fossilLoss = 5
+		xpGain = 100
+	}
 
-	if rand.Float64() < successRate {
-		if inv.Quantity <= 5 {
-			s.store.DB.Delete(&inv)
-		} else {
-			s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 5"))
+	// Atomically deduct money, extra items, fossils and grant XP.
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if hasCost && cost.Money > 0 {
+			var u model.User
+			if err := tx.Where("user_id = ?", userID).First(&u).Error; err != nil {
+				return err
+			}
+			if u.Balance < cost.Money {
+				return fmt.Errorf("%w: need %d", ErrReanimateNoMoney, cost.Money)
+			}
+			if err := tx.Model(&model.User{}).Where("user_id = ?", userID).UpdateColumn("balance", gorm.Expr("balance - ?", cost.Money)).Error; err != nil {
+				return err
+			}
 		}
+		for itemID, qty := range cost.Items {
+			var cInv model.Inventory
+			if err := tx.Where("user_id = ? AND item_id = ?", userID, itemID).First(&cInv).Error; err != nil || cInv.Quantity < qty {
+				return fmt.Errorf("%w: %s x%d", ErrReanimateNoItems, itemID, qty)
+			}
+			if cInv.Quantity == qty {
+				if err := tx.Delete(&cInv).Error; err != nil {
+					return err
+				}
+			} else {
+				if err := tx.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", userID, itemID).UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+					return err
+				}
+			}
+		}
+		// Deduct fossils (5 on success, 3 on fail)
+		var fInv model.Inventory
+		if err := tx.Where("user_id = ? AND item_id = ?", userID, pool.ItemName).First(&fInv).Error; err != nil {
+			return ErrNoFossils
+		}
+		if fInv.Quantity < fossilLoss {
+			return ErrNoFossils
+		}
+		if fInv.Quantity == fossilLoss {
+			if err := tx.Delete(&fInv).Error; err != nil {
+				return err
+			}
+		} else {
+			if err := tx.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", userID, pool.ItemName).UpdateColumn("quantity", gorm.Expr("quantity - ?", fossilLoss)).Error; err != nil {
+				return err
+			}
+		}
+		s.addArcheologistXP(tx, userID, xpGain)
+		return nil
+	})
+	if err != nil {
+		// Preserve typed errors for caller mapping
+		if errors.Is(err, ErrReanimateNoMoney) || errors.Is(err, ErrReanimateNoItems) || errors.Is(err, ErrNoFossils) {
+			return "", false, err
+		}
+		return "", false, err
+	}
 
-		petName := pool.Pets[rand.Intn(len(pool.Pets))]
-		pet, err := s.pets.CreateReanimatedPet(userID, petName)
-		if err != nil || pet == nil {
+	if success {
+		petName = pool.Pets[rand.Intn(len(pool.Pets))]
+		pet, perr := s.pets.CreateReanimatedPet(userID, petName)
+		if perr != nil || pet == nil {
 			return "", false, ErrReanimateFailed
 		}
-		s.addArcheologistXP(s.store.DB, userID, 100)
 		return petName, true, nil
 	}
-
-	if inv.Quantity <= 3 {
-		s.store.DB.Delete(&inv)
-	} else {
-		s.store.DB.Model(&inv).UpdateColumn("quantity", gorm.Expr("quantity - 3"))
-	}
-	s.addArcheologistXP(s.store.DB, userID, 25)
 	return "", false, nil
 }
 

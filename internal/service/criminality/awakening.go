@@ -10,7 +10,7 @@ import (
 
 // RequiredShadowFlags lists the delve flags that together qualify a player
 // as "touched by shadow". Having N of these grants the permanent flag.
-var shadowQualifyingFlags = []string{
+var ShadowQualifyingFlags = []string{
 	"betrayed_npc",
 	"desecrated_altar",
 	"slept_unprotected",
@@ -19,8 +19,12 @@ var shadowQualifyingFlags = []string{
 	"ambushed_while_sleeping",
 }
 
+// shadowQualifyingFlags is retained for backwards compatibility.
+var shadowQualifyingFlags = ShadowQualifyingFlags
+
 const (
-	shadowRequiredCount = 2
+	ShadowRequiredCount = 2
+	shadowRequiredCount = ShadowRequiredCount
 	maskBossFloorMin    = 8
 	maskBossFloorMax    = 10
 )
@@ -226,6 +230,9 @@ func (svc *Service) CheckGravewardenSpawn(userID int64, floor int, rngSeed int64
 }
 
 // GrantMaskToPlayer records that a player has obtained the Mask.
+// Flag-only: no inventory item is granted. The flag + has_mask unlocks
+// criminality (steal/burgle via HasMask) and auto-starts the shadow quest
+// if the player has no existing criminality quest/alignment.
 func (svc *Service) GrantMaskToPlayer(userID int64, serverID int64, lang string) (*discordgo.MessageEmbed, error) {
 	if err := svc.store.AddDelveFlag(userID, "mask_of_malveillance", `{"source":"gravewarden_morvain"}`); err != nil {
 		return nil, err
@@ -235,6 +242,20 @@ func (svc *Service) GrantMaskToPlayer(userID int64, serverID int64, lang string)
 	}
 	svc.store.AddCrimeRecord(userID, "mask_claimed",
 		fmt.Sprintf(`{"server_id":%d,"source":"gravewarden_morvain"}`, serverID))
+
+	// Auto-launch the criminality quest for the mask bearer.
+	// HasMask already allows steal/burgle (IsCommandAllowed checks
+	// alignment==thief || has_mask), but surfacing the quest gives the
+	// player a guided path. Only create if they have no quest/alignment yet.
+	if crim, err := svc.store.GetCriminality(userID); err == nil && crim.Alignment == "" {
+		hasHunter, _, _ := svc.store.GetUserQuest(userID, "masked_shadow_falls_hunter")
+		hasShadow, _, _ := svc.store.GetUserQuest(userID, "masked_shadow_falls_shadow")
+		hasForgive, _, _ := svc.store.GetUserQuest(userID, "masked_shadow_falls_forgive")
+		if hasHunter == nil && hasShadow == nil && hasForgive == nil {
+			_ = svc.store.CreateQuest(userID, "masked_shadow_falls_shadow")
+		}
+	}
+
 	announcement := svc.OnFirstMaskEquip(userID, serverID, lang)
 	return announcement, nil
 }

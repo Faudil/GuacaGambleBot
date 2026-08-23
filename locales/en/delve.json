@@ -226,7 +226,8 @@
       "warden_quest_advance": "The Warden nods, slow and solemn. They share a fragment of their story, and the weight between you shifts.",
       "warden_quest_progress": "The Warden watches you, patient as a locked door. \"Deeper,\" they say. \"The depths hold what I lost.\"",
       "warden_blessing": "The Warden bows. A faint light passes from them to you, and you feel strengthened. +{xp} XP",
-      "warden_listen": "The Warden speaks in fragments: of a vault, a promise, and a vigil that outlived its purpose. +{xp} XP"
+      "warden_listen": "The Warden speaks in fragments: of a vault, a promise, and a vigil that outlived its purpose. +{xp} XP",
+      "mask_criminality_hint": "🗡️ The shadows now answer to you — `steal` & `burgle` unlocked. Your criminal quest **Masked Shadow Falls** has begun! Use `/quest` to track it."
     },
     "ignore_fallen": "You turn away from the cries in the darkness and press on.",
     "left_voluntarily": "You ascend from the depths, your adventure complete. The Undercroft will remember your descent.",

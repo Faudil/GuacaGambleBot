@@ -3,6 +3,7 @@ package blackjack
 import (
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -32,9 +33,12 @@ type Cog struct {
 	store             *store.Store
 	cfg               *config.Config
 	svc               *bjsvc.Service
+	mu                sync.RWMutex
 	pendingChallenges map[int64]pendingChallenge
 	activeGames       map[int64]*activeGame
 }
+
+var one = float64(1)
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{
@@ -44,32 +48,240 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		pendingChallenges: map[int64]pendingChallenge{},
 		activeGames:       map[int64]*activeGame{},
 	}
-	r.Slash("blackjack", "Blackjack PvP : défiez un joueur.", c.onSlashMenu)
-	r.Slash("bj", "Blackjack PvP : défiez un joueur.", c.onSlashMenu)
-	r.Prefix("blackjack", c.onPrefixMenu)
-	r.Prefix("bj", c.onPrefixMenu)
+	opts := []*discordgo.ApplicationCommandOption{
+		{
+			Type:        discordgo.ApplicationCommandOptionUser,
+			Name:        "opponent",
+			Description: "Player to challenge to blackjack",
+			Required:    true,
+		},
+		{
+			Type:        discordgo.ApplicationCommandOptionInteger,
+			Name:        "amount",
+			Description: "Bet amount per player",
+			Required:    true,
+			MinValue:    &one,
+		},
+	}
+	r.SlashWithOptions("blackjack", "Blackjack PvP: challenge a player.", opts, c.onSlashChallenge)
+	r.SlashWithOptions("bj", "Blackjack PvP: challenge a player.", opts, c.onSlashChallenge)
+	r.Prefix("blackjack", c.onPrefixChallenge)
+	r.Prefix("bj", c.onPrefixChallenge)
 	r.Component("blackjack", "challenge", c.onChallengeOpen)
 	r.Component("blackjack", "accept", c.onAccept)
+	r.Component("blackjack", "deny", c.onDeny)
 	r.Component("blackjack", "hit", c.onHit)
 	r.Component("blackjack", "stand", c.onStand)
 	r.Modal("blackjack", "challenge_submit", c.onChallengeSubmit)
 }
 
-func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+func (c *Cog) onSlashChallenge(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	embed, comps := c.menu(lang)
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+	challengerID := interaction.ToInt64(interaction.UserID(i))
+
+	opponentID, amount, ok := parseSlashOptions(i)
+	if !ok {
+		interaction.RespondError(b, i, lang, "blackjack.invalid_opponent")
+		return
+	}
+	if opponentID == challengerID || opponentID == 0 {
+		interaction.RespondError(b, i, lang, "blackjack.invalid_opponent")
+		return
+	}
+	if amount <= 0 {
+		interaction.RespondError(b, i, lang, "blackjack.invalid_bet")
+		return
+	}
+	if err := c.createChallenge(challengerID, opponentID, amount, b, i, lang); err != nil {
+		// createChallenge already responded with error
+		return
+	}
 }
 
-func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+func parseSlashOptions(i *discordgo.InteractionCreate) (int64, int, bool) {
+	var opponentID int64
+	var amount int
+	foundOpponent := false
+	foundAmount := false
+	for _, opt := range i.ApplicationCommandData().Options {
+		switch opt.Name {
+		case "opponent":
+			foundOpponent = true
+			// User option: Value is string snowflake, also Resolved
+			if opt.Value != nil {
+				if s, ok := opt.Value.(string); ok {
+					opponentID = interaction.ToInt64(s)
+				}
+			}
+			// Fallback via UserValue or StringValue
+			if opponentID == 0 {
+				if u := opt.UserValue(nil); u != nil {
+					opponentID = interaction.ToInt64(u.ID)
+				} else if s := opt.StringValue(); s != "" {
+					opponentID = interaction.ToInt64(s)
+				}
+			}
+			// Last fallback: check resolved map with opt.Value
+			if opponentID == 0 && i.ApplicationCommandData().Resolved != nil && i.ApplicationCommandData().Resolved.Users != nil {
+				for id := range i.ApplicationCommandData().Resolved.Users {
+					opponentID = interaction.ToInt64(id)
+					break
+				}
+			}
+		case "amount":
+			foundAmount = true
+			amount = int(opt.IntValue())
+			if amount == 0 && opt.Value != nil {
+				switch v := opt.Value.(type) {
+				case float64:
+					amount = int(v)
+				case int:
+					amount = v
+				case int64:
+					amount = int(v)
+				}
+			}
+		}
+	}
+	// Fallback: if options were positional without names (some discordgo versions), use index
+	if !foundOpponent && len(i.ApplicationCommandData().Options) >= 2 {
+		opts := i.ApplicationCommandData().Options
+		// try index 0 as opponent
+		if opponentID == 0 {
+			if s, ok := opts[0].Value.(string); ok {
+				opponentID = interaction.ToInt64(s)
+			} else if u := opts[0].UserValue(nil); u != nil {
+				opponentID = interaction.ToInt64(u.ID)
+			} else {
+				opponentID = interaction.ToInt64(opts[0].StringValue())
+			}
+		}
+		if amount == 0 {
+			amount = int(opts[1].IntValue())
+		}
+		foundOpponent = opponentID != 0
+		foundAmount = amount != 0
+	}
+	return opponentID, amount, foundOpponent && foundAmount
+}
+
+func (c *Cog) onPrefixChallenge(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	embed, comps := c.menu(lang)
+	parts := strings.Fields(m.Content)
+	// parts[0] is "blackjack" or "bj", need at least 3: cmd, opponent, amount
+	if len(parts) < 3 {
+		// No args -> show help/menu
+		embed, comps := c.menu(lang)
+		_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+			Embeds:     []*discordgo.MessageEmbed{embed},
+			Components: comps,
+		})
+		return
+	}
+	// Try to parse opponent from mention or raw id; amount is last token
+	opponentID, ok := interaction.ParseUserID(parts[1])
+	if !ok {
+		// Also try to get from Discord mentions array
+		if len(m.Mentions) > 0 {
+			opponentID = interaction.ToInt64(m.Mentions[0].ID)
+			ok = true
+		}
+	}
+	if !ok {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("blackjack.invalid_opponent", lang))
+		return
+	}
+	amountStr := parts[2]
+	// allow amount to be second or third token if opponent mention contains space? Already split, amount is last
+	if len(parts) > 3 {
+		amountStr = parts[len(parts)-1]
+	}
+	amount, err := strconv.Atoi(strings.TrimSpace(amountStr))
+	if err != nil || amount <= 0 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("blackjack.invalid_bet", lang))
+		return
+	}
+	challengerID := interaction.ToInt64(m.Author.ID)
+	if opponentID == challengerID {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("blackjack.invalid_opponent", lang))
+		return
+	}
+	cb, err := c.store.GetBalance(challengerID)
+	if err != nil || cb < amount {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("blackjack.no_money_self", lang))
+		return
+	}
+	ob, err := c.store.GetBalance(opponentID)
+	if err != nil || ob < amount {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("blackjack.no_money_opponent", lang))
+		return
+	}
+	c.mu.Lock()
+	c.pendingChallenges[opponentID] = pendingChallenge{ChallengerID: challengerID, Amount: amount}
+	c.mu.Unlock()
+
+	embed := components.Embed(
+		i18n.T("blackjack.title", lang),
+		i18n.T("blackjack.challenge_msg", lang, map[string]any{
+			"challenger": interaction.Mention(challengerID),
+			"opponent":   interaction.Mention(opponentID),
+			"amount":     amount,
+		}),
+		0x3498db,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("blackjack.accept_label", lang), components.Encode("blackjack", "accept"), discordgo.SuccessButton),
+			components.Button(i18n.T("blackjack.deny_label", lang), components.Encode("blackjack", "deny"), discordgo.DangerButton),
+		),
+	}
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})
 }
+
+func (c *Cog) createChallenge(challengerID, opponentID int64, amount int, b *interaction.Bot, i *discordgo.InteractionCreate, lang string) error {
+	cb, err := c.store.GetBalance(challengerID)
+	if err != nil || cb < amount {
+		interaction.RespondError(b, i, lang, "blackjack.no_money_self")
+		return errNoMoney
+	}
+	ob, err := c.store.GetBalance(opponentID)
+	if err != nil || ob < amount {
+		interaction.RespondError(b, i, lang, "blackjack.no_money_opponent")
+		return errNoMoney
+	}
+
+	c.mu.Lock()
+	c.pendingChallenges[opponentID] = pendingChallenge{ChallengerID: challengerID, Amount: amount}
+	c.mu.Unlock()
+
+	embed := components.Embed(
+		i18n.T("blackjack.title", lang),
+		i18n.T("blackjack.challenge_msg", lang, map[string]any{
+			"challenger": interaction.Mention(challengerID),
+			"opponent":   interaction.Mention(opponentID),
+			"amount":     amount,
+		}),
+		0x3498db,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("blackjack.accept_label", lang), components.Encode("blackjack", "accept"), discordgo.SuccessButton),
+			components.Button(i18n.T("blackjack.deny_label", lang), components.Encode("blackjack", "deny"), discordgo.DangerButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+	return nil
+}
+
+var errNoMoney = &challengeError{}
+
+type challengeError struct{}
+
+func (e *challengeError) Error() string { return "no money" }
 
 func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	embed := components.Embed(
@@ -77,6 +289,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 		i18n.T("blackjack.challenge_msg", lang, map[string]any{"challenger": "?", "opponent": "?", "amount": 0}),
 		0x3498db,
 	)
+	embed.Description += "\n\n" + i18n.T("blackjack.howto", lang)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("blackjack.accept_label", lang), components.Encode("blackjack", "challenge"), discordgo.PrimaryButton),
@@ -116,46 +329,23 @@ func (c *Cog) onChallengeSubmit(b *interaction.Bot, i *discordgo.InteractionCrea
 		return
 	}
 
-	cb, err := c.store.GetBalance(challengerID)
-	if err != nil || cb < amount {
-		interaction.RespondError(b, i, lang, "blackjack.no_money_self")
+	if err := c.createChallenge(challengerID, opponentID, amount, b, i, lang); err != nil {
 		return
 	}
-	ob, err := c.store.GetBalance(opponentID)
-	if err != nil || ob < amount {
-		interaction.RespondError(b, i, lang, "blackjack.no_money_opponent")
-		return
-	}
-
-	c.pendingChallenges[opponentID] = pendingChallenge{ChallengerID: challengerID, Amount: amount}
-
-	embed := components.Embed(
-		i18n.T("blackjack.title", lang),
-		i18n.T("blackjack.challenge_msg", lang, map[string]any{
-			"challenger": interaction.Mention(challengerID),
-			"opponent":   interaction.Mention(opponentID),
-			"amount":     amount,
-		}),
-		0x3498db,
-	)
-	comps := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button(i18n.T("blackjack.accept_label", lang), components.Encode("blackjack", "accept"), discordgo.SuccessButton),
-		),
-	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
 }
 
 func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	opponentID := interaction.ToInt64(interaction.UserID(i))
+	c.mu.Lock()
 	pc, ok := c.pendingChallenges[opponentID]
 	if !ok {
+		c.mu.Unlock()
 		interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
 		return
 	}
 	delete(c.pendingChallenges, opponentID)
+	c.mu.Unlock()
 
 	cb, err := c.store.GetBalance(pc.ChallengerID)
 	if err != nil || cb < pc.Amount {
@@ -191,10 +381,33 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_ = c.store.IncrementGameLimit(pc.ChallengerID, "blackjack")
 
 	gs := c.svc.NewGame(pc.ChallengerID, opponentID, pc.Amount)
+	// Fix bug: store active game for both players so Hit/Stand can find it
+	c.mu.Lock()
+	ag := &activeGame{State: gs, Player1: pc.ChallengerID, Player2: opponentID}
+	c.activeGames[pc.ChallengerID] = ag
+	c.activeGames[opponentID] = ag
+	c.mu.Unlock()
+
 	embed, comps := c.gameEmbed(b, i, gs, lang)
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) onDeny(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	opponentID := interaction.ToInt64(interaction.UserID(i))
+	c.mu.Lock()
+	if _, ok := c.pendingChallenges[opponentID]; ok {
+		delete(c.pendingChallenges, opponentID)
+		c.mu.Unlock()
+		embed := components.Embed("", i18n.T("blackjack.deny_msg", lang, map[string]any{"user": interaction.Mention(opponentID)}), 0x95a5a6)
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+		return
+	}
+	c.mu.Unlock()
+	interaction.RespondError(b, i, lang, "blackjack.no_money_problem")
 }
 
 func (c *Cog) onHit(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -214,6 +427,7 @@ func (c *Cog) onHit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	if bust {
+		// Hit already set Finished, but keep for safety
 		gs.Finished[userID] = true
 		winnerID, reason, isDraw, over := gs.CheckGameOver()
 		if over {
@@ -254,6 +468,8 @@ func (c *Cog) onStand(b *interaction.Bot, i *discordgo.InteractionCreate) {
 }
 
 func (c *Cog) findGame(userID int64) *bjsvc.GameState {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, g := range c.activeGames {
 		if g.Player1 == userID || g.Player2 == userID {
 			return g.State
@@ -268,12 +484,18 @@ func (c *Cog) gameEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, gs *
 
 	statusP1 := ""
 	statusP2 := ""
-	if gs.Turn == gs.Player1ID && !gs.Finished[gs.Player1ID] {
+	if gs.Finished[gs.Player1ID] && gs.Finished[gs.Player2ID] {
+		// both finished, no turn indicator
+	} else if gs.Turn == gs.Player1ID && !gs.Finished[gs.Player1ID] {
 		statusP1 = i18n.T("blackjack.player_turn", lang, map[string]any{"user": ""})
 		statusP2 = i18n.T("blackjack.player_waiting", lang, map[string]any{"user": ""})
 	} else if gs.Turn == gs.Player2ID && !gs.Finished[gs.Player2ID] {
 		statusP2 = i18n.T("blackjack.player_turn", lang, map[string]any{"user": ""})
 		statusP1 = i18n.T("blackjack.player_waiting", lang, map[string]any{"user": ""})
+	} else if !gs.Finished[gs.Player1ID] {
+		// Fallback: show waiting if Turn points to finished player
+		statusP1 = i18n.T("blackjack.player_waiting", lang, map[string]any{"user": ""})
+		statusP2 = i18n.T("blackjack.player_turn", lang, map[string]any{"user": ""})
 	}
 
 	desc := i18n.T("blackjack.pot", lang, map[string]any{"amount": gs.Amount * 2}) + "\n\n"
@@ -303,8 +525,10 @@ func (c *Cog) gameEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, gs *
 }
 
 func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bjsvc.GameState, winnerID int64, reason string, isDraw bool, lang string) {
+	c.mu.Lock()
 	delete(c.activeGames, gs.Player1ID)
 	delete(c.activeGames, gs.Player2ID)
+	c.mu.Unlock()
 
 	embed, _ := c.gameEmbed(b, i, gs, lang)
 	color := 0x95a5a6

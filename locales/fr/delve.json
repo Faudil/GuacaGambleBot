@@ -226,7 +226,8 @@
       "warden_quest_advance": "Le Gardien hoche la tête, lent et solennel. Il partage un fragment de son histoire, et le poids entre vous s'allège.",
       "warden_quest_progress": "Le Gardien vous observe, patient comme une porte verrouillée. « Plus bas », dit-il. « Les profondeurs tiennent ce que j'ai perdu. »",
       "warden_blessing": "Le Gardien s'incline. Une faible lueur passe de lui à vous, et vous vous sentez fortifié. +{xp} XP",
-      "warden_listen": "Le Gardien parle par fragments : un caveau, une promesse, une veille qui a survécu à son but. +{xp} XP"
+      "warden_listen": "Le Gardien parle par fragments : un caveau, une promesse, une veille qui a survécu à son but. +{xp} XP",
+      "mask_criminality_hint": "🗡️ Les ombres vous obéissent — `steal` & `burgle` débloqués. Votre quête criminelle **Masked Shadow Falls** a commencé ! Utilisez `/quest` pour la suivre."
     },
     "ignore_fallen": "Vous ignorez les appels dans l'obscurité et continuez votre chemin.",
     "left_voluntarily": "Vous remontez des profondeurs, votre aventure terminée. Les Tréfonds se souviendront de votre descente.",

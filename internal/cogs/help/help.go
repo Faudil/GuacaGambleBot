@@ -43,7 +43,7 @@ func (c *Cog) embed() *discordgo.MessageEmbed {
 			components.Field("\U0001f3b0 Casino",
 				"`"+prefix+"coinflip` / `/coinflip` — Heads or tails\n"+
 					"`"+prefix+"slots` / `/slots` — Slot machine\n"+
-					"`"+prefix+"blackjack` / `/blackjack` — Blackjack duel\n"+
+					"`"+prefix+"blackjack @user 100` / `/blackjack` — Blackjack duel\n"+
 					"`"+prefix+"roulette` / `/roulette` — Russian roulette\n"+
 					"`"+prefix+"lotto` / `/lotto` — Server lottery\n"+
 					"`"+prefix+"betting` / `/betting` — Custom bets\n"+

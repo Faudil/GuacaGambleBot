@@ -731,18 +731,21 @@ func (c *Cog) resolveCombatAndRender(b *interaction.Bot, i *discordgo.Interactio
 			desc += "\n" + log
 		}
 
-		// Check for Gravewarden Morvain victory → grant Mask of Malveillance
+		// Check for Gravewarden Morvain victory → grant Mask of Malveillance (flag-only)
 		isGravewarden := res.EnemyName == "Gravewarden Morvain"
 		if isGravewarden {
 			announcement, err := c.crimsvc.GrantMaskToPlayer(userID, interaction.ToInt64(i.GuildID), lang)
-			if err == nil && announcement != nil {
+			if err == nil {
 				desc += "\n\n🎭 **The Mask of Malveillance pulses with dark energy!**"
-				go func() {
-					ss, _ := c.store.GetServerSetting(interaction.ToInt64(i.GuildID))
-					if ss != nil && ss.AnnouncementChannelID != 0 && announcement != nil {
-						_, _ = b.Session.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), announcement)
-					}
-				}()
+				desc += "\n" + i18n.T("delve.handler.mask_criminality_hint", lang)
+				if announcement != nil {
+					go func() {
+						ss, _ := c.store.GetServerSetting(interaction.ToInt64(i.GuildID))
+						if ss != nil && ss.AnnouncementChannelID != 0 && announcement != nil {
+							_, _ = b.Session.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), announcement)
+						}
+					}()
+				}
 			}
 		}
 

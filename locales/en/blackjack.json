@@ -1,6 +1,9 @@
 {
   "blackjack": {
     "accept_label": "Accept Duel",
+    "deny_label": "Decline",
+    "deny_msg": "❌ {user} declined the Blackjack duel.",
+    "howto": "Use `/blackjack opponent:@user amount:100` or `!blackjack @user 100`.",
     "beat": "{s1} beats {s2}",
     "bust": "{user} busted!",
     "challenge_msg": "🃏 **{challenger}** challenges **{opponent}** to Blackjack for **${amount}**!",
