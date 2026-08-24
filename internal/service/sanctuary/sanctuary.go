@@ -31,13 +31,25 @@ type SanctuaryTier struct {
 
 var SanctuaryTiers = map[int]SanctuaryTier{
 	1: {Tier: 1, Name: "Small Paddock", Slots: 5, Price: 5000, BuildHours: 2,
-		Materials: map[string]int{"wheat": 25, "coal": 10}},
+		Materials: map[string]int{"wheat": 5, "coal": 10}},
 	2: {Tier: 2, Name: "Animal Ranch", Slots: 15, Price: 25000, BuildHours: 8,
-		Materials: map[string]int{"iron_ore": 10, "copper_ore": 5, "silver_ore": 3, "sardine": 10}},
+		Materials: map[string]int{"iron_ore": 20, "copper_ore": 5, "silver_ore": 3, "sardine": 10}},
 	3: {Tier: 3, Name: "Wildlife Sanctuary", Slots: 30, Price: 75000, BuildHours: 24,
-		Materials: map[string]int{"gold_nugget": 5, "emerald": 3, "platinum": 2, "rough_diamond": 1}},
+		Materials: map[string]int{"tomato": 5, "emerald": 3, "platinum": 2, "rough_diamond": 1}},
 	4: {Tier: 4, Name: "Legendary Menagerie", Slots: 50, Price: 250000, BuildHours: 72,
-		Materials: map[string]int{"rough_diamond": 2, "gold_nugget": 5, "emerald": 3, "pure_dna": 1}},
+		Materials: map[string]int{"rough_diamond": 10, "gold_nugget": 30, "star_fruit": 6, "pure_dna": 3}},
+	5: {Tier: 5, Name: "Grand Aviary", Slots: 75, Price: 500000, BuildHours: 96,
+		Materials: map[string]int{"star_fruit": 20, "golden_apple": 10, "salmon": 30, "platinum": 15, "pure_dna": 5}},
+	6: {Tier: 6, Name: "Mystic Reserve", Slots: 95, Price: 1200000, BuildHours: 120,
+		Materials: map[string]int{"cursed_pumpkin": 10, "kraken_tentacle": 5, "emerald": 15, "ancient_alloy": 8, "gold_nugget": 40}},
+	7: {Tier: 7, Name: "Frozen Dominion", Slots: 115, Price: 2500000, BuildHours: 144,
+		Materials: map[string]int{"ghost_wheat": 30, "nova_fruit": 5, "whale": 10, "rough_diamond": 15, "kethari_crystal": 5}},
+	8: {Tier: 8, Name: "Abyssal Aquarium", Slots: 130, Price: 5000000, BuildHours: 168,
+		Materials: map[string]int{"star_fruit": 40, "lava_serpent": 8, "magma_carp": 15, "primordial_geode": 5, "kethari_crystal": 10}},
+	9: {Tier: 9, Name: "Volcanic Citadel", Slots: 140, Price: 8000000, BuildHours: 168,
+		Materials: map[string]int{"golden_carrot": 3, "nova_fruit": 10, "kraken_tentacle": 10, "shark": 20, "resonance_core": 2, "primordial_geode": 8}},
+	10: {Tier: 10, Name: "Cosmic Ark", Slots: 150, Price: 12000000, BuildHours: 168,
+		Materials: map[string]int{"nova_fruit": 15, "golden_carrot": 5, "kraken_tentacle": 10, "lava_serpent": 10, "resonance_core": 5, "kethari_crystal": 15, "rough_diamond": 20, "pure_dna": 20}},
 }
 
 type lootEntry struct {
@@ -178,8 +190,8 @@ var houseMaxTier = map[string]*houseMeta{
 	"cardboard_box": {MaxSanctuaryTier: 1},
 	"wooden_shack":  {MaxSanctuaryTier: 2},
 	"brick_house":   {MaxSanctuaryTier: 3},
-	"mansion":       {MaxSanctuaryTier: 3},
-	"gilded_palace": {MaxSanctuaryTier: 4},
+	"mansion":       {MaxSanctuaryTier: 8},
+	"gilded_palace": {MaxSanctuaryTier: 10},
 }
 
 func (s *Service) GetUsedSlots(userID int64) int {

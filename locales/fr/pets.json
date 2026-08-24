@@ -99,6 +99,7 @@
       "hatching_title": "🥚 Éclosion en cours...",
       "no_egg": "❌ Tu n'as pas d'œuf de biome dans ton inventaire ! Chasse pour en trouver ou achètes-en au `!shop`.",
       "no_slots": "❌ Tu n'as pas assez de places pour un nouveau familier ! Tu ne peux en avoir que {max} à la fois.",
+      "sent_to_sanctuary": "🏡 Ton équipe active est complète — le nouveau-né a été envoyé directement dans ton sanctuaire !",
       "step1": "Le **{egg}** tremble...\n*Crac...*",
       "step_footer": "🥚 {egg}",
       "step2": "La coquille se brise !\n*CRAC CRAC...*",

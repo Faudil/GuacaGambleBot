@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -258,6 +259,40 @@ var QuestRegistry = map[string]*QuestDef{
 			{Type: StepDialogue, TextKey: "quests.chronicler_legend.step4_outro", Rewards: &QuestReward{Money: 1000, Crowns: 10, ItemIDs: []string{"chronicler_relic"}, AchievementID: "legend_unwritten"}},
 		},
 	},
+	// ── World side quests — small, few-step stories that spawn randomly ──
+	// These are designed to be added with one QuestDef + one WorldQuestSpawns entry.
+	// They appear only through TrySpawnWorldQuest (random activity hook) and never
+	// respawn once completed (questRowExists guard). Persist until done.
+	"world_lost_tool": {
+		ID: "world_lost_tool", Type: "side", NPCID: "thorek",
+		TitleKey: "quests.world_lost_tool.title", DescKey: "quests.world_lost_tool.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.world_lost_tool.step0_intro"},
+			{Type: StepActivity, TextKey: "quests.world_lost_tool.step1_activity", Extra: map[string]any{"target_stat": "items_mined", "target_count": 5}},
+			{Type: StepRequirement, TextKey: "quests.world_lost_tool.step2_req", Extra: map[string]any{"req_items": map[string]any{"iron_ore": 3}}},
+			{Type: StepDialogue, TextKey: "quests.world_lost_tool.step3_outro", Rewards: &QuestReward{Money: 400, XP: 30, ItemIDs: []string{"iron_ore"}}},
+		},
+	},
+	"world_stray_seed": {
+		ID: "world_stray_seed", Type: "side", NPCID: "elara",
+		TitleKey: "quests.world_stray_seed.title", DescKey: "quests.world_stray_seed.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.world_stray_seed.step0_intro"},
+			{Type: StepActivity, TextKey: "quests.world_stray_seed.step1_activity", Extra: map[string]any{"target_stat": "items_farmed", "target_count": 4}},
+			{Type: StepRequirement, TextKey: "quests.world_stray_seed.step2_req", Extra: map[string]any{"req_items": map[string]any{"wheat": 3}}},
+			{Type: StepDialogue, TextKey: "quests.world_stray_seed.step3_outro", Rewards: &QuestReward{Money: 350, XP: 30, ItemIDs: []string{"growth_elixir"}}},
+		},
+	},
+	"world_tide_gift": {
+		ID: "world_tide_gift", Type: "side", NPCID: "irian",
+		TitleKey: "quests.world_tide_gift.title", DescKey: "quests.world_tide_gift.description",
+		Steps: []QuestStep{
+			{Type: StepDialogue, TextKey: "quests.world_tide_gift.step0_intro"},
+			{Type: StepActivity, TextKey: "quests.world_tide_gift.step1_activity", Extra: map[string]any{"target_stat": "items_fished", "target_count": 3}},
+			{Type: StepActivity, TextKey: "quests.world_tide_gift.step2_activity", Extra: map[string]any{"target_stat": "items_crafted", "target_count": 1}},
+			{Type: StepDialogue, TextKey: "quests.world_tide_gift.step3_outro", Rewards: &QuestReward{Money: 400, XP: 30, ItemIDs: []string{"worm", "worm"}}},
+		},
+	},
 }
 
 // BossLossUnlock maps a boss stage to the side quest offered when the player
@@ -273,6 +308,43 @@ var BossLossUnlocks = []BossLossUnlock{
 	// The Vault Guardian (stage 5) is the tutorial's final boss; losing to it
 	// unlocks Irian's training quest line.
 	{BossStage: 5, QuestID: "irian_training"},
+}
+
+// MaxActiveQuests is the soft cap for the quest log. Random world quests will
+// not spawn when the player has this many ACTIVE quests, but manually started
+// quests (tutorial, NPC offers, boss unlocks) may still push the count above it.
+const MaxActiveQuests = 5
+
+// WorldQuestSpawn describes one world side quest that can appear randomly.
+// Add one entry per QuestDef to make a new world errand discoverable. The hook
+// respects questRowExists (once-only) and MaxActiveQuests (needs space).
+type WorldQuestSpawn struct {
+	QuestID      string
+	Weight       int
+	SpawnChance  float64
+	TriggerStats []string // which activity stats may trigger this quest; empty = any activity
+}
+
+// WorldQuestSpawns is the pool of randomly discovered side stories.
+// Each entry maps to a QuestDef above. To add a new world quest:
+//  1. add a QuestDef to QuestRegistry
+//  2. add one WorldQuestSpawn entry here with its trigger stats and weight
+var WorldQuestSpawns = []WorldQuestSpawn{
+	{QuestID: "world_lost_tool", Weight: 10, SpawnChance: 0.04, TriggerStats: []string{"items_mined", "items_crafted"}},
+	{QuestID: "world_stray_seed", Weight: 10, SpawnChance: 0.04, TriggerStats: []string{"items_farmed", "items_digged"}},
+	{QuestID: "world_tide_gift", Weight: 10, SpawnChance: 0.04, TriggerStats: []string{"items_fished", "items_crafted"}},
+}
+
+// ActiveQuestCount returns the number of ACTIVE quests for a user.
+func ActiveQuestCount(st *store.Store, userID int64) int {
+	var n int64
+	st.DB.Table("user_quests").Where("user_id = ? AND status = ?", userID, "ACTIVE").Count(&n)
+	return int(n)
+}
+
+// CanSpawnWorldQuest reports whether a random world quest may spawn (needs space).
+func CanSpawnWorldQuest(st *store.Store, userID int64) bool {
+	return ActiveQuestCount(st, userID) < MaxActiveQuests
 }
 
 // UnlockOnBossLoss starts the side quest registered for this boss stage if the
@@ -310,7 +382,84 @@ type Service struct {
 func New(s *store.Store, cfg *config.Config) *Service {
 	svc := &Service{store: s, cfg: cfg}
 	s.SetQuestAdvanceFn(svc.RecordActivityComplete)
+	s.SetWorldSpawnFn(func(userID int64, stat string, amount int) {
+		_, _ = svc.TrySpawnWorldQuest(userID, stat)
+	})
 	return svc
+}
+
+// TrySpawnWorldQuest attempts to spawn one world side quest triggered by the
+// given activity stat. It respects MaxActiveQuests (needs space) and once-only
+// (questRowExists). A weighted candidate is chosen among spawns whose
+// TriggerStats contain stat (or any if empty), then SpawnChance is rolled.
+// Returns questID and true when a quest was started.
+func (s *Service) TrySpawnWorldQuest(userID int64, triggerStat string) (string, bool) {
+	if !CanSpawnWorldQuest(s.store, userID) {
+		return "", false
+	}
+	// Collect eligible spawns: trigger matches, not already owned, valid def.
+	var cands []WorldQuestSpawn
+	for _, sp := range WorldQuestSpawns {
+		if QuestRegistry[sp.QuestID] == nil {
+			continue
+		}
+		if questRowExists(s.store, userID, sp.QuestID) {
+			continue
+		}
+		if len(sp.TriggerStats) > 0 {
+			matched := false
+			for _, ts := range sp.TriggerStats {
+				if ts == triggerStat {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				continue
+			}
+		}
+		cands = append(cands, sp)
+	}
+	if len(cands) == 0 {
+		return "", false
+	}
+	// Weighted pick.
+	total := 0
+	for _, c := range cands {
+		w := c.Weight
+		if w <= 0 {
+			w = 1
+		}
+		total += w
+	}
+	roll := rand.Intn(total)
+	chosen := cands[0]
+	for _, c := range cands {
+		w := c.Weight
+		if w <= 0 {
+			w = 1
+		}
+		roll -= w
+		if roll < 0 {
+			chosen = c
+			break
+		}
+	}
+	chance := chosen.SpawnChance
+	if chance <= 0 {
+		chance = 0.04
+	}
+	if rand.Float64() > chance {
+		return "", false
+	}
+	if err := s.StartQuest(userID, chosen.QuestID); err != nil {
+		return "", false
+	}
+	// Notify player via quest notification queue (surfaced by next interaction).
+	s.store.PushQuestNotification(userID, store.QuestNotification{
+		QuestID: chosen.QuestID, Completed: false, NextStepKey: QuestRegistry[chosen.QuestID].Steps[0].TextKey,
+	})
+	return chosen.QuestID, true
 }
 
 // RecordActivityComplete is called by the store when an activity step reaches

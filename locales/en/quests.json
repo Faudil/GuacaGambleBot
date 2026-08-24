@@ -64,6 +64,30 @@
       "step8_outro": "The crowd erupts. Krag kneels, acknowledging your pet.\n\nThe herald rushes over, eyes wide. \"Unbelievable! A new champion rises!\"\n\nHe presses a flask into your hands. \"A **Gale Draught** — the real meals, the kind champions drink. It tastes like a storm. Give it to your pet tonight.\"\n\nHe claps your shoulder. \"Your pet is ranked now. The arena is open. Fight, win, and climb!\"",
       "title": "The Arena Calls"
     },
+    "world_lost_tool": {
+      "description": "Thorek misplaced his favourite hammer in the shafts.",
+      "title": "The Lost Tool",
+      "step0_intro": "You find Thorek staring at an empty rack, jaw tight.\n\n\"My hammer. Not the fancy one — the one that fits my hand. Left it on a ledge after a bad shift. If the shafts swallowed it, I'll never hear the end of it.\"\n\nHe grunts. \"You're heading down anyway. Keep an eye out while you `!mine`. Five swings ought to shake it loose.\"",
+      "step1_activity": "Goal: Mine 5 times using `!mine`.",
+      "step2_req": "Goal: Bring **3 Iron Ore** to Thorek (gather with `!mine`, then confirm here).",
+      "step3_outro": "Thorek turns the hammer over, thumb on a familiar dent.\n\n\"That's the one. Felt wrong without it.\"\n\nHe tosses you a pouch for the trouble. \"You mine clean. I remember that.\""
+    },
+    "world_stray_seed": {
+      "description": "Elara found a stray seed that shouldn't have sprouted.",
+      "title": "A Stray Seed",
+      "step0_intro": "Elara holds a sprout that pushed through a crack in the greenhouse glass.\n\n\"This wasn't planted. Wind, maybe — or something that wanted to be found.\"\n\nShe smiles. \"Help me tend the beds while we figure it out. `!farm` a few crops and we'll see if it belongs.\"",
+      "step1_activity": "Goal: Farm 4 times using `!farm`.",
+      "step2_req": "Goal: Bring **3 Wheat** to Elara (gather with `!farm`, then confirm here).",
+      "step3_outro": "The sprout settles, roots finding soil.\n\n\"It belongs now. You gave it neighbours.\"\n\nElara hands you a vial. \"Growth elixir — for the next stray.\""
+    },
+    "world_tide_gift": {
+      "description": "Irian asks you to read what the tide left behind.",
+      "title": "A Gift from the Tide",
+      "step0_intro": "Irian crouches by a tide pool, a small bundle wrapped in kelp at her feet.\n\n\"The tide left this. Could be driftwood. Could be a message. Either way, it wants hands that know the water.\"\n\nShe nods at the shore. \"Fish a bit — `!fish` three times — then craft one thing from what you find. The tide pays in kind.\"",
+      "step1_activity": "Goal: Fish 3 times using `!fish`.",
+      "step2_activity": "Goal: Craft 1 item using `!craft`.",
+      "step3_outro": "Irian unwraps the kelp — a smooth stone, warm as a held breath.\n\n\"Not driftwood. A promise the sea kept.\"\n\nShe presses a couple of wriggling worms into your palm. \"Bait for the next promise.\""
+    },
     "btn_show": "Show Quests",
     "complete_objective_first": "⚡ Complete the current objective first (mine, farm, hunt, etc.), then use the Refresh button to check your progress!",
     "completed_activity_msg": "✅ **{title}** complete! Type `/quest` to check your progress.",

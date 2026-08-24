@@ -64,6 +64,30 @@
       "step8_outro": "La foule explose. Krag s'agenouille, reconnaissant la force de ton familier.\n\nLe héraut accourt, les yeux écarquillés. \"Incroyable ! Un nouveau champion se lève !\"\n\nIl te glisse une fiole dans les mains. \"Une **Fiole de Rafale** — les vrais repas, ceux des champions. Ça a le goût de la tempête. Offre-la à ton familier ce soir.\"\n\nIl te frappe l'épaule. \"Ton familier est classé désormais. L'arène est ouverte. Combats, gagne, et grimpe !\"",
       "title": "L'Arène Appelle"
     },
+    "world_lost_tool": {
+      "description": "Thorek a égaré son marteau préféré dans les puits.",
+      "title": "L'Outil Perdu",
+      "step0_intro": "Tu trouves Thorek devant un râtelier vide, mâchoire serrée.\n\n« Mon marteau. Pas le clinquant — celui qui épouse ma main. Je l'ai laissé sur une corniche après un mauvais poste. Si les puits l'ont avalé, je n'entendrai plus que ça. »\n\nIl grogne. « Tu descends de toute façon. Garde l'œil ouvert pendant que tu `!mine`. Cinq coups devraient le déloger. »",
+      "step1_activity": "Objectif : Mine 5 fois avec `!mine`.",
+      "step2_req": "Objectif : Apporte **3 Minerais de Fer** à Thorek (récolte avec `!mine`, puis confirme ici).",
+      "step3_outro": "Thorek retourne le marteau, pouce sur une bosse familière.\n\n« C'est bien lui. Ça sonnait creux sans lui. »\n\nIl te lance une bourse. « Tu mines propre. Je m'en souviendrai. »"
+    },
+    "world_stray_seed": {
+      "description": "Elara a trouvé une pousse qui n'aurait pas dû germer.",
+      "title": "Une Graine Égarée",
+      "step0_intro": "Elara tient une pousse qui a percé la vitre de la serre.\n\n« Ça n'a pas été planté. Le vent, peut-être — ou quelque chose qui voulait être trouvé. »\n\nElle sourit. « Aide-moi à soigner les plates-bandes pendant qu'on réfléchit. `!farm` quelques récoltes et on verra si elle a sa place. »",
+      "step1_activity": "Objectif : Cultive 4 fois avec `!farm`.",
+      "step2_req": "Objectif : Apporte **3 Blés** à Elara (récolte avec `!farm`, puis confirme ici).",
+      "step3_outro": "La pousse s'apaise, racines en terre.\n\n« Elle a sa place, désormais. Tu lui as donné des voisines. »\n\nElara te tend une fiole. « De l'élixir de croissance — pour la prochaine égarée. »"
+    },
+    "world_tide_gift": {
+      "description": "Irian te demande de lire ce que la marée a laissé.",
+      "title": "Un Cadeau de la Marée",
+      "step0_intro": "Irian s'accroupit près d'une flaque de marée, un petit paquet d'algues à ses pieds.\n\n« La marée a laissé ça. Ça peut être du bois flotté. Ça peut être un message. Dans les deux cas, ça veut des mains qui connaissent l'eau. »\n\nElle hoche la tête vers le rivage. « Pêche un peu — `!fish` trois fois — puis fabrique une chose avec ta prise. La marée paie toujours. »",
+      "step1_activity": "Objectif : Pêche 3 fois avec `!fish`.",
+      "step2_activity": "Objectif : Fabrique 1 objet avec `!craft`.",
+      "step3_outro": "Irian défait les algues — une pierre lisse, chaude comme un souffle retenu.\n\n« Pas du bois flotté. Une promesse que la mer a gardée. »\n\nElle glisse deux vers frétillants dans ta paume. « De quoi appâter la prochaine promesse. »"
+    },
     "btn_show": "Voir Quêtes",
     "complete_objective_first": "⚡ Termine d'abord l'objectif actuel (minage, agriculture, chasse, etc.), puis utilise le bouton Rafraîchir pour vérifier ta progression !",
     "completed_activity_msg": "✅ **{title}** terminée ! Tapez `/quest` pour voir votre progression.",

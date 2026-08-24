@@ -105,6 +105,7 @@
       "magnetic_coil": "Bobine Magnétique",
       "workbench": "Établi"
     },
-    "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**. **+1 emplacement de meuble !**"
+    "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**. **+1 emplacement de meuble !**",
+    "sanctuary_house_max": "❌ Ta maison ne peut pas accueillir un sanctuaire plus grand — achète une plus grande maison pour l'agrandir."
   }
 }

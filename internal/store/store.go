@@ -48,6 +48,11 @@ type QuestNotification struct {
 // can re-check its milestone checks on any recorded activity.
 type JournalAdvanceFn func(userID int64, stat string, amount int)
 
+// WorldSpawnFn is called by RecordActivity after quest/journal logic to give the
+// world-quest system a chance to spawn a new side quest. It should be cheap and
+// return quickly; implementations decide internally whether to roll and start.
+type WorldSpawnFn func(userID int64, stat string, amount int)
+
 // Store is the data-access layer over GORM.
 type Store struct {
 	DB              *gorm.DB
@@ -55,6 +60,7 @@ type Store struct {
 	DefaultPrefix   string
 	questAdvanceFn  QuestAdvanceFn
 	journalFn       JournalAdvanceFn
+	worldSpawnFn    WorldSpawnFn
 
 	settingsMu    sync.Mutex
 	settingsCache map[int64]serverSettingsEntry
@@ -64,6 +70,8 @@ func (s *Store) SetQuestAdvanceFn(fn QuestAdvanceFn) { s.questAdvanceFn = fn }
 
 // SetJournalFn registers the journal advance hook (journal.New wires this).
 func (s *Store) SetJournalFn(fn JournalAdvanceFn) { s.journalFn = fn }
+
+func (s *Store) SetWorldSpawnFn(fn WorldSpawnFn) { s.worldSpawnFn = fn }
 
 func New(db *gorm.DB, cfg *config.Config) *Store {
 	return &Store{DB: db, StartingBalance: cfg.StartingBalance, DefaultPrefix: cfg.Prefix}
@@ -768,6 +776,9 @@ func (s *Store) RecordActivity(userID int64, stat string, amount int) error {
 	if s.journalFn != nil {
 		s.journalFn(userID, stat, amount)
 	}
+	if s.worldSpawnFn != nil {
+		s.worldSpawnFn(userID, stat, amount)
+	}
 	return nil
 }
 
@@ -975,6 +986,12 @@ func (s *Store) ClaimDailyTurnIn(userID int64) (completed bool, err error) {
 		s.pushQuestNotification(userID, QuestNotification{QuestID: "daily_quest", Completed: true})
 	}
 	return completed, nil
+}
+
+// PushQuestNotification queues a quest event so the user's next command can
+// surface it. Exported for the world-quest spawn hook (quests service).
+func (s *Store) PushQuestNotification(userID int64, n QuestNotification) {
+	s.pushQuestNotification(userID, n)
 }
 
 // pushQuestNotification queues a quest event so the user's next command can

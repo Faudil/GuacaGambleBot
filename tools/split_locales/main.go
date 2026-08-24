@@ -1,8 +1,17 @@
+//go:build ignore
+
 // Command split_locales migrates the legacy flat locale packs
 // (locales/en.json, locales/fr.json) into per-namespace files
 // (locales/en/<namespace>.json, locales/fr/<namespace>.json).
 //
 // Usage: go run ./tools/split_locales [locales-dir]
+//
+// MIGRATED 2025-08: The migration has already been executed (locales/*.json
+// no longer exist; locales are now split per-namespace). This tool is retained
+// for historical reference only and is excluded from the default build via
+// `//go:build ignore`. Do not run it on the current layout — it would error
+// with "no locale packs found". Safe to delete after 2026-02 if no rollback
+// is needed.
 package main
 
 import (

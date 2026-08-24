@@ -70,13 +70,13 @@ var Houses = map[string]*HouseType{
 		ID: "mansion", Price: 25000, MaxLevel: 10, IncomePerHour: 50,
 		InventoryBonus: 1000, PetSlotsBonus: 10, BankCapacity: 10000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
 		Buffs:            []string{"+1000 Inventory Slots", "+10 Pet Slots", "$10,000 Bank Cap", "20% Crafting Discount"},
-		MaxSanctuaryTier: 3,
+		MaxSanctuaryTier: 8,
 	},
 	"gilded_palace": {
 		ID: "gilded_palace", Price: 500000, MaxLevel: 20, IncomePerHour: 500,
 		InventoryBonus: 2000, PetSlotsBonus: 25, BankCapacity: 100000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
 		Buffs:            []string{"+2000 Inventory Slots", "+25 Pet Slots", "$100,000 Bank Cap", "30% Crafting Discount"},
-		MaxSanctuaryTier: 4,
+		MaxSanctuaryTier: 10,
 	},
 }
 
