@@ -18,6 +18,7 @@ var ErrSanctuaryFull = errors.New("sanctuary is full")
 var ErrPetAlreadyInSanctuary = errors.New("pet is already in sanctuary")
 var ErrPetNotInSanctuary = errors.New("pet is not in sanctuary")
 var ErrShowcaseNoSlots = errors.New("showcase is full")
+var ErrHouseSanctuaryCap = errors.New("sanctuary max tier for this house reached")
 
 type SanctuaryTier struct {
 	Tier       int
@@ -131,6 +132,51 @@ func (s *Service) GetMaxSlots(userID int64) int {
 	return 0
 }
 
+func (s *Service) GetHouseMaxTier(userID int64) int {
+	var h model.UserHousing
+	if err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&h).Error; err != nil {
+		return 0
+	}
+	ht := getHouseDef(h.HouseType)
+	if ht == nil {
+		return 0
+	}
+	return ht.MaxSanctuaryTier
+}
+
+func (s *Service) GetHouseMaxSlots(userID int64) int {
+	maxTier := s.GetHouseMaxTier(userID)
+	if t, ok := SanctuaryTiers[maxTier]; ok {
+		return t.Slots
+	}
+	return 0
+}
+
+// HasSanctuarySpace reports whether the sanctuary has a free slot.
+func (s *Service) HasSanctuarySpace(userID int64) bool {
+	return s.GetUsedSlots(userID) < s.GetMaxSlots(userID)
+}
+
+// getHouseDef avoids importing housing service (circular). Duplicate minimal house meta.
+func getHouseDef(houseType string) *houseMeta {
+	if m, ok := houseMaxTier[houseType]; ok {
+		return m
+	}
+	return nil
+}
+
+type houseMeta struct {
+	MaxSanctuaryTier int
+}
+
+var houseMaxTier = map[string]*houseMeta{
+	"cardboard_box": {MaxSanctuaryTier: 1},
+	"wooden_shack":  {MaxSanctuaryTier: 2},
+	"brick_house":   {MaxSanctuaryTier: 3},
+	"mansion":       {MaxSanctuaryTier: 3},
+	"gilded_palace": {MaxSanctuaryTier: 4},
+}
+
 func (s *Service) GetUsedSlots(userID int64) int {
 	var count int64
 	s.store.DB.Model(&model.UserPet{}).Where("user_id = ? AND in_sanctuary = ?", userID, true).Count(&count)
@@ -140,6 +186,9 @@ func (s *Service) GetUsedSlots(userID int64) int {
 func (s *Service) CanStartConstruction(userID int64, tier int) bool {
 	_, ok := SanctuaryTiers[tier]
 	if !ok {
+		return false
+	}
+	if tier > s.GetHouseMaxTier(userID) {
 		return false
 	}
 	san, err := s.GetSanctuary(userID)
@@ -156,6 +205,9 @@ func (s *Service) CanStartConstruction(userID int64, tier int) bool {
 }
 
 func (s *Service) StartConstruction(userID int64, tier int) error {
+	if tier > s.GetHouseMaxTier(userID) {
+		return ErrHouseSanctuaryCap
+	}
 	if !s.CanStartConstruction(userID, tier) {
 		return errors.New("cannot start construction")
 	}

@@ -99,6 +99,7 @@
       "hatching_title": "🥚 Hatching in progress...",
       "no_egg": "❌ You don't have a biome egg in your inventory! Hunt for one or buy at the `!shop`.",
       "no_slots": "❌ You don't have enough pet slots! You can only have {max} pets at once.",
+      "sent_to_sanctuary": "🏡 Your active roster is full — the new hatchling was sent directly to your sanctuary!",
       "step1": "The **{egg}** trembles...\n*Crack...*",
       "step_footer": "🥚 {egg}",
       "step2": "The shell breaks!\n*CRACK CRACK...*",

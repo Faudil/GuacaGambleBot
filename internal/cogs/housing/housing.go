@@ -58,6 +58,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("house", "start_research", c.onStartResearch)
 	r.Component("house", "complete_research", c.onCompleteResearch)
 	r.Component("house", "sanctuary", c.onSanctuary)
+	r.Component("house", "sanctuary_upgrade", c.onSanctuaryUpgrade)
+	r.Component("house", "sanctuary_complete", c.onSanctuaryComplete)
 	r.Component("house", "rest", c.onRest)
 	r.Component("house", "tree_start", c.onTreeStart)
 	r.Component("house", "tree_complete", c.onTreeComplete)
@@ -103,8 +105,8 @@ func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, [
 			components.Button(i18n.T("housing.btn_upgrade", lang), components.EncodeOwner(userID, "house", "upgrade"), discordgo.PrimaryButton),
 		),
 		components.ActionRow(
-			components.Button("🪑 Furniture", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
-			components.Button("🏡 Sanctuary", components.EncodeOwner(userID, "house", "sanctuary"), discordgo.SuccessButton),
+			components.Button(i18n.T("housing.btn_furniture", lang), components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton),
+			components.Button(i18n.T("housing.btn_sanctuary", lang), components.EncodeOwner(userID, "house", "sanctuary"), discordgo.SuccessButton),
 		),
 	}
 	if furnituresvc.HasFurniture(c.store, userID, "bed") {
@@ -286,9 +288,9 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	buffsText := strings.Join(ht.Buffs, "\n")
 	statsText := i18n.T("housing.stats", lang, map[string]any{"level": h.Level, "buffs": buffsText})
 	if maxSlots := ht.SlotsAt(h.Level); maxSlots > 0 {
-		statsText += fmt.Sprintf("\n🪑 Furniture: %d/%d slots", c.fsvc.GetUsedSlots(userID), maxSlots)
+		statsText += "\n🪑 " + i18n.T("housing.furniture_slots", lang, map[string]any{"used": c.fsvc.GetUsedSlots(userID), "max": maxSlots})
 	}
-	effects := c.activeEffects(userID)
+	effects := c.activeEffects(userID, lang)
 	if len(effects) > 0 {
 		statsText += "\n✨ **Loadout:**\n" + strings.Join(effects, "\n")
 	}
@@ -550,13 +552,13 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if maxSlots == 0 {
 		houseName := i18n.T("housing.types."+h.HouseType, lang)
-		embed := components.Embed("🪑 Furnitures",
+		embed := components.Embed(i18n.T("housing.furniture_title", lang),
 			i18n.T("housing.furniture_house_none", lang, map[string]any{"house": houseName}),
 			0xB9936C)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
-				components.Button("🔙 Back", components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
-				components.Button("🔬 Research", components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton),
+				components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+				components.Button(i18n.T("housing.btn_research", lang), components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton),
 			),
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
@@ -564,31 +566,29 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	desc := fmt.Sprintf("🪑 **Slots: %d/%d**", used, maxSlots)
+	desc := "🪑 **" + i18n.T("housing.furniture_slots", lang, map[string]any{"used": used, "max": maxSlots}) + "**"
 
 	placedFurniture, _ := c.fsvc.GetPlaced(userID)
 	if len(placedFurniture) > 0 {
-		desc += "\n\n**Placed:**"
+		desc += "\n\n**" + i18n.T("housing.furniture_section_placed", lang) + ":**"
 		for _, pf := range placedFurniture {
 			fd := furnituresvc.FurnitureDefs[pf.FurnitureID]
 			if fd == nil {
 				continue
 			}
 			effectInfo := ""
-			for _, e := range fd.Effects {
-				effectInfo += fmt.Sprintf("\n  └ ✨ %s", e.Description)
+			if eff := furnitureEffect(pf.FurnitureID, lang); eff != "" {
+				effectInfo = fmt.Sprintf("\n  └ ✨ %s", eff)
 			}
 			researchInfo := ""
 			for _, rID := range fd.UnlocksResearch {
-				if rd := researchsvc.ResearchDefs[rID]; rd != nil {
-					researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
-				}
+				researchInfo += fmt.Sprintf("\n  └ 🔬 %s", researchName(rID, lang))
 			}
 			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s", fd.Emoji, furnitureName(pf.FurnitureID, lang), fd.Slots, effectInfo, researchInfo)
 		}
 	}
 
-	desc += "\n\n**Available:**"
+	desc += "\n\n**" + i18n.T("housing.furniture_section_available", lang) + ":**"
 	for _, fd := range furnituresvc.FurnitureDefs {
 		if c.fsvc.IsPlaced(userID, fd.ID) {
 			continue
@@ -598,31 +598,29 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			costStr += fmt.Sprintf(", %dx %s", qty, itemID)
 		}
 		effectInfo := ""
-		for _, e := range fd.Effects {
-			effectInfo += fmt.Sprintf("\n  └ ✨ %s", e.Description)
+		if eff := furnitureEffect(fd.ID, lang); eff != "" {
+			effectInfo = fmt.Sprintf("\n  └ ✨ %s", eff)
 		}
 		researchInfo := ""
 		for _, rID := range fd.UnlocksResearch {
-			if rd := researchsvc.ResearchDefs[rID]; rd != nil {
-				researchInfo += fmt.Sprintf("\n  └ 🔬 %s", rd.Name)
-			}
+			researchInfo += fmt.Sprintf("\n  └ 🔬 %s", researchName(rID, lang))
 		}
 		desc += fmt.Sprintf("\n%s %s | %s (%d slot)%s%s", fd.Emoji, furnitureName(fd.ID, lang), costStr, fd.Slots, effectInfo, researchInfo)
 	}
 
-	embed := components.Embed("🪑 Furnitures", desc, 0xB9936C)
+	embed := components.Embed(i18n.T("housing.furniture_title", lang), desc, 0xB9936C)
 
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 
-	row = append(row, components.Button("🔙 Back", components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton))
-	row = append(row, components.Button("🔬 Research", components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton))
+	row = append(row, components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton))
+	row = append(row, components.Button(i18n.T("housing.btn_research", lang), components.EncodeOwner(userID, "house", "research_view"), discordgo.PrimaryButton))
 	comps = append(comps, components.ActionRow(row...))
 
 	// Place/Remove buttons
 	actionRow := []discordgo.MessageComponent{}
 	for _, pf := range placedFurniture {
-		actionRow = append(actionRow, components.Button(fmt.Sprintf("❌ %s", pf.FurnitureID), components.EncodeOwner(userID, "house", "remove", pf.FurnitureID), discordgo.DangerButton))
+		actionRow = append(actionRow, components.Button(fmt.Sprintf("❌ %s", furnitureName(pf.FurnitureID, lang)), components.EncodeOwner(userID, "house", "remove", pf.FurnitureID), discordgo.DangerButton))
 		if len(actionRow) == 5 {
 			comps = append(comps, components.ActionRow(actionRow...))
 			actionRow = nil
@@ -637,7 +635,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if c.fsvc.IsPlaced(userID, fd.ID) {
 			continue
 		}
-		label := fmt.Sprintf("📦 %s", fd.ID)
+		label := fmt.Sprintf("📦 %s", furnitureName(fd.ID, lang))
 		actionRow = append(actionRow, components.Button(label, components.EncodeOwner(userID, "house", "place", fd.ID), discordgo.SuccessButton))
 		if len(actionRow) == 5 {
 			comps = append(comps, components.ActionRow(actionRow...))
@@ -654,7 +652,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 // activeEffects lists the passive effects of the furniture placed in the user's
 // active house, for display in the house view.
-func (c *Cog) activeEffects(userID int64) []string {
+func (c *Cog) activeEffects(userID int64, lang string) []string {
 	placed, err := c.fsvc.GetPlaced(userID)
 	if err != nil {
 		return nil
@@ -662,8 +660,12 @@ func (c *Cog) activeEffects(userID int64) []string {
 	var out []string
 	for _, pf := range placed {
 		if fd := furnituresvc.FurnitureDefs[pf.FurnitureID]; fd != nil {
-			for _, e := range fd.Effects {
-				out = append(out, fmt.Sprintf("%s %s", fd.Emoji, e.Description))
+			eff := furnitureEffect(pf.FurnitureID, lang)
+			if eff == "" && len(fd.Effects) > 0 {
+				eff = fd.Effects[0].Description
+			}
+			if eff != "" {
+				out = append(out, fmt.Sprintf("%s %s", fd.Emoji, eff))
 			}
 		}
 	}
@@ -679,6 +681,31 @@ func furnitureName(id string, lang string) string {
 			return name
 		}
 		return fd.Name
+	}
+	return id
+}
+
+// furnitureEffect resolves the localized effect description for a furniture.
+func furnitureEffect(id string, lang string) string {
+	key := "housing.furniture_effects." + id
+	if val := i18n.T(key, lang); val != key {
+		return val
+	}
+	if fd := furnituresvc.FurnitureDefs[id]; fd != nil && len(fd.Effects) > 0 {
+		return fd.Effects[0].Description
+	}
+	return ""
+}
+
+// researchName resolves the localized research name, falling back to the
+// English name from the research catalog when a locale key is missing.
+func researchName(id string, lang string) string {
+	if rd := researchsvc.ResearchDefs[id]; rd != nil {
+		key := "housing.researches." + id
+		if name := i18n.T(key, lang); name != key {
+			return name
+		}
+		return rd.Name
 	}
 	return id
 }
@@ -718,7 +745,7 @@ func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	embed := components.Embed("✅", fmt.Sprintf("Placed **%s** in your house!", furnitureName(furnitureID, lang)), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.furniture_place_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), 0x2ecc71)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -774,7 +801,7 @@ func (c *Cog) onRemoveConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	embed := components.Embed("🗑️", fmt.Sprintf("Removed **%s** from your house.", furnitureName(furnitureID, lang)), 0xe67e22)
+	embed := components.Embed("🗑️", i18n.T("housing.furniture_remove_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), 0xe67e22)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -814,21 +841,17 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	activeList, _ := c.rsvc.GetActive(userID)
 	if len(activeList) > 0 {
-		desc += "**⏳ Active Research:**\n"
+		desc += "**⏳ " + i18n.T("housing.research_active", lang) + ":**\n"
 		for _, a := range activeList {
-			rd := researchsvc.ResearchDefs[a.ResearchID]
-			rName := a.ResearchID
-			if rd != nil {
-				rName = rd.Name
-			}
+			rName := researchName(a.ResearchID, lang)
 			if a.FinishTime != nil {
 				remaining := time.Until(*a.FinishTime)
 				if remaining > 0 {
 					h := int(remaining.Hours())
 					m := int(remaining.Minutes()) % 60
-					desc += fmt.Sprintf("• %s — ⏱ %dh %dm remaining\n", rName, h, m)
+					desc += fmt.Sprintf("• %s — ⏱ %s\n", rName, i18n.T("housing.research_time_remaining", lang, map[string]any{"h": h, "m": m}))
 				} else {
-					desc += fmt.Sprintf("• %s — ✅ **Ready to complete!**\n", rName)
+					desc += fmt.Sprintf("• %s — ✅ **%s**\n", rName, i18n.T("housing.research_ready", lang))
 				}
 			}
 		}
@@ -837,20 +860,16 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	completed, _ := c.rsvc.GetCompleted(userID)
 	if len(completed) > 0 {
-		desc += "**✅ Completed Research:**\n"
+		desc += "**✅ " + i18n.T("housing.research_completed", lang) + ":**\n"
 		for _, co := range completed {
-			rd := researchsvc.ResearchDefs[co.ResearchID]
-			rName := co.ResearchID
-			if rd != nil {
-				rName = rd.Name
-			}
+			rName := researchName(co.ResearchID, lang)
 			desc += fmt.Sprintf("• %s\n", rName)
 		}
 		desc += "\n"
 	}
 
 	availCount := 0
-	desc += "**📖 Available Research:**\n"
+	desc += "**📖 " + i18n.T("housing.research_available", lang) + ":**\n"
 	for _, rd := range researchsvc.ResearchDefs {
 		if c.rsvc.IsCompleted(userID, rd.ID) {
 			continue
@@ -871,15 +890,15 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 			for itemID, qty := range rd.CostItems {
 				costStr += fmt.Sprintf(", %dx %s", qty, itemID)
 			}
-			desc += fmt.Sprintf("• %s (%dh) — %s\n", rd.Name, rd.TimeHours, costStr)
+			desc += fmt.Sprintf("• %s (%dh) — %s\n", researchName(rd.ID, lang), rd.TimeHours, costStr)
 			availCount++
 		}
 	}
 	if availCount == 0 {
-		desc += "*(Place furniture to unlock research)*\n"
+		desc += "*(" + i18n.T("housing.research_empty_available", lang) + ")*\n"
 	}
 
-	desc += "\n**🔒 Locked Research (place furniture first):**\n"
+	desc += "\n**🔒 " + i18n.T("housing.research_locked", lang) + ":**\n"
 	lockedCount := 0
 	for _, rd := range researchsvc.ResearchDefs {
 		if c.fsvc.IsPlaced(userID, rd.RequiredFurniture) || c.rsvc.IsCompleted(userID, rd.ID) {
@@ -895,27 +914,23 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 		if isActive {
 			continue
 		}
-		desc += fmt.Sprintf("• %s → need **%s**\n", rd.Name, furnitureName(rd.RequiredFurniture, lang))
+		desc += fmt.Sprintf("• %s → %s\n", researchName(rd.ID, lang), i18n.T("housing.research_needs_furniture", lang, map[string]any{"furniture": furnitureName(rd.RequiredFurniture, lang)}))
 		lockedCount++
 	}
 	if lockedCount == 0 {
-		desc += "*(All research unlocked or in progress)*"
+		desc += "*(" + i18n.T("housing.research_empty_locked", lang) + ")*"
 	}
 
-	embed := components.Embed("🔬 Research Overview", desc, 0x1B5E20)
+	embed := components.Embed(i18n.T("housing.research_title", lang), desc, 0x1B5E20)
 
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
-	row = append(row, components.Button("🔙 Back", components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton))
+	row = append(row, components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "furniture"), discordgo.SecondaryButton))
 
 	// Active ready-to-complete buttons
 	for _, a := range activeList {
 		if a.FinishTime != nil && time.Now().After(*a.FinishTime) {
-			rd := researchsvc.ResearchDefs[a.ResearchID]
-			label := fmt.Sprintf("✅ %s", a.ResearchID)
-			if rd != nil {
-				label = fmt.Sprintf("✅ %s", rd.Name)
-			}
+			label := fmt.Sprintf("✅ %s", researchName(a.ResearchID, lang))
 			row = append(row, components.Button(label, components.EncodeOwner(userID, "house", "complete_research", a.ResearchID), discordgo.SuccessButton))
 		}
 	}
@@ -938,7 +953,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 			continue
 		}
 		if c.fsvc.IsPlaced(userID, rd.RequiredFurniture) {
-			label := fmt.Sprintf("📖 %s", rd.ID)
+			label := fmt.Sprintf("📖 %s", researchName(rd.ID, lang))
 			actionRow = append(actionRow, components.Button(label, components.EncodeOwner(userID, "house", "start_research", rd.ID), discordgo.PrimaryButton))
 			if len(actionRow) == 5 {
 				comps = append(comps, components.ActionRow(actionRow...))
@@ -955,6 +970,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 }
 
 func (c *Cog) onStartResearch(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	cid := i.MessageComponentData().CustomID
 	_, _, rest := components.Decode(cid)
@@ -970,13 +986,12 @@ func (c *Cog) onStartResearch(b *interaction.Bot, i *discordgo.InteractionCreate
 		return
 	}
 	rd := researchsvc.ResearchDefs[researchID]
-	rName := researchID
-	timeStr := ""
+	rName := researchName(researchID, lang)
+	timeHours := 0
 	if rd != nil {
-		rName = rd.Name
-		timeStr = fmt.Sprintf(" (%dh)", rd.TimeHours)
+		timeHours = rd.TimeHours
 	}
-	embed := components.Embed("🔬", fmt.Sprintf("Started research **%s**%s!", rName, timeStr), 0x2ecc71)
+	embed := components.Embed("🔬", i18n.T("housing.research_started", lang, map[string]any{"name": rName, "time": timeHours}), 0x2ecc71)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -998,11 +1013,8 @@ func (c *Cog) onCompleteResearch(b *interaction.Bot, i *discordgo.InteractionCre
 		return
 	}
 	rd := researchsvc.ResearchDefs[researchID]
-	rName := researchID
-	if rd != nil {
-		rName = rd.Name
-	}
-	msg := fmt.Sprintf("Completed research **%s**! New recipes unlocked!", rName)
+	rName := researchName(researchID, lang)
+	msg := i18n.T("housing.research_completed_msg", lang, map[string]any{"name": rName})
 	if rd != nil && len(rd.UnlocksRecipes) > 0 {
 		names := make([]string, 0, len(rd.UnlocksRecipes))
 		for _, key := range rd.UnlocksRecipes {
@@ -1102,7 +1114,14 @@ func (c *Cog) onTreeComplete(b *interaction.Bot, i *discordgo.InteractionCreate)
 }
 
 func (c *Cog) onSanctuary(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+	embed, comps := c.buildHouseSanctuaryEmbed(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) buildHouseSanctuaryEmbed(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	san, _ := c.ssvc.GetOrCreateSanctuary(userID)
 	tier := san.Tier
 	used := c.ssvc.GetUsedSlots(userID)
@@ -1111,8 +1130,105 @@ func (c *Cog) onSanctuary(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if t, ok := sansvc.SanctuaryTiers[tier]; ok {
 		tierName = t.Name
 	}
-	desc := fmt.Sprintf("**Tier:** %s (Lvl %d)\n**Capacity:** %d/%d pets\n\nUse `/sanctuary` to manage your sanctuary in detail!", tierName, tier, used, max)
+	houseMaxTier := c.ssvc.GetHouseMaxTier(userID)
+	houseMaxSlots := c.ssvc.GetHouseMaxSlots(userID)
+	houseName := "No House"
+	if h, err := c.hsvc.GetHousing(userID); err == nil {
+		if ht := housingsvc.Houses[h.HouseType]; ht != nil {
+			houseName = i18n.T("housing.types."+h.HouseType, lang)
+		}
+	}
+	desc := fmt.Sprintf("**Tier:** %s (Lvl %d)\n**Capacity:** %d/%d pets\n", tierName, tier, used, max)
+	if houseMaxTier > 0 {
+		desc += fmt.Sprintf("**House Limit:** %s → max Tier %d (%d slots)\n", houseName, houseMaxTier, houseMaxSlots)
+	} else {
+		desc += fmt.Sprintf("**House Limit:** %s → no sanctuary allowed (buy a house)\n", houseName)
+	}
+	if san.UnderConstruction != nil {
+		remaining := ""
+		if san.FinishTime != nil {
+			d := time.Until(*san.FinishTime)
+			if d > 0 {
+				remaining = fmt.Sprintf(" (%dh remaining)", int(d.Hours()))
+			} else {
+				remaining = " (ready to complete!)"
+			}
+		}
+		desc += fmt.Sprintf("\n🔧 **Upgrading** to %s%s\n", sansvc.SanctuaryTiers[tier+1].Name, remaining)
+	} else if tier < houseMaxTier {
+		if next, ok := sansvc.SanctuaryTiers[tier+1]; ok {
+			mats := ""
+			for item, qty := range next.Materials {
+				if mats != "" {
+					mats += ", "
+				}
+				mats += fmt.Sprintf("%dx %s", qty, item)
+			}
+			desc += fmt.Sprintf("\n**Next:** %s — $%d + %s (%dh)\n", next.Name, next.Price, mats, next.BuildHours)
+		}
+	} else if tier >= houseMaxTier && houseMaxTier > 0 {
+		desc += "\n*Max tier for your house reached — buy a bigger house to expand further.*\n"
+	}
+	desc += "\nUse buttons below to manage sanctuary."
+
 	embed := components.Embed("🏡 Pet Sanctuary", desc, 0x2ecc71)
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
+
+	var comps []discordgo.MessageComponent
+	var buttons []discordgo.MessageComponent
+	// Upgrade / Complete button
+	if san.UnderConstruction != nil {
+		if san.FinishTime != nil && time.Now().After(*san.FinishTime) {
+			buttons = append(buttons, components.Button("✅ Complete", components.EncodeOwner(userID, "house", "sanctuary_complete"), discordgo.SuccessButton))
+		}
+	} else if tier < houseMaxTier {
+		if _, ok := sansvc.SanctuaryTiers[tier+1]; ok {
+			buttons = append(buttons, components.Button("⬆️ Upgrade Sanctuary", components.EncodeOwner(userID, "house", "sanctuary_upgrade"), discordgo.SuccessButton))
+		}
+	}
+	if len(buttons) > 0 {
+		comps = append(comps, components.ActionRow(buttons...))
+	}
+	// Link to detailed sanctuary cog
+	comps = append(comps, components.ActionRow(
+		components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
+	))
+	return embed, comps
+}
+
+func (c *Cog) onSanctuaryUpgrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	san, _ := c.ssvc.GetOrCreateSanctuary(userID)
+	nextTier := san.Tier + 1
+	if nextTier == 1 && san.Tier == 0 && c.ssvc.GetHouseMaxTier(userID) == 0 {
+		interaction.RespondError(b, i, lang, "housing.no_house")
+		return
+	}
+	if err := c.ssvc.StartConstruction(userID, nextTier); err != nil {
+		msg := err.Error()
+		if errors.Is(err, sansvc.ErrHouseSanctuaryCap) {
+			msg = i18n.T("housing.sanctuary_house_max", lang)
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "❌ " + msg, Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	embed, comps := c.buildHouseSanctuaryEmbed(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onSanctuaryComplete(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	if err := c.ssvc.CompleteConstruction(userID); err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "❌ " + err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	embed, comps := c.buildHouseSanctuaryEmbed(userID, lang)
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }

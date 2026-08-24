@@ -24,14 +24,16 @@ import (
 	jsvc "guacagamblebot/internal/service/journal"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
+	sansvc "guacagamblebot/internal/service/sanctuary"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
 )
 
 type Cog struct {
-	store *store.Store
-	cfg   *config.Config
-	svc   *petsvc.Service
+	store  *store.Store
+	cfg    *config.Config
+	svc    *petsvc.Service
+	sanSvc *sansvc.Service
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
@@ -41,7 +43,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	}
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
-	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg, npcSvc)}
+	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg, npcSvc), sanSvc: sansvc.New(s, cfg)}
 	r.Slash("pets", "Gérer vos familiers", c.onSlashMenu)
 	r.Slash("pet", "Gérer vos familiers", c.onSlashMenu)
 	r.Slash("hatch", "Éclore un œuf de familier", c.onHatchCommand)
@@ -111,14 +113,28 @@ func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.Messag
 	if err != nil || len(pets) == 0 {
 		embed.Description = i18n.T("pets.list.no_pets", lang)
 	} else {
-		lines := make([]string, 0, len(pets))
-		for _, p := range pets {
+		// Minimal truncate: Discord SelectMenu max 25 options and embed description 4096
+		truncated := false
+		displayPets := pets
+		if len(pets) > 25 {
+			displayPets = pets[:25]
+			truncated = true
+		}
+		lines := make([]string, 0, len(displayPets))
+		for _, p := range displayPets {
 			lines = append(lines, c.petCardLine(p, lang))
 		}
-		embed.Description = strings.Join(lines, "\n")
+		desc := strings.Join(lines, "\n")
+		if len([]rune(desc)) > 4000 {
+			desc = string([]rune(desc)[:4000]) + "…"
+		}
+		if truncated {
+			desc += fmt.Sprintf("\n*… +%d more pets (showing 25/%d)*", len(pets)-25, len(pets))
+		}
+		embed.Description = desc
 
-		opts := make([]discordgo.SelectMenuOption, 0, len(pets))
-		for _, p := range pets {
+		opts := make([]discordgo.SelectMenuOption, 0, len(displayPets))
+		for _, p := range displayPets {
 			pt := petsvc.PetTypes[p.PetType]
 			emoji := "🐾"
 			if pt != nil {
@@ -1324,16 +1340,31 @@ func (c *Cog) onHatchPrefix(b *interaction.Bot, s *discordgo.Session, m *discord
 	c.hatchEggMessage(b, s, m, userID, lang)
 }
 
+func (c *Cog) hasSanctuarySpace(userID int64) bool {
+	if c.sanSvc == nil {
+		return false
+	}
+	return c.sanSvc.HasSanctuarySpace(userID)
+}
+
+func (c *Cog) canHatchAnywhere(userID int64) bool {
+	if c.svc.CanCreatePet(userID) {
+		return true
+	}
+	return c.hasSanctuarySpace(userID)
+}
+
 func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userID int64, lang string) {
 	eggType, hatchKey := c.findEgg(userID)
 	if eggType == "" {
 		interaction.RespondError(b, i, lang, "pets.hatch.no_egg")
 		return
 	}
-	if !c.svc.CanCreatePet(userID) {
+	if !c.canHatchAnywhere(userID) {
 		interaction.RespondError(b, i, lang, "pets.hatch.no_slots")
 		return
 	}
+	activeFree := c.svc.CanCreatePet(userID)
 
 	biome := hatchKey
 	petType := ""
@@ -1346,6 +1377,14 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 	if err != nil || pet == nil {
 		interaction.RespondError(b, i, lang, "pets.hatch.error")
 		return
+	}
+	// If active roster full but sanctuary has space, put pet directly into sanctuary
+	sentToSanctuary := false
+	if !activeFree && c.hasSanctuarySpace(userID) {
+		pet.InSanctuary = true
+		pet.IsActive = false
+		_ = c.svc.UpdatePet(pet)
+		sentToSanctuary = true
 	}
 
 	if err := c.store.DB.Exec(
@@ -1402,6 +1441,9 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 			"emoji": emoji, "pet": pet.Nickname, "type": petType,
 			"personality": personality, "biome": biomeName, "egg": eggName, "rarity": rarityName,
 		})
+		if sentToSanctuary {
+			desc += "\n\n" + i18n.T("pets.hatch.sent_to_sanctuary", lang)
+		}
 		final := components.Embed(
 			i18n.T("pets.hatch.success_title", lang, map[string]any{"emoji": emoji}),
 			desc,
@@ -1417,10 +1459,11 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_egg", lang))
 		return
 	}
-	if !c.svc.CanCreatePet(userID) {
+	if !c.canHatchAnywhere(userID) {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_slots", lang))
 		return
 	}
+	activeFreeMsg := c.svc.CanCreatePet(userID)
 	biome := hatchKey
 	petType := ""
 	if hatchKey == "prehistoric" {
@@ -1432,6 +1475,13 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	if err != nil || pet == nil {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
 		return
+	}
+	sentToSanctuaryMsg := false
+	if !activeFreeMsg && c.hasSanctuarySpace(userID) {
+		pet.InSanctuary = true
+		pet.IsActive = false
+		_ = c.svc.UpdatePet(pet)
+		sentToSanctuaryMsg = true
 	}
 	if err := c.store.DB.Exec(
 		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
@@ -1484,6 +1534,9 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 		"emoji": emoji, "pet": pet.Nickname, "type": petType,
 		"personality": personality, "biome": biomeName, "egg": eggName, "rarity": rarityName,
 	})
+	if sentToSanctuaryMsg {
+		desc += "\n\n" + i18n.T("pets.hatch.sent_to_sanctuary", lang)
+	}
 	final := components.Embed(
 		i18n.T("pets.hatch.success_title", lang, map[string]any{"emoji": emoji}),
 		desc,

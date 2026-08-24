@@ -105,6 +105,7 @@
       "magnetic_coil": "Magnetic Coil",
       "workbench": "Workbench"
     },
-    "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**. **+1 furniture slot!**"
+    "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**. **+1 furniture slot!**",
+    "sanctuary_house_max": "❌ Your house cannot support a larger sanctuary — buy a bigger house to expand further."
   }
 }
