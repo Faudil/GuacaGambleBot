@@ -26,7 +26,8 @@ type Cog struct {
 }
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
-	c := &Cog{store: s, cfg: cfg, svc: sansvc.New(s, cfg), psvc: ps.New(s, cfg)}
+	psvc := ps.New(s, cfg)
+	c := &Cog{store: s, cfg: cfg, svc: sansvc.New(s, cfg, psvc), psvc: psvc}
 	r.SlashWithOptions("sanctuary", "Manage or visit your pet sanctuary", []*discordgo.ApplicationCommandOption{
 		{
 			Type:        discordgo.ApplicationCommandOptionUser,
@@ -45,6 +46,12 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("sanctuary", "showcase", c.onShowcaseSelect)
 	r.Component("sanctuary", "showcase_select", c.onShowcaseSet)
 	r.Component("sanctuary", "showcase_slot", c.onShowcaseAssign)
+	r.Component("sanctuary", "fusion", c.onFusionMenu)
+	r.Component("sanctuary", "fusion_rarity", c.onFusionRarity)
+	r.Component("sanctuary", "fusion_pick", c.onFusionPick)
+	r.Component("sanctuary", "fusion_confirm", c.onFusionConfirm)
+	r.Component("sanctuary", "ascend", c.onAscendMenu)
+	r.Component("sanctuary", "ascend_pick", c.onAscendPick)
 }
 
 func (c *Cog) onSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -177,6 +184,17 @@ func (c *Cog) buildButtons(san *model.UserSanctuary, tier, used, max int, lang s
 		)
 	}
 
+	if tier > 0 {
+		buttons = append(buttons,
+			components.Button("⚗️ Fusion", components.EncodeOwner(userID, "sanctuary", "fusion"), discordgo.PrimaryButton),
+		)
+	}
+	if tier >= 2 {
+		buttons = append(buttons,
+			components.Button("👑 Ascend", components.EncodeOwner(userID, "sanctuary", "ascend"), discordgo.SuccessButton),
+		)
+	}
+
 	if len(buttons) == 0 {
 		if tier == 0 {
 			buttons = append(buttons,
@@ -297,6 +315,315 @@ func (c *Cog) onComplete(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+}
+
+// ── Fusion (TradeUp) & Ascendancy ─────────────────────────────────────────
+
+func (c *Cog) onFusionMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(interaction.UserID(i))
+	desc := "**Fusion Lab** — Trade pets of same rarity for a higher one (instant).\n"
+	for _, rarity := range []string{ps.RarityCommon, ps.RarityRare, ps.RarityEpic} {
+		req, target := ps.TradeUpRarity(rarity)
+		cost := sansvc.TradeUpCosts[rarity]
+		mats := ""
+		for k, v := range cost.Items {
+			if mats != "" {
+				mats += ", "
+			}
+			mats += fmt.Sprintf("%dx %s", v, k)
+		}
+		desc += fmt.Sprintf("\n**%s → %s** : %d pets + $%d + %s", rarity, target, req, cost.Money, mats)
+	}
+	embed := components.Embed("⚗️ Fusion Lab", desc, 0x9b59b6)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("Common→Rare (5)", components.EncodeOwner(userID, "sanctuary", "fusion_rarity", ps.RarityCommon), discordgo.PrimaryButton),
+			components.Button("Rare→Epic (4)", components.EncodeOwner(userID, "sanctuary", "fusion_rarity", ps.RarityRare), discordgo.PrimaryButton),
+			components.Button("Epic→Legendary (3)", components.EncodeOwner(userID, "sanctuary", "fusion_rarity", ps.RarityEpic), discordgo.DangerButton),
+		),
+		components.ActionRow(
+			components.Button("🔙 Back", components.EncodeOwner(userID, "sanctuary", "view"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onFusionRarity(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	rarity := rest[0]
+	req, _ := ps.TradeUpRarity(rarity)
+	if req == 0 {
+		return
+	}
+	// Research gate
+	if rid, ok := sansvc.TradeUpResearch[rarity]; ok {
+		var r model.UserResearch
+		if err := c.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, rid, true).First(&r).Error; err != nil {
+			_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{Content: "❌ Research required: " + rid, Flags: discordgo.MessageFlagsEphemeral},
+			})
+			return
+		}
+	}
+	pets, _ := c.psvc.GetPets(userID)
+	opts := []discordgo.SelectMenuOption{}
+	for _, p := range pets {
+		pt := ps.PetTypes[p.PetType]
+		if pt == nil || pt.Rarity != rarity {
+			continue
+		}
+		if p.IsActive || p.OnExpedition {
+			continue
+		}
+		label := p.Nickname + " (" + p.PetType + ")"
+		if len(label) > 50 {
+			label = label[:50]
+		}
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label: label,
+			Value: strconv.FormatInt(p.ID, 10),
+			Emoji: &discordgo.ComponentEmoji{Name: pt.Emoji},
+		})
+		if len(opts) >= 25 {
+			break
+		}
+	}
+	if len(opts) < req {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: fmt.Sprintf("❌ Need %d %s pets (have eligible %d)", req, rarity, len(opts)), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	embed := components.Embed("⚗️ Select pets", fmt.Sprintf("Select exactly **%d %s** pets to fuse.", req, rarity), 0x9b59b6)
+	sel := discordgo.SelectMenu{
+		CustomID:    components.EncodeOwner(userID, "sanctuary", "fusion_pick", rarity),
+		Placeholder: fmt.Sprintf("Pick %d pets", req),
+		Options:     opts,
+		MinValues:   &req,
+		MaxValues:   req,
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{components.ActionRow(sel)}))
+}
+
+func (c *Cog) onFusionPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	data := i.MessageComponentData()
+	_, _, rest := components.Decode(data.CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	rarity := rest[0]
+	ids := data.Values
+	req, target := ps.TradeUpRarity(rarity)
+	if len(ids) != req {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: fmt.Sprintf("❌ Need %d pets", req), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	cost := sansvc.TradeUpCosts[rarity]
+	mats := ""
+	for k, v := range cost.Items {
+		if mats != "" {
+			mats += ", "
+		}
+		mats += fmt.Sprintf("%dx %s", v, k)
+	}
+	embed := components.Embed("⚗️ Confirm Fusion", fmt.Sprintf("%d %s → 1 %s\nCost: $%d + %s\nRandom species of %s", req, rarity, target, cost.Money, mats, target), 0xf1c40f)
+	joined := ""
+	for idx, id := range ids {
+		if idx > 0 {
+			joined += ","
+		}
+		joined += id
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button("✅ Confirm Fusion", components.EncodeOwner(userID, "sanctuary", "fusion_confirm", rarity, joined), discordgo.SuccessButton),
+			components.Button("❌ Cancel", components.EncodeOwner(userID, "sanctuary", "view"), discordgo.SecondaryButton),
+		),
+	}))
+	_ = lang
+}
+
+func (c *Cog) onFusionConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
+	}
+	// rest[0]=rarity, rest[1]=comma joined ids
+	idsStr := rest[1]
+	parts := []string{}
+	// custom_id may have been split by ::, so joined ids may be in separate rest entries if commas not escaped ; handle both
+	if len(rest) > 2 {
+		// if ids were split by Encode, they would be separate entries; reconstruct
+		for _, p := range rest[1:] {
+			parts = append(parts, p)
+		}
+		idsStr = ""
+		for idx, p := range parts {
+			if idx > 0 {
+				idsStr += ","
+			}
+			idsStr += p
+		}
+		// fallback: values also carry ids if coming from previous select? not here
+	}
+	_ = idsStr
+	idStrs := splitIDs(idsStr)
+	var ids []int64
+	for _, s := range idStrs {
+		if s == "" {
+			continue
+		}
+		if id, err := strconv.ParseInt(s, 10, 64); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		// try fallback from Values if button encode failed due to length limit
+		data := i.MessageComponentData()
+		for _, v := range data.Values {
+			if id, err := strconv.ParseInt(v, 10, 64); err == nil {
+				ids = append(ids, id)
+			}
+		}
+	}
+	newPet, err := c.svc.TradeUp(userID, ids)
+	if err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "❌ Fusion failed: " + err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	pt := ps.PetTypes[newPet.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+	embed := components.Embed("✨ Fusion Success!", fmt.Sprintf("%s **%s** (%s) created!", emoji, newPet.Nickname, newPet.PetType), 0x2ecc71)
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+	_ = lang
+}
+
+func splitIDs(s string) []string {
+	out := []string{}
+	cur := ""
+	for _, ch := range s {
+		if ch == ',' {
+			out = append(out, cur)
+			cur = ""
+		} else {
+			cur += string(ch)
+		}
+	}
+	if cur != "" {
+		out = append(out, cur)
+	}
+	return out
+}
+
+func (c *Cog) onAscendMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	active, err := c.psvc.GetActivePet(userID)
+	if err != nil || active == nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.transcend.no_pet", lang), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	if active.Level < 20 {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.transcend.level_low", lang, map[string]any{"name": active.Nickname}), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	if active.TranscendLockedUntil != nil && time.Now().Before(*active.TranscendLockedUntil) {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: fmt.Sprintf("❌ %s is locked until %s", active.Nickname, active.TranscendLockedUntil.Format(time.RFC822)), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	pets, _ := c.psvc.GetPets(userID)
+	opts := []discordgo.SelectMenuOption{}
+	for _, p := range pets {
+		if p.ID == active.ID {
+			continue
+		}
+		if p.PetType != active.PetType {
+			continue
+		}
+		if p.OnExpedition {
+			continue
+		}
+		pt := ps.PetTypes[p.PetType]
+		emoji := "🐾"
+		if pt != nil {
+			emoji = pt.Emoji
+		}
+		label := p.Nickname + " Lvl " + strconv.Itoa(p.Level)
+		if len(label) > 50 {
+			label = label[:50]
+		}
+		opts = append(opts, discordgo.SelectMenuOption{
+			Label: label,
+			Value: strconv.FormatInt(p.ID, 10),
+			Emoji: &discordgo.ComponentEmoji{Name: emoji},
+		})
+		if len(opts) >= 25 {
+			break
+		}
+	}
+	if len(opts) == 0 {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: fmt.Sprintf("❌ No sacrifice of same species (%s) found.", active.PetType), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	embed := components.Embed("👑 Ascend — Transcend", fmt.Sprintf("Active: **%s** (%s) Lvl %d TRS %d\nSacrifice same species to gain +1 TRS and lock 24h.", active.Nickname, active.PetType, active.Level, active.TrsLvl), 0x9b59b6)
+	sel := discordgo.SelectMenu{
+		CustomID:    components.EncodeOwner(userID, "sanctuary", "ascend_pick"),
+		Placeholder: "Choose sacrifice",
+		Options:     opts,
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{components.ActionRow(sel)}))
+}
+
+func (c *Cog) onAscendPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	data := i.MessageComponentData()
+	if len(data.Values) == 0 {
+		return
+	}
+	sacID, _ := strconv.ParseInt(data.Values[0], 10, 64)
+	active, err := c.svc.Transcend(userID, sacID)
+	if err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "❌ Transcend failed: " + err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	embed := components.Embed("✨ Transcendence!", i18n.T("pets.transcend.success", lang, map[string]any{"name": active.Nickname, "level": active.TrsLvl}), 0x9b59b6)
+	embed.Footer = &discordgo.MessageEmbedFooter{Text: "Locked for 24h"}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 }
 
 func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {

@@ -287,6 +287,7 @@ var all = []Item{
 	{ID: "crayfish", Source: SourceShop, Name: "Crayfish", Emoji: "🦞", Price: 25, Description: "Rare bait. Attracts stronger fish.", EffectType: "bait", Droppable: true, Category: Fishing},
 	{ID: "golden_lure", Source: SourceShop, Name: "Golden Lure", Emoji: "👑", Price: 100, Description: "Legendary bait. Draws the deadliest creatures.", EffectType: "bait", Droppable: true, Category: Fishing},
 	{ID: "mutagen", Source: SourceShop, Name: "Mutagen", Emoji: "🧪", Price: 100, Description: "A glowing mutagenic substance from a mutated fish.", EffectType: "resource", Droppable: true, Category: Fishing},
+	{ID: "mutated_flesh", Source: SourceShop, Name: "Mutated Flesh", Emoji: "🧫", Price: 30, Description: "Tainted flesh from a mutated fish. Still warm and pulsating.", EffectType: "resource", Droppable: true, Category: Fishing},
 
 	// --- Farming ---
 	{ID: "rotten_plant", Source: SourceShop, Name: "Rotten Plant", Emoji: "🌿", Price: 0, Description: "You mismanaged your farm...", EffectType: "resource", Droppable: true, Category: Farming},

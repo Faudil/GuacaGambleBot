@@ -38,6 +38,17 @@
     "success_msg": "🛠️ **Great!** You crafted **{amount}x {item}** and gained **{xp} XP**!",
     "title": "🛠️ Crafting Recipes (Level {level})",
     "unlock_line": "**{item}** - {ingredients}",
-    "unlocked_title": "**🔓 Unlocked Recipes**\n"
+    "unlocked_title": "**🔓 Unlocked Recipes**\n",
+    "qty_title": "🔨 {item} — Quantity",
+    "qty_desc": "Ingredients per unit: {ingredients}\nTotal for **{qty}x**: {totalIngredients}\nXP: **{xp}**\nMax craftable: **{max}**",
+    "qty_confirm": "✅ Craft {qty}x",
+    "qty_back": "↩ Back",
+    "step_minus5": "−5",
+    "step_minus1": "−1",
+    "step_plus1": "+1",
+    "step_plus5": "+5",
+    "invalid_qty_range": "❌ Quantity must be between 1 and 10.",
+    "max_hint": " (max craftable: {max})",
+    "craft_qty_label": "{qty}/10"
   }
 }

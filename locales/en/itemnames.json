@@ -460,6 +460,10 @@
       "name": "Mutagen",
       "description": "A glowing mutagenic substance from a mutated fish."
     },
+    "mutated_flesh": {
+      "name": "Mutated Flesh",
+      "description": "Tainted flesh from a mutated fish. Still warm and pulsating."
+    },
     "mysterious_seed": {
       "name": "Mysterious Seed",
       "description": "An unknown seed pulsing with energy."

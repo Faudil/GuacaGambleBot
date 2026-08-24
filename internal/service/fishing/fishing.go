@@ -459,6 +459,7 @@ func (s *Service) ResolveCatch(userID int64, state *FishFightState) (*FightResol
 	}
 
 	if state.Mutated {
+		_ = s.store.AddItemRaw(s.store.DB, userID, "mutated_flesh", 2)
 		_ = s.store.AddItemRaw(s.store.DB, userID, "mutagen", 1)
 	}
 

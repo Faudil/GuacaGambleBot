@@ -48,9 +48,14 @@ type Cog struct {
 	svc   *crtsvc.Service
 }
 
+const maxCraftAmount = 10
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: crtsvc.New(s, cfg)}
-	r.Slash("craft", "Fabriquer un objet à partir de recettes.", c.onSlashCraft)
+	r.SlashWithOptions("craft", "Fabriquer un objet à partir de recettes.", []*discordgo.ApplicationCommandOption{
+		{Type: discordgo.ApplicationCommandOptionString, Name: "item", Description: "Recipe to craft", Required: false, Autocomplete: true},
+		{Type: discordgo.ApplicationCommandOptionInteger, Name: "quantity", Description: "How many (1-10)", Required: false, MinValue: float64Ptr(1), MaxValue: 10},
+	}, c.onSlashCraft)
 	r.Slash("recipes", "Voir les recettes de craft disponibles.", c.onSlashRecipes)
 	r.Prefix("craft", c.onCraftPrefix)
 	r.Prefix("fabriquer", c.onCraftPrefix)
@@ -63,14 +68,141 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("crafting", "craft_filter", c.onCraftFilter)
 	r.Component("crafting", "craft_nav", c.onCraftNav)
 	r.Component("crafting", "craft_back", c.onCraftBack)
+	r.Component("crafting", "craft_step", c.onCraftStep)
+	r.Component("crafting", "craft_confirm", c.onCraftConfirm)
 }
 
 func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
+
+	// Autocomplete handling
+	if i.Type == discordgo.InteractionApplicationCommandAutocomplete {
+		c.handleCraftAutocomplete(b, i, lang, userID)
+		return
+	}
+
+	// Parse slash options: item + quantity
+	var itemOpt *string
+	var qtyOpt *int
+	for _, opt := range i.ApplicationCommandData().Options {
+		switch opt.Name {
+		case "item":
+			if v, ok := opt.Value.(string); ok {
+				itemOpt = &v
+			}
+		case "quantity":
+			if v, ok := opt.Value.(float64); ok {
+				qi := int(v)
+				qtyOpt = &qi
+			}
+		}
+	}
+	if itemOpt != nil && strings.TrimSpace(*itemOpt) != "" {
+		amount := 1
+		if qtyOpt != nil {
+			amount = *qtyOpt
+		}
+		if amount < 1 || amount > maxCraftAmount {
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+					components.Embed("❌", i18n.T("crafting.invalid_qty_range", lang), 0xe74c3c), nil))
+			return
+		}
+		query := strings.ToLower(strings.TrimSpace(*itemOpt))
+		recipeKey := c.resolveRecipeKey(query, lang)
+		recipe, ok := crtsvc.Recipes[recipeKey]
+		if !ok {
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+					components.Embed("❌", i18n.T("crafting.no_recipe", lang, map[string]any{"item": query}), 0xe74c3c), nil))
+			return
+		}
+		// Enforce max craftable hint if requested exceeds possible
+		if max := c.maxCraftable(userID, recipe); amount > max {
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+					components.Embed("❌", i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})+i18n.T("crafting.max_hint", lang, map[string]any{"max": max}), 0xe74c3c), nil))
+			return
+		}
+		charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, amount)
+		if err != nil {
+			var msg string
+			switch err {
+			case crtsvc.ErrNoLevel:
+				msg = i18n.T("crafting.no_level", lang, map[string]any{"level": recipe.LevelRequired})
+			case crtsvc.ErrNoIngredients:
+				max := c.maxCraftable(userID, recipe)
+				msg = i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."}) + i18n.T("crafting.max_hint", lang, map[string]any{"max": max})
+			case crtsvc.ErrNoRecipe:
+				msg = i18n.T("crafting.no_recipe", lang, map[string]any{"item": query})
+			case crtsvc.ErrResearchRequired:
+				rn := c.researchName(recipe.RequiredResearch)
+				if !c.isResearchCompleted(userID, recipe.RequiredResearch2) {
+					rn = c.researchName(recipe.RequiredResearch2)
+				}
+				msg = i18n.T("crafting.no_research", lang, map[string]any{"research": rn})
+			default:
+				if err == store.ErrInventoryFull {
+					msg = i18n.T("inventory.full", lang)
+				} else {
+					msg = err.Error()
+				}
+			}
+			_ = b.Session.InteractionRespond(i.Interaction,
+				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+					components.Embed("❌", msg, 0xe74c3c), nil))
+			return
+		}
+		resDisplay := c.displayName(recipe.Result, lang)
+		msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": amount, "item": resDisplay, "xp": recipe.XP * amount})
+		if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
+			msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
+		}
+		if charLeveled {
+			msg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charNewLevel})
+		}
+		_ = b.Session.InteractionRespond(i.Interaction,
+			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
+				components.Embed("✅", msg, 0x2ecc71), nil))
+		return
+	}
+
 	embed, comps := c.buildCraftMenu(userID, lang, "all", 1)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+func (c *Cog) handleCraftAutocomplete(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64) {
+	focused := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "item" && opt.Focused {
+			if v, ok := opt.Value.(string); ok {
+				focused = strings.ToLower(v)
+			}
+		}
+	}
+	level := c.svc.GetCrafterLevel(userID)
+	choices := []*discordgo.ApplicationCommandOptionChoice{}
+	for key, rec := range crtsvc.Recipes {
+		if !c.unlocked(userID, level, rec) {
+			continue
+		}
+		name := c.displayName(rec.Result, lang)
+		if focused != "" && !strings.Contains(strings.ToLower(name), focused) && !strings.Contains(strings.ToLower(key), focused) && !strings.Contains(strings.ToLower(rec.Result), focused) {
+			continue
+		}
+		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{Name: name, Value: key})
+		if len(choices) >= 25 {
+			break
+		}
+	}
+	// sort by name for stable autocomplete
+	sort.Slice(choices, func(a, b int) bool { return choices[a].Name < choices[b].Name })
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{Choices: choices},
+	})
 }
 
 func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
@@ -105,6 +237,10 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.invalid_qty", lang))
 		return
 	}
+	if amount > maxCraftAmount {
+		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.invalid_qty_range", lang))
+		return
+	}
 
 	itemQuery = strings.ToLower(strings.TrimSpace(itemQuery))
 
@@ -115,13 +251,20 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 		return
 	}
 
+	// max hint for prefix
+	if max := c.maxCraftable(userID, recipe); amount > max {
+		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})+i18n.T("crafting.max_hint", lang, map[string]any{"max": max}))
+		return
+	}
+
 	charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, amount)
 	if err != nil {
 		switch err {
 		case crtsvc.ErrNoLevel:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_level", lang, map[string]any{"level": recipe.LevelRequired}))
 		case crtsvc.ErrNoIngredients:
-			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."}))
+			max := c.maxCraftable(userID, recipe)
+			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})+i18n.T("crafting.max_hint", lang, map[string]any{"max": max}))
 		case crtsvc.ErrNoRecipe:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_recipe", lang, map[string]any{"item": itemQuery}))
 		case crtsvc.ErrResearchRequired:
@@ -131,7 +274,11 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 			}
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("crafting.no_research", lang, map[string]any{"research": rName}))
 		default:
-			_, _ = sess.ChannelMessageSend(m.ChannelID, "❌ "+err.Error())
+			if err == store.ErrInventoryFull {
+				_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("inventory.full", lang))
+			} else {
+				_, _ = sess.ChannelMessageSend(m.ChannelID, "❌ "+err.Error())
+			}
 		}
 		return
 	}
@@ -583,8 +730,7 @@ func (c *Cog) onCraftNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
-// onCraftPick crafts one copy of the recipe chosen in the menu and replaces
-// the menu with the result.
+// onCraftPick now opens a quantity stepper instead of crafting 1 immediately.
 func (c *Cog) onCraftPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -594,20 +740,65 @@ func (c *Cog) onCraftPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	recipeKey := values[0]
+	if _, ok := crtsvc.Recipes[recipeKey]; !ok {
+		interaction.RespondError(b, i, lang, "crafting.no_recipe", map[string]any{"item": recipeKey})
+		return
+	}
+	embed, comps := c.buildCraftQuantityView(userID, recipeKey, lang, 1)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onCraftStep(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
+	}
+	recipeKey := rest[0]
+	qty, _ := strconv.Atoi(rest[1])
+	if _, ok := crtsvc.Recipes[recipeKey]; !ok {
+		interaction.RespondError(b, i, lang, "crafting.no_recipe", map[string]any{"item": recipeKey})
+		return
+	}
+	qty = max(1, min(qty, maxCraftAmount))
+	// also clamp to max craftable so stepper never exceeds feasible
+	if max := c.maxCraftable(userID, crtsvc.Recipes[recipeKey]); max > 0 && qty > max {
+		qty = max
+	}
+	embed, comps := c.buildCraftQuantityView(userID, recipeKey, lang, qty)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onCraftConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
+	}
+	recipeKey := rest[0]
+	qty, _ := strconv.Atoi(rest[1])
+	if qty < 1 || qty > maxCraftAmount {
+		interaction.RespondError(b, i, lang, "crafting.invalid_qty_range")
+		return
+	}
 	recipe, ok := crtsvc.Recipes[recipeKey]
 	if !ok {
 		interaction.RespondError(b, i, lang, "crafting.no_recipe", map[string]any{"item": recipeKey})
 		return
 	}
-
-	charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, 1)
+	charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, qty)
 	if err != nil {
 		var msg string
 		switch err {
 		case crtsvc.ErrNoLevel:
 			msg = i18n.T("crafting.no_level", lang, map[string]any{"level": recipe.LevelRequired})
 		case crtsvc.ErrNoIngredients:
-			msg = i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})
+			max := c.maxCraftable(userID, recipe)
+			msg = i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."}) + i18n.T("crafting.max_hint", lang, map[string]any{"max": max})
 		case crtsvc.ErrNoRecipe:
 			msg = i18n.T("crafting.no_recipe", lang, map[string]any{"item": recipeKey})
 		case crtsvc.ErrResearchRequired:
@@ -617,24 +808,25 @@ func (c *Cog) onCraftPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			msg = i18n.T("crafting.no_research", lang, map[string]any{"research": rn})
 		default:
-			msg = err.Error()
+			if err == store.ErrInventoryFull {
+				msg = i18n.T("inventory.full", lang)
+			} else {
+				msg = err.Error()
+			}
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
 				components.Embed("❌", msg, 0xe74c3c), nil))
 		return
 	}
-
 	resDisplay := c.displayName(recipe.Result, lang)
-	msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": 1, "item": resDisplay, "xp": recipe.XP})
-
+	msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": qty, "item": resDisplay, "xp": recipe.XP * qty})
 	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
 		msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
 	}
 	if charLeveled {
 		msg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": charNewLevel})
 	}
-
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("crafting.craft_again_btn", lang),
@@ -694,6 +886,152 @@ func (c *Cog) researchName(researchID string) string {
 
 func (c *Cog) displayName(name, lang string) string {
 	return items.LocalizedName(name, lang)
+}
+
+func float64Ptr(v float64) *float64 { return &v }
+
+// maxCraftable returns how many copies the user can craft limited by ingredients and inventory space, capped at maxCraftAmount.
+func (c *Cog) maxCraftable(userID int64, recipe crtsvc.Recipe) int {
+	// ingredient multiplier: workbench discount + efficiency buff (without consuming)
+	mult := 1.0
+	var buff model.ActiveBuff
+	if err := c.store.DB.Where("user_id = ? AND skill_id = ?", userID, "efficiency").First(&buff).Error; err == nil {
+		mult *= 0.5
+	}
+	var house model.UserHousing
+	if err := c.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&house).Error; err == nil {
+		var cnt int64
+		c.store.DB.Model(&model.UserFurniture{}).Where("user_id = ? AND house_type = ? AND furniture_id = ?", userID, house.HouseType, "workbench").Count(&cnt)
+		if cnt > 0 {
+			mult *= 0.9
+		}
+	}
+
+	// max by ingredients
+	maxByIng := maxCraftAmount
+	first := true
+	for ing, qty := range recipe.Ingredients {
+		var inv model.Inventory
+		if err := c.store.DB.Where("user_id = ? AND item_id = ?", userID, ing).First(&inv).Error; err != nil {
+			return 0
+		}
+		reqPer := max(1, int(float64(qty)*mult))
+		if reqPer == 0 {
+			reqPer = 1
+		}
+		possible := inv.Quantity / reqPer
+		if first || possible < maxByIng {
+			maxByIng = possible
+			first = false
+		}
+	}
+	if maxByIng > maxCraftAmount {
+		maxByIng = maxCraftAmount
+	}
+	if maxByIng < 0 {
+		maxByIng = 0
+	}
+	// limit by free slots (effectiveAmount includes perfect_forge doubling)
+	effMult := 1
+	var pf model.ActiveBuff
+	if err := c.store.DB.Where("user_id = ? AND skill_id = ?", userID, "perfect_forge").First(&pf).Error; err == nil {
+		effMult = 2
+	}
+	free, err := c.store.FreeSlots(c.store.DB, userID)
+	if err != nil {
+		return maxByIng
+	}
+	maxBySlots := free / effMult
+	if maxBySlots < maxByIng {
+		maxByIng = maxBySlots
+	}
+	if maxByIng > maxCraftAmount {
+		maxByIng = maxCraftAmount
+	}
+	if maxByIng < 0 {
+		maxByIng = 0
+	}
+	return maxByIng
+}
+
+func (c *Cog) buildCraftQuantityView(userID int64, recipeKey, lang string, qty int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	recipe := crtsvc.Recipes[recipeKey]
+	craftMax := c.maxCraftable(userID, recipe)
+	if craftMax == 0 {
+		craftMax = 1
+	}
+	if qty < 1 {
+		qty = 1
+	}
+	if qty > craftMax {
+		qty = craftMax
+	}
+	if qty > maxCraftAmount {
+		qty = maxCraftAmount
+	}
+	itemName := c.displayName(recipe.Result, lang)
+	// scaled ingredients for qty
+	scaledParts := make([]string, 0, len(recipe.Ingredients))
+	for ing, base := range recipe.Ingredients {
+		scaledParts = append(scaledParts, fmt.Sprintf("%dx %s", base*qty, items.LocalizedName(ing, lang)))
+	}
+	totalIng := strings.Join(scaledParts, ", ")
+	perUnit := recipeIngredients(recipe, lang)
+	desc := i18n.T("crafting.qty_desc", lang, map[string]any{
+		"ingredients":      perUnit,
+		"totalIngredients": totalIng,
+		"qty":              qty,
+		"max":              craftMax,
+		"xp":               recipe.XP * qty,
+	})
+	embed := components.Embed(
+		i18n.T("crafting.qty_title", lang, map[string]any{"item": itemName}),
+		desc, 0xe67e22,
+	)
+	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("crafting.craft_qty_label", lang, map[string]any{"qty": qty})}
+
+	// stepper buttons
+	qm1 := qty - 1
+	if qm1 < 1 {
+		qm1 = 1
+	}
+	qm5 := qty - 5
+	if qm5 < 1 {
+		qm5 = 1
+	}
+	qp1 := qty + 1
+	if qp1 > maxCraftAmount {
+		qp1 = maxCraftAmount
+	}
+	if qp1 > craftMax {
+		qp1 = craftMax
+	}
+	qp5 := qty + 5
+	if qp5 > maxCraftAmount {
+		qp5 = maxCraftAmount
+	}
+	if qp5 > craftMax {
+		qp5 = craftMax
+	}
+
+	disableMinus1 := qty <= 1
+	disableMinus5 := qty <= 1
+	disablePlus1 := qty >= craftMax || qty >= maxCraftAmount
+	disablePlus5 := qty >= craftMax || qty >= maxCraftAmount
+
+	row1 := []discordgo.MessageComponent{
+		discordgo.Button{Label: i18n.T("crafting.step_minus5", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qm5)), Style: discordgo.SecondaryButton, Disabled: disableMinus5},
+		discordgo.Button{Label: i18n.T("crafting.step_minus1", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qm1)), Style: discordgo.SecondaryButton, Disabled: disableMinus1},
+		discordgo.Button{Label: fmt.Sprintf("%d/%d", qty, craftMax), CustomID: "_disabled", Style: discordgo.SecondaryButton, Disabled: true},
+		discordgo.Button{Label: i18n.T("crafting.step_plus1", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qp1)), Style: discordgo.SecondaryButton, Disabled: disablePlus1},
+		discordgo.Button{Label: i18n.T("crafting.step_plus5", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qp5)), Style: discordgo.SecondaryButton, Disabled: disablePlus5},
+	}
+	row2 := []discordgo.MessageComponent{
+		discordgo.Button{Label: i18n.T("crafting.qty_confirm", lang, map[string]any{"qty": qty}), CustomID: components.EncodeOwner(userID, "crafting", "craft_confirm", recipeKey, strconv.Itoa(qty)), Style: discordgo.SuccessButton, Disabled: qty > craftMax},
+		discordgo.Button{Label: i18n.T("crafting.qty_back", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_back"), Style: discordgo.SecondaryButton},
+	}
+	comps := []discordgo.MessageComponent{components.ActionRow(row1...), components.ActionRow(row2...)}
+	return embed, comps
 }
 
 func isNumeric(s string) bool {

@@ -67,6 +67,7 @@ var Recipes = map[string]Recipe{
 	"vip_ticket":          {Result: "vip_ticket", Ingredients: map[string]int{"rough_diamond": 3, "platinum": 2}, LevelRequired: 1, XP: 150, RequiredResearch: "game_theory"},
 	"enchanted_orchard":   {Result: "enchanted_orchard", Ingredients: map[string]int{"rough_diamond": 2, "emerald": 2}, LevelRequired: 1, XP: 250, RequiredResearch: "advanced_botany"},
 	"volcano_egg":         {Result: "volcano_egg", Ingredients: map[string]int{"rough_diamond": 1, "golden_apple": 1, "pure_dna": 1, "bone_dust": 10}, LevelRequired: 1, XP: 200, RequiredResearch: "dna_research"},
+	"mutagen":             {Result: "mutagen", Ingredients: map[string]int{"mutated_flesh": 3, "silver_ore": 1}, LevelRequired: 1, XP: 30, RequiredResearch: "mutagen_synthesis"},
 
 	// --- Pet food (tier 1) ---
 	"warrior_stew":   {Result: "warrior_stew", Ingredients: map[string]int{"sardine": 3, "wheat": 2}, LevelRequired: 1, XP: 20},

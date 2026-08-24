@@ -38,6 +38,17 @@
     "success_msg": "🛠️ **Bravo !** Tu as crafté **{amount}x {item}** et gagné **{xp} XP** d'artisanat !",
     "title": "🛠️ Recettes d'Artisanat (Niveau {level})",
     "unlock_line": "**{item}** - {ingredients}",
-    "unlocked_title": "**🔓 Recettes Débloquées**\n"
+    "unlocked_title": "**🔓 Recettes Débloquées**\n",
+    "qty_title": "🔨 {item} — Quantité",
+    "qty_desc": "Ingrédients par unité : {ingredients}\nTotal pour **{qty}x** : {totalIngredients}\nXP : **{xp}**\nFabricable max : **{max}**",
+    "qty_confirm": "✅ Fabriquer {qty}x",
+    "qty_back": "↩ Retour",
+    "step_minus5": "−5",
+    "step_minus1": "−1",
+    "step_plus1": "+1",
+    "step_plus5": "+5",
+    "invalid_qty_range": "❌ La quantité doit être entre 1 et 10.",
+    "max_hint": " (fabricable max : {max})",
+    "craft_qty_label": "{qty}/10"
   }
 }

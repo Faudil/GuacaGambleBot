@@ -239,6 +239,8 @@ func (r *Router) deferInteraction(s *discordgo.Session, i *discordgo.Interaction
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
 		// Deferred channel message: slash replies arrive as follow-ups.
+	case discordgo.InteractionApplicationCommandAutocomplete:
+		return false // autocomplete must respond directly within 3s
 	case discordgo.InteractionMessageComponent:
 		domain, action, _ := components.Decode(i.MessageComponentData().CustomID)
 		if isModalOpener(domain, action) {
@@ -310,7 +312,7 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 	}
 
 	switch i.Type {
-	case discordgo.InteractionApplicationCommand:
+	case discordgo.InteractionApplicationCommand, discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(gid)) {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -328,6 +330,11 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 			"guild", gid,
 		)
 		if h, ok := r.slash[data.Name]; ok {
+			// Autocomplete must respond synchronously without defer window.
+			if i.Type == discordgo.InteractionApplicationCommandAutocomplete {
+				h(r.bot, i)
+				return
+			}
 			r.dispatchInteraction(s, i, func() { h(r.bot, i) })
 		} else {
 			log.Warn("no handler for slash command", "cmd", data.Name)

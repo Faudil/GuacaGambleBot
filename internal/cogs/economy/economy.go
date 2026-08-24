@@ -112,7 +112,7 @@ func (c *Cog) onSlashBalance(b *interaction.Bot, i *discordgo.InteractionCreate)
 	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
-		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+" / 500", true),
+		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 		components.Field(i18n.T("economy.daily_interest", lang), "+$"+strconv.Itoa(res.Interest)+" / jour", false),
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.balance_footer", lang)}
@@ -131,7 +131,7 @@ func (c *Cog) onPrefixBalance(b *interaction.Bot, s *discordgo.Session, m *disco
 	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
-		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+" / 500", true),
+		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 		components.Field(i18n.T("economy.daily_interest", lang), "+$"+strconv.Itoa(res.Interest)+" / jour", false),
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.balance_footer", lang)}
@@ -296,7 +296,7 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
-		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+" / 500", true),
+		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
 		components.Field(i18n.T("economy.daily_interest", lang), "+$"+strconv.Itoa(res.Interest)+" / jour", false),
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.balance_footer", lang)}

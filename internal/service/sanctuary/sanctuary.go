@@ -90,12 +90,17 @@ var biomeLootTables = map[string]biomeLootTable{
 }
 
 type Service struct {
-	store *store.Store
-	cfg   *config.Config
+	store  *store.Store
+	cfg    *config.Config
+	petSvc *ps.Service
 }
 
-func New(s *store.Store, cfg *config.Config) *Service {
-	return &Service{store: s, cfg: cfg}
+func New(s *store.Store, cfg *config.Config, petSvc ...*ps.Service) *Service {
+	svc := &Service{store: s, cfg: cfg}
+	if len(petSvc) > 0 {
+		svc.petSvc = petSvc[0]
+	}
+	return svc
 }
 
 func (s *Service) GetSanctuary(userID int64) (*model.UserSanctuary, error) {
@@ -406,6 +411,217 @@ func (s *Service) GetSanctuaryInfo(userID int64) (int, int, int, error) {
 		max = t.Slots
 	}
 	return tier, used, max, nil
+}
+
+// ── Side upgrades: Fusion (Trade-Up) & Ascendancy (Transcend) ───────────────
+
+var (
+	ErrFusionNoResearch   = errors.New("fusion research not completed")
+	ErrFusionWrongCount   = errors.New("wrong number of pets for fusion")
+	ErrFusionMixedRarity  = errors.New("all pets must be same rarity")
+	ErrFusionLegendaryMax = errors.New("legendary pets cannot be fused")
+	ErrFusionSameID       = errors.New("duplicate pet ids")
+	ErrFusionNotOwned     = errors.New("pet not owned")
+	ErrFusionActivePet    = errors.New("active pet cannot be fused")
+	ErrAscendNotReady     = errors.New("pet not ready to transcend")
+	ErrAscendLocked       = errors.New("pet is locked after transcend")
+)
+
+// TradeUpCosts adds money+items on top of pet consumption. Keeps python exact counts
+// plus a resource sink. Random target species per tier.
+var TradeUpCosts = map[string]struct {
+	Money int
+	Items map[string]int
+}{
+	ps.RarityCommon: {Money: 5000, Items: map[string]int{"bone_dust": 20, "coal": 10}},
+	ps.RarityRare:   {Money: 20000, Items: map[string]int{"iron_ore": 10, "silver_ore": 5, "bone_dust": 20}},
+	ps.RarityEpic:   {Money: 75000, Items: map[string]int{"gold_nugget": 5, "emerald": 2, "platinum": 1}},
+}
+
+// TradeUpResearch reuses forge fusion researches per spec.
+var TradeUpResearch = map[string]string{
+	ps.RarityCommon: "fusion_common",
+	ps.RarityRare:   "fusion_rare",
+	ps.RarityEpic:   "fusion_epic",
+}
+
+// TradeUp fuses pets of same rarity into one random pet of next rarity (instant).
+func (s *Service) TradeUp(userID int64, petIDs []int64) (*model.UserPet, error) {
+	if len(petIDs) == 0 {
+		return nil, ErrFusionWrongCount
+	}
+	seen := map[int64]bool{}
+	for _, id := range petIDs {
+		if seen[id] {
+			return nil, ErrFusionSameID
+		}
+		seen[id] = true
+	}
+	var pets []model.UserPet
+	if err := s.store.DB.Where("id IN ?", petIDs).Find(&pets).Error; err != nil {
+		return nil, err
+	}
+	if len(pets) != len(petIDs) {
+		return nil, ErrFusionNotOwned
+	}
+	rarity := ""
+	for i, p := range pets {
+		if p.UserID != userID {
+			return nil, ErrFusionNotOwned
+		}
+		if p.IsActive {
+			return nil, ErrFusionActivePet
+		}
+		if p.OnExpedition {
+			return nil, errors.New("pet on expedition cannot be fused")
+		}
+		pt := ps.PetTypes[p.PetType]
+		if pt == nil {
+			return nil, errors.New("unknown pet type")
+		}
+		if i == 0 {
+			rarity = pt.Rarity
+		} else if pt.Rarity != rarity {
+			return nil, ErrFusionMixedRarity
+		}
+	}
+	if rarity == ps.RarityLegendary {
+		return nil, ErrFusionLegendaryMax
+	}
+	reqCount, targetRarity := ps.TradeUpRarity(rarity)
+	if reqCount == 0 || targetRarity == "" {
+		return nil, ErrFusionWrongCount
+	}
+	if len(petIDs) != reqCount {
+		return nil, ErrFusionWrongCount
+	}
+	// Research gate (reuse forge researches if present)
+	if rid, ok := TradeUpResearch[rarity]; ok && rid != "" {
+		var r model.UserResearch
+		if err := s.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, rid, true).First(&r).Error; err != nil {
+			return nil, ErrFusionNoResearch
+		}
+	}
+	// Resource gate
+	cost := TradeUpCosts[rarity]
+	if cost.Money > 0 {
+		bal, err := s.store.GetBalance(userID)
+		if err != nil {
+			return nil, err
+		}
+		if bal < cost.Money {
+			return nil, errors.New("not enough money")
+		}
+	}
+	for itemID, qty := range cost.Items {
+		var inv model.Inventory
+		if err := s.store.DB.Where("user_id = ? AND item_id = ? AND quantity >= ?", userID, itemID, qty).First(&inv).Error; err != nil {
+			return nil, errors.New("missing materials: " + itemID)
+		}
+	}
+	// Pick random target species
+	newPetName := ps.RollGacha(targetRarity, ps.Biomes[rand.Intn(len(ps.Biomes))])
+	if newPetName == "" {
+		return nil, errors.New("failed to roll new pet")
+	}
+	var newPet *model.UserPet
+	err := s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if cost.Money > 0 {
+			if err := tx.Model(&model.User{}).Where("user_id = ?", userID).UpdateColumn("balance", gorm.Expr("balance - ?", cost.Money)).Error; err != nil {
+				return err
+			}
+		}
+		for itemID, qty := range cost.Items {
+			if err := tx.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", userID, itemID).UpdateColumn("quantity", gorm.Expr("quantity - ?", qty)).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("id IN ?", petIDs).Delete(&model.UserPet{}).Error; err != nil {
+			return err
+		}
+		for _, id := range petIDs {
+			_ = tx.Where("pet_id = ?", id).Delete(&model.UserPetSkill{}).Error
+		}
+		pt := ps.PetTypes[newPetName]
+		if pt == nil {
+			return errors.New("unknown target pet")
+		}
+		p := &model.UserPet{
+			UserID:      userID,
+			PetType:     newPetName,
+			Nickname:    newPetName,
+			Level:       1,
+			MaxHP:       pt.MaxHP,
+			HP:          pt.MaxHP,
+			Atk:         pt.Atk,
+			Defense:     pt.Defense,
+			Speed:       pt.Speed,
+			DGE:         pt.DGE,
+			ACC:         pt.ACC,
+			CritC:       pt.CritC,
+			CritD:       pt.CritD,
+			Bonus:       pt.Bonus,
+			Elo:         1000,
+			Personality: ps.RandomPersonality(),
+			History:     `[]`,
+		}
+		if err := tx.Create(p).Error; err != nil {
+			return err
+		}
+		newPet = p
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return newPet, nil
+}
+
+// Transcend increments TrsLvl of active pet by consuming same species sacrifice. Instant, then locks 24h.
+func (s *Service) Transcend(userID int64, sacrificeID int64) (*model.UserPet, error) {
+	active, err := func() (*model.UserPet, error) {
+		var p model.UserPet
+		if err := s.store.DB.Where("user_id = ? AND is_active = ?", userID, true).First(&p).Error; err != nil {
+			return nil, err
+		}
+		return &p, nil
+	}()
+	if err != nil {
+		return nil, errors.New("no active pet")
+	}
+	if active.Level < 20 {
+		return nil, errors.New("active pet must be level 20")
+	}
+	if active.TranscendLockedUntil != nil && time.Now().Before(*active.TranscendLockedUntil) {
+		return nil, ErrAscendLocked
+	}
+	var sac model.UserPet
+	if err := s.store.DB.Where("id = ? AND user_id = ?", sacrificeID, userID).First(&sac).Error; err != nil {
+		return nil, errors.New("sacrifice not found")
+	}
+	if sac.ID == active.ID {
+		return nil, errors.New("cannot sacrifice active pet")
+	}
+	if sac.PetType != active.PetType {
+		return nil, errors.New("sacrifice must be same species")
+	}
+	if sac.OnExpedition {
+		return nil, errors.New("pet on expedition cannot be sacrificed")
+	}
+	err = s.store.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(&model.UserPet{}, sac.ID).Error; err != nil {
+			return err
+		}
+		_ = tx.Where("pet_id = ?", sac.ID).Delete(&model.UserPetSkill{}).Error
+		lock := time.Now().Add(24 * time.Hour)
+		active.TrsLvl++
+		active.TranscendLockedUntil = &lock
+		return tx.Save(active).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return active, nil
 }
 
 func randomRoll(pool []lootEntry) string {

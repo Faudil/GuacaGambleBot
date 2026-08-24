@@ -8,6 +8,7 @@ import (
 	"guacagamblebot/internal/config"
 	charsvc "guacagamblebot/internal/service/character"
 	dailyquest "guacagamblebot/internal/service/dailyquest"
+	"guacagamblebot/internal/service/housing"
 	"guacagamblebot/internal/store"
 )
 
@@ -29,15 +30,23 @@ type BalanceResult struct {
 	Wallet   int
 	Bank     int
 	Interest int
+	MaxBank  int
 }
 
-// Balance returns wallet, bank and projected daily interest.
+// Balance returns wallet, bank, projected daily interest and the housing-based bank capacity.
 func (s *Service) Balance(userID int64) (*BalanceResult, error) {
+	maxBank, err := housing.New(s.store, s.cfg).BankCapacity(userID)
+	if err != nil {
+		return nil, err
+	}
+	if _, _, _, err := s.store.ClampBank(userID, maxBank); err != nil {
+		return nil, err
+	}
 	wallet, bank, err := s.store.GetBankData(userID)
 	if err != nil {
 		return nil, err
 	}
-	return &BalanceResult{Wallet: wallet, Bank: bank, Interest: (bank / 100) * 10}, nil
+	return &BalanceResult{Wallet: wallet, Bank: bank, Interest: (bank / 100) * 10, MaxBank: maxBank}, nil
 }
 
 // DailyResult holds the outcome of claiming the daily reward.

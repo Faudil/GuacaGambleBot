@@ -67,6 +67,13 @@ var ResearchDefs = map[string]*ResearchDef{
 		UnlocksRecipes:    []string{"volcano_egg"},
 		BonusDesc:         "Unlocks: Volcano Egg",
 	},
+	"mutagen_synthesis": {
+		ID: "mutagen_synthesis", Name: "Mutagen Synthesis", Description: "Synthesize pure mutagen from tainted flesh. Extraction technique for the genetics lab.",
+		TimeHours: 8, CostMoney: 6000, CostItems: map[string]int{"pufferfish": 5, "magma_carp": 3, "silver_ore": 5},
+		RequiredFurniture: "genetics_lab",
+		UnlocksRecipes:    []string{"mutagen"},
+		BonusDesc:         "Unlocks: Mutagen crafting (Mutated Flesh → Mutagen)",
+	},
 	"pet_nutrition": {
 		ID: "pet_nutrition", Name: "Pet Nutrition", Description: "Master alchemical feeding to brew potions that empower your pets.",
 		TimeHours: 12, CostMoney: 12000, CostItems: map[string]int{"golden_apple": 4, "mutagen": 4},

@@ -2,6 +2,7 @@ package crafting
 
 import (
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -122,11 +123,16 @@ func TestCraftMenuOnlyShowsUnlockedRecipes(t *testing.T) {
 	assert.True(t, anyFieldContains(vals, "🔬 Tool Crafting"),
 		"locked recipes must be visible with their research requirement")
 
-	// Crafting an unlocked level-1 item succeeds.
+	// Crafting an unlocked level-1 item succeeds via quantity picker (stepper default 1).
 	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 3))
 
 	b := &interaction.Bot{Session: &stubSession{}}
 	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	embed = lastEmbed(t, b)
+	// picker shows quantity view
+	assert.Contains(t, embed.Title, "Beer")
+	// confirm 1x
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "beer", 1))
 	embed = lastEmbed(t, b)
 	assert.Contains(t, embed.Description, "1x Beer")
 
@@ -173,6 +179,9 @@ func TestCraftMenuResearchUnlocksRecipeAtLevel1(t *testing.T) {
 	b := &interaction.Bot{Session: &stubSession{}}
 	c.onCraftPick(b, craftPickInteraction("1", "bow"))
 	embed := lastEmbed(t, b)
+	assert.Contains(t, embed.Title, "Bow")
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "bow", 1))
+	embed = lastEmbed(t, b)
 	assert.Contains(t, embed.Description, "1x Bow")
 
 	var inv model.Inventory
@@ -183,7 +192,9 @@ func TestCraftMenuResearchUnlocksRecipeAtLevel1(t *testing.T) {
 func TestCraftMenuMissingIngredients(t *testing.T) {
 	c := testCog(t)
 	b := &interaction.Bot{Session: &stubSession{}}
+	// picker still appears, error surfaces on confirm when ingredients missing
 	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "beer", 1))
 	embed := lastEmbed(t, b)
 	assert.Contains(t, embed.Description, "missing ingredients")
 }
@@ -194,7 +205,7 @@ func TestCraftMenuPaginates(t *testing.T) {
 	completeAllResearch(t, c, 1)
 
 	embed, comps := c.buildCraftMenu(1, "en", "all", 1)
-	assert.Len(t, crtsvc.Recipes, 71)
+	assert.Len(t, crtsvc.Recipes, 72)
 	assert.Len(t, embed.Fields, 25, "page 1 shows the first 25 recipes")
 
 	_, recipeSel := menuSelects(t, comps)
@@ -209,12 +220,12 @@ func TestCraftMenuPaginates(t *testing.T) {
 
 	_, comps3 := c.buildCraftMenu(1, "en", "all", 3)
 	_, recipeSel3 := menuSelects(t, comps3)
-	assert.Len(t, recipeSel3.Options, 21, "last page holds the remaining recipes")
+	assert.Len(t, recipeSel3.Options, 22, "last page holds the remaining recipes")
 
 	// A stale nav press landing beyond the last page is clamped.
 	_, compsClamped := c.buildCraftMenu(1, "en", "all", 99)
 	_, recipeSelClamped := menuSelects(t, compsClamped)
-	assert.Len(t, recipeSelClamped.Options, 21)
+	assert.Len(t, recipeSelClamped.Options, 22)
 }
 
 func TestCraftMenuCategoryFilter(t *testing.T) {
@@ -283,6 +294,7 @@ func TestCraftSuccessShowsCraftAgainButton(t *testing.T) {
 
 	b := &interaction.Bot{Session: &stubSession{}}
 	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "beer", 1))
 
 	s, ok := b.Session.(*stubSession)
 	require.True(t, ok)
@@ -325,6 +337,26 @@ func craftPickInteraction(userID string, values ...string) *discordgo.Interactio
 	}}
 }
 
+func craftConfirmInteraction(userID, recipeKey string, qty int) *discordgo.InteractionCreate {
+	return &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+		Type:    discordgo.InteractionMessageComponent,
+		GuildID: "100",
+		Token:   "tok",
+		Member:  &discordgo.Member{User: &discordgo.User{ID: userID}},
+		Data:    discordgo.MessageComponentInteractionData{CustomID: "crafting::craft_confirm::" + recipeKey + "::" + strconv.Itoa(qty) + "::" + userID},
+	}}
+}
+
+func craftStepInteraction(userID, recipeKey string, qty int) *discordgo.InteractionCreate {
+	return &discordgo.InteractionCreate{Interaction: &discordgo.Interaction{
+		Type:    discordgo.InteractionMessageComponent,
+		GuildID: "100",
+		Token:   "tok",
+		Member:  &discordgo.Member{User: &discordgo.User{ID: userID}},
+		Data:    discordgo.MessageComponentInteractionData{CustomID: "crafting::craft_step::" + recipeKey + "::" + strconv.Itoa(qty) + "::" + userID},
+	}}
+}
+
 func lastEmbed(t *testing.T, b *interaction.Bot) *discordgo.MessageEmbed {
 	t.Helper()
 	s, ok := b.Session.(*stubSession)
@@ -355,4 +387,50 @@ func TestCraftFilterSelectIsOwnerEncoded(t *testing.T) {
 	}
 	assert.Equal(t, "crafting::craft_filter::1", filterID,
 		"category select must carry the owner id so the router gates it")
+}
+
+func TestCraftQuantityStepperMultiCraft(t *testing.T) {
+	c := testCog(t)
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 30))
+	b := &interaction.Bot{Session: &stubSession{}}
+	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	embed := lastEmbed(t, b)
+	assert.Contains(t, embed.Title, "Beer")
+	// step to 5
+	c.onCraftStep(b, craftStepInteraction("1", "beer", 5))
+	embed = lastEmbed(t, b)
+	assert.Contains(t, embed.Description, "5x")
+	// confirm 5
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "beer", 5))
+	embed = lastEmbed(t, b)
+	assert.Contains(t, embed.Description, "5x Beer")
+	var inv model.Inventory
+	require.NoError(t, c.store.DB.Where("user_id = ? AND item_id = ?", 1, "beer").First(&inv).Error)
+	assert.Equal(t, 5, inv.Quantity)
+	var wheat model.Inventory
+	require.NoError(t, c.store.DB.Where("user_id = ? AND item_id = ?", 1, "wheat").First(&wheat).Error)
+	assert.Equal(t, 15, wheat.Quantity)
+}
+
+func TestCraftQuantityMaxHint(t *testing.T) {
+	c := testCog(t)
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 6)) // can craft max 2
+	b := &interaction.Bot{Session: &stubSession{}}
+	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	embed := lastEmbed(t, b)
+	assert.Contains(t, embed.Description, "Max craftable")
+}
+
+func TestCraftConfirmExceedsMax(t *testing.T) {
+	c := testCog(t)
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 3))
+	b := &interaction.Bot{Session: &stubSession{}}
+	c.onCraftPick(b, craftPickInteraction("1", "beer"))
+	// try to confirm 10 while only 1 craftable
+	c.onCraftConfirm(b, craftConfirmInteraction("1", "beer", 10))
+	// should fail with missing ingredients (since service will reject, but our pre-check also fails)
+	// after confirm, inventory should still be 0 beer because craft failed
+	var cnt int64
+	c.store.DB.Model(&model.Inventory{}).Where("user_id = ? AND item_id = ?", 1, "beer").Count(&cnt)
+	assert.Equal(t, int64(0), cnt)
 }

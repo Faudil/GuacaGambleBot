@@ -460,6 +460,10 @@
       "name": "Mutagène",
       "description": "Une substance mutagène lumineuse issue d'un poisson muté."
     },
+    "mutated_flesh": {
+      "name": "Chair Mutée",
+      "description": "Chair corrompue d'un poisson muté. Encore chaude et pulsante."
+    },
     "mysterious_seed": {
       "name": "Graine Mystérieuse",
       "description": "Une graine inconnue pulsant d'énergie."
