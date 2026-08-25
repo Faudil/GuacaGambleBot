@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -80,6 +81,18 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("pets", "artifact_stat_choose", c.onArtifactStatChoose)
 	r.Component("pets", "weekly_refresh", c.onWeeklyRefresh)
 	r.Component("pets", "weekly_history", c.onWeeklyHistory)
+	r.SlashWithOptions("pet-retire", "Send a pet to your sanctuary", []*discordgo.ApplicationCommandOption{
+		{Type: discordgo.ApplicationCommandOptionString, Name: "pet", Description: "Pet to retire (autocomplete)", Required: true, Autocomplete: true},
+	}, c.onSlashRetire)
+	r.SlashWithOptions("pet-recall", "Recall a pet from your sanctuary", []*discordgo.ApplicationCommandOption{
+		{Type: discordgo.ApplicationCommandOptionString, Name: "pet", Description: "Pet to recall (autocomplete)", Required: true, Autocomplete: true},
+	}, c.onSlashRecall)
+	r.Prefix("retire", c.onPrefixRetire)
+	r.Prefix("recall", c.onPrefixRecall)
+	r.Component("pets", "retire_btn", c.onRetireClick)
+	r.Component("pets", "retire_confirm", c.onRetireConfirm)
+	r.Component("pets", "recall_btn", c.onRecallClick)
+	r.Component("pets", "recall_confirm", c.onRecallConfirm)
 }
 
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -337,6 +350,21 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 		row2 = append(row2, components.Button(i18n.T("pets.detail.btn_skills", lang), components.EncodeOwner(userID, "pets", "skills", petIDStr), discordgo.PrimaryButton))
 	}
 	row2 = append(row2, components.Button(i18n.T("pets.detail.btn_heal", lang), components.EncodeOwner(userID, "pets", "heal", petIDStr), discordgo.SuccessButton))
+	// Sanctuary retire / recall (Option A)
+	if !pet.InSanctuary && !pet.OnExpedition {
+		if tier, _, _, _ := c.sanSvc.GetSanctuaryInfo(userID); tier > 0 {
+			if c.hasSanctuarySpace(userID) {
+				row2 = append(row2, components.Button(i18n.T("pets.detail.btn_retire", lang), components.EncodeOwner(userID, "pets", "retire_btn", petIDStr), discordgo.SecondaryButton))
+			} else {
+				btn := components.Button(i18n.T("pets.detail.btn_retire", lang), components.EncodeOwner(userID, "pets", "retire_btn", petIDStr), discordgo.SecondaryButton).(discordgo.Button)
+				btn.Disabled = true
+				row2 = append(row2, btn)
+			}
+		}
+	}
+	if pet.InSanctuary {
+		row2 = append(row2, components.Button(i18n.T("pets.detail.btn_recall", lang), components.EncodeOwner(userID, "pets", "recall_btn", petIDStr), discordgo.PrimaryButton))
+	}
 	row2 = append(row2, components.Button("🗑️", components.EncodeOwner(userID, "pets", "delete", petIDStr), discordgo.SecondaryButton))
 
 	comps := []discordgo.MessageComponent{components.ActionRow(row1...)}
@@ -344,6 +372,153 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 		comps = append(comps, components.ActionRow(row2...))
 	}
 	return embed, comps
+}
+
+// ─── Sanctuary Retire / Recall (via /pet detail) ────────────────────────────
+
+func (c *Cog) onRetireClick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, _ := strconv.ParseInt(rest[0], 10, 64)
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+	if pet.InSanctuary {
+		interaction.RespondError(b, i, lang, "pets.retire.already")
+		return
+	}
+	if pet.OnExpedition {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.retire.on_expedition", lang, map[string]any{"name": pet.Nickname}), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	tier, used, max, _ := c.sanSvc.GetSanctuaryInfo(userID)
+	if tier == 0 {
+		interaction.RespondError(b, i, lang, "sanctuary.no_sanctuary")
+		return
+	}
+	if used >= max {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.retire.full", lang), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	pt := petsvc.PetTypes[pet.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+	embed := components.Embed(i18n.T("pets.retire.confirm_title", lang),
+		i18n.T("pets.retire.confirm_desc", lang, map[string]any{"emoji": emoji, "name": pet.Nickname, "used": used, "max": max}),
+		0xe67e22)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("pets.retire.confirm_btn", lang), components.EncodeOwner(userID, "pets", "retire_confirm", rest[0]), discordgo.DangerButton),
+			components.Button(i18n.T("pets.retire.cancel_btn", lang), components.EncodeOwner(userID, "pets", "pet", rest[0]), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onRetireConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, _ := strconv.ParseInt(rest[0], 10, 64)
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+	if err := c.sanSvc.RetirePet(userID, petID); err != nil {
+		msg := err.Error()
+		if errors.Is(err, sansvc.ErrSanctuaryFull) {
+			msg = i18n.T("pets.retire.full", lang)
+		} else if errors.Is(err, sansvc.ErrPetAlreadyInSanctuary) {
+			msg = i18n.T("pets.retire.already", lang)
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: msg, Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	// Refresh detail to show InSanctuary state (now Recall button)
+	updated, _ := c.svc.GetPetByID(petID)
+	if updated != nil {
+		pet = updated
+	}
+	embed, comps := c.petDetail(pet, lang)
+	// Prepend success notice via embed description prefix
+	embed.Description = i18n.T("pets.retire.success", lang, map[string]any{"name": pet.Nickname}) + "\n\n" + embed.Description
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onRecallClick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, _ := strconv.ParseInt(rest[0], 10, 64)
+	pet, err := c.svc.GetPetByID(petID)
+	if err != nil || pet == nil || pet.UserID != userID {
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
+		return
+	}
+	if !pet.InSanctuary {
+		interaction.RespondError(b, i, lang, "pets.recall.not_in_sanctuary")
+		return
+	}
+	embed := components.Embed(i18n.T("pets.recall.confirm_title", lang),
+		i18n.T("pets.recall.confirm_desc", lang, map[string]any{"name": pet.Nickname, "cost": 100}),
+		0x3498db)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("pets.recall.confirm_btn", lang), components.EncodeOwner(userID, "pets", "recall_confirm", rest[0]), discordgo.SuccessButton),
+			components.Button(i18n.T("pets.recall.cancel_btn", lang), components.EncodeOwner(userID, "pets", "pet", rest[0]), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+}
+
+func (c *Cog) onRecallConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) == 0 {
+		return
+	}
+	petID, _ := strconv.ParseInt(rest[0], 10, 64)
+	if err := c.sanSvc.RecallPet(userID, petID); err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	pet, _ := c.svc.GetPetByID(petID)
+	if pet == nil {
+		embed, comps := c.menuFromUser(userID, interaction.DisplayName(b.Session, i.GuildID, i.Member, userID), lang)
+		_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+		return
+	}
+	embed, comps := c.petDetail(pet, lang)
+	embed.Description = i18n.T("pets.recall.success", lang, map[string]any{"name": pet.Nickname}) + "\n\n" + embed.Description
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
 // onPetActivate sets the selected pet as the player's active companion.
@@ -2267,4 +2442,231 @@ func (c *Cog) weeklyHistoryEmbed(userID, serverID int64, lang string) *discordgo
 
 	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, 0x9b59b6)
 	return embed
+}
+
+// ─── Sanctuary Slash Autocomplete + Prefix ────────────────────────────────
+
+func (c *Cog) onSlashRetire(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	if i.Type == discordgo.InteractionApplicationCommandAutocomplete {
+		c.handleRetireAutocomplete(b, i, lang, userID)
+		return
+	}
+	val := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "pet" {
+			if v, ok := opt.Value.(string); ok {
+				val = strings.TrimSpace(v)
+			}
+		}
+	}
+	if val == "" {
+		interaction.RespondError(b, i, lang, "pets.retire.not_found")
+		return
+	}
+	pet := c.findPetByAutocompleteValue(userID, val, false)
+	if pet == nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.retire.not_found", lang), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	if err := c.sanSvc.RetirePet(userID, pet.ID); err != nil {
+		msg := err.Error()
+		if errors.Is(err, sansvc.ErrSanctuaryFull) {
+			msg = i18n.T("pets.retire.full", lang)
+		} else if errors.Is(err, sansvc.ErrPetAlreadyInSanctuary) {
+			msg = i18n.T("pets.retire.already", lang)
+		}
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: msg, Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.retire.success", lang, map[string]any{"name": pet.Nickname}), Flags: discordgo.MessageFlagsEphemeral},
+	})
+}
+
+func (c *Cog) onSlashRecall(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	if i.Type == discordgo.InteractionApplicationCommandAutocomplete {
+		c.handleRecallAutocomplete(b, i, lang, userID)
+		return
+	}
+	val := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Name == "pet" {
+			if v, ok := opt.Value.(string); ok {
+				val = strings.TrimSpace(v)
+			}
+		}
+	}
+	if val == "" {
+		interaction.RespondError(b, i, lang, "pets.recall.not_found")
+		return
+	}
+	pet := c.findPetByAutocompleteValue(userID, val, true)
+	if pet == nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.recall.not_found", lang), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	if err := c.sanSvc.RecallPet(userID, pet.ID); err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{Content: i18n.T("pets.recall.success", lang, map[string]any{"name": pet.Nickname}), Flags: discordgo.MessageFlagsEphemeral},
+	})
+}
+
+func (c *Cog) handleRetireAutocomplete(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64) {
+	focused := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Focused {
+			if v, ok := opt.Value.(string); ok {
+				focused = strings.ToLower(strings.TrimSpace(v))
+			}
+		}
+	}
+	pets, _ := c.svc.GetActiveRosterPets(userID)
+	choices := []*discordgo.ApplicationCommandOptionChoice{}
+	for _, p := range pets {
+		if p.InSanctuary || p.OnExpedition {
+			continue
+		}
+		name := p.Nickname
+		low := strings.ToLower(name + " " + p.PetType)
+		if focused != "" && !strings.Contains(low, focused) {
+			continue
+		}
+		display := name + " (" + p.PetType + " Lvl " + strconv.Itoa(p.Level) + ")"
+		if len([]rune(display)) > 100 {
+			display = string([]rune(display)[:100])
+		}
+		// Use nickname as value; duplicates resolved by picking first match
+		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{Name: display, Value: strconv.FormatInt(p.ID, 10)})
+		if len(choices) >= 25 {
+			break
+		}
+	}
+	sort.Slice(choices, func(a, b int) bool { return choices[a].Name < choices[b].Name })
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{Choices: choices},
+	})
+}
+
+func (c *Cog) handleRecallAutocomplete(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, userID int64) {
+	focused := ""
+	for _, opt := range i.ApplicationCommandData().Options {
+		if opt.Focused {
+			if v, ok := opt.Value.(string); ok {
+				focused = strings.ToLower(strings.TrimSpace(v))
+			}
+		}
+	}
+	pets, _ := c.svc.GetSanctuaryPets(userID)
+	choices := []*discordgo.ApplicationCommandOptionChoice{}
+	for _, p := range pets {
+		low := strings.ToLower(p.Nickname + " " + p.PetType)
+		if focused != "" && !strings.Contains(low, focused) {
+			continue
+		}
+		display := p.Nickname + " (" + p.PetType + " Lvl " + strconv.Itoa(p.Level) + ")"
+		if len([]rune(display)) > 100 {
+			display = string([]rune(display)[:100])
+		}
+		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{Name: display, Value: strconv.FormatInt(p.ID, 10)})
+		if len(choices) >= 25 {
+			break
+		}
+	}
+	sort.Slice(choices, func(a, b int) bool { return choices[a].Name < choices[b].Name })
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{Choices: choices},
+	})
+	_ = lang
+}
+
+func (c *Cog) findPetByAutocompleteValue(userID int64, val string, inSanctuary bool) *model.UserPet {
+	if id, err := strconv.ParseInt(val, 10, 64); err == nil {
+		if p, err := c.svc.GetPetByID(id); err == nil && p != nil && p.UserID == userID && p.InSanctuary == inSanctuary {
+			return p
+		}
+	}
+	// Fallback nickname match (case-insensitive)
+	var pets []model.UserPet
+	if inSanctuary {
+		pets, _ = c.svc.GetSanctuaryPets(userID)
+	} else {
+		pets, _ = c.svc.GetActiveRosterPets(userID)
+	}
+	low := strings.ToLower(val)
+	for i := range pets {
+		if strings.ToLower(pets[i].Nickname) == low || strings.ToLower(pets[i].PetType) == low {
+			return &pets[i]
+		}
+	}
+	for i := range pets {
+		if strings.Contains(strings.ToLower(pets[i].Nickname+" "+pets[i].PetType), low) {
+			return &pets[i]
+		}
+	}
+	return nil
+}
+
+func (c *Cog) onPrefixRetire(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+	args := strings.Fields(m.Content)
+	if len(args) < 2 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.retire.not_found", lang))
+		return
+	}
+	q := strings.Join(args[1:], " ")
+	pet := c.findPetByAutocompleteValue(userID, q, false)
+	if pet == nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.retire.not_found", lang))
+		return
+	}
+	if err := c.sanSvc.RetirePet(userID, pet.ID); err != nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+		return
+	}
+	_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.retire.success", lang, map[string]any{"name": pet.Nickname}))
+}
+
+func (c *Cog) onPrefixRecall(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+	args := strings.Fields(m.Content)
+	if len(args) < 2 {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.recall.not_found", lang))
+		return
+	}
+	q := strings.Join(args[1:], " ")
+	pet := c.findPetByAutocompleteValue(userID, q, true)
+	if pet == nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.recall.not_found", lang))
+		return
+	}
+	if err := c.sanSvc.RecallPet(userID, pet.ID); err != nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+		return
+	}
+	_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.recall.success", lang, map[string]any{"name": pet.Nickname}))
 }

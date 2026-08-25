@@ -54,7 +54,9 @@
       "btn_feed": "🍖 Nourrir",
       "btn_heal": "🏥 Soigner",
       "btn_name": "Donner un prénom",
+      "btn_recall": "🔙 Rappeler",
       "btn_rename": "Renommer",
+      "btn_retire": "🏞️ Retirer",
       "btn_skills": "⚡ Compétences",
       "combat": "🛡️ Combat",
       "history": "📜 Historique récent",
@@ -385,6 +387,26 @@
       "success": "✨ **TRANSCENDANCE RÉUSSIE !** ✨\nTon familier **{name}** est maintenant TRS Niveau **{level}** !",
       "target_not_found": "❌ Familier consommé (ID: {id}) non trouvé dans ta collection.",
       "wrong_type": "❌ Le familier consommé doit être un **{type}** (le même que ton familier actif)."
+    },
+    "retire": {
+      "already": "❌ Ce familier est déjà dans ton sanctuaire !",
+      "cancel_btn": "Annuler",
+      "confirm_btn": "🏞️ Retirer",
+      "confirm_desc": "{emoji} **{name}** sera envoyé dans ton sanctuaire ({used}/{max}). Continuer ? Le familier actif sera désactivé si nécessaire.",
+      "confirm_title": "🏞️ Retirer au sanctuaire ?",
+      "full": "❌ Ton sanctuaire est plein !",
+      "not_found": "❌ Familier introuvable. Utilise l'autocomplétion ou vérifie le surnom.",
+      "on_expedition": "❌ **{name}** est en expédition et ne peut pas être retiré !",
+      "success": "🏞️ **{name}** a été retiré dans ton sanctuaire !"
+    },
+    "recall": {
+      "cancel_btn": "Annuler",
+      "confirm_btn": "🔙 Rappeler",
+      "confirm_desc": "**{name}** sera rappelé du sanctuaire vers ton équipe active pour 100$. Continuer ?",
+      "confirm_title": "🔙 Rappeler du sanctuaire ?",
+      "not_found": "❌ Familier introuvable dans ton sanctuaire.",
+      "not_in_sanctuary": "❌ Ce familier n'est pas dans ton sanctuaire !",
+      "success": "🔙 **{name}** a été rappelé dans ton équipe active !"
     }
   }
 }

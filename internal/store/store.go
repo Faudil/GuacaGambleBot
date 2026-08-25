@@ -415,19 +415,11 @@ func (s *Store) RepayDebt(borrowerID int64, payment int) (int, []RepaidLender, e
 func (s *Store) CheckGameLimit(userID int64, gameName string, maxUsage int) (bool, int, error) {
 	today := time.Now().Format("2006-01-02")
 	var gl model.GameLimit
-	res := s.DB.Where("user_id = ? AND game_name = ?", userID, gameName).First(&gl)
+	res := s.DB.Where("user_id = ? AND game_name = ? AND date_str = ?", userID, gameName, today).First(&gl)
 	if res.Error == gorm.ErrRecordNotFound {
 		return true, maxUsage, nil
 	} else if res.Error != nil {
 		return false, 0, res.Error
-	}
-	if gl.DateStr != today {
-		if err := s.DB.Model(&model.GameLimit{}).
-			Where("user_id = ? AND game_name = ?", userID, gameName).
-			Updates(map[string]any{"date_str": today, "count": 0}).Error; err != nil {
-			return false, 0, err
-		}
-		return true, maxUsage, nil
 	}
 	if gl.Count >= maxUsage {
 		return false, 0, nil

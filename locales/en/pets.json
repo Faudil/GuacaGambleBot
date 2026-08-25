@@ -54,7 +54,9 @@
       "btn_feed": "🍖 Feed",
       "btn_heal": "🏥 Heal",
       "btn_name": "Name",
+      "btn_recall": "🔙 Recall",
       "btn_rename": "Rename",
+      "btn_retire": "🏞️ Retire",
       "btn_skills": "⚡ Skills",
       "combat": "🛡️ Combat",
       "history": "📜 Recent History",
@@ -385,6 +387,26 @@
       "success": "✨ **TRANSCENDENCE COMPLETED!** ✨\nYour pet **{name}** is now TRS Level **{level}**!",
       "target_not_found": "❌ Consumed pet (ID: {id}) not found in your collection.",
       "wrong_type": "❌ The consumed pet must be a **{type}** (the same as your active pet)."
+    },
+    "retire": {
+      "already": "❌ This pet is already in your sanctuary!",
+      "cancel_btn": "Cancel",
+      "confirm_btn": "🏞️ Retire",
+      "confirm_desc": "{emoji} **{name}** will be sent to your sanctuary ({used}/{max}). Continue? Active pet will be deactivated if needed.",
+      "confirm_title": "🏞️ Retire to Sanctuary?",
+      "full": "❌ Your sanctuary is full!",
+      "not_found": "❌ Pet not found. Use autocomplete or check the nickname.",
+      "on_expedition": "❌ **{name}** is on an expedition and cannot be retired!",
+      "success": "🏞️ **{name}** has been retired to your sanctuary!"
+    },
+    "recall": {
+      "cancel_btn": "Cancel",
+      "confirm_btn": "🔙 Recall",
+      "confirm_desc": "**{name}** will be recalled from sanctuary to your active roster for $100. Continue?",
+      "confirm_title": "🔙 Recall from Sanctuary?",
+      "not_found": "❌ Pet not found in your sanctuary.",
+      "not_in_sanctuary": "❌ This pet is not in your sanctuary!",
+      "success": "🔙 **{name}** has been recalled to your active roster!"
     }
   }
 }

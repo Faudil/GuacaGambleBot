@@ -74,7 +74,7 @@
     "inspect_zone_line": "**{zone}** ({active}/{total})",
     "item_received": "🎒 **+{qty}x {item}**",
     "legend_title": "👑 Légende",
-    "limit_reached": "❌ Tu as utilisé toutes tes actions de ferme aujourd'hui (max 20).",
+    "limit_reached": "❌ Tu as utilisé toutes tes actions de ferme aujourd'hui (max 100).",
     "main_desc": "👨‍🌾 **Niveau Fermier :** {level}\nXP : `{xpbar}` {xp}/{xpnext}\n🌱 **Actif :** {active}/{max} parcelles\n⏱ **Prochaine :** {next}\n{blessed}\n\n{time}\n\n💡 {tip}",
     "main_title": "🚜 Ferme",
     "master_title": "🎖️ Maître",

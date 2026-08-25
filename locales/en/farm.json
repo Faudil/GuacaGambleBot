@@ -74,7 +74,7 @@
     "inspect_zone_line": "**{zone}** ({active}/{total})",
     "item_received": "🎒 **+{qty}x {item}**",
     "legend_title": "👑 Legend",
-    "limit_reached": "❌ You've used all your farm actions for today (20 max).",
+    "limit_reached": "❌ You've used all your farm actions for today (100 max).",
     "main_desc": "👨‍🌾 **Farmer Level:** {level}\nXP: `{xpbar}` {xp}/{xpnext}\n🌱 **Active:** {active}/{max} plots\n⏱ **Next:** {next}\n{blessed}\n\n{time}\n\n💡 {tip}",
     "main_title": "🚜 Farmstead",
     "master_title": "🎖️ Master",
