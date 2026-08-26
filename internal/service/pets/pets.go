@@ -265,9 +265,40 @@ func (s *Service) SanctuaryPetCount(userID int64) int {
 func (s *Service) MaxPetSlots(userID int64) int {
 	var u model.User
 	if err := s.store.DB.Where("user_id = ?", userID).First(&u).Error; err != nil {
+		if BasePetSlots > 10 {
+			return 10
+		}
 		return BasePetSlots
 	}
-	return BasePetSlots + u.ExtraPetSlots
+	m := BasePetSlots + u.ExtraPetSlots
+	if m > 10 {
+		return 10
+	}
+	return m
+}
+
+// MigrateOverflowToSanctuary moves excess active pets (>10) to sanctuary, allowing overflow if sanctuary max exceeded.
+func (s *Service) MigrateOverflowToSanctuary() (int, error) {
+	var userIDs []int64
+	if err := s.store.DB.Model(&model.UserPet{}).Distinct("user_id").Pluck("user_id", &userIDs).Error; err != nil {
+		return 0, err
+	}
+	moved := 0
+	for _, uid := range userIDs {
+		var pets []model.UserPet
+		if err := s.store.DB.Where("user_id = ? AND in_sanctuary = ?", uid, false).Order("is_active DESC, level DESC, elo DESC, id ASC").Find(&pets).Error; err != nil {
+			continue
+		}
+		if len(pets) <= 10 {
+			continue
+		}
+		for _, p := range pets[10:] {
+			if err := s.store.DB.Model(&model.UserPet{}).Where("id = ?", p.ID).Updates(map[string]any{"in_sanctuary": true, "is_active": false}).Error; err == nil {
+				moved++
+			}
+		}
+	}
+	return moved, nil
 }
 
 func (s *Service) CanCreatePet(userID int64) bool {

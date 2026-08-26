@@ -17,6 +17,7 @@ import (
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/logger"
+	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe/hoakhaven"
 	"guacagamblebot/internal/universe/scifi"
@@ -108,6 +109,17 @@ func main() {
 
 	bot := &interaction.Bot{Session: dg, DB: database, Prefix: cfg.Prefix}
 	str := store.New(database, cfg)
+	// Auto-migrate overflow roster >10 to sanctuary (allows overflow even if sanctuary max exceeded)
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Warn("overflow migration panic", "error", r)
+			}
+		}()
+		if m, err := petsvc.New(str, cfg).MigrateOverflowToSanctuary(); err == nil && m > 0 {
+			slog.Info("overflow migration: moved pets to sanctuary", "moved", m)
+		}
+	}()
 	go elosimulation.Run(ctx, str)
 	go elosimulation.RunWeeklyReset(ctx, str, dg)
 	router := interaction.NewRouter(bot, str)

@@ -120,7 +120,8 @@ func (c *Cog) menu(s interaction.Session, i *discordgo.InteractionCreate, lang s
 }
 
 func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	pets, err := c.svc.GetPets(userID)
+	// Only active roster: max 10, never exceeds Discord limits. Overflow auto-migrated to sanctuary on boot.
+	pets, err := c.svc.GetActiveRosterPets(userID)
 	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": pseudo}), "", 0x2ecc71)
 
 	comps := []discordgo.MessageComponent{}
@@ -128,12 +129,10 @@ func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.Messag
 	if err != nil || len(pets) == 0 {
 		embed.Description = i18n.T("pets.list.no_pets", lang)
 	} else {
-		// Minimal truncate: Discord SelectMenu max 25 options and embed description 4096
-		truncated := false
+		// Defensive truncate to 10 even if migration race leaves overflow
 		displayPets := pets
-		if len(pets) > 25 {
-			displayPets = pets[:25]
-			truncated = true
+		if len(pets) > 10 {
+			displayPets = pets[:10]
 		}
 		lines := make([]string, 0, len(displayPets))
 		for _, p := range displayPets {
@@ -142,9 +141,6 @@ func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.Messag
 		desc := strings.Join(lines, "\n")
 		if len([]rune(desc)) > 4000 {
 			desc = string([]rune(desc)[:4000]) + "…"
-		}
-		if truncated {
-			desc += fmt.Sprintf("\n*… +%d more pets (showing 25/%d)*", len(pets)-25, len(pets))
 		}
 		embed.Description = desc
 
