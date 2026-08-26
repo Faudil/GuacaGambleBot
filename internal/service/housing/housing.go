@@ -177,12 +177,27 @@ func (s *Service) HasHouse(userID int64, houseType string) bool {
 	return count > 0
 }
 
-func (s *Service) applyHousingBonuses(userID int64, ht *HouseType) {
+func (s *Service) recalcHousingBonuses(userID int64) {
+	var houses []model.UserHousing
+	if err := s.store.DB.Where("user_id = ?", userID).Find(&houses).Error; err != nil {
+		return
+	}
+	totalInv, totalPet := 0, 0
+	for _, h := range houses {
+		if ht := Houses[h.HouseType]; ht != nil {
+			totalInv += ht.InventoryBonus
+			totalPet += ht.PetSlotsBonus
+		}
+	}
 	s.store.DB.Model(&model.User{}).Where("user_id = ?", userID).
 		Updates(map[string]any{
-			"extra_inv_slots": ht.InventoryBonus,
-			"extra_pet_slots": ht.PetSlotsBonus,
+			"extra_inv_slots": totalInv,
+			"extra_pet_slots": totalPet,
 		})
+}
+
+func (s *Service) applyHousingBonuses(userID int64, ht *HouseType) {
+	s.recalcHousingBonuses(userID)
 }
 
 // BuyHouse purchases a new house type and moves in immediately. Each house
@@ -222,7 +237,7 @@ func (s *Service) BuyHouse(userID int64, houseType string) error {
 	if err != nil {
 		return err
 	}
-	s.applyHousingBonuses(userID, ht)
+	s.recalcHousingBonuses(userID)
 	return nil
 }
 
@@ -245,7 +260,7 @@ func (s *Service) SwitchHouse(userID int64, houseType string) error {
 	if err != nil {
 		return err
 	}
-	s.applyHousingBonuses(userID, Houses[houseType])
+	s.recalcHousingBonuses(userID)
 	return nil
 }
 
@@ -276,7 +291,7 @@ func (s *Service) UpgradeLevel(userID int64) error {
 		UpdateColumn("level", gorm.Expr("level + 1")).Error; err != nil {
 		return err
 	}
-	s.applyHousingBonuses(userID, ht)
+	s.recalcHousingBonuses(userID)
 	return nil
 }
 

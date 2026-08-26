@@ -487,20 +487,6 @@ func TestRollOreGating(t *testing.T) {
 	assert.True(t, foundUltra, "ultra-rare should appear at depth 30+")
 }
 
-func TestWagerEVZero(t *testing.T) {
-	for _, risk := range []int{10, 25, 50, 75} {
-		rate := WagerPayoutRateFromRisk(risk)
-		ev := float64(100-risk)/100*rate - float64(risk)/100*1
-		assert.InDelta(t, 0, ev, 0.001, "wager EV should be 0 at risk %d", risk)
-	}
-	// High risk is clamped to 3.0 for safety, so EV becomes house-favoured
-	rate90 := WagerPayoutRateFromRisk(90)
-	assert.Equal(t, 3.0, rate90)
-	ev90 := float64(10)/100*rate90 - float64(90)/100*1
-	assert.Less(t, ev90, 0.0, "high risk clamped => negative EV (house edge)")
-	assert.Equal(t, 0.0, WagerPayoutRateFromRisk(0), "no risk = no profit")
-}
-
 func TestPickNarrativeEvent(t *testing.T) {
 	ev1 := pickNarrativeEvent(1)
 	assert.Nil(t, ev1)

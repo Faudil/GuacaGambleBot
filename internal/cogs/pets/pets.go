@@ -28,6 +28,8 @@ import (
 	sansvc "guacagamblebot/internal/service/sanctuary"
 	"guacagamblebot/internal/store"
 	"guacagamblebot/internal/universe"
+
+	"gorm.io/gorm"
 )
 
 type Cog struct {
@@ -154,8 +156,8 @@ func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.Messag
 				emoji = pt.Emoji
 			}
 			label := p.Nickname
-			if len(label) > 25 {
-				label = label[:25]
+			if len([]rune(label)) > 25 {
+				label = string([]rune(label)[:25])
 			}
 			opts = append(opts, discordgo.SelectMenuOption{
 				Label: label,
@@ -381,6 +383,8 @@ func (c *Cog) onRetireClick(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) == 0 {
+		slog.Warn("pets: retire click missing petID", "user", userID)
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
@@ -434,6 +438,8 @@ func (c *Cog) onRetireConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) == 0 {
+		slog.Warn("pets: retire confirm missing petID", "user", userID)
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
@@ -443,6 +449,7 @@ func (c *Cog) onRetireConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 		return
 	}
 	if err := c.sanSvc.RetirePet(userID, petID); err != nil {
+		slog.Error("pets: retire failed", "user", userID, "pet", petID, "error", err)
 		msg := err.Error()
 		if errors.Is(err, sansvc.ErrSanctuaryFull) {
 			msg = i18n.T("pets.retire.full", lang)
@@ -471,6 +478,8 @@ func (c *Cog) onRecallClick(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) == 0 {
+		slog.Warn("pets: recall click missing petID", "user", userID)
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
@@ -500,10 +509,13 @@ func (c *Cog) onRecallConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	userID := interaction.ToInt64(interaction.UserID(i))
 	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
 	if len(rest) == 0 {
+		slog.Warn("pets: recall confirm missing petID", "user", userID)
+		interaction.RespondError(b, i, lang, "pets.equip.fail")
 		return
 	}
 	petID, _ := strconv.ParseInt(rest[0], 10, 64)
 	if err := c.sanSvc.RecallPet(userID, petID); err != nil {
+		slog.Error("pets: recall failed", "user", userID, "pet", petID, "error", err)
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{Content: err.Error(), Flags: discordgo.MessageFlagsEphemeral},
@@ -1535,11 +1547,19 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 		interaction.RespondError(b, i, lang, "pets.hatch.no_egg")
 		return
 	}
-	if !c.canHatchAnywhere(userID) {
+	// Block if both pools full (do not queue for future under_construction slot)
+	activeCount := c.svc.ActivePetCount(userID)
+	maxActive := c.svc.MaxPetSlots(userID)
+	sanMax := 0
+	if c.sanSvc != nil {
+		sanMax = c.sanSvc.GetMaxSlots(userID)
+	}
+	activeFree := activeCount < maxActive
+	hasSanSpace := c.hasSanctuarySpace(userID)
+	if !activeFree && !hasSanSpace {
 		interaction.RespondError(b, i, lang, "pets.hatch.no_slots")
 		return
 	}
-	activeFree := c.svc.CanCreatePet(userID)
 
 	biome := hatchKey
 	petType := ""
@@ -1548,25 +1568,50 @@ func (c *Cog) hatchEgg(b *interaction.Bot, i *discordgo.InteractionCreate, userI
 	} else {
 		petType = petsvc.RollGacha("", hatchKey)
 	}
-	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(i.GuildID))
-	if err != nil || pet == nil {
+	// Atomic create + conditional sanctuary move re-checks space inside transaction
+	var pet *model.UserPet
+	var sentToSanctuary bool
+	err := c.store.DB.Transaction(func(tx *gorm.DB) error {
+		// Re-check inside tx to avoid race
+		if !activeFree {
+			var sanUsed int64
+			if err := tx.Model(&model.UserPet{}).Where("user_id = ? AND in_sanctuary = ?", userID, true).Count(&sanUsed).Error; err != nil {
+				return err
+			}
+			if int(sanUsed) >= sanMax {
+				return sansvc.ErrSanctuaryFull
+			}
+		}
+		p2, err := c.svc.CreatePetWithTx(tx, userID, petType, interaction.ToInt64(i.GuildID))
+		if err != nil || p2 == nil {
+			return err
+		}
+		pet = p2
+		if !activeFree {
+			pet.InSanctuary = true
+			pet.IsActive = false
+			if err := tx.Save(pet).Error; err != nil {
+				return err
+			}
+			sentToSanctuary = true
+		}
+		if err := tx.Exec(`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`, userID, eggType).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, sansvc.ErrSanctuaryFull) {
+			interaction.RespondError(b, i, lang, "pets.hatch.no_slots")
+			return
+		}
+		slog.Error("pets: hatch transaction failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "pets.hatch.error")
 		return
 	}
-	// If active roster full but sanctuary has space, put pet directly into sanctuary
-	sentToSanctuary := false
-	if !activeFree && c.hasSanctuarySpace(userID) {
-		pet.InSanctuary = true
-		pet.IsActive = false
-		_ = c.svc.UpdatePet(pet)
-		sentToSanctuary = true
-	}
-
-	if err := c.store.DB.Exec(
-		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
-		userID, eggType,
-	).Error; err != nil {
-		slog.Error("pets: failed to decrement egg inventory", "user", userID, "egg", eggType, "error", err)
+	if pet == nil {
+		interaction.RespondError(b, i, lang, "pets.hatch.error")
+		return
 	}
 
 	rarity := petTypeRarity(pet)
@@ -1634,11 +1679,18 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_egg", lang))
 		return
 	}
-	if !c.canHatchAnywhere(userID) {
+	activeCountMsg := c.svc.ActivePetCount(userID)
+	maxActiveMsg := c.svc.MaxPetSlots(userID)
+	sanMaxMsg := 0
+	if c.sanSvc != nil {
+		sanMaxMsg = c.sanSvc.GetMaxSlots(userID)
+	}
+	activeFreeMsg := activeCountMsg < maxActiveMsg
+	hasSanSpaceMsg := c.hasSanctuarySpace(userID)
+	if !activeFreeMsg && !hasSanSpaceMsg {
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_slots", lang))
 		return
 	}
-	activeFreeMsg := c.svc.CanCreatePet(userID)
 	biome := hatchKey
 	petType := ""
 	if hatchKey == "prehistoric" {
@@ -1646,23 +1698,45 @@ func (c *Cog) hatchEggMessage(b *interaction.Bot, s *discordgo.Session, m *disco
 	} else {
 		petType = petsvc.RollGacha("", hatchKey)
 	}
-	pet, err := c.svc.CreatePet(userID, petType, interaction.ToInt64(m.GuildID))
-	if err != nil || pet == nil {
+	var pet *model.UserPet
+	var sentToSanctuaryMsg bool
+	err := c.store.DB.Transaction(func(tx *gorm.DB) error {
+		if !activeFreeMsg {
+			var sanUsed int64
+			if err := tx.Model(&model.UserPet{}).Where("user_id = ? AND in_sanctuary = ?", userID, true).Count(&sanUsed).Error; err != nil {
+				return err
+			}
+			if int(sanUsed) >= sanMaxMsg {
+				return sansvc.ErrSanctuaryFull
+			}
+		}
+		p2, err := c.svc.CreatePetWithTx(tx, userID, petType, interaction.ToInt64(m.GuildID))
+		if err != nil || p2 == nil {
+			return err
+		}
+		pet = p2
+		if !activeFreeMsg {
+			pet.InSanctuary = true
+			pet.IsActive = false
+			if err := tx.Save(pet).Error; err != nil {
+				return err
+			}
+			sentToSanctuaryMsg = true
+		}
+		return tx.Exec(`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`, userID, eggType).Error
+	})
+	if err != nil {
+		if errors.Is(err, sansvc.ErrSanctuaryFull) {
+			_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.no_slots", lang))
+			return
+		}
+		slog.Error("pets: hatch (prefix) transaction failed", "user", userID, "error", err)
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
 		return
 	}
-	sentToSanctuaryMsg := false
-	if !activeFreeMsg && c.hasSanctuarySpace(userID) {
-		pet.InSanctuary = true
-		pet.IsActive = false
-		_ = c.svc.UpdatePet(pet)
-		sentToSanctuaryMsg = true
-	}
-	if err := c.store.DB.Exec(
-		`UPDATE inventory SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ? AND quantity > 0`,
-		userID, eggType,
-	).Error; err != nil {
-		slog.Error("pets: failed to decrement egg inventory (msg)", "user", userID, "egg", eggType, "error", err)
+	if pet == nil {
+		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("pets.hatch.error", lang))
+		return
 	}
 
 	rarity := petTypeRarity(pet)

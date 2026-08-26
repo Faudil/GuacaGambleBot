@@ -72,38 +72,6 @@ func oreValueCurve(depth int) int {
 	return int(v)
 }
 
-// EstimatedValue exposes the curve for wager payout calculations.
-func EstimatedValue(depth int) int { return oreValueCurve(depth) }
-
-// WagerPayoutRate returns the profit multiplier for a surviving wagered dig.
-// Deprecated: use WagerPayoutRateFromRisk for EV=0 fairness.
-func WagerPayoutRate(depth int) float64 {
-	risk := (depth - 1) * 5
-	if risk < 0 {
-		risk = 0
-	}
-	if risk > 90 {
-		risk = 90
-	}
-	return WagerPayoutRateFromRisk(risk)
-}
-
-// WagerPayoutRateFromRisk returns the profit multiplier that makes the wager EV=0
-// given the true collapse risk (0-99). Profit = risk/(100-risk), clamped to [0, 3.0].
-func WagerPayoutRateFromRisk(risk int) float64 {
-	if risk <= 0 {
-		return 0
-	}
-	if risk >= 95 {
-		return 3.0
-	}
-	r := float64(risk) / float64(100-risk)
-	if r > 3.0 {
-		r = 3.0
-	}
-	return r
-}
-
 // eligibleOres returns ores whose depth gate is satisfied.
 func eligibleOres(depth int) []MineItem {
 	var out []MineItem
@@ -393,10 +361,6 @@ type EventEffect struct {
 	// picked. The player is expected to own it (ownership is checked by the
 	// cog before consuming).
 	ConsumeItem string
-	// Wager is the credit stake required for this option (0 = no wager).
-	Wager int
-	// WagerWin is the credit payout on success (0 = no payout, stake lost).
-	WagerWin int
 	// RepairTool restores this many durability points to the active tool.
 	RepairTool int
 	Message    string
@@ -785,7 +749,7 @@ var eventPool = func() []EventDef {
 			}},
 		{ID: "goblin_trader", Stage: StageShallow, Rarity: EventRare, MinDepth: 5,
 			Options: []NarrativeOption{
-				o("mining.ev_goblin_o1", "mining.ev_goblin_o1d", &EventEffect{Wager: 100, WagerWin: 250, Message: "mining.ev_goblin_r1"}),
+				o("mining.ev_goblin_o1", "mining.ev_goblin_o1d", &EventEffect{Message: "mining.ev_goblin_r1"}),
 				o("mining.ev_goblin_o2", "mining.ev_goblin_o2d", ef("mining.ev_goblin_r2")),
 			}},
 
@@ -797,7 +761,7 @@ var eventPool = func() []EventDef {
 			}},
 		{ID: "fossil_bed", Stage: StageDepth, Rarity: EventCommon, MinDepth: 11,
 			Options: []NarrativeOption{
-				o("mining.ev_fossil_o1", "mining.ev_fossil_o1d", &EventEffect{WagerWin: 300, Message: "mining.ev_fossil_r1"}),
+				o("mining.ev_fossil_o1", "mining.ev_fossil_o1d", &EventEffect{Items: []BagEntry{{Name: "gold_nugget", Count: 3}, {Name: "platinum", Count: 1}}, Message: "mining.ev_fossil_r1"}),
 				o("mining.ev_fossil_o2", "mining.ev_fossil_o2d", &EventEffect{Items: []BagEntry{{Name: "ancient_alloy", Count: 1}}, LoreID: "mine_lore_fracture", Message: "mining.ev_fossil_r2"}),
 			}},
 
@@ -823,7 +787,7 @@ var eventPool = func() []EventDef {
 		// ═══ NEW — DEEP RARE ═══
 		{ID: "dice_ghost", Stage: StageDeep, Rarity: EventRare, MinDepth: 17,
 			Options: []NarrativeOption{
-				o("mining.ev_dice_o1", "mining.ev_dice_o1d", &EventEffect{Wager: 250, WagerWin: 500, Message: "mining.ev_dice_r1"}),
+				o("mining.ev_dice_o1", "mining.ev_dice_o1d", &EventEffect{Message: "mining.ev_dice_r1"}),
 				o("mining.ev_dice_o2", "mining.ev_dice_o2d", efr("mining.ev_dice_r2", -15, 5)),
 			}},
 		{ID: "anvil", Stage: StageDeep, Rarity: EventRare, MinDepth: 16,
@@ -835,7 +799,7 @@ var eventPool = func() []EventDef {
 		// ═══ NEW — DEEP LEGENDARY ═══
 		{ID: "vault_lock", Stage: StageDeep, Rarity: EventLegendary, MinDepth: 18,
 			Options: []NarrativeOption{
-				o("mining.ev_vault_o1", "mining.ev_vault_o1d", &EventEffect{Wager: 500, WagerWin: 1500, Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_vault_r1"}),
+				o("mining.ev_vault_o1", "mining.ev_vault_o1d", &EventEffect{Items: []BagEntry{{Name: "resonance_core", Count: 1}}, Message: "mining.ev_vault_r1"}),
 				o("mining.ev_vault_o2", "mining.ev_vault_o2d", &EventEffect{RiskMod: 20, RiskTurns: 5, Items: []BagEntry{{Name: "kethari_crystal", Count: 2}}, Message: "mining.ev_vault_r2"}),
 				o("mining.ev_vault_o3", "mining.ev_vault_o3d", ef("mining.ev_vault_r3")),
 			}},
@@ -951,7 +915,7 @@ func (s *Service) ApplyEventOption(eventID string, optionIdx int, depth int, bag
 		eff.Message = "mining.ev_glow_r1g"
 	}
 
-	// Goblin trader: 45% win extra ore + credits, else just lose stake
+	// Goblin trader: 45% win ore, else lose
 	if eventID == "goblin_trader" && optionIdx == 0 {
 		if rand.Intn(100) < 45 {
 			if rand.Intn(100) < 50 {
@@ -961,28 +925,29 @@ func (s *Service) ApplyEventOption(eventID string, optionIdx int, depth int, bag
 			}
 			eff.Message = "mining.ev_goblin_r1_win"
 		} else {
-			eff.WagerWin = 0
 			eff.Items = nil
 			eff.Message = "mining.ev_goblin_r1_lose"
 		}
 	}
 
-	// Dice ghost: 50/50 double or lose
+	// Dice ghost: 50/50 ore or lose
 	if eventID == "dice_ghost" && optionIdx == 0 {
 		if rand.Intn(100) < 50 {
+			eff.Items = []BagEntry{{Name: "gold_nugget", Count: 2}, {Name: "emerald", Count: 1}}
 			eff.Message = "mining.ev_dice_r1_win"
 		} else {
-			eff.WagerWin = 0
+			eff.Items = nil
+			eff.RiskMod = 10
+			eff.RiskTurns = 3
 			eff.Message = "mining.ev_dice_r1_lose"
 		}
 	}
 
-	// Vault lock: 40% success on lockpick (wager), else lose stake
+	// Vault lock: 40% success, else lose
 	if eventID == "vault_lock" && optionIdx == 0 {
 		if rand.Intn(100) < 40 {
 			eff.Message = "mining.ev_vault_r1_win"
 		} else {
-			eff.WagerWin = 0
 			eff.Items = nil
 			eff.Message = "mining.ev_vault_r1_lose"
 		}
@@ -1456,7 +1421,6 @@ type PersistedSession struct {
 	RiskMod        int
 	RiskTurns      int
 	Bag            []BagEntry
-	Wager          int
 	Contract       *Contract
 	EventCount     int
 }
@@ -1507,7 +1471,6 @@ func (s *Service) SaveSession(userID int64, ps *PersistedSession) error {
 		RiskMod:        ps.RiskMod,
 		RiskTurns:      ps.RiskTurns,
 		Bag:            string(bagJSON),
-		Wager:          ps.Wager,
 		Contract:       contractJSON,
 		UpdatedAt:      time.Now(),
 	})
@@ -1571,7 +1534,6 @@ func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
 		RiskMod:        m.RiskMod,
 		RiskTurns:      m.RiskTurns,
 		Bag:            bag,
-		Wager:          m.Wager,
 		Contract:       contract,
 		EventCount:     0,
 	}, nil

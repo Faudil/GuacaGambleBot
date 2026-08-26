@@ -381,8 +381,8 @@ func (c *Cog) onFusionRarity(b *interaction.Bot, i *discordgo.InteractionCreate)
 			continue
 		}
 		label := p.Nickname + " (" + p.PetType + ")"
-		if len(label) > 50 {
-			label = label[:50]
+		if len([]rune(label)) > 50 {
+			label = string([]rune(label)[:50])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,
@@ -577,8 +577,8 @@ func (c *Cog) onAscendMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			emoji = pt.Emoji
 		}
 		label := p.Nickname + " Lvl " + strconv.Itoa(p.Level)
-		if len(label) > 50 {
-			label = label[:50]
+		if len([]rune(label)) > 50 {
+			label = string([]rune(label)[:50])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,
@@ -642,8 +642,8 @@ func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			emoji = pt.Emoji
 		}
 		label := p.Nickname
-		if len(label) > 50 {
-			label = label[:50]
+		if len([]rune(label)) > 50 {
+			label = string([]rune(label)[:50])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,
@@ -681,8 +681,8 @@ func (c *Cog) onRecallSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			emoji = pt.Emoji
 		}
 		label := p.Nickname
-		if len(label) > 50 {
-			label = label[:50]
+		if len([]rune(label)) > 50 {
+			label = string([]rune(label)[:50])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,
@@ -724,8 +724,8 @@ func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 			status = " [Slot " + itoa(p.ShowcaseSlot) + "]"
 		}
 		label := p.Nickname + status
-		if len(label) > 50 {
-			label = label[:50]
+		if len([]rune(label)) > 50 {
+			label = string([]rune(label)[:50])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,

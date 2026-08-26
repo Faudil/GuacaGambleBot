@@ -115,6 +115,26 @@ func (s *Service) CreatePet(userID int64, petType string, serverID ...int64) (*m
 	return pet, nil
 }
 
+func (s *Service) CreatePetWithTx(tx *gorm.DB, userID int64, petType string, serverID ...int64) (*model.UserPet, error) {
+	pt, ok := PetTypes[petType]
+	if !ok {
+		return nil, nil
+	}
+	sid := int64(0)
+	if len(serverID) > 0 {
+		sid = serverID[0]
+	}
+	pet := s.newPet(userID, pt, sid, "hatched",
+		pt.Emoji+" A wild **"+petType+"** emerged from its egg! It looks at you with curious eyes.")
+	if pet == nil {
+		return nil, nil
+	}
+	if err := tx.Create(pet).Error; err != nil {
+		return nil, err
+	}
+	return pet, nil
+}
+
 // CreateReanimatedPet creates a pet reanimated from fossils: same stats and
 // activation rules as CreatePet, but with reanimation history instead of the
 // hatching event.

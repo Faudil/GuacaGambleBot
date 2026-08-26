@@ -32,7 +32,6 @@ type userSession struct {
 	ghostVeilTurns int
 	riskMod        int
 	riskTurns      int
-	wager          int
 	contract       *miningsvc.Contract
 	eventCount     int
 }
@@ -68,7 +67,6 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("mine", "descend", c.onDescend)
 	r.Component("mine", "event", c.onEventOption)
 	r.Component("mine", "leave", c.onLeave)
-	r.Component("mine", "wager", c.onWager)
 	r.Component("mine", "contract_pick", c.onContractPick)
 	r.Component("mine", "gamble", c.onGamble)
 }
@@ -99,7 +97,6 @@ func (c *Cog) loadSession(userID int64) *userSession {
 		ghostVeilTurns: ps.GhostVeilTurns,
 		riskMod:        ps.RiskMod,
 		riskTurns:      ps.RiskTurns,
-		wager:          ps.Wager,
 		contract:       ps.Contract,
 		eventCount:     ps.EventCount,
 	}
@@ -145,7 +142,6 @@ func (c *Cog) ensureSession(userID int64, toolID string) (*userSession, error) {
 			ghostVeilTurns: ps.GhostVeilTurns,
 			riskMod:        ps.RiskMod,
 			riskTurns:      ps.RiskTurns,
-			wager:          ps.Wager,
 			contract:       ps.Contract,
 			eventCount:     ps.EventCount,
 		}
@@ -179,7 +175,6 @@ func (c *Cog) persistSession(userID int64) {
 			RiskMod:        sess.riskMod,
 			RiskTurns:      sess.riskTurns,
 			Bag:            append([]miningsvc.BagEntry(nil), sess.bag...),
-			Wager:          sess.wager,
 			Contract:       sess.contract,
 			EventCount:     sess.eventCount,
 		}
@@ -414,32 +409,6 @@ func (c *Cog) onContractPick(b *interaction.Bot, i *discordgo.InteractionCreate)
 	c.respond(b, i, embed, comps)
 }
 
-func (c *Cog) onWager(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
-	amt := 0
-	if len(rest) > 0 {
-		fmt.Sscanf(rest[0], "%d", &amt)
-	}
-	mu := getUserMu(userID)
-	mu.Lock()
-	sessionsMu.Lock()
-	sess, ok := sessions[userID]
-	if !ok {
-		sessionsMu.Unlock()
-		mu.Unlock()
-		interaction.RespondError(b, i, lang, "mining.error")
-		return
-	}
-	sess.wager = amt
-	sessionsMu.Unlock()
-	mu.Unlock()
-	c.persistSession(userID)
-	embed, comps := c.mineEmbed(lang, userID, "")
-	c.respond(b, i, embed, comps)
-}
-
 func (c *Cog) onGamble(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -520,11 +489,6 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 	if effects := c.effectsLine(sess, lang); effects != "" {
 		desc += "\n" + effects
 	}
-	if sess.wager > 0 {
-		rate := miningsvc.WagerPayoutRateFromRisk(riskNext)
-		profit := int(float64(sess.wager) * rate)
-		desc += "\n" + i18n.T("mining.wager_active", lang, map[string]any{"amount": sess.wager, "profit": profit})
-	}
 	if sess.contract != nil {
 		prog, target := miningsvc.ContractProgress(sess.contract, sess.depth, sess.bag, sess.depth-1, sess.eventCount)
 		done := ""
@@ -588,28 +552,6 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 				CustomID: components.EncodeOwner(userID, "mine", "gamble"),
 				Style:    discordgo.SecondaryButton,
 				Disabled: len(sess.bag) == 0,
-			},
-		),
-		components.ActionRow(
-			discordgo.Button{
-				Label:    "50",
-				CustomID: components.EncodeOwner(userID, "mine", "wager", "50"),
-				Style:    discordgo.SecondaryButton,
-			},
-			discordgo.Button{
-				Label:    "250",
-				CustomID: components.EncodeOwner(userID, "mine", "wager", "250"),
-				Style:    discordgo.SecondaryButton,
-			},
-			discordgo.Button{
-				Label:    "1000",
-				CustomID: components.EncodeOwner(userID, "mine", "wager", "1000"),
-				Style:    discordgo.SecondaryButton,
-			},
-			discordgo.Button{
-				Label:    i18n.T("mining.wager_off", lang),
-				CustomID: components.EncodeOwner(userID, "mine", "wager", "0"),
-				Style:    discordgo.SecondaryButton,
 			},
 		),
 	}
@@ -752,47 +694,16 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	toolID := sess.toolID
 	gvt := sess.ghostVeilTurns
 	riskMod := sess.riskMod
-	wager := sess.wager
 	sessionsMu.RUnlock()
 
-	wagerMsg := ""
-	if wager > 0 {
-		bal, err := c.store.GetBalance(userID)
-		if err != nil || bal < wager {
-			sessionsMu.Lock()
-			if s, ok := sessions[userID]; ok {
-				s.wager = 0
-			}
-			sessionsMu.Unlock()
-			wager = 0
-			wagerMsg = i18n.T("mining.wager_no_funds", lang)
-		} else {
-			if _, err := c.store.UpdateBalance(userID, -wager); err != nil {
-				sessionsMu.Lock()
-				if s, ok := sessions[userID]; ok {
-					s.wager = 0
-				}
-				sessionsMu.Unlock()
-				wager = 0
-				wagerMsg = i18n.T("mining.wager_no_funds", lang)
-			}
-		}
-	}
-	risk := c.svc.RiskFor(userID, depth, toolID, gvt, riskMod)
 	res, err := c.svc.Descend(userID, depth, bagCopy, toolID, gvt, riskMod)
 	if err != nil {
-		if wager > 0 {
-			_, _ = c.store.UpdateBalance(userID, wager)
-		}
 		slog.Error("mining descend failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
 		return
 	}
 
 	if res.Collapsed {
-		if wager > 0 {
-			wagerMsg = i18n.T("mining.wager_lost", lang, map[string]any{"amount": wager})
-		}
 		sessionsMu.Lock()
 		delete(sessions, userID)
 		sessionsMu.Unlock()
@@ -804,9 +715,6 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		msg := i18n.T("mining.collapse_msg", lang, map[string]any{"items": bagStr})
 		if len(res.Bag) == 0 {
 			msg = i18n.T("mining.collapse_empty", lang)
-		}
-		if wagerMsg != "" {
-			msg = wagerMsg + "\n\n" + msg
 		}
 		c.respond(b, i, components.Embed("💥 COLLAPSE!", msg, 0xFF0000), nil)
 		return
@@ -836,13 +744,6 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		sessForContract = s
 	}
 	sessionsMu.Unlock()
-	if wager > 0 {
-		rate := miningsvc.WagerPayoutRateFromRisk(risk)
-		profit := int(float64(wager) * rate)
-		payout := wager + profit
-		_, _ = c.store.UpdateBalance(userID, payout)
-		wagerMsg = i18n.T("mining.wager_won", lang, map[string]any{"profit": profit, "payout": payout})
-	}
 	// persist after releasing per-user lock? Use helper (short lock)
 	c.persistSession(userID)
 
@@ -862,13 +763,6 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			eventMsg = loreMsg + "\n" + eventMsg
 		} else {
 			eventMsg = loreMsg
-		}
-	}
-	if wagerMsg != "" {
-		if eventMsg != "" {
-			eventMsg = wagerMsg + "\n\n" + eventMsg
-		} else {
-			eventMsg = wagerMsg
 		}
 	}
 	if sessForContract != nil {
@@ -948,39 +842,6 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	eff := c.svc.ApplyEventOption(eventID, optionIdx, depthSnap, bagSnap)
 
-	// Wager stake for event options (per-user serialized, no global hold)
-	if eff.Wager > 0 {
-		bal, err := c.store.GetBalance(userID)
-		if err != nil || bal < eff.Wager {
-			interaction.RespondError(b, i, lang, "mining.wager_no_funds")
-			return
-		}
-		if _, err := c.store.UpdateBalance(userID, -eff.Wager); err != nil {
-			interaction.RespondError(b, i, lang, "mining.error")
-			return
-		}
-		if eff.WagerWin > 0 {
-			_, _ = c.store.UpdateBalance(userID, eff.WagerWin)
-		}
-	} else if eff.WagerWin > 0 {
-		_, _ = c.store.UpdateBalance(userID, eff.WagerWin)
-	}
-	if eff.WagerWin > 0 {
-		winLine := i18n.T("mining.wager_event_won", lang, map[string]any{"amount": eff.WagerWin})
-		if eff.Message != "" {
-			eff.Message = eff.Message + "|WINLINE:" + winLine
-		} else {
-			eff.Message = winLine
-		}
-	} else if eff.Wager > 0 && eff.WagerWin == 0 {
-		loseLine := i18n.T("mining.wager_event_lost", lang, map[string]any{"amount": eff.Wager})
-		if eff.Message != "" {
-			eff.Message = eff.Message + "|WINLINE:" + loseLine
-		} else {
-			eff.Message = loseLine
-		}
-	}
-
 	if eff.RepairTool > 0 {
 		sessionsMu.RLock()
 		tid := sess.toolID
@@ -991,14 +852,6 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if eff.ConsumeItem != "" {
 		has, err := c.store.HasItem(userID, eff.ConsumeItem, 1)
 		if err != nil || !has {
-			if eff.Wager > 0 {
-				_, _ = c.store.UpdateBalance(userID, eff.Wager)
-				if eff.WagerWin > 0 {
-					_, _ = c.store.UpdateBalance(userID, -eff.WagerWin)
-				}
-			} else if eff.WagerWin > 0 {
-				_, _ = c.store.UpdateBalance(userID, -eff.WagerWin)
-			}
 			interaction.RespondError(b, i, lang, "mining.event_no_magnet")
 			return
 		}
