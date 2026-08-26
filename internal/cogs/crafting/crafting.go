@@ -154,7 +154,7 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 					components.Embed("❌", msg, 0xe74c3c), nil))
 			return
 		}
-		resDisplay := c.displayName(recipe.Result, lang)
+		resDisplay := items.LocalizedName(recipe.Result, lang)
 		msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": amount, "item": resDisplay, "xp": recipe.XP * amount})
 		if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
 			msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
@@ -188,7 +188,7 @@ func (c *Cog) handleCraftAutocomplete(b *interaction.Bot, i *discordgo.Interacti
 		if !c.unlocked(userID, level, rec) {
 			continue
 		}
-		name := c.displayName(rec.Result, lang)
+		name := items.LocalizedName(rec.Result, lang)
 		if focused != "" && !strings.Contains(strings.ToLower(name), focused) && !strings.Contains(strings.ToLower(key), focused) && !strings.Contains(strings.ToLower(rec.Result), focused) {
 			continue
 		}
@@ -283,7 +283,7 @@ func (c *Cog) onCraftPrefix(b *interaction.Bot, sess *discordgo.Session, m *disc
 		return
 	}
 
-	resDisplay := c.displayName(recipe.Result, lang)
+	resDisplay := items.LocalizedName(recipe.Result, lang)
 	msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": amount, "item": resDisplay, "xp": recipe.XP * amount})
 
 	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
@@ -420,13 +420,13 @@ func (c *Cog) buildRecipesView(userID int64, level int, lang string, page int) (
 		line := ""
 		if researchID != "" {
 			line = i18n.T("crafting.lock_research_line", lang, map[string]any{
-				"item":        c.displayName(recipe.Result, lang),
+				"item":        items.LocalizedName(recipe.Result, lang),
 				"research":    c.researchName(researchID),
 				"ingredients": recipeIngredients(recipe, lang),
 			})
 		} else {
 			line = i18n.T("crafting.lock_line", lang, map[string]any{
-				"item":        c.displayName(recipe.Result, lang),
+				"item":        items.LocalizedName(recipe.Result, lang),
 				"level":       needLevel,
 				"ingredients": recipeIngredients(recipe, lang),
 			})
@@ -534,7 +534,7 @@ func (c *Cog) craftRecipes(userID int64, level int, lang, category string) []str
 		if a.LevelRequired != b.LevelRequired {
 			return a.LevelRequired < b.LevelRequired
 		}
-		return c.displayName(a.Result, lang) < c.displayName(b.Result, lang)
+		return items.LocalizedName(a.Result, lang) < items.LocalizedName(b.Result, lang)
 	})
 	return keys
 }
@@ -575,7 +575,7 @@ func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*di
 }
 
 func (c *Cog) recipeMenuField(userID int64, level int, recipe crtsvc.Recipe, lang string) *discordgo.MessageEmbedField {
-	name := fmt.Sprintf("%s %s", recipeEmoji(recipe), c.displayName(recipe.Result, lang))
+	name := fmt.Sprintf("%s %s", recipeEmoji(recipe), items.LocalizedName(recipe.Result, lang))
 	if c.unlocked(userID, level, recipe) {
 		return components.Field(name,
 			i18n.T("crafting.menu_recipe_line", lang, map[string]any{
@@ -644,7 +644,7 @@ func (c *Cog) recipeSelect(userID int64, level int, recipes []string, page int, 
 			desc = desc[:97] + "..."
 		}
 		options = append(options, discordgo.SelectMenuOption{
-			Label:       c.displayName(recipe.Result, lang),
+			Label:       items.LocalizedName(recipe.Result, lang),
 			Value:       key,
 			Emoji:       &discordgo.ComponentEmoji{Name: recipeEmoji(recipe)},
 			Description: desc,
@@ -819,7 +819,7 @@ func (c *Cog) onCraftConfirm(b *interaction.Bot, i *discordgo.InteractionCreate)
 				components.Embed("❌", msg, 0xe74c3c), nil))
 		return
 	}
-	resDisplay := c.displayName(recipe.Result, lang)
+	resDisplay := items.LocalizedName(recipe.Result, lang)
 	msg := i18n.T("crafting.success_msg", lang, map[string]any{"amount": qty, "item": resDisplay, "xp": recipe.XP * qty})
 	if leveledUp, newLevel := c.svc.LevelUpCheck(userID); leveledUp {
 		msg += i18n.T("crafting.level_up", lang, map[string]any{"level": newLevel})
@@ -861,7 +861,7 @@ func (c *Cog) resolveRecipeKey(query, lang string) string {
 				return key
 			}
 		}
-		if strings.ToLower(c.displayName(key, lang)) == q {
+		if strings.ToLower(items.LocalizedName(key, lang)) == q {
 			return key
 		}
 	}
@@ -882,10 +882,6 @@ func (c *Cog) researchName(researchID string) string {
 		return rd.Name
 	}
 	return researchID
-}
-
-func (c *Cog) displayName(name, lang string) string {
-	return items.LocalizedName(name, lang)
 }
 
 func float64Ptr(v float64) *float64 { return &v }
@@ -969,7 +965,7 @@ func (c *Cog) buildCraftQuantityView(userID int64, recipeKey, lang string, qty i
 	if qty > maxCraftAmount {
 		qty = maxCraftAmount
 	}
-	itemName := c.displayName(recipe.Result, lang)
+	itemName := items.LocalizedName(recipe.Result, lang)
 	// scaled ingredients for qty
 	scaledParts := make([]string, 0, len(recipe.Ingredients))
 	for ing, base := range recipe.Ingredients {
@@ -1015,16 +1011,30 @@ func (c *Cog) buildCraftQuantityView(userID int64, recipeKey, lang string, qty i
 	}
 
 	disableMinus1 := qty <= 1
-	disableMinus5 := qty <= 1
 	disablePlus1 := qty >= craftMax || qty >= maxCraftAmount
-	disablePlus5 := qty >= craftMax || qty >= maxCraftAmount
+	// The ±5 buttons are also disabled when clamping makes them redundant
+	// with their ±1 counterpart (same target quantity): two enabled buttons
+	// with the same custom_id are just as invalid to Discord as two disabled
+	// ones, so this doubles as a duplicate-custom_id guard.
+	disableMinus5 := qty <= 1 || qm5 == qm1
+	disablePlus5 := qty >= craftMax || qty >= maxCraftAmount || qp5 == qp1
 
+	// Disabled stepper buttons still need a custom_id distinct from every other
+	// component on the message — Discord rejects the whole update if two
+	// buttons share one, which happens here whenever the clamped target
+	// quantity collapses to the same value (e.g. qm1 == qm5 == 1 at qty=1).
+	stepID := func(action string, disabled bool, target int) string {
+		if disabled {
+			return "_disabled_" + action
+		}
+		return components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(target))
+	}
 	row1 := []discordgo.MessageComponent{
-		discordgo.Button{Label: i18n.T("crafting.step_minus5", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qm5)), Style: discordgo.SecondaryButton, Disabled: disableMinus5},
-		discordgo.Button{Label: i18n.T("crafting.step_minus1", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qm1)), Style: discordgo.SecondaryButton, Disabled: disableMinus1},
+		discordgo.Button{Label: i18n.T("crafting.step_minus5", lang), CustomID: stepID("m5", disableMinus5, qm5), Style: discordgo.SecondaryButton, Disabled: disableMinus5},
+		discordgo.Button{Label: i18n.T("crafting.step_minus1", lang), CustomID: stepID("m1", disableMinus1, qm1), Style: discordgo.SecondaryButton, Disabled: disableMinus1},
 		discordgo.Button{Label: fmt.Sprintf("%d/%d", qty, craftMax), CustomID: "_disabled", Style: discordgo.SecondaryButton, Disabled: true},
-		discordgo.Button{Label: i18n.T("crafting.step_plus1", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qp1)), Style: discordgo.SecondaryButton, Disabled: disablePlus1},
-		discordgo.Button{Label: i18n.T("crafting.step_plus5", lang), CustomID: components.EncodeOwner(userID, "crafting", "craft_step", recipeKey, strconv.Itoa(qp5)), Style: discordgo.SecondaryButton, Disabled: disablePlus5},
+		discordgo.Button{Label: i18n.T("crafting.step_plus1", lang), CustomID: stepID("p1", disablePlus1, qp1), Style: discordgo.SecondaryButton, Disabled: disablePlus1},
+		discordgo.Button{Label: i18n.T("crafting.step_plus5", lang), CustomID: stepID("p5", disablePlus5, qp5), Style: discordgo.SecondaryButton, Disabled: disablePlus5},
 	}
 	row2 := []discordgo.MessageComponent{
 		discordgo.Button{Label: i18n.T("crafting.qty_confirm", lang, map[string]any{"qty": qty}), CustomID: components.EncodeOwner(userID, "crafting", "craft_confirm", recipeKey, strconv.Itoa(qty)), Style: discordgo.SuccessButton, Disabled: qty > craftMax},

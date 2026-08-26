@@ -108,7 +108,7 @@ func TestRunDataMigrationsIdempotent(t *testing.T) {
 
 	// First run applies the tutorial migrations and records the markers.
 	require.NoError(t, runDataMigrations(d))
-	for _, id := range []string{"tutorial_step_reorder", "tutorial_rewind_skipped_hunt"} {
+	for _, id := range []string{"tutorial_step_reorder", "tutorial_rewind_skipped_hunt", "job_xp_formula_rebalance"} {
 		var count int64
 		require.NoError(t, d.Model(&model.DataMigration{}).Where("id = ?", id).Count(&count).Error)
 		assert.Equal(t, int64(1), count, "marker %s", id)
@@ -116,7 +116,7 @@ func TestRunDataMigrationsIdempotent(t *testing.T) {
 
 	// Second run must be a no-op (markers present, nothing re-applied).
 	require.NoError(t, runDataMigrations(d))
-	for _, id := range []string{"tutorial_step_reorder", "tutorial_rewind_skipped_hunt"} {
+	for _, id := range []string{"tutorial_step_reorder", "tutorial_rewind_skipped_hunt", "job_xp_formula_rebalance"} {
 		var count int64
 		require.NoError(t, d.Model(&model.DataMigration{}).Where("id = ?", id).Count(&count).Error)
 		assert.Equal(t, int64(1), count, "marker %s", id)
@@ -225,4 +225,38 @@ func TestMigrateEquipSlotJewelry(t *testing.T) {
 	assert.Equal(t, "trinket", slotOf(3, "delve_flaming_arcane_orb_of_the_dying_star"))
 	assert.Equal(t, "jewelry", slotOf(4, "ancient_amulet"))
 	assert.Equal(t, "trinket", slotOf(5, "spark_shard"))
+}
+
+func TestMigrateJobXPFormulaRebalance(t *testing.T) {
+	d := migrationTestDB(t)
+	require.NoError(t, d.AutoMigrate(&model.Job{}))
+
+	// Fresh level 1, no XP earned yet: nothing to convert.
+	require.NoError(t, d.Create(&model.Job{UserID: 1, JobName: "miner", Level: 1, XP: 0}).Error)
+	// Old formula: 75(L1)+100(L2)+125(L3)+25 = 325 total XP earned.
+	// New formula: 100(L1)+150(L2) = 250 consumed, 75 left over, stuck at L3 (needs 200).
+	require.NoError(t, d.Create(&model.Job{UserID: 2, JobName: "fisher", Level: 4, XP: 25}).Error)
+	// Still mid-level-1 under the old formula (< 75 XP): level and XP unaffected.
+	require.NoError(t, d.Create(&model.Job{UserID: 3, JobName: "farmer", Level: 1, XP: 40}).Error)
+
+	require.NoError(t, migrateJobXPFormulaRebalance(d))
+
+	get := func(uid int64, name string) model.Job {
+		t.Helper()
+		var j model.Job
+		require.NoError(t, d.Where("user_id = ? AND job_name = ?", uid, name).First(&j).Error)
+		return j
+	}
+
+	fresh := get(1, "miner")
+	assert.Equal(t, 1, fresh.Level)
+	assert.Equal(t, 0, fresh.XP)
+
+	rebalanced := get(2, "fisher")
+	assert.Equal(t, 3, rebalanced.Level)
+	assert.Equal(t, 75, rebalanced.XP)
+
+	untouched := get(3, "farmer")
+	assert.Equal(t, 1, untouched.Level)
+	assert.Equal(t, 40, untouched.XP)
 }

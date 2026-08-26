@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/items"
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
@@ -1368,11 +1369,11 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*Leave
 		}
 	} else {
 		job.XP += totalXP
-		next := jobXPForLevel(job.Level)
+		next := jobssvc.XPForLevel(job.Level)
 		for job.XP >= next {
 			job.XP -= next
 			job.Level++
-			next = jobXPForLevel(job.Level)
+			next = jobssvc.XPForLevel(job.Level)
 		}
 		if err := s.store.DB.Model(&model.Job{}).Where("user_id = ? AND job_name = ?", userID, "miner").
 			Updates(map[string]any{"xp": job.XP, "level": job.Level}).Error; err != nil {
@@ -1388,10 +1389,6 @@ func (s *Service) LeaveMine(userID int64, bag []BagEntry, toolID string) (*Leave
 	}
 
 	return &LeaveResult{XP: totalXP, Bag: bag, Unlocks: unlocks, ToolID: toolID, LeveledUp: leveled, NewLevel: lvl}, nil
-}
-
-func jobXPForLevel(level int) int {
-	return 50 + level*25
 }
 
 func LoreDisplayName(loreID string) string {

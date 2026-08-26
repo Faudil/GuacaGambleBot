@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	furnituresvc "guacagamblebot/internal/service/furniture"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
 )
@@ -532,11 +533,11 @@ func (s *Service) GetFarmerLevel(userID int64) int {
 
 // levelUpJob applies as many level-ups as the job's XP warrants.
 func levelUpJob(job *model.Job) {
-	next := 50 + job.Level*25
+	next := jobssvc.XPForLevel(job.Level)
 	for job.XP >= next {
 		job.XP -= next
 		job.Level++
-		next = 50 + job.Level*25
+		next = jobssvc.XPForLevel(job.Level)
 	}
 }
 
@@ -545,7 +546,7 @@ func (s *Service) GetFarmerXP(userID int64) (int, int) {
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "farmer").First(&job).Error; err != nil {
 		return 0, 50
 	}
-	next := 50 + job.Level*25
+	next := jobssvc.XPForLevel(job.Level)
 	return job.XP, next
 }
 

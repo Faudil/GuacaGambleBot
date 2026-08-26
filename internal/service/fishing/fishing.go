@@ -13,6 +13,7 @@ import (
 	"guacagamblebot/internal/model"
 	charsvc "guacagamblebot/internal/service/character"
 	invsvc "guacagamblebot/internal/service/inventory"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	loresvc "guacagamblebot/internal/service/lore"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
@@ -51,10 +52,10 @@ var FishPool = []FishSpecies{
 	// River
 	{Name: "Trout", ItemID: "trout", Biome: "river", BaitTier: BaitCommon, Strength: 2, Evasiveness: 2, Stamina: 30, MinWeight: 1, MaxWeight: 4, MinSize: 10, MaxSize: 20},
 	{Name: "Salmon", ItemID: "salmon", Biome: "river", BaitTier: BaitCommon, Strength: 3, Evasiveness: 3, Stamina: 35, MinWeight: 3, MaxWeight: 10, MinSize: 15, MaxSize: 30},
-	{Name: "Pike", ItemID: "pufferfish", Biome: "river", BaitTier: BaitRare, Strength: 5, Evasiveness: 3, Stamina: 45, MinWeight: 5, MaxWeight: 15, MinSize: 20, MaxSize: 40},
 	{Name: "Giant Catfish", ItemID: "whale", Biome: "river", BaitTier: BaitLegendary, Strength: 6, Evasiveness: 5, Stamina: 60, MinWeight: 20, MaxWeight: 60, MinSize: 30, MaxSize: 60},
 	// Ocean
 	{Name: "Cod", ItemID: "sardine", Biome: "ocean", BaitTier: BaitCommon, Strength: 3, Evasiveness: 2, Stamina: 35, MinWeight: 2, MaxWeight: 8, MinSize: 15, MaxSize: 25},
+	{Name: "Pike", ItemID: "pufferfish", Biome: "ocean", BaitTier: BaitRare, Strength: 5, Evasiveness: 3, Stamina: 45, MinWeight: 5, MaxWeight: 15, MinSize: 20, MaxSize: 40},
 	{Name: "Swordfish", ItemID: "swordfish", Biome: "ocean", BaitTier: BaitCommon, Strength: 5, Evasiveness: 3, Stamina: 50, MinWeight: 50, MaxWeight: 200, MinSize: 60, MaxSize: 120},
 	{Name: "Shark", ItemID: "shark", Biome: "ocean", BaitTier: BaitRare, Strength: 6, Evasiveness: 4, Stamina: 55, MinWeight: 100, MaxWeight: 500, MinSize: 80, MaxSize: 200},
 	{Name: "Whale", ItemID: "whale", Biome: "ocean", BaitTier: BaitLegendary, Strength: 7, Evasiveness: 6, Stamina: 75, MinWeight: 1000, MaxWeight: 10000, MinSize: 200, MaxSize: 600},
@@ -653,16 +654,12 @@ func tierWeight(t BaitTier) int {
 	return 0
 }
 
-func jobXPForLevel(level int) int {
-	return 50 + level*25
-}
-
 // levelUpJob applies as many level-ups as the job's XP warrants.
 func levelUpJob(job *model.Job) {
-	next := jobXPForLevel(job.Level)
+	next := jobssvc.XPForLevel(job.Level)
 	for job.XP >= next {
 		job.XP -= next
 		job.Level++
-		next = jobXPForLevel(job.Level)
+		next = jobssvc.XPForLevel(job.Level)
 	}
 }

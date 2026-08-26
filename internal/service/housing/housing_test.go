@@ -58,7 +58,7 @@ func TestBuyHouseSuccess(t *testing.T) {
 
 func TestBuyHouseAppliesInventoryBonus(t *testing.T) {
 	svc, st := testService(t)
-	_, err := st.UpdateBalance(1, 600000)
+	_, err := st.UpdateBalance(1, 1000000)
 	require.NoError(t, err)
 
 	err = svc.BuyHouse(1, "gilded_palace")
@@ -427,7 +427,7 @@ func TestBankCapacityNoHouse(t *testing.T) {
 
 func TestBankCapacityPerHouse(t *testing.T) {
 	svc, st := testService(t)
-	_, err := st.UpdateBalance(1, 600000)
+	_, err := st.UpdateBalance(1, 1100000)
 	require.NoError(t, err)
 
 	require.NoError(t, svc.BuyHouse(1, "cardboard_box"))
@@ -448,7 +448,7 @@ func TestBankCapacityPerHouse(t *testing.T) {
 
 func TestBankCapacityMerchantUpgrades(t *testing.T) {
 	svc, st := testService(t)
-	_, err := st.UpdateBalance(1, 600000)
+	_, err := st.UpdateBalance(1, 1000000)
 	require.NoError(t, err)
 	require.NoError(t, svc.BuyHouse(1, "gilded_palace"))
 

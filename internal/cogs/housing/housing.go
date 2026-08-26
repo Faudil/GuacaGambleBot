@@ -568,10 +568,14 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	desc := "🪑 **" + i18n.T("housing.furniture_slots", lang, map[string]any{"used": used, "max": maxSlots}) + "**"
 
+	// Furniture from the active house drives Place/Remove eligibility; the
+	// full cross-house list is shown for convenience so the player doesn't
+	// have to switch houses just to see what they already own.
 	placedFurniture, _ := c.fsvc.GetPlaced(userID)
-	if len(placedFurniture) > 0 {
+	allPlacedFurniture, _ := c.fsvc.GetAllPlaced(userID)
+	if len(allPlacedFurniture) > 0 {
 		desc += "\n\n**" + i18n.T("housing.furniture_section_placed", lang) + ":**"
-		for _, pf := range placedFurniture {
+		for _, pf := range allPlacedFurniture {
 			fd := furnituresvc.FurnitureDefs[pf.FurnitureID]
 			if fd == nil {
 				continue
@@ -584,7 +588,12 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			for _, rID := range fd.UnlocksResearch {
 				researchInfo += fmt.Sprintf("\n  └ 🔬 %s", researchName(rID, lang))
 			}
-			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s", fd.Emoji, furnitureName(pf.FurnitureID, lang), fd.Slots, effectInfo, researchInfo)
+			houseInfo := ""
+			if pf.HouseType != h.HouseType {
+				houseName := i18n.T("housing.types."+pf.HouseType, lang)
+				houseInfo = fmt.Sprintf(" _(%s)_", i18n.T("housing.furniture_from_house", lang, map[string]any{"house": houseName}))
+			}
+			desc += fmt.Sprintf("\n%s %s (%d slot)%s%s%s", fd.Emoji, furnitureName(pf.FurnitureID, lang), fd.Slots, houseInfo, effectInfo, researchInfo)
 		}
 	}
 

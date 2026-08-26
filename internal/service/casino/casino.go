@@ -31,7 +31,7 @@ var SLOT_SYMBOLS = map[string]struct {
 	"💎": {Weight: 2, Mult: 100},
 }
 
-func BuildWheel() []string {
+func buildWheel() []string {
 	var wheel []string
 	for sym, data := range SLOT_SYMBOLS {
 		for i := 0; i < data.Weight; i++ {
@@ -41,19 +41,21 @@ func BuildWheel() []string {
 	return wheel
 }
 
-var wheel = BuildWheel()
+var wheel = buildWheel()
 
 type SlotsResult struct {
-	Symbol1   string
-	Symbol2   string
-	Symbol3   string
-	Payout    int
-	IsWin     bool
-	WinType   string
-	WinSym    string
-	XpGain    int
-	LeveledUp bool
-	NewLevel  int
+	Symbol1          string
+	Symbol2          string
+	Symbol3          string
+	Payout           int
+	IsWin            bool
+	WinType          string
+	WinSym           string
+	XpGain           int
+	LeveledUp        bool
+	NewLevel         int
+	LuckReroll       bool
+	PreRerollSymbol3 string
 }
 
 type CoinflipResult struct {
@@ -87,7 +89,7 @@ var megaPaylines = [8][3]int{
 const (
 	baseSlotsLimit   = 10
 	megaSlotsLimit   = 5
-	maxMegaSlotsBet  = 2000
+	maxMegaSlotsBet  = 50000
 	parlorLimitBoost = 5
 )
 
@@ -127,33 +129,95 @@ func (s *Service) remaining(userID int64, game string, max int) int {
 	return left
 }
 
-func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
+// wagerParams configures the shared bet-validation/limit-check/debit
+// preamble used by every casino game.
+type wagerParams struct {
+	game     string // game_limit / AddWinRecord key, e.g. "slots", "coinflip", "mega_slots"
+	statKey  string // achievement stat incremented by the wagered amount
+	limitMax int    // pre-resolved max plays for this game today
+	maxBet   int    // 0 = no upper cap
+}
+
+// placeWager validates the bet amount, enforces the daily play limit,
+// records the wagered achievement stat and debits the stake. It returns a
+// translated sentinel error (ErrMaxBet/ErrLimit/ErrNoMoney) on failure.
+func (s *Service) placeWager(userID int64, amount int, p wagerParams) error {
 	if amount <= 0 {
-		return nil, ErrMaxBet
+		return ErrMaxBet
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, "slots", s.casinoLimit(userID, baseSlotsLimit))
+	if p.maxBet > 0 && amount > p.maxBet {
+		return ErrMaxBet
+	}
+	ok, _, err := s.store.CheckGameLimit(userID, p.game, p.limitMax)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if !ok {
-		return nil, ErrLimit
+		return ErrLimit
 	}
-	if err := s.store.IncrementGameLimit(userID, "slots"); err != nil {
-		return nil, err
+	if err := s.store.IncrementGameLimit(userID, p.game); err != nil {
+		return err
 	}
-	if err := achievement.IncrementStat(s.store.DB, userID, "slots_spent", amount); err != nil {
-		return nil, err
+	if err := achievement.IncrementStat(s.store.DB, userID, p.statKey, amount); err != nil {
+		return err
 	}
 	if _, err := s.store.Debit(userID, amount); err != nil {
 		if errors.Is(err, store.ErrInsufficientFunds) {
-			return nil, ErrNoMoney
+			return ErrNoMoney
 		}
+		return err
+	}
+	return nil
+}
+
+// settleSlotsWager applies the lucky_break/jackpot_fever buffs, credits the
+// payout on a win, records the win and updates the slots_* achievement
+// stats shared by SpinSlots and SpinMegaSlots. gameKey is the AddWinRecord
+// game name ("slots" or "mega_slots"); repGain is the gambling reputation
+// awarded on a win.
+func (s *Service) settleSlotsWager(userID int64, amount int, isWin bool, payout *int, gameKey string, repGain int) error {
+	if isWin {
+		s.npcSvc.AddActivityReputation(userID, "gambling", repGain)
+		if charsvc.HasBuff(s.store, userID, "lucky_break") {
+			*payout = int(float64(*payout) * 1.5)
+			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
+		}
+		if charsvc.HasBuff(s.store, userID, "jackpot_fever") {
+			*payout *= 3
+			charsvc.ConsumeBuff(s.store, userID, "jackpot_fever")
+		}
+		if _, err := s.store.UpdateBalance(userID, *payout); err != nil {
+			return err
+		}
+		_ = s.store.AddWinRecord(userID, gameKey, *payout-amount)
+		if err := achievement.IncrementStat(s.store.DB, userID, "slots_won", 1); err != nil {
+			return err
+		}
+		net := *payout - amount
+		if net > 0 {
+			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_won", net)
+		} else if net < 0 {
+			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", -net)
+		}
+		return nil
+	}
+	if err := achievement.IncrementStat(s.store.DB, userID, "slots_lost", 1); err != nil {
+		return err
+	}
+	_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
+	return nil
+}
+
+func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
+	if err := s.placeWager(userID, amount, wagerParams{
+		game:     "slots",
+		statKey:  "slots_spent",
+		limitMax: s.casinoLimit(userID, baseSlotsLimit),
+	}); err != nil {
 		return nil, err
 	}
 
 	lukBonus := charsvc.GetLUKBonus(s.store, userID)
-	luckyBreak := charsvc.HasBuff(s.store, userID, "lucky_break")
-	jackpotFever := charsvc.HasBuff(s.store, userID, "jackpot_fever")
 
 	r1 := wheel[rand.Intn(len(wheel))]
 	r2 := wheel[rand.Intn(len(wheel))]
@@ -162,7 +226,9 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 	res := &SlotsResult{Symbol1: r1, Symbol2: r2, Symbol3: r3}
 
 	// LUK slightly improves odds: reroll one losing symbol if luck is high
-	if r1 != r2 && r2 != r3 && r1 != r3 && lukBonus > 0.5 && rand.Float64() < lukBonus*0.05 {
+	if r1 != r2 && r2 != r3 && r1 != r3 && lukBonus > 0.5 && rand.Float64() < lukBonus*0.03 {
+		res.LuckReroll = true
+		res.PreRerollSymbol3 = r3
 		r3 = r1
 		res.Symbol3 = r3
 	}
@@ -208,38 +274,12 @@ func (s *Service) SpinSlots(userID int64, amount int) (*SlotsResult, error) {
 		}
 	}
 
-	if res.IsWin {
-		if res.WinType == "JACKPOT" {
-			s.npcSvc.AddActivityReputation(userID, "gambling", 5)
-		} else {
-			s.npcSvc.AddActivityReputation(userID, "gambling", 1)
-		}
-		if luckyBreak {
-			res.Payout = int(float64(res.Payout) * 1.5)
-			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
-		}
-		if jackpotFever {
-			res.Payout *= 3
-			charsvc.ConsumeBuff(s.store, userID, "jackpot_fever")
-		}
-		if _, err := s.store.UpdateBalance(userID, res.Payout); err != nil {
-			return nil, err
-		}
-		_ = s.store.AddWinRecord(userID, "slots", res.Payout-amount)
-		if err := achievement.IncrementStat(s.store.DB, userID, "slots_won", 1); err != nil {
-			return nil, err
-		}
-		net := res.Payout - amount
-		if net > 0 {
-			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_won", net)
-		} else if net < 0 {
-			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", -net)
-		}
-	} else {
-		if err := achievement.IncrementStat(s.store.DB, userID, "slots_lost", 1); err != nil {
-			return nil, err
-		}
-		_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
+	repGain := 1
+	if res.WinType == "JACKPOT" {
+		repGain = 5
+	}
+	if err := s.settleSlotsWager(userID, amount, res.IsWin, &res.Payout, "slots", repGain); err != nil {
+		return nil, err
 	}
 
 	leveled, lvl := charsvc.AddXP(s.store, userID, res.XpGain)
@@ -253,29 +293,12 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	if choice == "" {
 		return nil, ErrChoice
 	}
-	if amount <= 0 {
-		return nil, ErrMaxBet
-	}
-	if amount > 2000 {
-		return nil, ErrMaxBet
-	}
-	ok, _, err := s.store.CheckGameLimit(userID, "coinflip", s.casinoLimit(userID, baseSlotsLimit))
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, ErrLimit
-	}
-	if err := s.store.IncrementGameLimit(userID, "coinflip"); err != nil {
-		return nil, err
-	}
-	if err := achievement.IncrementStat(s.store.DB, userID, "coinflip_spent", amount); err != nil {
-		return nil, err
-	}
-	if _, err := s.store.Debit(userID, amount); err != nil {
-		if errors.Is(err, store.ErrInsufficientFunds) {
-			return nil, ErrNoMoney
-		}
+	if err := s.placeWager(userID, amount, wagerParams{
+		game:     "coinflip",
+		statKey:  "coinflip_spent",
+		limitMax: s.casinoLimit(userID, baseSlotsLimit),
+		maxBet:   2000,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -291,11 +314,7 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 			result = choice
 			win = true
 		} else {
-			if choice == "pile" {
-				result = "face"
-			} else {
-				result = "pile"
-			}
+			result = flipOpposite(choice)
 			win = false
 		}
 	} else {
@@ -312,30 +331,18 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 
 	if !useRigged && !win && lukBonus > 0.5 && rand.Float64() < lukBonus*0.03 {
 		win = true
-		if choice == "pile" {
-			result = "pile"
-		} else {
-			result = "face"
-		}
+		result = choice
 	}
 
 	if luckyBreak && !win && rand.Float64() < 0.5 {
 		win = true
-		if choice == "pile" {
-			result = "pile"
-		} else {
-			result = "face"
-		}
+		result = choice
 		charsvc.ConsumeBuff(s.store, userID, "lucky_break")
 	}
 
 	if !win && charsvc.HasPassive(s.store, userID, "perk_casino_edge") && rand.Float64() < 0.01 {
 		win = true
-		if choice == "pile" {
-			result = "pile"
-		} else {
-			result = "face"
-		}
+		result = choice
 	}
 
 	res := &CoinflipResult{Result: result, Win: win}
@@ -359,6 +366,14 @@ func (s *Service) Coinflip(userID int64, choice string, amount int, useRigged bo
 	res.LeveledUp = leveled
 	res.NewLevel = lvl
 	return res, nil
+}
+
+// flipOpposite returns the other side of a coinflip choice ("pile"/"face").
+func flipOpposite(choice string) string {
+	if choice == "pile" {
+		return "face"
+	}
+	return "pile"
 }
 
 func (s *Service) normalizeChoice(c string) string {
@@ -389,32 +404,18 @@ func evaluateMegaGrid(grid []string, amount int) (winLines []int, payout int) {
 // 9 symbols and pays for every fully-matching payline (rows, columns and
 // diagonals), so several lines can win at once.
 func (s *Service) SpinMegaSlots(userID int64, amount int) (*MegaSlotsResult, error) {
-	if amount <= 0 {
-		return nil, ErrMaxBet
-	}
-	if amount > maxMegaSlotsBet {
+	if amount <= 0 || amount > maxMegaSlotsBet {
 		return nil, ErrMaxBet
 	}
 	if !furnituresvc.HasFurniture(s.store, userID, "gambling_parlor") {
 		return nil, ErrRequiresFurniture
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, "mega_slots", megaSlotsLimit)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, ErrLimit
-	}
-	if err := s.store.IncrementGameLimit(userID, "mega_slots"); err != nil {
-		return nil, err
-	}
-	if err := achievement.IncrementStat(s.store.DB, userID, "slots_spent", amount); err != nil {
-		return nil, err
-	}
-	if _, err := s.store.Debit(userID, amount); err != nil {
-		if errors.Is(err, store.ErrInsufficientFunds) {
-			return nil, ErrNoMoney
-		}
+	if err := s.placeWager(userID, amount, wagerParams{
+		game:     "mega_slots",
+		statKey:  "slots_spent",
+		limitMax: megaSlotsLimit,
+		maxBet:   maxMegaSlotsBet,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -423,43 +424,17 @@ func (s *Service) SpinMegaSlots(userID int64, amount int) (*MegaSlotsResult, err
 		grid[i] = wheel[rand.Intn(len(wheel))]
 	}
 
-	luckyBreak := charsvc.HasBuff(s.store, userID, "lucky_break")
-	jackpotFever := charsvc.HasBuff(s.store, userID, "jackpot_fever")
-
 	res := &MegaSlotsResult{Grid: grid}
 	res.WinLines, res.Payout = evaluateMegaGrid(grid, amount)
 	res.IsWin = len(res.WinLines) > 0
-
 	if res.IsWin {
 		res.XpGain = 100
-		s.npcSvc.AddActivityReputation(userID, "gambling", 5)
-		if luckyBreak {
-			res.Payout = int(float64(res.Payout) * 1.5)
-			charsvc.ConsumeBuff(s.store, userID, "lucky_break")
-		}
-		if jackpotFever {
-			res.Payout *= 3
-			charsvc.ConsumeBuff(s.store, userID, "jackpot_fever")
-		}
-		if _, err := s.store.UpdateBalance(userID, res.Payout); err != nil {
-			return nil, err
-		}
-		_ = s.store.AddWinRecord(userID, "mega_slots", res.Payout-amount)
-		if err := achievement.IncrementStat(s.store.DB, userID, "slots_won", 1); err != nil {
-			return nil, err
-		}
-		net := res.Payout - amount
-		if net > 0 {
-			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_won", net)
-		} else if net < 0 {
-			_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", -net)
-		}
 	} else {
 		res.XpGain = 10
-		if err := achievement.IncrementStat(s.store.DB, userID, "slots_lost", 1); err != nil {
-			return nil, err
-		}
-		_ = achievement.IncrementStat(s.store.DB, userID, "slots_money_lost", amount)
+	}
+
+	if err := s.settleSlotsWager(userID, amount, res.IsWin, &res.Payout, "mega_slots", 5); err != nil {
+		return nil, err
 	}
 
 	leveled, lvl := charsvc.AddXP(s.store, userID, res.XpGain)

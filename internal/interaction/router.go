@@ -407,11 +407,28 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		}
 	}
 
-	log.Info("interaction completed",
+	total := time.Since(start)
+	fields := []any{
 		"user", uid,
 		"guild", gid,
-		"duration", time.Since(start).String(),
-	)
+		"duration", total.String(),
+	}
+	// Attribute the elapsed time to Discord API round-trips vs in-process handler
+	// work, so slow interactions can be diagnosed without a profiler.
+	if ds, ok := r.bot.Session.(*DeferringSession); ok && i.Interaction != nil {
+		discord := ds.TakeDiscordTime(i.Interaction.ID)
+		compute := total - discord
+		if compute < 0 {
+			compute = 0
+		}
+		fields = append(fields, "discord_ms", millis(discord), "compute_ms", millis(compute))
+	}
+	log.Info("interaction completed", fields...)
+}
+
+// millis renders a duration as fractional milliseconds for structured logs.
+func millis(d time.Duration) float64 {
+	return float64(d.Microseconds()) / 1000
 }
 
 func (r *Router) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {

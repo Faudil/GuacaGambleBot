@@ -66,7 +66,7 @@ func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("item_manager.trade_proposal_title", lang),
 		i18n.T("item_manager.trade_proposal_desc", lang, map[string]any{
 			"seller": interaction.Mention(sellerID),
-			"item":   c.displayName(itemName, lang),
+			"item":   items.LocalizedName(itemName, lang),
 			"price":  priceVal,
 			"buyer":  interaction.Mention(recipientID),
 		}),
@@ -128,7 +128,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		i18n.T("item_manager.trade_proposal_title", lang),
 		i18n.T("item_manager.trade_proposal_desc", lang, map[string]any{
 			"seller": m.Author.Mention(),
-			"item":   c.displayName(itemName, lang),
+			"item":   items.LocalizedName(itemName, lang),
 			"price":  priceVal,
 			"buyer":  "<@" + fmt.Sprint(recipientID) + ">",
 		}),
@@ -169,7 +169,7 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	result := c.svc.TransferItem(sellerID, buyerID, itemName, price)
-	displayName := c.displayName(itemName, lang)
+	displayName := items.LocalizedName(itemName, lang)
 
 	if result == tradesvc.TradeSuccess {
 		content := i18n.T("item_manager.trade_success", lang, map[string]any{
@@ -221,8 +221,4 @@ func (c *Cog) onDecline(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{Content: i18n.T("item_manager.trade_cancelled", lang), Components: []discordgo.MessageComponent{}},
 	})
-}
-
-func (c *Cog) displayName(name, lang string) string {
-	return items.LocalizedName(name, lang)
 }

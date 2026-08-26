@@ -226,12 +226,12 @@ func TestAddArcheologistXPMultiLevelUp(t *testing.T) {
 	svc.addArcheologistXP(s.DB, 1, 1000)
 	var job model.Job
 	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
-	// 1000 XP from level 1: consumes 75+100+125+150+175+200 = 825 across 6 level-ups.
-	assert.Equal(t, 7, job.Level)
-	assert.Equal(t, 175, job.XP)
+	// 1000 XP from level 1: consumes 100+150+200+250+300 = 1000 across 5 level-ups.
+	assert.Equal(t, 6, job.Level)
+	assert.Equal(t, 0, job.XP)
 	xp, next := svc.GetArcheologistXP(1)
-	assert.Equal(t, 175, xp)
-	assert.Equal(t, 225, next)
+	assert.Equal(t, 0, xp)
+	assert.Equal(t, 350, next)
 }
 
 func TestAddArcheologistXPCreationLevelsUp(t *testing.T) {
@@ -240,11 +240,11 @@ func TestAddArcheologistXPCreationLevelsUp(t *testing.T) {
 	svc.addArcheologistXP(s.DB, 1, 200)
 	var job model.Job
 	require.NoError(t, s.DB.Where("user_id = ? AND job_name = ?", 1, "archeologist").First(&job).Error)
-	assert.Equal(t, 3, job.Level) // 75 -> L2 (125 left), 100 -> L3 (25 left)
-	assert.Equal(t, 25, job.XP)
+	assert.Equal(t, 2, job.Level) // 100 -> L2 (100 left)
+	assert.Equal(t, 100, job.XP)
 	xp, next := svc.GetArcheologistXP(1)
-	assert.Equal(t, 25, xp)
-	assert.Equal(t, 125, next)
+	assert.Equal(t, 100, xp)
+	assert.Equal(t, 150, next)
 }
 
 func TestAwardResult(t *testing.T) {

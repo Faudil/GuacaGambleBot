@@ -391,7 +391,7 @@ func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if len(options) >= maxSellOptions {
 			break
 		}
-		label := fmt.Sprintf("%s x%d — $%d", displayName(e.Item.Name, lang), e.Quantity, prices[e.Item.ID])
+		label := fmt.Sprintf("%s x%d — $%d", items.LocalizedName(e.Item.Name, lang), e.Quantity, prices[e.Item.ID])
 		if len(label) > 100 {
 			label = label[:97] + "..."
 		}
@@ -426,7 +426,7 @@ func (c *Cog) onPickItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	modal := components.ModalResponse(
 		components.EncodeOwner(userID, "inventory", "sellqty", itemID),
-		i18n.T("inventory.sell_modal_title", lang, map[string]any{"item": displayName(it.Name, lang)}),
+		i18n.T("inventory.sell_modal_title", lang, map[string]any{"item": items.LocalizedName(it.Name, lang)}),
 		components.TextInput("amount",
 			i18n.T("inventory.sell_amount_label", lang), true, "1",
 			discordgo.TextInputShort, 1, 5),
@@ -481,7 +481,7 @@ func (c *Cog) onSellModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	content := i18n.T("market.sold_msg", lang, map[string]any{
-		"amount": amount, "item": displayName(it.Name, lang), "gain": gain,
+		"amount": amount, "item": items.LocalizedName(it.Name, lang), "gain": gain,
 	})
 	if leveled {
 		content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
@@ -552,15 +552,11 @@ func buildCategoryFields(res *invsvc.InvResult, cat, lang string) []*discordgo.M
 			if e.Item != nil {
 				emoji = e.Item.Emoji
 			}
-			val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, displayName(e.ItemName, lang), e.Quantity)
+			val += fmt.Sprintf("%s **%s** : `x%d`\n", emoji, items.LocalizedName(e.ItemName, lang), e.Quantity)
 		}
 	}
 	if val == "" {
 		return nil
 	}
 	return []*discordgo.MessageEmbedField{components.Field(i18n.T("inventory.category_"+cat, lang), val, false)}
-}
-
-func displayName(name, lang string) string {
-	return items.LocalizedName(name, lang)
 }

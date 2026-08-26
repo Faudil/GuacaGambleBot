@@ -104,7 +104,7 @@ func TestCraftAddsXP(t *testing.T) {
 
 	var job model.Job
 	st.DB.Where("user_id = ? AND job_name = ?", 2, "crafter").First(&job)
-	assert.Equal(t, 10, job.XP)
+	assert.Equal(t, 20, job.XP)
 }
 
 func TestCraftMultiple(t *testing.T) {

@@ -10,7 +10,7 @@ type PetHistoryEntry struct {
 
 type UserPet struct {
 	ID                   int64      `gorm:"primaryKey;column:id;autoIncrement"`
-	UserID               int64      `gorm:"column:user_id"`
+	UserID               int64      `gorm:"index:idx_user_pets_user;column:user_id"`
 	ServerID             int64      `gorm:"column:server_id;default:0"`
 	PetType              string     `gorm:"column:pet_type"`
 	Nickname             string     `gorm:"column:nickname"`
@@ -56,7 +56,7 @@ type ServerPetElo struct {
 
 type PetExpedition struct {
 	ID          int64     `gorm:"primaryKey;column:id;autoIncrement"`
-	UserID      int64     `gorm:"column:user_id"`
+	UserID      int64     `gorm:"index:idx_pet_expeditions_user;column:user_id"`
 	PetID       int64     `gorm:"column:pet_id"`
 	StartTime   time.Time `gorm:"column:start_time"`
 	EndTime     time.Time `gorm:"column:end_time"`

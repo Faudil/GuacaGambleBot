@@ -13,7 +13,7 @@ type Bet struct {
 type Wager struct {
 	ID     int64  `gorm:"primaryKey;column:id;autoIncrement"`
 	BetID  int64  `gorm:"column:bet_id"`
-	UserID int64  `gorm:"column:user_id"`
+	UserID int64  `gorm:"index:idx_wagers_user;column:user_id"`
 	Option string `gorm:"column:option"`
 	Amount int    `gorm:"column:amount"`
 }

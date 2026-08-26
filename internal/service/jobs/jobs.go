@@ -9,7 +9,7 @@ import (
 var JobNames = []string{"miner", "fisher", "farmer", "gambler", "crafter", "archeologist", "hunter"}
 
 func XPForLevel(level int) int {
-	return 50 + level*25
+	return 50 + level*50
 }
 
 type JobInfo struct {

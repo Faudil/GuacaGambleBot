@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"testing"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/stretchr/testify/require"
@@ -24,9 +25,14 @@ func TestSendAchievementsChunksUnderEmbedLimit(t *testing.T) {
 
 	SendAchievements(&Bot{Session: ds}, &discordgo.InteractionCreate{Interaction: i}, "en", all)
 
-	calls, bodies := rt.snapshot()
+	// SendAchievements fires its follow-ups asynchronously (off the handler's
+	// critical path), so wait for the expected batch count to land.
 	expected := int(math.Ceil(float64(len(all)) / float64(achievementsPerEmbed)))
-	require.Len(t, calls, expected, "unlocks must be chunked into one follow-up per batch")
+	var calls, bodies []string
+	require.Eventually(t, func() bool {
+		calls, bodies = rt.snapshot()
+		return len(calls) == expected
+	}, 2*time.Second, 5*time.Millisecond, "unlocks must be chunked into one follow-up per batch")
 	for _, body := range bodies {
 		var follow struct {
 			Embeds []struct {

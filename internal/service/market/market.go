@@ -82,13 +82,13 @@ func New(s *store.Store, cfg *config.Config) *Service {
 	return &Service{store: s, cfg: cfg}
 }
 
-func currentWeekID() string {
+func CurrentWeekID() string {
 	y, w := time.Now().ISOWeek()
 	return fmt.Sprintf("%d-W%02d", y, w)
 }
 
 func (s *Service) ensureWeekRotation() error {
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	var count int64
 	s.store.DB.Model(&model.MarketState{}).Where("week_id = ? AND is_active = ?", weekID, true).Count(&count)
 	if count > 0 {

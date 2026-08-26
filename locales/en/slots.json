@@ -15,10 +15,10 @@
     "pair_diamond": "😲 **So close!** A pair of diamonds, that pays off big!",
     "pair_grape": "🍇 **Oof!** At least you're refunded (almost).",
     "pair_lemon": "🍋 **Not bad!** A little lemon juice to celebrate?",
-    "rolling": "🌀",
     "state_rolling": "...",
     "state_start": "Place your bets...",
     "state_suspense": "Suspense...",
+    "state_luck_reroll": "✨ **Lucky break!** Your luck rerolls the last reel...",
     "title": "🎰 Slot Machine"
   },
   "mega_slots": {

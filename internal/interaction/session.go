@@ -2,6 +2,7 @@ package interaction
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -44,6 +45,12 @@ type DeferringSession struct {
 
 	mu       sync.Mutex
 	deferred map[string]time.Time
+
+	// discordNanos accumulates, per interaction ID, the wall-clock time spent
+	// inside Discord API calls made while producing that interaction's reply.
+	// The router reads it at completion to log the compute-vs-network split, so
+	// slow interactions can be attributed to handler work vs Discord latency.
+	discordNanos sync.Map // interaction ID -> *int64 (nanoseconds)
 }
 
 // NewDeferringSession wraps base with the deferred-response translation layer.
@@ -52,6 +59,25 @@ func NewDeferringSession(base Session) *DeferringSession {
 		Session:  base,
 		deferred: make(map[string]time.Time),
 	}
+}
+
+// addDiscordTime attributes a Discord API call's duration to an interaction.
+func (d *DeferringSession) addDiscordTime(id string, dur time.Duration) {
+	if id == "" {
+		return
+	}
+	v, _ := d.discordNanos.LoadOrStore(id, new(int64))
+	atomic.AddInt64(v.(*int64), int64(dur))
+}
+
+// TakeDiscordTime returns and clears the total time spent in Discord API calls
+// while replying to the interaction. Returns 0 when nothing was recorded.
+func (d *DeferringSession) TakeDiscordTime(id string) time.Duration {
+	v, ok := d.discordNanos.LoadAndDelete(id)
+	if !ok {
+		return 0
+	}
+	return time.Duration(atomic.LoadInt64(v.(*int64)))
 }
 
 // deferInteraction records that the router acknowledged this interaction with
@@ -90,7 +116,12 @@ func (d *DeferringSession) isDeferred(i *discordgo.Interaction) bool {
 
 func (d *DeferringSession) InteractionRespond(i *discordgo.Interaction, r *discordgo.InteractionResponse, opts ...discordgo.RequestOption) error {
 	if !d.isDeferred(i) {
-		return d.Session.InteractionRespond(i, r, opts...)
+		start := time.Now()
+		err := d.Session.InteractionRespond(i, r, opts...)
+		if i != nil {
+			d.addDiscordTime(i.ID, time.Since(start))
+		}
+		return err
 	}
 	switch r.Type {
 	case discordgo.InteractionResponseDeferredMessageUpdate,
@@ -136,7 +167,10 @@ func (d *DeferringSession) translateEdit(i *discordgo.Interaction, data *discord
 	if data.Attachments != nil {
 		edit.Attachments = data.Attachments
 	}
-	if _, err := d.Session.InteractionResponseEdit(i, edit, opts...); err != nil {
+	start := time.Now()
+	_, err := d.Session.InteractionResponseEdit(i, edit, opts...)
+	d.addDiscordTime(i.ID, time.Since(start))
+	if err != nil {
 		logger.Log().Warn("deferred update translation failed", "interaction_id", i.ID, "error", err)
 		return err
 	}
@@ -159,7 +193,10 @@ func (d *DeferringSession) translateFollowup(i *discordgo.Interaction, data *dis
 	if data.Attachments != nil {
 		params.Attachments = *data.Attachments
 	}
-	if _, err := d.Session.FollowupMessageCreate(i, false, params, opts...); err != nil {
+	start := time.Now()
+	_, err := d.Session.FollowupMessageCreate(i, false, params, opts...)
+	d.addDiscordTime(i.ID, time.Since(start))
+	if err != nil {
 		logger.Log().Warn("deferred follow-up translation failed", "interaction_id", i.ID, "error", err)
 		return err
 	}

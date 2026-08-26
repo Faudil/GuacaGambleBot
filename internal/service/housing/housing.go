@@ -55,25 +55,25 @@ var Houses = map[string]*HouseType{
 		MaxSanctuaryTier: 1,
 	},
 	"wooden_shack": {
-		ID: "wooden_shack", Price: 500, MaxLevel: 3, IncomePerHour: 10,
+		ID: "wooden_shack", Price: 500, MaxLevel: 3, IncomePerHour: 5,
 		InventoryBonus: 250, PetSlotsBonus: 1, BankCapacity: 1000, CraftingDiscount: 0.05, FurnitureSlots: 2, Color: 0xA1887F,
 		Buffs:            []string{"+250 Inventory Slots", "+1 Pet Slot", "$1,000 Bank Cap", "5% Crafting Discount"},
 		MaxSanctuaryTier: 2,
 	},
 	"brick_house": {
-		ID: "brick_house", Price: 5000, MaxLevel: 5, IncomePerHour: 25,
+		ID: "brick_house", Price: 5000, MaxLevel: 5, IncomePerHour: 10,
 		InventoryBonus: 500, PetSlotsBonus: 3, BankCapacity: 5000, CraftingDiscount: 0.10, FurnitureSlots: 4, Color: 0xD32F2F,
 		Buffs:            []string{"+500 Inventory Slots", "+3 Pet Slots", "$5,000 Bank Cap", "10% Crafting Discount"},
 		MaxSanctuaryTier: 3,
 	},
 	"mansion": {
-		ID: "mansion", Price: 25000, MaxLevel: 10, IncomePerHour: 50,
+		ID: "mansion", Price: 50000, MaxLevel: 10, IncomePerHour: 25,
 		InventoryBonus: 1000, PetSlotsBonus: 5, BankCapacity: 10000, CraftingDiscount: 0.20, FurnitureSlots: 6, Color: 0x1E88E5,
 		Buffs:            []string{"+1000 Inventory Slots", "+5 Pet Slots", "$10,000 Bank Cap", "20% Crafting Discount"},
 		MaxSanctuaryTier: 8,
 	},
 	"gilded_palace": {
-		ID: "gilded_palace", Price: 500000, MaxLevel: 20, IncomePerHour: 500,
+		ID: "gilded_palace", Price: 1000000, MaxLevel: 20, IncomePerHour: 50,
 		InventoryBonus: 2000, PetSlotsBonus: 7, BankCapacity: 100000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
 		Buffs:            []string{"+2000 Inventory Slots", "+7 Pet Slots", "$100,000 Bank Cap", "30% Crafting Discount"},
 		MaxSanctuaryTier: 10,
@@ -82,10 +82,10 @@ var Houses = map[string]*HouseType{
 
 var BaseProduction = map[string]map[string]float64{
 	"cardboard_box": {"wheat": 0.1},
-	"wooden_shack":  {"wheat": 0.5, "oat": 0.2},
-	"brick_house":   {"iron_ore": 0.5, "coal": 1.0},
-	"mansion":       {"silver_ore": 0.5, "gold_nugget": 0.2},
-	"gilded_palace": {"platinum": 0.2, "emerald": 0.1},
+	"wooden_shack":  {"wheat": 0.2, "oat": 0.2},
+	"brick_house":   {"iron_ore": 0.1, "coal": 0.2},
+	"mansion":       {"silver_ore": 0.1, "gold_nugget": 0.2},
+	"gilded_palace": {"platinum": 0.1, "emerald": 0.01},
 }
 
 type UpgradeDef struct {

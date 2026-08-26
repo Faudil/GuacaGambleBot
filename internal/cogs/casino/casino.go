@@ -310,25 +310,96 @@ func (c *Cog) megaSlotsEmbed(grid []string, stateText string, amount int, lang s
 	}
 }
 
+// slotsErrorKey maps a casino service error to its i18n message key for slots.
+func slotsErrorKey(err error) string {
+	switch err {
+	case casinosvc.ErrNoMoney:
+		return "slots.no_money"
+	case casinosvc.ErrLimit:
+		return "slots.limit_reached"
+	case casinosvc.ErrMaxBet:
+		return "slots.invalid_bet"
+	default:
+		return "coinflip.invalid_bet"
+	}
+}
+
+// coinflipErrorKey maps a casino service error to its i18n message key for coinflip.
+func coinflipErrorKey(err error) string {
+	switch err {
+	case casinosvc.ErrNoMoney:
+		return "coinflip.no_money"
+	case casinosvc.ErrChoice:
+		return "coinflip.choice_error"
+	case casinosvc.ErrMaxBet:
+		return "coinflip.max_bet"
+	case casinosvc.ErrLimit:
+		return "coinflip.limit_reached"
+	default:
+		return "coinflip.invalid_bet"
+	}
+}
+
+// megaSlotsErrorKey maps a casino service error to its i18n message key for mega slots.
+func megaSlotsErrorKey(err error) string {
+	switch err {
+	case casinosvc.ErrNoMoney:
+		return "slots.no_money"
+	case casinosvc.ErrRequiresFurniture:
+		return "mega_slots.requires_parlor"
+	case casinosvc.ErrLimit:
+		return "mega_slots.limit"
+	case casinosvc.ErrMaxBet:
+		return "mega_slots.max_bet"
+	default:
+		return "coinflip.invalid_bet"
+	}
+}
+
+// slotsResultStatus builds the flavor + gain/loss (+ level-up) text and embed
+// color for a finished slots spin, shared by the interaction and prefix flows.
+func (c *Cog) slotsResultStatus(res *casinosvc.SlotsResult, amount int, lang string) (status string, color int) {
+	color = 0xe74c3c
+	if res.WinType == "JACKPOT" {
+		color = 0xf1c40f
+	} else if res.IsWin {
+		color = 0x2ecc71
+	}
+	flavor := c.getSlotsFlavor(res.WinType, res.WinSym, lang)
+	if res.IsWin {
+		status = flavor + "\n" + i18n.T("slots.gain", lang, map[string]any{"amount": res.Payout})
+	} else {
+		status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
+	}
+	if res.LeveledUp {
+		status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
+	return status, color
+}
+
+// coinflipResultStatus builds the win/lose (+ level-up) text and embed color
+// for a finished coinflip, shared by the interaction and prefix flows.
+func coinflipResultStatus(res *casinosvc.CoinflipResult, lang string) (text string, color int) {
+	color = 0x2ecc71
+	if res.Win {
+		text = i18n.T("coinflip.win_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
+	} else {
+		text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
+		color = 0xe74c3c
+	}
+	if res.LeveledUp {
+		text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
+	}
+	return text, color
+}
+
 func (c *Cog) playMegaSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amount int, responseType discordgo.InteractionResponseType) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
 	res, serr := c.svc.SpinMegaSlots(userID, amount)
 	if serr != nil {
-		var msg string
-		switch serr {
-		case casinosvc.ErrNoMoney:
-			msg = i18n.T("slots.no_money", lang)
-		case casinosvc.ErrRequiresFurniture:
-			msg = i18n.T("mega_slots.requires_parlor", lang)
-		case casinosvc.ErrLimit:
-			msg = i18n.T("mega_slots.limit", lang)
-		case casinosvc.ErrMaxBet:
-			msg = i18n.T("mega_slots.max_bet", lang)
-		default:
-			msg = i18n.T("coinflip.invalid_bet", lang)
-		}
+		msg := i18n.T(megaSlotsErrorKey(serr), lang)
 		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -440,16 +511,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 
 	res, serr := c.svc.SpinSlots(userID, amount)
 	if serr != nil {
-		switch serr {
-		case casinosvc.ErrNoMoney:
-			interaction.RespondError(b, i, lang, "slots.no_money")
-		case casinosvc.ErrLimit:
-			interaction.RespondError(b, i, lang, "slots.limit_reached")
-		case casinosvc.ErrMaxBet:
-			interaction.RespondError(b, i, lang, "slots.invalid_bet")
-		default:
-			interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
-		}
+		interaction.RespondError(b, i, lang, slotsErrorKey(serr))
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
@@ -485,22 +547,13 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 			time.Sleep(500 * time.Millisecond)
 		}
 
-		color := 0xe74c3c
-		if res.WinType == "JACKPOT" {
-			color = 0xf1c40f
-		} else if res.IsWin {
-			color = 0x2ecc71
+		if res.LuckReroll {
+			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, 0xf1c40f)
+			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, menuComps))
+			time.Sleep(900 * time.Millisecond)
 		}
-		flavor := c.getSlotsFlavor(res.WinType, res.WinSym, lang)
-		var status string
-		if res.IsWin {
-			status = flavor + "\n" + i18n.T("slots.gain", lang, map[string]any{"amount": res.Payout})
-		} else {
-			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
-		}
-		if res.LeveledUp {
-			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
-		}
+
+		status, color := c.slotsResultStatus(res, amount, lang)
 
 		embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.Symbol3, status, amount, lang, color)
 		resultComps := c.slotsResultComps(amount, lang, userID)
@@ -523,18 +576,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 
 	res, cerr := c.svc.Coinflip(userID, choice, amount, false)
 	if cerr != nil {
-		switch cerr {
-		case casinosvc.ErrNoMoney:
-			interaction.RespondError(b, i, lang, "coinflip.no_money")
-		case casinosvc.ErrChoice:
-			interaction.RespondError(b, i, lang, "coinflip.choice_error")
-		case casinosvc.ErrMaxBet:
-			interaction.RespondError(b, i, lang, "coinflip.max_bet")
-		case casinosvc.ErrLimit:
-			interaction.RespondError(b, i, lang, "coinflip.limit_reached")
-		default:
-			interaction.RespondError(b, i, lang, "coinflip.invalid_bet")
-		}
+		interaction.RespondError(b, i, lang, coinflipErrorKey(cerr))
 		return
 	}
 	_ = c.store.RecordActivity(userID, "casino_games_played", 1)
@@ -561,17 +603,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 
 		time.Sleep(600 * time.Millisecond)
 
-		var text string
-		color := 0x2ecc71
-		if res.Win {
-			text = i18n.T("coinflip.win_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
-		} else {
-			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
-			color = 0xe74c3c
-		}
-		if res.LeveledUp {
-			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
-		}
+		text, color := coinflipResultStatus(res, lang)
 
 		embed = components.Embed(i18n.T("slots.title", lang), text, color)
 		resultComps := c.coinflipResultComps(choice, amount, lang, userID)
@@ -594,17 +626,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 
 	res, serr := c.svc.SpinSlots(userID, amount)
 	if serr != nil {
-		var msg string
-		switch serr {
-		case casinosvc.ErrNoMoney:
-			msg = i18n.T("slots.no_money", lang)
-		case casinosvc.ErrLimit:
-			msg = i18n.T("slots.limit_reached", lang)
-		case casinosvc.ErrMaxBet:
-			msg = i18n.T("slots.invalid_bet", lang)
-		default:
-			msg = i18n.T("coinflip.invalid_bet", lang)
-		}
+		msg := i18n.T(slotsErrorKey(serr), lang)
 		_, _ = s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
@@ -656,22 +678,18 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 			time.Sleep(500 * time.Millisecond)
 		}
 
-		color := 0xe74c3c
-		if res.WinType == "JACKPOT" {
-			color = 0xf1c40f
-		} else if res.IsWin {
-			color = 0x2ecc71
+		if res.LuckReroll {
+			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, 0xf1c40f)
+			_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
+				Channel:    m.ChannelID,
+				ID:         msgID,
+				Embeds:     &[]*discordgo.MessageEmbed{embed},
+				Components: &menuComps,
+			})
+			time.Sleep(900 * time.Millisecond)
 		}
-		flavor := c.getSlotsFlavor(res.WinType, res.WinSym, lang)
-		var status string
-		if res.IsWin {
-			status = flavor + "\n" + i18n.T("slots.gain", lang, map[string]any{"amount": res.Payout})
-		} else {
-			status = flavor + "\n" + i18n.T("slots.loss", lang, map[string]any{"amount": amount})
-		}
-		if res.LeveledUp {
-			status += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
-		}
+
+		status, color := c.slotsResultStatus(res, amount, lang)
 		if questMsg.QuestID != "" {
 			status += "\n\n" + questssvc.QuestNotificationMsg(questMsg, lang)
 		}
@@ -693,19 +711,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 
 	res, cerr := c.svc.Coinflip(userID, choice, amount, false)
 	if cerr != nil {
-		var msg string
-		switch cerr {
-		case casinosvc.ErrNoMoney:
-			msg = i18n.T("coinflip.no_money", lang)
-		case casinosvc.ErrChoice:
-			msg = i18n.T("coinflip.choice_error", lang)
-		case casinosvc.ErrMaxBet:
-			msg = i18n.T("coinflip.max_bet", lang)
-		case casinosvc.ErrLimit:
-			msg = i18n.T("coinflip.limit_reached", lang)
-		default:
-			msg = i18n.T("coinflip.invalid_bet", lang)
-		}
+		msg := i18n.T(coinflipErrorKey(cerr), lang)
 		_, _ = s.ChannelMessageSend(m.ChannelID, msg)
 		return
 	}
@@ -744,17 +750,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 
 		time.Sleep(600 * time.Millisecond)
 
-		var text string
-		color := 0x2ecc71
-		if res.Win {
-			text = i18n.T("coinflip.win_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
-		} else {
-			text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
-			color = 0xe74c3c
-		}
-		if res.LeveledUp {
-			text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
-		}
+		text, color := coinflipResultStatus(res, lang)
 		if questMsg.QuestID != "" {
 			text += "\n\n" + questssvc.QuestNotificationMsg(questMsg, lang)
 		}

@@ -16,7 +16,7 @@ type UserFossilHarvest struct {
 
 type UserFarming struct {
 	ID         int64     `gorm:"primaryKey;column:id;autoIncrement"`
-	UserID     int64     `gorm:"column:user_id"`
+	UserID     int64     `gorm:"index:idx_user_farming_user;column:user_id"`
 	ZoneKey    string    `gorm:"column:zone_key"`
 	PlotIndex  int       `gorm:"column:plot_index"`
 	ItemName   string    `gorm:"column:item_name"`

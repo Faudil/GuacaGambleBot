@@ -15,10 +15,10 @@
     "pair_diamond": "😲 **Si proche !** Une paire de diamants, ça rapporte gros !",
     "pair_grape": "🍇 **Ouf !** Au moins t'es remboursé (ou presque).",
     "pair_lemon": "🍋 **Pas mal !** Un petit jus de citron pour fêter ça ?",
-    "rolling": "🌀",
     "state_rolling": "...",
     "state_start": "Faites vos jeux...",
     "state_suspense": "Suspense...",
+    "state_luck_reroll": "✨ **Coup de chance !** Ta chance relance le dernier rouleau...",
     "title": "🎰 Machine à Sous"
   },
   "mega_slots": {

@@ -178,6 +178,7 @@ var dataMigrations = []DataMigration{
 	{ID: "inventory_canonical_ids", Run: migrateInventoryCanonicalIDs},
 	{ID: "inventory_cleanup_zero_quantity", Run: migrateInventoryCleanupZeroQuantity},
 	{ID: "equip_slot_jewelry", Run: migrateEquipSlotJewelry},
+	{ID: "job_xp_formula_rebalance", Run: migrateJobXPFormulaRebalance},
 }
 
 // runDataMigrations applies any data migrations not yet recorded.
@@ -480,6 +481,63 @@ func migrateEquipSlotJewelry(tx *gorm.DB) error {
 		    WHERE is_equipped = 1
 		    GROUP BY user_id, equip_slot
 		  )`).Error
+}
+
+// oldJobXPForLevel and rebalancedJobXPForLevel are frozen copies of the job
+// leveling formula from before/after the 2026-08 rebalance (50+level*25 to
+// 50+level*50 — see internal/service/jobs.XPForLevel). They are duplicated
+// here rather than imported so this migration keeps converting between
+// exactly these two formulas even if the live formula changes again later,
+// and so internal/db does not import internal/service/jobs (that would form
+// an import cycle through the service/store test packages that import
+// internal/db to set up a real database).
+func oldJobXPForLevel(level int) int {
+	return 50 + level*25
+}
+
+func rebalancedJobXPForLevel(level int) int {
+	return 50 + level*50
+}
+
+// migrateJobXPFormulaRebalance recomputes every job's level and XP-into-level
+// after the leveling formula changed from oldJobXPForLevel to
+// rebalancedJobXPForLevel. A stored (level, xp) pair encodes progress measured
+// against whichever formula was active when it accrued, so it is converted
+// back to total XP earned under the old formula and then re-leveled forward
+// under the new one — this is the same forward-progression logic each job
+// service uses when granting XP, just replayed from zero.
+func migrateJobXPFormulaRebalance(tx *gorm.DB) error {
+	if !tx.Migrator().HasTable(&model.Job{}) {
+		return nil
+	}
+	var jobs []model.Job
+	if err := tx.Find(&jobs).Error; err != nil {
+		return err
+	}
+	for _, j := range jobs {
+		totalXP := j.XP
+		for lvl := 1; lvl < j.Level; lvl++ {
+			totalXP += oldJobXPForLevel(lvl)
+		}
+
+		newLevel, newXP := 1, totalXP
+		next := rebalancedJobXPForLevel(newLevel)
+		for newXP >= next {
+			newXP -= next
+			newLevel++
+			next = rebalancedJobXPForLevel(newLevel)
+		}
+
+		if newLevel == j.Level && newXP == j.XP {
+			continue
+		}
+		if err := tx.Model(&model.Job{}).
+			Where("user_id = ? AND job_name = ?", j.UserID, j.JobName).
+			Updates(map[string]any{"level": newLevel, "xp": newXP}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tableColumn is a row from `PRAGMA table_info`.

@@ -5,7 +5,6 @@ import (
 	"math"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -92,7 +91,7 @@ func (c *Cog) sendMarketMessage(b *interaction.Bot, i *discordgo.InteractionCrea
 
 	totalPages := max(1, int(math.Ceil(float64(total)/float64(pageSize))))
 	bal, _ := c.store.GetBalance(userID)
-	weekID := currentWeekID()
+	weekID := mktsvc.CurrentWeekID()
 
 	embed := c.buildMarketEmbed(views, lang, weekID, category, page, totalPages, bal)
 	comps := c.buildMarketComponents(views, total, category, page, totalPages, lang)
@@ -125,7 +124,7 @@ func (c *Cog) sendMarketPrefix(b *interaction.Bot, sess *discordgo.Session, m *d
 
 	totalPages := max(1, int(math.Ceil(float64(total)/float64(pageSize))))
 	bal, _ := c.store.GetBalance(userID)
-	weekID := currentWeekID()
+	weekID := mktsvc.CurrentWeekID()
 
 	embed := c.buildMarketEmbed(views, lang, weekID, category, page, totalPages, bal)
 	comps := c.buildMarketComponents(views, total, category, page, totalPages, lang)
@@ -154,7 +153,7 @@ func (c *Cog) buildMarketEmbed(views []mktsvc.MarketItemView, lang, weekID, cate
 			trendStr = i18n.T("market.trend_stable", lang)
 		}
 
-		name := fmt.Sprintf("%s %s", v.Item.Emoji, c.displayName(v.Item.Name, lang))
+		name := fmt.Sprintf("%s %s", v.Item.Emoji, items.LocalizedName(v.Item.Name, lang))
 		embed.Fields = append(embed.Fields, components.Field(
 			name,
 			i18n.T("market.item_line", lang, map[string]any{"price": v.CurrentPrice, "trend": trendStr}),
@@ -271,7 +270,7 @@ func (c *Cog) buildMarketComponents(views []mktsvc.MarketItemView, total int, ca
 func (c *Cog) buildSellEmbed(views []mktsvc.PlayerSellItemView, lang string, page, totalPages, balance int) *discordgo.MessageEmbed {
 	embed := components.Embed(i18n.T("market.title", lang), i18n.T("market.sell_greeting", lang), 0x2ecc71)
 	for _, v := range views {
-		name := fmt.Sprintf("%s %s", v.Item.Emoji, c.displayName(v.Item.Name, lang))
+		name := fmt.Sprintf("%s %s", v.Item.Emoji, items.LocalizedName(v.Item.Name, lang))
 		embed.Fields = append(embed.Fields, components.Field(
 			name,
 			i18n.T("market.sell_item_line", lang, map[string]any{
@@ -292,7 +291,7 @@ func (c *Cog) buildSellEmbed(views []mktsvc.PlayerSellItemView, lang string, pag
 func (c *Cog) buildSellComponents(views []mktsvc.PlayerSellItemView, page, totalPages int, lang string) []discordgo.MessageComponent {
 	var itemOptions []discordgo.SelectMenuOption
 	for _, v := range views {
-		label := fmt.Sprintf("%s — %s", c.displayName(v.Item.Name, lang), i18n.T("market.item_price", lang, map[string]any{"price": v.UnitPrice}))
+		label := fmt.Sprintf("%s — %s", items.LocalizedName(v.Item.Name, lang), i18n.T("market.item_price", lang, map[string]any{"price": v.UnitPrice}))
 		if len(label) > 100 {
 			label = label[:97] + "..."
 		}
@@ -467,7 +466,7 @@ func (c *Cog) onSelectItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	embed := components.Embed(
-		i18n.T("market.modal_title", lang, map[string]any{"item": c.displayName(it.Name, lang)}),
+		i18n.T("market.modal_title", lang, map[string]any{"item": items.LocalizedName(it.Name, lang)}),
 		i18n.T("market.action_confirm", lang, map[string]any{"price": price}),
 		0xf1c40f,
 	)
@@ -520,7 +519,7 @@ func (c *Cog) openOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate,
 
 	modal := components.ModalResponse(
 		components.Encode("market", "order", action, itemID),
-		i18n.T("market.modal_title", lang, map[string]any{"item": c.displayName(it.Name, lang)}),
+		i18n.T("market.modal_title", lang, map[string]any{"item": items.LocalizedName(it.Name, lang)}),
 		components.TextInput("amount",
 			i18n.T("market.modal_amount_label", lang), true, "1",
 			discordgo.TextInputShort, 1, 5),
@@ -594,7 +593,7 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			return
 		}
 		content := i18n.T("market.bought_msg", lang, map[string]any{
-			"amount": amount, "item": c.displayName(it.Name, lang), "cost": cost,
+			"amount": amount, "item": items.LocalizedName(it.Name, lang), "cost": cost,
 		})
 		if leveled {
 			content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
@@ -614,7 +613,7 @@ func (c *Cog) onOrderModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			return
 		}
 		content := i18n.T("market.sold_msg", lang, map[string]any{
-			"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
+			"amount": amount, "item": items.LocalizedName(it.Name, lang), "gain": gain,
 		})
 		if leveled {
 			content += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
@@ -695,7 +694,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		case mktsvc.ErrNotSellable:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.item_not_sellable", lang))
 		case mktsvc.ErrNoItem:
-			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.no_item", lang, map[string]any{"item": c.displayName(it.Name, lang), "amount": amount}))
+			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.no_item", lang, map[string]any{"item": items.LocalizedName(it.Name, lang), "amount": amount}))
 		case mktsvc.ErrInvalidQty:
 			_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("market.invalid_amount", lang))
 		default:
@@ -704,7 +703,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		return
 	}
 	sellMsg := i18n.T("market.sold_msg", lang, map[string]any{
-		"amount": amount, "item": c.displayName(it.Name, lang), "gain": gain,
+		"amount": amount, "item": items.LocalizedName(it.Name, lang), "gain": gain,
 	})
 	if leveled {
 		sellMsg += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
@@ -726,13 +725,4 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 		sellMsg += "\n\n" + achievementsMsg
 	}
 	_, _ = sess.ChannelMessageSend(m.ChannelID, sellMsg)
-}
-
-func (c *Cog) displayName(name, lang string) string {
-	return items.LocalizedName(name, lang)
-}
-
-func currentWeekID() string {
-	y, w := time.Now().ISOWeek()
-	return fmt.Sprintf("%d-W%02d", y, w)
 }

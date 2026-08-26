@@ -11,6 +11,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	furnituresvc "guacagamblebot/internal/service/furniture"
+	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	petsvc "guacagamblebot/internal/service/pets"
 	"guacagamblebot/internal/store"
@@ -571,7 +572,7 @@ func (s *Service) GetArcheologistXP(userID int64) (int, int) {
 	if err := s.store.DB.Where("user_id = ? AND job_name = ?", userID, "archeologist").First(&job).Error; err != nil {
 		return 0, 50
 	}
-	next := 50 + job.Level*25
+	next := jobssvc.XPForLevel(job.Level)
 	return job.XP, next
 }
 
@@ -595,11 +596,11 @@ func (s *Service) addArcheologistXP(db *gorm.DB, userID int64, xp int) {
 
 // levelUpJob applies as many level-ups as the job's XP warrants.
 func (s *Service) levelUpJob(job *model.Job) {
-	next := 50 + job.Level*25
+	next := jobssvc.XPForLevel(job.Level)
 	for job.XP >= next {
 		job.XP -= next
 		job.Level++
-		next = 50 + job.Level*25
+		next = jobssvc.XPForLevel(job.Level)
 	}
 }
 

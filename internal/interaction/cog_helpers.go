@@ -1,6 +1,7 @@
 package interaction
 
 import (
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,27 @@ import (
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
 )
+
+// goSafe runs a post-response side effect (notification follow-ups, journal
+// scenes) in its own goroutine so the Discord round-trip never sits on the
+// interaction handler's critical path: the user's main reply has already been
+// sent, and these confirmations arrive a beat later either way. A panic in the
+// detached goroutine is recovered and logged so it can never crash the process
+// (the handler's own recover no longer covers it once it runs asynchronously).
+func goSafe(name string, f func()) {
+	go func() {
+		defer func() {
+			if v := recover(); v != nil {
+				logger.Log().Error("panic recovered in async side effect",
+					"task", name,
+					"panic", v,
+					"stack", string(debug.Stack()),
+				)
+			}
+		}()
+		f()
+	}()
+}
 
 // RespondError replies to an interaction with a single ephemeral error/info
 // message translated via the given locale key. Optional params are forwarded
@@ -73,24 +95,30 @@ const achievementsPerEmbed = 15
 // achievements, chunked so large unlock batches can never overflow the embed
 // description limit.
 func SendAchievements(b *Bot, i *discordgo.InteractionCreate, lang string, unlocks []*achievement.Achievement) {
-	for start := 0; start < len(unlocks); start += achievementsPerEmbed {
-		end := min(start+achievementsPerEmbed, len(unlocks))
-		desc := ""
-		for _, a := range unlocks[start:end] {
-			name := i18n.T("achievements."+a.ID+".name", lang)
-			adesc := i18n.T("achievements."+a.ID+".desc", lang)
-			glory := i18n.T("achievements.ui.new_achievement_glory", lang, map[string]any{"glory": a.Glory})
-			desc += "🎖️ **" + name + "** " + a.Emoji + "\n" + glory + "\n" + adesc + "\n\n"
-		}
-		embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, 0xf1c40f)
-		if _, err := b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Embeds: []*discordgo.MessageEmbed{embed}}); err != nil {
-			logger.Log().Error("failed to send achievement unlock notification",
-				"error", err,
-				"user", UserID(i),
-				"guild", i.GuildID,
-			)
-		}
+	if len(unlocks) == 0 {
+		return
 	}
+	uid, gid := UserID(i), i.GuildID
+	goSafe("achievement_notification", func() {
+		for start := 0; start < len(unlocks); start += achievementsPerEmbed {
+			end := min(start+achievementsPerEmbed, len(unlocks))
+			desc := ""
+			for _, a := range unlocks[start:end] {
+				name := i18n.T("achievements."+a.ID+".name", lang)
+				adesc := i18n.T("achievements."+a.ID+".desc", lang)
+				glory := i18n.T("achievements.ui.new_achievement_glory", lang, map[string]any{"glory": a.Glory})
+				desc += "🎖️ **" + name + "** " + a.Emoji + "\n" + glory + "\n" + adesc + "\n\n"
+			}
+			embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, 0xf1c40f)
+			if _, err := b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Embeds: []*discordgo.MessageEmbed{embed}}); err != nil {
+				logger.Log().Error("failed to send achievement unlock notification",
+					"error", err,
+					"user", uid,
+					"guild", gid,
+				)
+			}
+		}
+	})
 }
 
 // SendQuestNotification posts a follow-up ephemeral embed (visible only to the
@@ -100,9 +128,11 @@ func SendQuestNotification(b *Bot, i *discordgo.InteractionCreate, n store.Quest
 		return
 	}
 	embed := components.Embed(i18n.T("quests.notification_title", lang), questssvc.QuestNotificationMsg(n, lang), 0x9b59b6)
-	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Embeds: []*discordgo.MessageEmbed{embed},
-		Flags:  discordgo.MessageFlagsEphemeral,
+	goSafe("quest_notification", func() {
+		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Flags:  discordgo.MessageFlagsEphemeral,
+		})
 	})
 }
 
@@ -113,20 +143,20 @@ func SendJournalScene(b *Bot, i *discordgo.InteractionCreate, text string, dm bo
 	if text == "" || b.Session == nil {
 		return
 	}
-	if dm {
-		uid := UserID(i)
-		if uid != "" {
+	uid := UserID(i)
+	goSafe("journal_scene", func() {
+		if dm && uid != "" {
 			if ch, err := b.Session.UserChannelCreate(uid); err == nil {
 				if _, err := b.Session.ChannelMessageSend(ch.ID, text); err == nil {
 					return
 				}
 			}
 		}
-	}
-	embed := components.Embed("🕯️", text, 0x2c3e50)
-	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
-		Embeds: []*discordgo.MessageEmbed{embed},
-		Flags:  discordgo.MessageFlagsEphemeral,
+		embed := components.Embed("🕯️", text, 0x2c3e50)
+		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			Embeds: []*discordgo.MessageEmbed{embed},
+			Flags:  discordgo.MessageFlagsEphemeral,
+		})
 	})
 }
 
@@ -137,14 +167,16 @@ func SendJournalSceneMsg(s *discordgo.Session, channelID, userID, text string, d
 	if text == "" || s == nil {
 		return
 	}
-	if dm && userID != "" {
-		if ch, err := s.UserChannelCreate(userID); err == nil {
-			if _, err := s.ChannelMessageSend(ch.ID, text); err == nil {
-				return
+	goSafe("journal_scene_msg", func() {
+		if dm && userID != "" {
+			if ch, err := s.UserChannelCreate(userID); err == nil {
+				if _, err := s.ChannelMessageSend(ch.ID, text); err == nil {
+					return
+				}
 			}
 		}
-	}
-	_, _ = s.ChannelMessageSend(channelID, text)
+		_, _ = s.ChannelMessageSend(channelID, text)
+	})
 }
 
 // Mention formats a Discord user mention from a numeric user id.

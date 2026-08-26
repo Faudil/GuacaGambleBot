@@ -52,7 +52,7 @@ func TestGetMarketCategoryFilter(t *testing.T) {
 	// The weekly rotation is random, so seed a known mining item to make this
 	// test deterministic (a mining item may not be selected for a given week).
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -81,7 +81,7 @@ func TestGetPlayerSellItems(t *testing.T) {
 
 	// Deterministic rotation: coal is active at a custom price this week.
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	require.NoError(t, st.DB.Where("1=1").Delete(&model.MarketState{}).Error)
 	require.NoError(t, st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 8, LastReset: today, WeekID: weekID, IsActive: true,
@@ -150,7 +150,7 @@ func TestBuyItemSuccess(t *testing.T) {
 
 	// Force a specific item to be active and cheap
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	err := st.DB.Where("1=1").Delete(&model.MarketState{}).Error
 	require.NoError(t, err)
 	err = st.DB.Create(&model.MarketState{
@@ -180,7 +180,7 @@ func TestBuyItemInsufficientFunds(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 9999, LastReset: today, WeekID: weekID, IsActive: true,
@@ -206,7 +206,7 @@ func TestSellItemSuccess(t *testing.T) {
 
 	seedInventory(t, st, 1, "coal", 10)
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -229,7 +229,7 @@ func TestSellItemNotOwned(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -376,7 +376,7 @@ func TestSellPricesFor(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 9, LastReset: today, WeekID: weekID, IsActive: true,
@@ -392,7 +392,7 @@ func TestBuyItemAdjustsPriceUp(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -416,7 +416,7 @@ func TestSellItemAdjustsPriceDown(t *testing.T) {
 
 	seedInventory(t, st, 1, "coal", 100)
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -436,7 +436,7 @@ func TestBuyThenSellRoundTripLosesMoney(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -462,7 +462,7 @@ func TestPumpAndDump999LosesMoney(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -499,7 +499,7 @@ func TestVendorArbitrageClosed(t *testing.T) {
 	floor := maxInt(1, int(float64(bow.Price)*PriceFloorMult))
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: bow.ID, CurrentPrice: floor, LastReset: today, WeekID: weekID, IsActive: true,
@@ -528,7 +528,7 @@ func TestLargeBuyClampsAtCeiling(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -553,7 +553,7 @@ func TestLargeSellClampsAtFloor(t *testing.T) {
 
 	seedInventory(t, st, 1, "coal", 999)
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 	st.DB.Create(&model.MarketState{
 		ItemID: "coal", CurrentPrice: 5, LastReset: today, WeekID: weekID, IsActive: true,
@@ -617,7 +617,7 @@ func TestDayResetDecaysPrice(t *testing.T) {
 	svc, st := testService(t)
 
 	today := time.Now().Format("2006-01-02")
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	st.DB.Where("1=1").Delete(&model.MarketState{})
 
 	// Create item with price below base — should decay upward
@@ -638,7 +638,7 @@ func TestDayResetDecaysPrice(t *testing.T) {
 func TestRotateMarketSelectsDistinctItems(t *testing.T) {
 	svc, st := testService(t)
 
-	weekID := currentWeekID()
+	weekID := CurrentWeekID()
 	err := svc.rotateMarket(weekID)
 	require.NoError(t, err)
 

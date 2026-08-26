@@ -111,7 +111,7 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		CostMoney:       6000,
 		SlotType:        "floor",
 		Slots:           2,
-		CostItems:       map[string]int{"iron_ore": 30, "coal": 15},
+		CostItems:       map[string]int{"iron_ore": 40, "coal": 20},
 		Effects:         []Effect{{Stat: "equip_quality", Value: 0.05, Description: "+5% chance to upgrade crafted rarity"}},
 		UnlocksResearch: []string{"equip_common", "equip_uncommon", "equip_rare", "set_dragon_slayer", "set_shadow_stalker"},
 	},
@@ -203,6 +203,14 @@ func (s *Service) GetPlaced(userID int64) ([]model.UserFurniture, error) {
 	}
 	var placed []model.UserFurniture
 	err = s.store.DB.Where("user_id = ? AND house_type = ?", userID, houseType).Find(&placed).Error
+	return placed, err
+}
+
+// GetAllPlaced returns every furniture the user has placed across all of
+// their owned houses, not just the active one.
+func (s *Service) GetAllPlaced(userID int64) ([]model.UserFurniture, error) {
+	var placed []model.UserFurniture
+	err := s.store.DB.Where("user_id = ?", userID).Order("house_type").Find(&placed).Error
 	return placed, err
 }
 

@@ -26,6 +26,7 @@
     "expand_pets_success": "✅ **Enclos agrandi !** Tu as gagné `+1` emplacement pour familier.",
     "furniture_already_placed": "Déjà placé",
     "furniture_available": "Disponible",
+    "furniture_from_house": "dans {house}",
     "furniture_house_none": "Ta **{house}** est trop petite pour contenir du mobilier. Achète une plus grande maison pour débloquer les meubles !",
     "furniture_no_slots": "Aucun emplacement libre ({used}/{max})",
     "furniture_place_success": "**{name}** placé dans ta maison !",

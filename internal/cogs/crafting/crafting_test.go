@@ -421,6 +421,32 @@ func TestCraftQuantityMaxHint(t *testing.T) {
 	assert.Contains(t, embed.Description, "Max craftable")
 }
 
+// TestCraftQuantityViewCustomIDsAreUnique guards against the bug where the
+// clamped ±1/±5 stepper buttons collapsed to the same target quantity (e.g.
+// qty=1 makes both "-1" and "-5" clamp to 1) and thus emitted identical
+// custom_ids on the same message. Discord rejects such updates outright, so
+// the failure was invisible in logs but left /craft's quantity view
+// permanently unusable.
+func TestCraftQuantityViewCustomIDsAreUnique(t *testing.T) {
+	c := testCog(t)
+	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 300))
+
+	for qty := 1; qty <= maxCraftAmount; qty++ {
+		_, comps := c.buildCraftQuantityView(1, "beer", "en", qty)
+		seen := map[string]bool{}
+		for _, comp := range comps {
+			row, ok := comp.(discordgo.ActionsRow)
+			require.True(t, ok)
+			for _, sub := range row.Components {
+				btn, ok := sub.(discordgo.Button)
+				require.True(t, ok)
+				assert.Falsef(t, seen[btn.CustomID], "duplicate custom_id %q at qty=%d", btn.CustomID, qty)
+				seen[btn.CustomID] = true
+			}
+		}
+	}
+}
+
 func TestCraftConfirmExceedsMax(t *testing.T) {
 	c := testCog(t)
 	require.NoError(t, c.store.AddItemRaw(c.store.DB, 1, "wheat", 3))

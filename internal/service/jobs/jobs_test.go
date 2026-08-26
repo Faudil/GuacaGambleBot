@@ -50,7 +50,7 @@ func TestGetJobsWithData(t *testing.T) {
 	require.NotNil(t, miner)
 	assert.Equal(t, 5, miner.Level)
 	assert.Equal(t, 200, miner.XP)
-	assert.Equal(t, 175, miner.Next)
+	assert.Equal(t, 300, miner.Next)
 }
 
 func TestGetJobsTotalLevel(t *testing.T) {
@@ -65,7 +65,7 @@ func TestGetJobsTotalLevel(t *testing.T) {
 }
 
 func TestXPForLevel(t *testing.T) {
-	assert.Equal(t, 75, XPForLevel(1))
-	assert.Equal(t, 175, XPForLevel(5))
+	assert.Equal(t, 100, XPForLevel(1))
+	assert.Equal(t, 300, XPForLevel(5))
 	assert.Equal(t, 50, XPForLevel(0))
 }
