@@ -33,8 +33,8 @@ type DelveSession struct {
 
 type UserDelveFlag struct {
 	ID       int64     `gorm:"primaryKey;column:id;autoIncrement"`
-	UserID   int64     `gorm:"index:idx_delve_flags_user;column:user_id"`
-	FlagID   string    `gorm:"column:flag_id"`
+	UserID   int64     `gorm:"uniqueIndex:idx_delve_flags_user_flag;column:user_id"`
+	FlagID   string    `gorm:"uniqueIndex:idx_delve_flags_user_flag;column:flag_id"`
 	Metadata string    `gorm:"column:metadata;type:text"`
 	EarnedAt time.Time `gorm:"column:earned_at;autoCreateTime"`
 }
