@@ -12,6 +12,7 @@
     "no_battle_step": "❌ Aucun combat de boss disponible ici.",
     "no_pet": "❌ Tu n'as pas de familier actif ! Obtiens un œuf avec `/start`, fais-le éclore avec `/hatch`, puis choisis ton compagnon avec `/pets`.",
     "pet_ko": "❌ Ton familier actif **{name}** est K.O. ! Soigne-le d'abord via `!heal`.",
+    "pet_on_expedition": "❌ **{name}** est en expédition ! Attends son retour pour combattre.",
     "rewards_title": "🎁 Récompenses obtenues :",
     "stage_info": "Étape {stage}/5 - **{name}**",
     "stats_label": "Niveau : {level}\nEspèce : {species}\nPV : {hp} | Atk : {atk} | Déf : {defense} | Vitesse : {speed}",

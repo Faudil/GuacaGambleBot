@@ -522,6 +522,10 @@ func (c *Cog) onFight(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	abilities := delvesvc.GetCombatAbilities(playerLevel)
 	weaponEmoji, weaponName := delvesvc.GetWeaponDisplay(c.store, userID)
 
+	// Promote to touched_by_shadow as soon as the 2-of-6 shadow qualifiers are
+	// met, even mid-run, so the Gravewarden can still spawn later in this run.
+	_ = c.svc.MaybeGrantTouchedByShadowLive(s)
+
 	// Check for Gravewarden Morvain special boss
 	name, hp, maxHP, atk, def, spawn := c.crimsvc.CheckGravewardenSpawn(userID, s.Floor, seed)
 	if spawn {

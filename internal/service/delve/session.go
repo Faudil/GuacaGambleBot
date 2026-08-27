@@ -362,3 +362,45 @@ func (svc *Service) maybeGrantTouchedByShadow(userID int64) error {
 	}
 	return nil
 }
+
+// MaybeGrantTouchedByShadowLive promotes the player to "touched_by_shadow"
+// as soon as 2 of the 6 qualifying flags are validated, even mid-run —
+// combining flags already persisted from past runs with ones earned so far
+// in the current, still-active session (which aren't written to the store
+// until EndSession). Call this before checking for the Gravewarden so a
+// player who crosses the threshold partway through a run can still have it
+// spawn later in that same run, rather than only in a future one.
+func (svc *Service) MaybeGrantTouchedByShadowLive(session *model.DelveSession) error {
+	has, err := svc.store.HasDelveFlag(session.UserID, "touched_by_shadow")
+	if err != nil {
+		return err
+	}
+	if has {
+		return nil
+	}
+
+	owned := make(map[string]bool, len(shadowQualifyingFlags))
+	persisted, err := svc.store.GetDelveFlags(session.UserID)
+	if err != nil {
+		return err
+	}
+	for _, f := range persisted {
+		owned[f.FlagID] = true
+	}
+	var inRun []string
+	json.Unmarshal([]byte(session.Flags), &inRun)
+	for _, f := range inRun {
+		owned[f] = true
+	}
+
+	count := 0
+	for _, qf := range shadowQualifyingFlags {
+		if owned[qf] {
+			count++
+		}
+	}
+	if count >= shadowRequiredCount {
+		return svc.store.AddDelveFlag(session.UserID, "touched_by_shadow", `{"source":"criminality_awakening"}`)
+	}
+	return nil
+}

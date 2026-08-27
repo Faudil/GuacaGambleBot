@@ -12,6 +12,7 @@
     "no_battle_step": "❌ No boss battle step is available here.",
     "no_pet": "❌ You don't have an active pet! Get a starter egg with `/start`, hatch it with `/hatch`, then open `/pets` to select your companion.",
     "pet_ko": "❌ Your active pet **{name}** is K.O.! Heal it first using `!heal`.",
+    "pet_on_expedition": "❌ **{name}** is on an expedition! Wait for it to return before fighting.",
     "rewards_title": "🎁 Rewards Earned:",
     "stage_info": "Stage {stage}/5 - **{name}**",
     "stats_label": "Level: {level}\nSpecies: {species}\nHP: {hp} | Atk: {atk} | Def: {defense} | Speed: {speed}",

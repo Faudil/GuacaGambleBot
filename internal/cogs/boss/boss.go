@@ -353,6 +353,10 @@ func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome
 		return nil, components.Embed("❌", i18n.T("boss_league.pet_ko", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c), backBtn
 	}
 
+	if pet.OnExpedition {
+		return nil, components.Embed("❌", i18n.T("boss_league.pet_on_expedition", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c), backBtn
+	}
+
 	bossCfg := bosssvc.BossLeague[bossStage]
 	bossPet := c.svc.CreateBossPet(bossCfg)
 
