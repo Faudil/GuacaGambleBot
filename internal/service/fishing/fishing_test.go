@@ -1,21 +1,18 @@
 package fishing
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	loresvc "guacagamblebot/internal/service/lore"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 	"guacagamblebot/internal/universe"
 	hoakhaven "guacagamblebot/internal/universe/hoakhaven"
 )
@@ -23,9 +20,7 @@ import (
 func testService(t *testing.T) (*Service, *store.Store) {
 	hoakhaven.Register()
 	def := universe.Get("hoakhaven")
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "f.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	s := store.New(d, cfg)
 	loreSvc := loresvc.New(s, cfg, def)

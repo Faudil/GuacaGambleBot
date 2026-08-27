@@ -2,22 +2,20 @@ package hunt
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jobssvc "guacagamblebot/internal/service/jobs"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
 )
@@ -27,9 +25,7 @@ func testService(t *testing.T) (*Service, *store.Store) {
 }
 
 func testServiceWithCfg(t *testing.T, cfg *config.Config) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "h.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	if cfg == nil {
 		cfg = &config.Config{StartingBalance: 100}
 	}

@@ -1,23 +1,18 @@
 package use
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "use.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	s := store.New(d, &config.Config{StartingBalance: 100})
 	return New(s, &config.Config{StartingBalance: 100}), s
 }

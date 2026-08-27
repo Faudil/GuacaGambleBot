@@ -1,25 +1,20 @@
 package shop
 
 import (
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "shop.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	s := store.New(d, cfg)
 	return New(s, cfg), s
@@ -124,9 +119,7 @@ func TestBuyItemFullInventoryRejected(t *testing.T) {
 // does), and BuyItem must not block forever by querying the shared pool from
 // inside its own transaction.
 func TestBuyItemSingleConnPool(t *testing.T) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "shop.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	sqlDB, err := d.DB()
 	require.NoError(t, err)
 	sqlDB.SetMaxOpenConns(1)

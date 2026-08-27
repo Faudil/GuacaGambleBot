@@ -1,24 +1,19 @@
 package loan
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func testStore(t *testing.T) *store.Store {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "test.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	return store.New(d, &config.Config{StartingBalance: 100, DailyAmount: 50})
 }
 

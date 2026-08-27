@@ -1,20 +1,18 @@
 package pets
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
 	"guacagamblebot/internal/battle"
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	questssvc "guacagamblebot/internal/service/quests"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 )
 
 func TestAllPetTypesHaveDamageType(t *testing.T) {
@@ -66,9 +64,7 @@ func TestRollPrehistoric(t *testing.T) {
 }
 
 func testService(t *testing.T) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "p.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100}
 	s := store.New(d, cfg)
 	return New(s, cfg), s

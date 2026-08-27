@@ -2,31 +2,26 @@ package dailyquest
 
 import (
 	"encoding/json"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/gorm"
 
 	"guacagamblebot/internal/config"
-	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/model"
 	crafting "guacagamblebot/internal/service/crafting"
 	invsvc "guacagamblebot/internal/service/inventory"
 	npcsvc "guacagamblebot/internal/service/npcs"
 	"guacagamblebot/internal/service/use"
 	"guacagamblebot/internal/store"
+	"guacagamblebot/internal/testutil"
 	"guacagamblebot/internal/universe"
 	"guacagamblebot/internal/universe/hoakhaven"
 )
 
 func testService(t *testing.T) (*Service, *store.Store) {
-	d, err := gorm.Open(sqlite.Open(filepath.Join(t.TempDir(), "dq.db")), &gorm.Config{})
-	require.NoError(t, err)
-	require.NoError(t, db.Migrate(d))
+	d := testutil.NewDB(t)
 	cfg := &config.Config{StartingBalance: 100, DailyAmount: 50}
 	hoakhaven.Register()
 	s := store.New(d, cfg)
