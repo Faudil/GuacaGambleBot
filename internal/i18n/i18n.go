@@ -7,13 +7,22 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 )
 
-// translations holds the loaded locale data: lang -> nested map.
-var translations = map[string]map[string]any{}
+// translations holds the loaded locale data: lang -> nested map. Load
+// replaces it wholesale (tests reload it between runs, and a goSafe
+// background goroutine from a prior interaction may still be calling T
+// concurrently), so all access goes through translationsMu.
+var (
+	translationsMu sync.RWMutex
+	translations   = map[string]map[string]any{}
+)
 
 // Languages returns the sorted list of loaded language codes.
 func Languages() []string {
+	translationsMu.RLock()
+	defer translationsMu.RUnlock()
 	langs := make([]string, 0, len(translations))
 	for l := range translations {
 		langs = append(langs, l)
@@ -26,7 +35,7 @@ func Languages() []string {
 // the language code, e.g. "en", "fr"). Each *.json file inside a language
 // directory is one namespace and is merged at the top level.
 func Load(dir string) error {
-	translations = map[string]map[string]any{}
+	loaded := map[string]map[string]any{}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -40,8 +49,11 @@ func Load(dir string) error {
 		if err != nil {
 			return fmt.Errorf("language %s: %w", lang, err)
 		}
-		translations[lang] = pack
+		loaded[lang] = pack
 	}
+	translationsMu.Lock()
+	translations = loaded
+	translationsMu.Unlock()
 	return nil
 }
 
@@ -93,6 +105,8 @@ func getNested(m map[string]any, keys []string) any {
 // language, French is used as a fallback; if still absent the key itself is
 // returned so missing translations are visible rather than silent.
 func T(key, lang string, params ...map[string]any) string {
+	translationsMu.RLock()
+	defer translationsMu.RUnlock()
 	if translations == nil {
 		return key
 	}
