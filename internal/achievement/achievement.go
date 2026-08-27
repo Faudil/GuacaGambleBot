@@ -122,6 +122,16 @@ func init() {
 	register("daily_quest_50", "📜", 50, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 50 })
 	register("daily_quest_100", "📜", 100, func(s map[string]any) bool { return num(s, "daily_quests_completed") >= 100 })
 
+	register("sanctuary_tier_3", "🏡", 50, func(s map[string]any) bool { return num(s, "sanctuary_tier") >= 3 })
+	register("sanctuary_tier_5", "🏘️", 150, func(s map[string]any) bool { return num(s, "sanctuary_tier") >= 5 })
+	register("sanctuary_tier_10", "🏰", 500, func(s map[string]any) bool { return num(s, "sanctuary_tier") >= 10 })
+	register("sanctuary_retire_10", "🏞️", 20, func(s map[string]any) bool { return num(s, "pets_retired") >= 10 })
+	register("sanctuary_retire_50", "🌳", 80, func(s map[string]any) bool { return num(s, "pets_retired") >= 50 })
+	register("sanctuary_fusion_1", "⚗️", 30, func(s map[string]any) bool { return num(s, "fusions_done") >= 1 })
+	register("sanctuary_fusion_10", "🧪", 150, func(s map[string]any) bool { return num(s, "fusions_done") >= 10 })
+	register("sanctuary_ascend_1", "🌟", 50, func(s map[string]any) bool { return num(s, "ascends_done") >= 1 })
+	register("sanctuary_ascend_10", "💫", 250, func(s map[string]any) bool { return num(s, "ascends_done") >= 10 })
+
 	register("pet_collector_common", "🦋", 50, func(s map[string]any) bool { return num(s, "collected_common_pets") >= 8 })
 	register("pet_collector_rare", "🦁", 150, func(s map[string]any) bool { return num(s, "collected_rare_pets") >= 6 })
 	register("pet_collector_epic", "🦄", 300, func(s map[string]any) bool { return num(s, "collected_epic_pets") >= 4 })
@@ -268,6 +278,7 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 	stats := map[string]any{
 		"balance":                  0,
 		"boss_league_stage":        0,
+		"sanctuary_tier":           0,
 		"lore_count":               0,
 		"max_pet_level":            0,
 		"pet_ranks":                []string{},
@@ -325,6 +336,14 @@ func BuildStats(db *gorm.DB, userID int64) (map[string]any, error) {
 		stats["roulette_money_lost"] = us.RouletteMoneyLost
 		stats["daily_uses"] = us.DailyUses
 		stats["daily_quests_completed"] = us.DailyQuestsCompleted
+		stats["pets_retired"] = us.PetsRetired
+		stats["fusions_done"] = us.FusionsDone
+		stats["ascends_done"] = us.AscendsDone
+	}
+
+	var san model.UserSanctuary
+	if res := db.Where("user_id = ?", userID).First(&san); res.Error == nil {
+		stats["sanctuary_tier"] = san.Tier
 	}
 
 	// Pet collection stats (computed from PetTypes rarity map)

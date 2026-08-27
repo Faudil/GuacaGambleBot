@@ -182,6 +182,30 @@ var ResearchDefs = map[string]*ResearchDef{
 		BonusDesc:         "Unlocks: Fusing Epic → Legendary",
 	},
 
+	// --- Pet Fusion (sanctuary) ---
+	//
+	// Separate from gear fusion above: these gate the sanctuary's Fusion Lab
+	// (trading same-rarity pets for a random pet of the next rarity), and used
+	// to incorrectly reuse the gear fusion_* research IDs.
+	"pet_fusion_common": {
+		ID: "pet_fusion_common", Name: "Pet Fusion: Common → Rare", Description: "Learn to fuse 5 Common pets into 1 Rare pet.",
+		TimeHours: 2, CostMoney: 2500, CostItems: map[string]int{"bone_dust": 15, "coal": 15},
+		RequiredFurniture: "forge",
+		BonusDesc:         "Unlocks: Sanctuary fusion, Common → Rare",
+	},
+	"pet_fusion_rare": {
+		ID: "pet_fusion_rare", Name: "Pet Fusion: Rare → Epic", Description: "Refine Rare pets into Epic companions.",
+		TimeHours: 5, CostMoney: 12000, CostItems: map[string]int{"iron_ore": 20, "silver_ore": 10, "bone_dust": 15},
+		RequiredFurniture: "forge",
+		BonusDesc:         "Unlocks: Sanctuary fusion, Rare → Epic",
+	},
+	"pet_fusion_epic": {
+		ID: "pet_fusion_epic", Name: "Pet Fusion: Epic → Legendary", Description: "The pinnacle of the sanctuary — fuse Epic pets into Legendary.",
+		TimeHours: 10, CostMoney: 30000, CostItems: map[string]int{"gold_nugget": 10, "emerald": 5, "platinum": 3},
+		RequiredFurniture: "arcane_forge",
+		BonusDesc:         "Unlocks: Sanctuary fusion, Epic → Legendary",
+	},
+
 	// --- Set Research ---
 	"set_dragon_slayer": {
 		ID: "set_dragon_slayer", Name: "Dragon Slayer Set", Description: "Study the remains of ancient dragons to craft their slayer's gear.",

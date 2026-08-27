@@ -49,6 +49,21 @@ func init() {
 				Check:   communityCheck(1000),
 				Reward:  Reward{Money: 800, Crowns: 15},
 			},
+			{
+				TextKey: "journal.paths.builder.step9",
+				Check:   columnValueCheck("user_sanctuaries", "tier", 3),
+				Reward:  Reward{Money: 500, Crowns: 5},
+			},
+			{
+				TextKey: "journal.paths.builder.step10",
+				Check:   statCheck("fusions_done", 1),
+				Reward:  Reward{Money: 600},
+			},
+			{
+				TextKey: "journal.paths.builder.step11",
+				Check:   columnValueCheck("user_sanctuaries", "tier", 5),
+				Reward:  Reward{Money: 1200, Crowns: 20},
+			},
 		},
 	}
 }

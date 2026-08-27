@@ -71,6 +71,9 @@ type UserStat struct {
 	ToolDynamiteUses     int   `gorm:"column:tool_dynamite_uses;default:0"`
 	ToolHammerUses       int   `gorm:"column:tool_hammer_uses;default:0"`
 	ToolBrushUses        int   `gorm:"column:tool_brush_uses;default:0"`
+	PetsRetired          int   `gorm:"column:pets_retired;default:0"`
+	FusionsDone          int   `gorm:"column:fusions_done;default:0"`
+	AscendsDone          int   `gorm:"column:ascends_done;default:0"`
 }
 
 func (User) TableName() string      { return "users" }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
@@ -333,6 +334,9 @@ func (c *Cog) onComplete(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
 }
 
 // ── Fusion (TradeUp) & Ascendancy ─────────────────────────────────────────
@@ -532,7 +536,9 @@ func (c *Cog) onFusionConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	}
 	embed := components.Embed("✨ Fusion Success!", fmt.Sprintf("%s **%s** (%s) created!", emoji, newPet.Nickname, newPet.PetType), 0x2ecc71)
 	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
-	_ = lang
+	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
 }
 
 func splitIDs(s string) []string {
@@ -642,6 +648,9 @@ func (c *Cog) onAscendPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed("✨ Transcendence!", i18n.T("pets.transcend.success", lang, map[string]any{"name": active.Nickname, "level": active.TrsLvl}), 0x9b59b6)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: "Locked for 24h"}
 	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
+	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
 }
 
 // ── Pet picker: shared paginated + searchable pet selector ────────────────
@@ -877,6 +886,9 @@ func (c *Cog) onRetirePick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			Flags:   discordgo.MessageFlagsEphemeral,
 		},
 	})
+	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
 }
 
 func (c *Cog) onRecallSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {

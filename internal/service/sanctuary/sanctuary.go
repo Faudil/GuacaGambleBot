@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"guacagamblebot/internal/achievement"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/model"
 	ps "guacagamblebot/internal/service/pets"
@@ -295,7 +296,11 @@ func (s *Service) RetirePet(userID int64, petID int64) error {
 	}
 	pet.InSanctuary = true
 	pet.IsActive = false
-	return s.store.DB.Save(&pet).Error
+	if err := s.store.DB.Save(&pet).Error; err != nil {
+		return err
+	}
+	_ = achievement.IncrementStat(s.store.DB, userID, "pets_retired", 1)
+	return nil
 }
 
 func (s *Service) RecallPet(userID int64, petID int64) error {
@@ -450,11 +455,13 @@ var TradeUpCosts = map[string]struct {
 	ps.RarityEpic:   {Money: 75000, Items: map[string]int{"gold_nugget": 5, "emerald": 2, "platinum": 1}},
 }
 
-// TradeUpResearch reuses forge fusion researches per spec.
+// TradeUpResearch gates each sanctuary fusion tier behind its own research —
+// previously these pointed at the forge's gear fusion_* IDs, so completing
+// gear fusion research silently unlocked pet fusion too (and vice versa).
 var TradeUpResearch = map[string]string{
-	ps.RarityCommon: "fusion_common",
-	ps.RarityRare:   "fusion_rare",
-	ps.RarityEpic:   "fusion_epic",
+	ps.RarityCommon: "pet_fusion_common",
+	ps.RarityRare:   "pet_fusion_rare",
+	ps.RarityEpic:   "pet_fusion_epic",
 }
 
 // TradeUp fuses pets of same rarity into one random pet of next rarity (instant).
@@ -507,7 +514,7 @@ func (s *Service) TradeUp(userID int64, petIDs []int64) (*model.UserPet, error) 
 	if len(petIDs) != reqCount {
 		return nil, ErrFusionWrongCount
 	}
-	// Research gate (reuse forge researches if present)
+	// Research gate
 	if rid, ok := TradeUpResearch[rarity]; ok && rid != "" {
 		var r model.UserResearch
 		if err := s.store.DB.Where("user_id = ? AND research_id = ? AND completed = ?", userID, rid, true).First(&r).Error; err != nil {
@@ -586,6 +593,7 @@ func (s *Service) TradeUp(userID int64, petIDs []int64) (*model.UserPet, error) 
 	if err != nil {
 		return nil, err
 	}
+	_ = achievement.IncrementStat(s.store.DB, userID, "fusions_done", 1)
 	return newPet, nil
 }
 
@@ -633,6 +641,7 @@ func (s *Service) Transcend(userID int64, sacrificeID int64) (*model.UserPet, er
 	if err != nil {
 		return nil, err
 	}
+	_ = achievement.IncrementStat(s.store.DB, userID, "ascends_done", 1)
 	return active, nil
 }
 

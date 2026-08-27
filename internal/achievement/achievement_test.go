@@ -158,6 +158,34 @@ func TestHuntBossKillAchievements(t *testing.T) {
 	assertContains(t, unlocks, "hunt_boss_100")
 }
 
+func TestSanctuaryAchievements(t *testing.T) {
+	d := testDB(t)
+	require.NoError(t, d.Create(&model.User{UserID: 5, Balance: 100}).Error)
+
+	// Tier is read live from user_sanctuaries, not a counter.
+	require.NoError(t, d.Create(&model.UserSanctuary{UserID: 5, Tier: 3}).Error)
+	unlocks, err := CheckAndUnlock(d, 5)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "sanctuary_tier_3")
+	assertNotContains(t, unlocks, "sanctuary_tier_5")
+	assertNotContains(t, unlocks, "sanctuary_tier_10")
+
+	// Retire/fusion/ascend counters accumulate via IncrementStat.
+	for i := 0; i < 10; i++ {
+		require.NoError(t, IncrementStat(d, 5, "pets_retired", 1))
+	}
+	require.NoError(t, IncrementStat(d, 5, "fusions_done", 1))
+	require.NoError(t, IncrementStat(d, 5, "ascends_done", 1))
+	unlocks, err = CheckAndUnlock(d, 5)
+	require.NoError(t, err)
+	assertContains(t, unlocks, "sanctuary_retire_10")
+	assertContains(t, unlocks, "sanctuary_fusion_1")
+	assertContains(t, unlocks, "sanctuary_ascend_1")
+	assertNotContains(t, unlocks, "sanctuary_retire_50")
+	assertNotContains(t, unlocks, "sanctuary_fusion_10")
+	assertNotContains(t, unlocks, "sanctuary_ascend_10")
+}
+
 func TestSignalCompleteHiddenAchievement(t *testing.T) {
 	// The Signal completion achievement is registered and hidden (granted
 	// explicitly by the quest service, never auto-unlocked).

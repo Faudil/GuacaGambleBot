@@ -369,6 +369,42 @@
       "desc": "Win $5,000 in Roulette.",
       "name": "Death-Defying ($5k)"
     },
+    "sanctuary_ascend_1": {
+      "name": "Ascendant",
+      "desc": "Transcend a pet for the first time."
+    },
+    "sanctuary_ascend_10": {
+      "name": "Beyond Mortal Limits",
+      "desc": "Transcend pets 10 times."
+    },
+    "sanctuary_fusion_1": {
+      "name": "Fusion Novice",
+      "desc": "Fuse pets in the sanctuary for the first time."
+    },
+    "sanctuary_fusion_10": {
+      "name": "Master Alchemist",
+      "desc": "Fuse pets in the sanctuary 10 times."
+    },
+    "sanctuary_retire_10": {
+      "name": "Caretaker",
+      "desc": "Retire 10 pets to your sanctuary."
+    },
+    "sanctuary_retire_50": {
+      "name": "Wildlife Warden",
+      "desc": "Retire 50 pets to your sanctuary."
+    },
+    "sanctuary_tier_3": {
+      "name": "Growing Sanctuary",
+      "desc": "Build your sanctuary to tier 3."
+    },
+    "sanctuary_tier_5": {
+      "name": "Thriving Sanctuary",
+      "desc": "Build your sanctuary to tier 5."
+    },
+    "sanctuary_tier_10": {
+      "name": "Cosmic Ark",
+      "desc": "Build your sanctuary to tier 10, the maximum."
+    },
     "signal_complete": {
       "name": "The Signal",
       "desc": "Restore the Zenith Generator and answer the signal."

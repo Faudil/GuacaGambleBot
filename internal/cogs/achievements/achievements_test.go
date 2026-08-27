@@ -65,10 +65,10 @@ func realViews(unlocked bool) []achievementsvc.View {
 func TestListViewStaysWithinEmbedLimit(t *testing.T) {
 	c := testCog(t)
 	views := realViews(false)
-	require.Len(t, views, 100, "fixture must reproduce the full achievements registry")
+	require.Len(t, views, 109, "fixture must reproduce the full achievements registry")
 
 	for _, lang := range []string{"en", "fr"} {
-		for page := 1; page <= 4; page++ {
+		for page := 1; page <= 5; page++ {
 			embed, _ := c.listView(lang, 42, views, page)
 			require.LessOrEqual(t, len(embed.Description), 4096,
 				"%s: page %d exceeds Discord's embed description limit", lang, page)
@@ -84,18 +84,18 @@ func TestListViewPagination(t *testing.T) {
 	embed1, comps1 := c.listView("en", 42, views, 1)
 	lines1 := strings.Split(embed1.Description, "\n")
 	assert.Len(t, lines1, pageSize, "page 1 must hold a full page")
-	assert.Equal(t, "📄 1/4", navPageLabel(t, comps1))
+	assert.Equal(t, "📄 1/5", navPageLabel(t, comps1))
 
-	embed4, comps4 := c.listView("en", 42, views, 4)
-	lines4 := strings.Split(embed4.Description, "\n")
-	assert.Len(t, lines4, len(views)-3*pageSize, "page 4 must hold the remaining achievements")
-	assert.Equal(t, "📄 4/4", navPageLabel(t, comps4))
+	embed5, comps5 := c.listView("en", 42, views, 5)
+	lines5 := strings.Split(embed5.Description, "\n")
+	assert.Len(t, lines5, len(views)-4*pageSize, "page 5 must hold the remaining achievements")
+	assert.Equal(t, "📄 5/5", navPageLabel(t, comps5))
 
 	// Out-of-range pages are clamped to the nearest valid page.
 	clampedLow, _ := c.listView("en", 42, views, 0)
 	assert.Equal(t, embed1.Description, clampedLow.Description, "page 0 must clamp to page 1")
 	clampedHigh, _ := c.listView("en", 42, views, 99)
-	assert.Equal(t, embed4.Description, clampedHigh.Description, "page 99 must clamp to the last page")
+	assert.Equal(t, embed5.Description, clampedHigh.Description, "page 99 must clamp to the last page")
 }
 
 func TestListViewEmpty(t *testing.T) {

@@ -369,6 +369,42 @@
       "desc": "Gagne 5 000 $ à la Roulette.",
       "name": "Trompe la Mort (5k$)"
     },
+    "sanctuary_ascend_1": {
+      "name": "Ascendant",
+      "desc": "Transcende un familier pour la première fois."
+    },
+    "sanctuary_ascend_10": {
+      "name": "Au-delà des Limites Mortelles",
+      "desc": "Transcende des familiers 10 fois."
+    },
+    "sanctuary_fusion_1": {
+      "name": "Novice en Fusion",
+      "desc": "Fusionne des familiers au sanctuaire pour la première fois."
+    },
+    "sanctuary_fusion_10": {
+      "name": "Maître Alchimiste",
+      "desc": "Fusionne des familiers au sanctuaire 10 fois."
+    },
+    "sanctuary_retire_10": {
+      "name": "Gardien",
+      "desc": "Mets 10 familiers en retraite au sanctuaire."
+    },
+    "sanctuary_retire_50": {
+      "name": "Gardien de la Faune",
+      "desc": "Mets 50 familiers en retraite au sanctuaire."
+    },
+    "sanctuary_tier_3": {
+      "name": "Sanctuaire en Expansion",
+      "desc": "Construis ton sanctuaire jusqu'au niveau 3."
+    },
+    "sanctuary_tier_5": {
+      "name": "Sanctuaire Florissant",
+      "desc": "Construis ton sanctuaire jusqu'au niveau 5."
+    },
+    "sanctuary_tier_10": {
+      "name": "Arche Cosmique",
+      "desc": "Construis ton sanctuaire jusqu'au niveau 10, le maximum."
+    },
     "signal_complete": {
       "name": "Le Signal",
       "desc": "Restaure le Générateur Zenith et réponds au signal."
