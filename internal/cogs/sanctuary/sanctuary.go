@@ -207,7 +207,19 @@ func (c *Cog) buildButtons(san *model.UserSanctuary, tier, used, max int, lang s
 		}
 	}
 
-	return []discordgo.MessageComponent{components.ActionRow(buttons...)}
+	// Discord caps an action row at 5 buttons; split into multiple rows so a
+	// fully-built sanctuary (which can offer 7 actions at once) doesn't blow
+	// the limit and get the whole interaction response rejected.
+	var rows []discordgo.MessageComponent
+	for len(buttons) > 0 {
+		n := 5
+		if n > len(buttons) {
+			n = len(buttons)
+		}
+		rows = append(rows, components.ActionRow(buttons[:n]...))
+		buttons = buttons[n:]
+	}
+	return rows
 }
 
 type biomeCollectionInfo struct {
@@ -650,6 +662,9 @@ func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			Value: strconv.FormatInt(p.ID, 10),
 			Emoji: &discordgo.ComponentEmoji{Name: emoji},
 		})
+		if len(opts) >= 25 {
+			break
+		}
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
@@ -689,6 +704,9 @@ func (c *Cog) onRecallSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			Value: strconv.FormatInt(p.ID, 10),
 			Emoji: &discordgo.ComponentEmoji{Name: emoji},
 		})
+		if len(opts) >= 25 {
+			break
+		}
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
@@ -732,6 +750,9 @@ func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreat
 			Value: strconv.FormatInt(p.ID, 10),
 			Emoji: &discordgo.ComponentEmoji{Name: emoji},
 		})
+		if len(opts) >= 25 {
+			break
+		}
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
