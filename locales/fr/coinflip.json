@@ -8,7 +8,7 @@
     "heads_label": "Face",
     "invalid_bet": "❌ Mise invalide.",
     "legit_choice": "🎲 Tu décides de jouer à la loyal.",
-    "legit_label": "🎲 Jouer loyal (50%)",
+    "legit_label": "🎲 Pile ou Face loyal (50%)",
     "limit_reached": "❌ Limite quotidienne du pile ou face atteinte ! Reviens demain.",
     "lose_cheat": " (Même en trichant ?! La honte...)",
     "lose_msg": "❌ **PERDU...** La pièce tombe sur **{result}**.",

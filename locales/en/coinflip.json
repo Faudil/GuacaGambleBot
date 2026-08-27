@@ -8,7 +8,7 @@
     "heads_label": "Heads",
     "invalid_bet": "❌ Invalid bet.",
     "legit_choice": "🎲 You decide to play fair.",
-    "legit_label": "🎲 Play Fair (50%)",
+    "legit_label": "🎲 Heads or Tails Fair (50%)",
     "limit_reached": "❌ Coinflip daily limit reached! Come back tomorrow.",
     "lose_cheat": " (Even while cheating?! Shameful...)",
     "lose_msg": "❌ **YOU LOST...** The coin lands on **{result}**.",

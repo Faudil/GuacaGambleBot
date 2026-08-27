@@ -2,7 +2,7 @@
   "quests": {
     "active_list": "**Tes quêtes actives :**\n\nSélectionnes-en une avec `!quest <id>` :\n",
     "activity_intro": "📋 **{quest}**\n\n**{label}** , accomplis cette activité, puis reviens pour continuer.",
-    "activity_view_btn": "Continue",
+    "activity_view_btn": "continuer",
     "boss_fight_btn": "⚔️ Combattre le Boss",
     "boss_ko": "❌ Ton familier est K.O. ! Nourris-le d'abord.",
     "boss_league": {

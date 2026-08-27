@@ -14,6 +14,7 @@
     "btn_start_research": "📖 Start",
     "btn_tree": "Upgrade Tree",
     "btn_upgrade": "Upgrade Level",
+    "btn_sanctuary": "Sanctuary",
     "active": "✅ Active",
     "already_owned": "❌ You already own this house!",
     "buy_failed": "❌ Something went wrong while buying this house: {error}",

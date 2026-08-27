@@ -1,5 +1,5 @@
 {
   "casino": {
-    "rolls_left": "Parties restantes aujourd'hui — 🎰 {slots} · 🪙 {coinflip} · 🔟 {mega}"
+    "rolls_left": "Parties restantes aujourd'hui: 🎰 {slots} · 🪙 {coinflip} · 🔟 {mega}"
   }
 }
