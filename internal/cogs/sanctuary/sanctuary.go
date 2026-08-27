@@ -3,6 +3,7 @@ package sanctuary
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -39,7 +40,12 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("sanctuary", c.onPrefix)
 	r.Component("sanctuary", "view", c.onView)
 	r.Component("sanctuary", "retire", c.onRetireSelect)
+	r.Component("sanctuary", "retire_pick", c.onRetirePick)
 	r.Component("sanctuary", "recall", c.onRecallSelect)
+	r.Component("sanctuary", "recall_pick", c.onRecallPick)
+	r.Component("sanctuary", "pet_page", c.onPetPage)
+	r.Component("sanctuary", "pet_search_open", c.onPetSearchOpen)
+	r.Modal("sanctuary", "pet_search_submit", c.onPetSearchSubmit)
 	r.Component("sanctuary", "collect", c.onCollect)
 	r.Component("sanctuary", "upgrade", c.onUpgrade)
 	r.Component("sanctuary", "complete", c.onComplete)
@@ -638,134 +644,274 @@ func (c *Cog) onAscendPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 }
 
-func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+// ── Pet picker: shared paginated + searchable pet selector ────────────────
+//
+// Retire, Recall, and Showcase all need "pick one of my pets" with the same
+// shape: a select menu (capped at Discord's 25-option limit) plus Prev/Next
+// paging and a name-or-species search, so a player with a hundred pets can
+// still reach any of them. The three menus share this one implementation;
+// only the source pet list, labels, and destination pick-action differ.
+
+const petPageSize = 25
+
+// petPickerKind identifies which picker flow a page/search interaction
+// belongs to, since "pet_page" and "pet_search_*" are shared components.
+type petPickerKind string
+
+const (
+	pickerRetire   petPickerKind = "retire"
+	pickerRecall   petPickerKind = "recall"
+	pickerShowcase petPickerKind = "showcase"
+)
+
+type petPickerSpec struct {
+	title          string
+	color          int
+	promptKey      string
+	placeholderKey string
+	noneKey        string
+	pickAction     string
+	fetch          func(c *Cog, userID int64) ([]model.UserPet, error)
+	label          func(p model.UserPet) (label, emoji string)
+}
+
+func petLabel(p model.UserPet) (string, string) {
+	pt := ps.PetTypes[p.PetType]
+	emoji := "🐾"
+	if pt != nil {
+		emoji = pt.Emoji
+	}
+	return p.Nickname, emoji
+}
+
+var petPickers = map[petPickerKind]petPickerSpec{
+	pickerRetire: {
+		title: "🏞️ Retire a Pet", color: 0x2ecc71,
+		promptKey: "sanctuary.retire_prompt", placeholderKey: "sanctuary.retire_placeholder",
+		noneKey: "sanctuary.no_active_pets", pickAction: "retire_pick",
+		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetActiveRosterPets(userID) },
+		label: petLabel,
+	},
+	pickerRecall: {
+		title: "🔙 Recall a Pet", color: 0x3498db,
+		promptKey: "sanctuary.recall_prompt", placeholderKey: "sanctuary.recall_placeholder",
+		noneKey: "sanctuary.no_sanctuary_pets", pickAction: "recall_pick",
+		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetSanctuaryPets(userID) },
+		label: petLabel,
+	},
+	pickerShowcase: {
+		title: "⭐ Showcase Pets", color: 0xf1c40f,
+		promptKey: "sanctuary.showcase_prompt", placeholderKey: "sanctuary.showcase_placeholder",
+		noneKey: "sanctuary.no_sanctuary_pets", pickAction: "showcase_select",
+		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetSanctuaryPets(userID) },
+		label: func(p model.UserPet) (string, string) {
+			label, emoji := petLabel(p)
+			if p.ShowcaseSlot > 0 {
+				label += " [Slot " + itoa(p.ShowcaseSlot) + "]"
+			}
+			return label, emoji
+		},
+	},
+}
+
+// filterPets keeps pets whose nickname or species contains query (case-insensitive).
+func filterPets(pets []model.UserPet, query string) []model.UserPet {
+	if query == "" {
+		return pets
+	}
+	q := strings.ToLower(query)
+	out := make([]model.UserPet, 0, len(pets))
+	for _, p := range pets {
+		if strings.Contains(strings.ToLower(p.Nickname), q) || strings.Contains(strings.ToLower(p.PetType), q) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// pagePets slices pets into the requested page (clamped in range) of petPageSize.
+func pagePets(pets []model.UserPet, page int) (pageItems []model.UserPet, totalPages, clamped int) {
+	totalPages = (len(pets) + petPageSize - 1) / petPageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+	if page < 0 {
+		page = 0
+	}
+	if page > totalPages-1 {
+		page = totalPages - 1
+	}
+	start := page * petPageSize
+	end := start + petPageSize
+	if start > len(pets) {
+		start = len(pets)
+	}
+	if end > len(pets) {
+		end = len(pets)
+	}
+	return pets[start:end], totalPages, page
+}
+
+func (c *Cog) renderPetPicker(b *interaction.Bot, i *discordgo.InteractionCreate, kind petPickerKind, page int, query string) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	pets, err := c.psvc.GetActiveRosterPets(userID)
-	if err != nil || len(pets) == 0 {
-		interaction.RespondError(b, i, lang, "sanctuary.no_active_pets")
+	spec, ok := petPickers[kind]
+	if !ok {
 		return
 	}
-	opts := make([]discordgo.SelectMenuOption, 0, len(pets))
-	for _, p := range pets {
-		pt := ps.PetTypes[p.PetType]
-		emoji := "🐾"
-		if pt != nil {
-			emoji = pt.Emoji
-		}
-		label := p.Nickname
-		if len([]rune(label)) > 50 {
-			label = string([]rune(label)[:50])
+	all, err := spec.fetch(c, userID)
+	if err != nil || len(all) == 0 {
+		interaction.RespondError(b, i, lang, spec.noneKey)
+		return
+	}
+	filtered := filterPets(all, query)
+	pageItems, totalPages, page := pagePets(filtered, page)
+
+	opts := make([]discordgo.SelectMenuOption, 0, len(pageItems))
+	for _, p := range pageItems {
+		label, emoji := spec.label(p)
+		if len([]rune(label)) > 100 {
+			label = string([]rune(label)[:100])
 		}
 		opts = append(opts, discordgo.SelectMenuOption{
 			Label: label,
 			Value: strconv.FormatInt(p.ID, 10),
 			Emoji: &discordgo.ComponentEmoji{Name: emoji},
 		})
-		if len(opts) >= 25 {
-			break
-		}
 	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("🏞️ Retire a Pet", i18n.T("sanctuary.retire_prompt", lang), 0x2ecc71),
-			[]discordgo.MessageComponent{
-				components.ActionRow(
-					discordgo.SelectMenu{
-						CustomID:    components.EncodeOwner(userID, "sanctuary", "retire"),
-						Placeholder: i18n.T("sanctuary.retire_placeholder", lang),
-						Options:     opts,
-					},
-				),
-			}))
+
+	prompt := i18n.T(spec.promptKey, lang) + fmt.Sprintf("\n\n**Page %d/%d** · %d pet(s)", page+1, totalPages, len(filtered))
+	if query != "" {
+		prompt += fmt.Sprintf("\n🔍 Filter: `%s`", query)
+	}
+	embed := components.Embed(spec.title, prompt, spec.color)
+
+	var rows []discordgo.MessageComponent
+	if len(opts) > 0 {
+		rows = append(rows, components.ActionRow(discordgo.SelectMenu{
+			CustomID:    components.EncodeOwner(userID, "sanctuary", spec.pickAction),
+			Placeholder: i18n.T(spec.placeholderKey, lang),
+			Options:     opts,
+		}))
+	}
+	rows = append(rows, components.ActionRow(
+		components.ButtonDisabled("◀ Prev",
+			components.EncodeOwner(userID, "sanctuary", "pet_page", string(kind), strconv.Itoa(page-1), query),
+			discordgo.SecondaryButton, page <= 0),
+		components.Button("🔍 Search",
+			components.EncodeOwner(userID, "sanctuary", "pet_search_open", string(kind)),
+			discordgo.PrimaryButton),
+		components.ButtonDisabled("Next ▶",
+			components.EncodeOwner(userID, "sanctuary", "pet_page", string(kind), strconv.Itoa(page+1), query),
+			discordgo.SecondaryButton, page >= totalPages-1),
+	))
+	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, rows))
+}
+
+func (c *Cog) onPetPage(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	if len(rest) < 2 {
+		return
+	}
+	page, _ := strconv.Atoi(rest[1])
+	query := ""
+	if len(rest) > 2 {
+		query = rest[2]
+	}
+	c.renderPetPicker(b, i, petPickerKind(rest[0]), page, query)
+}
+
+func (c *Cog) onPetSearchOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	kind := string(pickerRetire)
+	if len(rest) > 0 {
+		kind = rest[0]
+	}
+	modal := components.ModalResponse(
+		components.EncodeOwner(userID, "sanctuary", "pet_search_submit", kind),
+		i18n.T("sanctuary.search_modal_title", lang),
+		components.TextInput("query", i18n.T("sanctuary.search_input_label", lang), false,
+			i18n.T("sanctuary.search_input_placeholder", lang), discordgo.TextInputShort, 0, 30),
+	)
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: modal,
+	})
+}
+
+func (c *Cog) onPetSearchSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	_, _, rest := components.Decode(i.ModalSubmitData().CustomID)
+	kind := pickerRetire
+	if len(rest) > 0 {
+		kind = petPickerKind(rest[0])
+	}
+	query := strings.ReplaceAll(strings.TrimSpace(interaction.ModalValues(i)["query"]), "::", " ")
+	c.renderPetPicker(b, i, kind, 0, query)
+}
+
+func (c *Cog) onRetireSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	c.renderPetPicker(b, i, pickerRetire, 0, "")
+}
+
+func (c *Cog) onRetirePick(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	data := i.MessageComponentData()
+	if len(data.Values) == 0 {
+		return
+	}
+	petID, err := strconv.ParseInt(data.Values[0], 10, 64)
+	if err != nil {
+		return
+	}
+	if err := c.svc.RetirePet(userID, petID); err != nil {
+		interaction.RespondError(b, i, lang, "sanctuary.retire_error")
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: i18n.T("sanctuary.retire_success", lang),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
 }
 
 func (c *Cog) onRecallSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	c.renderPetPicker(b, i, pickerRecall, 0, "")
+}
+
+func (c *Cog) onRecallPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	pets, err := c.psvc.GetSanctuaryPets(userID)
-	if err != nil || len(pets) == 0 {
-		interaction.RespondError(b, i, lang, "sanctuary.no_sanctuary_pets")
+	data := i.MessageComponentData()
+	if len(data.Values) == 0 {
 		return
 	}
-	opts := make([]discordgo.SelectMenuOption, 0, len(pets))
-	for _, p := range pets {
-		pt := ps.PetTypes[p.PetType]
-		emoji := "🐾"
-		if pt != nil {
-			emoji = pt.Emoji
-		}
-		label := p.Nickname
-		if len([]rune(label)) > 50 {
-			label = string([]rune(label)[:50])
-		}
-		opts = append(opts, discordgo.SelectMenuOption{
-			Label: label,
-			Value: strconv.FormatInt(p.ID, 10),
-			Emoji: &discordgo.ComponentEmoji{Name: emoji},
-		})
-		if len(opts) >= 25 {
-			break
-		}
+	petID, err := strconv.ParseInt(data.Values[0], 10, 64)
+	if err != nil {
+		return
 	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("🔙 Recall a Pet", i18n.T("sanctuary.recall_prompt", lang), 0x3498db),
-			[]discordgo.MessageComponent{
-				components.ActionRow(
-					discordgo.SelectMenu{
-						CustomID:    components.EncodeOwner(userID, "sanctuary", "recall"),
-						Placeholder: i18n.T("sanctuary.recall_placeholder", lang),
-						Options:     opts,
-					},
-				),
-			}))
+	if err := c.svc.RecallPet(userID, petID); err != nil {
+		_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{Content: "❌ Could not recall: " + err.Error(), Flags: discordgo.MessageFlagsEphemeral},
+		})
+		return
+	}
+	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: i18n.T("sanctuary.recall_success", lang),
+			Flags:   discordgo.MessageFlagsEphemeral,
+		},
+	})
 }
 
 func (c *Cog) onShowcaseSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	pets, err := c.psvc.GetSanctuaryPets(userID)
-	if err != nil || len(pets) == 0 {
-		interaction.RespondError(b, i, lang, "sanctuary.no_sanctuary_pets")
-		return
-	}
-	opts := make([]discordgo.SelectMenuOption, 0, len(pets))
-	for _, p := range pets {
-		pt := ps.PetTypes[p.PetType]
-		emoji := "🐾"
-		if pt != nil {
-			emoji = pt.Emoji
-		}
-		status := ""
-		if p.ShowcaseSlot > 0 {
-			status = " [Slot " + itoa(p.ShowcaseSlot) + "]"
-		}
-		label := p.Nickname + status
-		if len([]rune(label)) > 50 {
-			label = string([]rune(label)[:50])
-		}
-		opts = append(opts, discordgo.SelectMenuOption{
-			Label: label,
-			Value: strconv.FormatInt(p.ID, 10),
-			Emoji: &discordgo.ComponentEmoji{Name: emoji},
-		})
-		if len(opts) >= 25 {
-			break
-		}
-	}
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("⭐ Showcase Pets", i18n.T("sanctuary.showcase_prompt", lang), 0xf1c40f),
-			[]discordgo.MessageComponent{
-				components.ActionRow(
-					discordgo.SelectMenu{
-						CustomID:    components.EncodeOwner(userID, "sanctuary", "showcase_select"),
-						Placeholder: i18n.T("sanctuary.showcase_placeholder", lang),
-						Options:     opts,
-					},
-				),
-			}))
+	c.renderPetPicker(b, i, pickerShowcase, 0, "")
 }
 
 func (c *Cog) onShowcaseSet(b *interaction.Bot, i *discordgo.InteractionCreate) {
