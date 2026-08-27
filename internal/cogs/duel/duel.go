@@ -63,7 +63,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 			"amount":     0,
 			"user":       "?",
 		}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -125,7 +125,7 @@ func (c *Cog) onChallengeSubmit(b *interaction.Bot, i *discordgo.InteractionCrea
 			"amount":     amount,
 			"user":       interaction.Mention(opponentID),
 		}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -177,16 +177,16 @@ func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		"total": res.TotalO,
 	})
 
-	color := 0xf1c40f
+	color := components.ColorReward
 	if res.IsDraw {
 		desc += i18n.T("duel.draw_msg", lang)
-		color = 0x95a5a6
+		color = components.ColorMuted
 	} else {
 		desc += i18n.T("duel.win_msg", lang, map[string]any{
 			"user":   interaction.Mention(res.WinnerID),
 			"amount": res.Amount,
 		})
-		color = 0xf1c40f
+		color = components.ColorReward
 	}
 
 	embed := components.Embed(i18n.T("duel.result_title", lang), desc, color)
@@ -206,7 +206,7 @@ func (c *Cog) onDeny(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	opponentID := interaction.ToInt64(interaction.UserID(i))
 	if _, ok := c.pendingDuels[opponentID]; ok {
 		delete(c.pendingDuels, opponentID)
-		embed := components.Embed("", i18n.T("duel.deny_msg", lang, map[string]any{"user": interaction.Mention(opponentID)}), 0x95a5a6)
+		embed := components.Embed("", i18n.T("duel.deny_msg", lang, map[string]any{"user": interaction.Mention(opponentID)}), components.ColorMuted)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 	} else {

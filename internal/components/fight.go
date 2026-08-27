@@ -119,27 +119,29 @@ func hpLine(p DisplayPet, hpLabel string) string {
 	return hpLabel + " " + HPBar(p.HP, p.MaxHP) + " **" + fmt.Sprintf("%d/%d", p.HP, p.MaxHP) + "**"
 }
 
-// FrameColor returns the embed border color matching the latest journal action
-// (red crit flash, gray dodge, purple stun, green heal, amber DoT, default
-// cyan-blue hit, dark navy when the journal is empty).
+// FrameColor returns the embed border colour matching the latest journal
+// action, so a fight's border tracks what just happened: danger on a crit,
+// muted on a dodge, arcane on a stun, success on a heal, warning on a
+// damage-over-time tick, info on an ordinary hit, and idle before the first
+// blow lands.
 func FrameColor(journal []string) int {
 	if len(journal) == 0 {
-		return 0x2C3E50
+		return ColorIdle
 	}
 	last := journal[len(journal)-1]
 	switch {
 	case strings.Contains(last, "CRITICAL HIT"):
-		return 0xFF0000
+		return ColorDanger
 	case strings.Contains(last, "dodges"):
-		return 0x95A5A6
+		return ColorMuted
 	case strings.Contains(last, "stunned"):
-		return 0x9B59B6
+		return ColorArcane
 	case strings.Contains(last, "heals"), strings.Contains(last, "regenerates"),
 		strings.Contains(last, "drains"), strings.Contains(last, "leeches"):
-		return 0x2ECC71
+		return ColorSuccess
 	case strings.Contains(last, "poison"), strings.Contains(last, "bleed"),
 		strings.HasPrefix(last, "🔥"), strings.Contains(last, "burns"):
-		return 0xE67E22
+		return ColorWarning
 	}
-	return 0x3498DB
+	return ColorInfo
 }

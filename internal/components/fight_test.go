@@ -76,15 +76,15 @@ func TestFightFrameEmbed(t *testing.T) {
 	assert.NotContains(t, emb.Description, "```", "markdown must render, so no code fence")
 	assert.Contains(t, emb.Description, "🟩")
 	assert.NotContains(t, emb.Description, "\x1b")
-	assert.Equal(t, 0xFF0000, emb.Color)
+	assert.Equal(t, ColorDanger, emb.Color)
 }
 
 func TestFrameColor(t *testing.T) {
-	assert.Equal(t, 0xFF0000, FrameColor([]string{"💥 **CRITICAL HIT!**"}))
-	assert.Equal(t, 0x95A5A6, FrameColor([]string{"💨 **X** dodges Y's attack!"}))
-	assert.Equal(t, 0x9B59B6, FrameColor([]string{"💫 **X** is stunned (2 turns left)"}))
-	assert.Equal(t, 0x2ECC71, FrameColor([]string{"💚 **X** regenerates **6** HP."}))
-	assert.Equal(t, 0xE67E22, FrameColor([]string{"🔥 **X** burns and loses **16** HP."}))
-	assert.Equal(t, 0x3498DB, FrameColor([]string{"⚔️ 🐉 **X** deals **32** damage"}))
-	assert.Equal(t, 0x2C3E50, FrameColor(nil))
+	assert.Equal(t, ColorDanger, FrameColor([]string{"💥 **CRITICAL HIT!**"}))
+	assert.Equal(t, ColorMuted, FrameColor([]string{"💨 **X** dodges Y's attack!"}))
+	assert.Equal(t, ColorArcane, FrameColor([]string{"💫 **X** is stunned (2 turns left)"}))
+	assert.Equal(t, ColorSuccess, FrameColor([]string{"💚 **X** regenerates **6** HP."}))
+	assert.Equal(t, ColorWarning, FrameColor([]string{"🔥 **X** burns and loses **16** HP."}))
+	assert.Equal(t, ColorInfo, FrameColor([]string{"⚔️ 🐉 **X** deals **32** damage"}))
+	assert.Equal(t, ColorIdle, FrameColor(nil))
 }

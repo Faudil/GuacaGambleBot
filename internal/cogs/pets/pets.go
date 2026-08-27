@@ -2149,13 +2149,13 @@ const hatchEggColor = 0xF1E3C8
 func rarityHatchColor(rarity string) int {
 	switch rarity {
 	case petsvc.RarityLegendary:
-		return 0xFFD700
+		return components.ColorLegendary
 	case petsvc.RarityEpic:
-		return 0x9B59B6
+		return components.ColorEpic
 	case petsvc.RarityRare:
-		return 0x2ECC71
+		return components.ColorRare
 	default:
-		return 0x95A5A6
+		return components.ColorCommon
 	}
 }
 
