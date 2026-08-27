@@ -24,7 +24,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: shop.New(s, cfg)}
-	r.Slash("shop", "Boutique quotidienne : achète des objets.", c.onSlashMenu)
+	r.Slash("shop", "Daily shop: buy items before today's offers refresh.", c.onSlashMenu)
 	r.Prefix("shop", c.onPrefix)
 	r.Prefix("boutique", c.onPrefix)
 	r.Component("shop", "buy", c.onBuy)
@@ -43,10 +43,9 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 
 	bal, _ := c.store.GetBalance(userID)
-	desc := fmt.Sprintf(i18n.T("shop.personal_desc", lang)+"\n\n", interaction.Mention(userID))
 	embed := components.Embed(
 		i18n.T("shop.personal_title", lang, map[string]any{"user": i.Member.User.Username}),
-		desc, 0x3498db,
+		i18n.T("shop.personal_desc", lang), 0x3498db,
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent
@@ -68,7 +67,8 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		))
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("shop.balance_footer", lang, map[string]any{"balance": bal}),
+		Text: i18n.T("shop.balance_footer", lang, map[string]any{"balance": bal}) + " • " +
+			i18n.T("shop.refresh_footer", lang, map[string]any{"time": formatRefresh(time.Until(c.svc.NextRefresh()))}),
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed,
@@ -86,10 +86,9 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 	}
 
 	bal, _ := c.store.GetBalance(userID)
-	desc := fmt.Sprintf(i18n.T("shop.personal_desc", lang)+"\n\n", m.Author.Mention())
 	embed := components.Embed(
 		i18n.T("shop.personal_title", lang, map[string]any{"user": m.Author.Username}),
-		desc, 0x3498db,
+		i18n.T("shop.personal_desc", lang), 0x3498db,
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent
@@ -111,7 +110,8 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 		))
 	}
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: i18n.T("shop.balance_footer", lang, map[string]any{"balance": bal}),
+		Text: i18n.T("shop.balance_footer", lang, map[string]any{"balance": bal}) + " • " +
+			i18n.T("shop.refresh_footer", lang, map[string]any{"time": formatRefresh(time.Until(c.svc.NextRefresh()))}),
 	}
 	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
@@ -161,6 +161,19 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if unlocks, err := achievement.CheckAndUnlock(b.DB, userID); err == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
 	}
+}
+
+func formatRefresh(d time.Duration) string {
+	if d < 0 {
+		d = 0
+	}
+	d = d.Round(time.Minute)
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %02dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }
 
 func init() {

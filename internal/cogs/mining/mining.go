@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"strings"
 	"sync"
 
@@ -26,14 +25,16 @@ import (
 )
 
 type userSession struct {
-	depth          int
-	bag            []miningsvc.BagEntry
-	toolID         string
-	ghostVeilTurns int
-	riskMod        int
-	riskTurns      int
-	contract       *miningsvc.Contract
-	eventCount     int
+	depth           int
+	riskUnits       int
+	bag             []miningsvc.BagEntry
+	toolID          string
+	ghostVeilTurns  int
+	riskMod         int
+	riskTurns       int
+	contract        *miningsvc.Contract
+	eventCount      int
+	charterDeclined bool
 }
 
 var sessions = map[int64]*userSession{}
@@ -65,10 +66,10 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("m", c.onPrefixMenu)
 	r.Component("mine", "tool_select", c.onToolSelect)
 	r.Component("mine", "descend", c.onDescend)
+	r.Component("mine", "stay", c.onStay)
 	r.Component("mine", "event", c.onEventOption)
 	r.Component("mine", "leave", c.onLeave)
 	r.Component("mine", "contract_pick", c.onContractPick)
-	r.Component("mine", "gamble", c.onGamble)
 }
 
 func (c *Cog) respond(b *interaction.Bot, i *discordgo.InteractionCreate, embed *discordgo.MessageEmbed, comps []discordgo.MessageComponent) {
@@ -91,14 +92,16 @@ func (c *Cog) loadSession(userID int64) *userSession {
 		return nil
 	}
 	sess = &userSession{
-		depth:          ps.Depth,
-		bag:            ps.Bag,
-		toolID:         ps.ToolID,
-		ghostVeilTurns: ps.GhostVeilTurns,
-		riskMod:        ps.RiskMod,
-		riskTurns:      ps.RiskTurns,
-		contract:       ps.Contract,
-		eventCount:     ps.EventCount,
+		depth:           ps.Depth,
+		riskUnits:       ps.RiskUnits,
+		bag:             ps.Bag,
+		toolID:          ps.ToolID,
+		ghostVeilTurns:  ps.GhostVeilTurns,
+		riskMod:         ps.RiskMod,
+		riskTurns:       ps.RiskTurns,
+		contract:        ps.Contract,
+		eventCount:      ps.EventCount,
+		charterDeclined: ps.CharterDeclined,
 	}
 	sessionsMu.Lock()
 	if current, exists := sessions[userID]; exists {
@@ -136,14 +139,16 @@ func (c *Cog) ensureSession(userID int64, toolID string) (*userSession, error) {
 		sessionsMu.RUnlock()
 		// If still not in map, create from persisted
 		sess := &userSession{
-			depth:          ps.Depth,
-			bag:            ps.Bag,
-			toolID:         ps.ToolID,
-			ghostVeilTurns: ps.GhostVeilTurns,
-			riskMod:        ps.RiskMod,
-			riskTurns:      ps.RiskTurns,
-			contract:       ps.Contract,
-			eventCount:     ps.EventCount,
+			depth:           ps.Depth,
+			riskUnits:       ps.RiskUnits,
+			bag:             ps.Bag,
+			toolID:          ps.ToolID,
+			ghostVeilTurns:  ps.GhostVeilTurns,
+			riskMod:         ps.RiskMod,
+			riskTurns:       ps.RiskTurns,
+			contract:        ps.Contract,
+			eventCount:      ps.EventCount,
+			charterDeclined: ps.CharterDeclined,
 		}
 		sessionsMu.Lock()
 		sessions[userID] = sess
@@ -169,14 +174,16 @@ func (c *Cog) persistSession(userID int64) {
 	var ps *miningsvc.PersistedSession
 	if ok {
 		ps = &miningsvc.PersistedSession{
-			Depth:          sess.depth,
-			ToolID:         sess.toolID,
-			GhostVeilTurns: sess.ghostVeilTurns,
-			RiskMod:        sess.riskMod,
-			RiskTurns:      sess.riskTurns,
-			Bag:            append([]miningsvc.BagEntry(nil), sess.bag...),
-			Contract:       sess.contract,
-			EventCount:     sess.eventCount,
+			Depth:           sess.depth,
+			RiskUnits:       sess.riskUnits,
+			ToolID:          sess.toolID,
+			GhostVeilTurns:  sess.ghostVeilTurns,
+			RiskMod:         sess.riskMod,
+			RiskTurns:       sess.riskTurns,
+			Bag:             append([]miningsvc.BagEntry(nil), sess.bag...),
+			Contract:        sess.contract,
+			EventCount:      sess.eventCount,
+			CharterDeclined: sess.charterDeclined,
 		}
 	}
 	sessionsMu.Unlock()
@@ -240,7 +247,7 @@ func localizedItemName(itemID, lang string) string {
 	if loc != key {
 		return loc
 	}
-	return items.DisplayName(itemID)
+	return items.LocalizedName(itemID, lang)
 }
 
 func (c *Cog) toolSelection(lang string, userID int64, remaining int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -306,17 +313,7 @@ func (c *Cog) onToolSelect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		c.sessionError(b, i, lang, userID, err)
 		return
 	}
-	// If session has no contract yet (fresh expedition), show charter selection
-	sessionsMu.Lock()
-	sess := sessions[userID]
-	hasContract := sess != nil && sess.contract != nil
-	sessionsMu.Unlock()
-	if !hasContract {
-		embed, comps := c.charterEmbed(lang, userID)
-		c.respond(b, i, embed, comps)
-		return
-	}
-	embed, comps := c.mineEmbed(lang, userID, "")
+	embed, comps := c.mineEmbed(lang, userID, "", nil)
 	c.respond(b, i, embed, comps)
 }
 
@@ -386,6 +383,7 @@ func (c *Cog) onContractPick(b *interaction.Bot, i *discordgo.InteractionCreate)
 	}
 	if choice == "skip" {
 		sess.contract = nil
+		sess.charterDeclined = true
 	} else {
 		idx := 0
 		fmt.Sscanf(choice, "%d", &idx)
@@ -405,51 +403,11 @@ func (c *Cog) onContractPick(b *interaction.Bot, i *discordgo.InteractionCreate)
 	charterMu.Unlock()
 	sessionsMu.Unlock()
 	c.persistSession(userID)
-	embed, comps := c.mineEmbed(lang, userID, "")
+	embed, comps := c.mineEmbed(lang, userID, "", nil)
 	c.respond(b, i, embed, comps)
 }
 
-func (c *Cog) onGamble(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	userID := interaction.ToInt64(interaction.UserID(i))
-	sess := c.loadSession(userID)
-	if sess == nil || len(sess.bag) == 0 {
-		interaction.RespondError(b, i, lang, "mining.no_session")
-		return
-	}
-	won := rand.Intn(2) == 0
-	mu := getUserMu(userID)
-	mu.Lock()
-	defer mu.Unlock()
-	sessionsMu.Lock()
-	// re-fetch under lock to ensure not deleted
-	if s, ok := sessions[userID]; ok {
-		sess = s
-	} else {
-		sessionsMu.Unlock()
-		interaction.RespondError(b, i, lang, "mining.no_session")
-		return
-	}
-	if won {
-		for idx := range sess.bag {
-			sess.bag[idx].Count *= 2
-		}
-		msg := i18n.T("mining.gamble_win", lang, map[string]any{"bag": c.bagString(sess.bag, lang)})
-		sessionsMu.Unlock()
-		c.persistSession(userID)
-		embed, comps := c.mineEmbed(lang, userID, msg)
-		c.respond(b, i, embed, comps)
-	} else {
-		sess.bag = nil
-		msg := i18n.T("mining.gamble_lose", lang)
-		sessionsMu.Unlock()
-		c.persistSession(userID)
-		embed, comps := c.mineEmbed(lang, userID, msg)
-		c.respond(b, i, embed, comps)
-	}
-}
-
-func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string, found *miningsvc.MineItem) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	sessionsMu.Lock()
 	sess, ok := sessions[userID]
 	if !ok {
@@ -465,7 +423,7 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 	ti := miningsvc.GetToolInfo(sess.toolID)
 	ml, _ := c.svc.GetMinerLevel(userID)
 
-	riskNext := c.svc.RiskFor(userID, depth, sess.toolID, sess.ghostVeilTurns, sess.riskMod)
+	riskNext := c.svc.RiskFor(userID, sess.riskUnits, sess.toolID, sess.ghostVeilTurns, sess.riskMod)
 
 	color := miningsvc.DepthColor(depth)
 	flavorKey := miningsvc.DepthFlavorKey(depth)
@@ -475,8 +433,17 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 		desc = eventMsg + "\n\n" + desc
 	}
 
+	// found reports what was gained by the action that triggered this render
+	// (e.g. this dig's roll), not the bag's running total — a merge into an
+	// existing stack must show the delta just gained, not the cumulative count.
 	lootText := i18n.T("mining.found_nothing", lang)
-	if len(sess.bag) > 0 {
+	if found != nil {
+		if found.Count > 1 {
+			lootText = i18n.T("mining.found_item_count", lang, map[string]any{"item": localizedItemName(found.Name, lang), "count": found.Count})
+		} else {
+			lootText = i18n.T("mining.found_item", lang, map[string]any{"item": localizedItemName(found.Name, lang)})
+		}
+	} else if len(sess.bag) > 0 {
 		last := sess.bag[len(sess.bag)-1]
 		if last.Count > 1 {
 			lootText = i18n.T("mining.found_item_count", lang, map[string]any{"item": localizedItemName(last.Name, lang), "count": last.Count})
@@ -543,15 +510,14 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string) (*discordgo.
 				Style:    discordgo.PrimaryButton,
 			},
 			discordgo.Button{
+				Label:    i18n.T("mining.stay_label", lang),
+				CustomID: components.EncodeOwner(userID, "mine", "stay"),
+				Style:    discordgo.SecondaryButton,
+			},
+			discordgo.Button{
 				Label:    i18n.T("mining.leave_label", lang),
 				CustomID: components.EncodeOwner(userID, "mine", "leave"),
 				Style:    discordgo.SuccessButton,
-			},
-			discordgo.Button{
-				Label:    i18n.T("mining.gamble_label", lang),
-				CustomID: components.EncodeOwner(userID, "mine", "gamble"),
-				Style:    discordgo.SecondaryButton,
-				Disabled: len(sess.bag) == 0,
 			},
 		),
 	}
@@ -589,8 +555,11 @@ func decayTurns(sess *userSession) {
 }
 
 func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	if ev != nil && ev.ID == miningsvc.NPCCharterEventID {
+		return c.charterEmbed(lang, userID)
+	}
 	if ev == nil || len(ev.Options) == 0 {
-		return c.mineEmbed(lang, userID, "")
+		return c.mineEmbed(lang, userID, "", nil)
 	}
 	sessionsMu.Lock()
 	sess, _ := sessions[userID]
@@ -664,7 +633,25 @@ func eventKeyID(id string) string {
 	return strings.ReplaceAll(id, "_legendary", "_leg")
 }
 
+// onDescend digs and, on success, moves one depth deeper — the full risk
+// increase per dig.
 func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	c.performDig(b, i, true)
+}
+
+// onStay digs again at the current depth instead of going deeper — the
+// player trades loot-tier progress for only half the risk increase of a
+// normal descend.
+func (c *Cog) onStay(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	c.performDig(b, i, false)
+}
+
+// performDig runs one dig action. When advance is true (a normal descend) a
+// successful dig moves the player one depth deeper and the collapse risk
+// grows by a full step (+2 risk units, i.e. +5%). When advance is false (the
+// "stay" option) depth is unchanged and risk only grows by half a step (+1
+// risk unit) — the same dig, loot and events, just without pressing deeper.
+func (c *Cog) performDig(b *interaction.Bot, i *discordgo.InteractionCreate, advance bool) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 
@@ -690,13 +677,16 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		sess = sessions[userID]
 	}
 	depth := sess.depth
+	riskUnits := sess.riskUnits
 	bagCopy := append([]miningsvc.BagEntry(nil), sess.bag...)
 	toolID := sess.toolID
 	gvt := sess.ghostVeilTurns
 	riskMod := sess.riskMod
+	hasContract := sess.contract != nil
+	charterDeclined := sess.charterDeclined
 	sessionsMu.RUnlock()
 
-	res, err := c.svc.Descend(userID, depth, bagCopy, toolID, gvt, riskMod)
+	res, err := c.svc.Descend(userID, depth, riskUnits, bagCopy, toolID, gvt, riskMod, hasContract, charterDeclined)
 	if err != nil {
 		slog.Error("mining descend failed", "user", userID, "error", err)
 		interaction.RespondError(b, i, lang, "mining.error")
@@ -716,16 +706,21 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if len(res.Bag) == 0 {
 			msg = i18n.T("mining.collapse_empty", lang)
 		}
-		c.respond(b, i, components.Embed("💥 COLLAPSE!", msg, 0xFF0000), nil)
+		c.respond(b, i, components.Embed(i18n.T("mining.collapse_title", lang), msg, 0xFF0000), nil)
 		return
 	}
 
-	// Apply successful descend updates under write lock
+	// Apply successful dig updates under write lock
 	var brokeToolID string
 	var sessForContract *userSession
 	sessionsMu.Lock()
 	if s, ok := sessions[userID]; ok {
-		s.depth++
+		if advance {
+			s.depth++
+			s.riskUnits += 2
+		} else {
+			s.riskUnits++
+		}
 		s.bag = res.Bag
 		if s.ghostVeilTurns > 0 {
 			s.ghostVeilTurns--
@@ -775,7 +770,7 @@ func (c *Cog) onDescend(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	embed, comps := c.mineEmbed(lang, userID, eventMsg)
+	embed, comps := c.mineEmbed(lang, userID, eventMsg, res.Item)
 
 	if res.NarrativeEvent != nil {
 		eEmbed, eComps := c.eventEmbed(lang, userID, res.NarrativeEvent)
@@ -944,7 +939,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if !forceLeave {
 		sessionsMu.Unlock()
 		c.persistSession(userID)
-		embed, comps := c.mineEmbed(lang, userID, msg)
+		embed, comps := c.mineEmbed(lang, userID, msg, nil)
 		c.respond(b, i, embed, comps)
 		return
 	}
@@ -977,7 +972,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if msg != "" {
 		resultMsg = msg + "\n\n" + resultMsg
 	}
-	c.respond(b, i, components.Embed("✅ Expedition Complete!", resultMsg, 0x00FF00), nil)
+	c.respond(b, i, components.Embed(i18n.T("mining.expedition_complete_title", lang), resultMsg, 0x00FF00), nil)
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
@@ -1054,7 +1049,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		title += "\n" + i18n.T("mining.contract_reward_msg", lang, map[string]any{"credits": contractReward.RewardCredits, "xp": contractReward.RewardXP})
 	}
 
-	c.respond(b, i, components.Embed("✅ Expedition Complete!", title, color), nil)
+	c.respond(b, i, components.Embed(i18n.T("mining.expedition_complete_title", lang), title, color), nil)
 
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 

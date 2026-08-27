@@ -636,7 +636,7 @@ func (c *Cog) recipeSelect(userID int64, level int, recipes []string, page int, 
 	end := min(start+maxMenuOptions, len(recipes))
 	for _, key := range recipes[start:end] {
 		recipe := crtsvc.Recipes[key]
-		if !c.unlocked(userID, level, recipe) {
+		if !c.unlocked(userID, level, recipe) || c.maxCraftable(userID, recipe) <= 0 {
 			continue
 		}
 		desc := recipeIngredients(recipe, lang)

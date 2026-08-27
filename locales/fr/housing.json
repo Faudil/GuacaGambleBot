@@ -18,6 +18,7 @@
     "already_owned": "❌ Tu possèdes déjà cette maison !",
     "buy_failed": "❌ Une erreur est survenue lors de l'achat de cette maison : {error}",
     "buy_success": "🎉 **Félicitations !** Tu es désormais propriétaire d'une **{house}** !",
+    "collect_resources": "📦 **Ressources :** {resources}",
     "collect_success": "💰 **Loyer récolté !** Tu as gagné **${amount}** grâce à ta propriété.",
     "color_success": "🎨 Couleur du thème mise à jour : **{hex}** !",
     "construction_finished": "🛠️ **Construction terminée** : {item} est prêt !\nUtilise `!house complete` pour finaliser.",
@@ -51,6 +52,7 @@
     "no_money": "❌ Tu n'as pas assez d'argent ({price}$).",
     "nothing_to_collect": "⏳ Ta propriété n'a pas encore généré assez de revenus. Reviens plus tard !",
     "owned": "✅ Possédée",
+    "pending_income": "💰 **{amount}$** en attente",
     "pending_rewards": "💰 Récompenses en attente",
     "pet_full_warning": "❌ **Ton zoo est plein ({current}/{limit}) !**\nLibère des familiers ou agrandis ton écurie avec `!house expand pets`.",
     "rename_success": "✅ Ta maison est désormais connue sous le nom de : **{name}**",
@@ -106,7 +108,23 @@
       "magnetic_coil": "Bobine Magnétique",
       "workbench": "Établi"
     },
+    "upgrade_effects": {
+      "industrial_drill": "Donne parfois des minerais rares",
+      "industrial_workshop": "Production de ressources x2",
+      "merchant_office": "+20% Capacité Banque, +15% Revenus",
+      "merchant_vault": "Capacité Banque doublée",
+      "mystic_altar": "-5% Coûts de Craft, Régénération Pet",
+      "mystic_laboratory": "-15% Coûts de Craft, Chance XP Pet augmentée"
+    },
     "upgrade_success": "🛠️ **Amélioration terminée !** Ta maison est désormais de Niveau **{level}**. **+1 emplacement de meuble !**",
-    "sanctuary_house_max": "❌ Ta maison ne peut pas accueillir un sanctuaire plus grand — achète une plus grande maison pour l'agrandir."
+    "sanctuary_house_max": "❌ Ta maison ne peut pas accueillir un sanctuaire plus grand — achète une plus grande maison pour l'agrandir.",
+    "upgrades": {
+      "industrial_drill": "Foreuse Automatique",
+      "industrial_workshop": "Atelier Industriel",
+      "merchant_office": "Bureau de Négociant",
+      "merchant_vault": "Chambre Forte",
+      "mystic_altar": "Autel Mystique",
+      "mystic_laboratory": "Laboratoire d'Alchimie"
+    }
   }
 }

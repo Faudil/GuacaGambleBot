@@ -58,7 +58,7 @@ func (c *Cog) onPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Me
 	}
 	switch sub {
 	case "fight":
-		o, errEmbed, errComps := c.prepareFight(interaction.ToInt64(m.Author.ID), lang)
+		o, errEmbed, errComps := c.prepareFight(interaction.ToInt64(m.Author.ID), lang, "")
 		if o == nil {
 			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 				Embeds:     []*discordgo.MessageEmbed{errEmbed},
@@ -93,6 +93,8 @@ func questStepBossStage(def *questssvc.QuestDef, stepIdx int) int {
 
 // findBossBattleQuest finds any active quest whose current step is a StepBossBattle.
 // It checks boss_league first, then falls back to any other active quest.
+// Used as a fallback when a fight is triggered without an explicit quest id
+// (e.g. the legacy /start boss button).
 func (c *Cog) findBossBattleQuest(userID int64) (string, *questssvc.QuestDef, *model.UserQuest, *model.UserQuestData) {
 	for _, qid := range []string{"boss_league", "arena_rival", "tutorial"} {
 		uq, uqd, err := c.qsvc.GetQuestProgress(userID, qid)
@@ -110,114 +112,157 @@ func (c *Cog) findBossBattleQuest(userID int64) (string, *questssvc.QuestDef, *m
 	return "", nil, nil, nil
 }
 
-// show renders the current boss quest step. It returns the boss picture asset
-// name (empty when the step has none) so callers can upload it with the embed.
+// hasBossStep reports whether a quest line ever puts the player in front of a
+// boss, i.e. it's relevant to show on the /boss screen.
+func hasBossStep(def *questssvc.QuestDef) bool {
+	for _, step := range def.Steps {
+		if step.Type == questssvc.StepBossBattle {
+			return true
+		}
+	}
+	return false
+}
+
+// bossQuestLine is one active, boss-related quest currently sitting on a step
+// the player can act on from /boss (its narrative beat or its boss fight).
+type bossQuestLine struct {
+	qid     string
+	def     *questssvc.QuestDef
+	uqd     *model.UserQuestData
+	stepIdx int
+}
+
+// findBossQuestLines returns every active quest whose current step is either
+// the narrative lead-up to a boss (StepDialogue) or the boss fight itself
+// (StepBossBattle), across every quest line that ever features a boss. This
+// lets a player choose between several boss lines at once (e.g. the arena
+// rival vs. the league) instead of only ever seeing one.
+func (c *Cog) findBossQuestLines(userID int64) []bossQuestLine {
+	infos, err := c.qsvc.GetAllActiveQuests(userID)
+	if err != nil {
+		return nil
+	}
+	var lines []bossQuestLine
+	for _, info := range infos {
+		def := c.qsvc.GetQuestDef(info.QuestID)
+		if def == nil || !hasBossStep(def) {
+			continue
+		}
+		_, uqd, err := c.qsvc.GetQuestProgress(userID, info.QuestID)
+		if err != nil || uqd == nil || uqd.StepIndex >= len(def.Steps) {
+			continue
+		}
+		switch def.Steps[uqd.StepIndex].Type {
+		case questssvc.StepDialogue, questssvc.StepBossBattle:
+			lines = append(lines, bossQuestLine{qid: info.QuestID, def: def, uqd: uqd, stepIdx: uqd.StepIndex})
+		}
+	}
+	return lines
+}
+
+// show renders every boss quest line the player currently has active, each as
+// its own field with its own action button, so they can choose which boss to
+// pursue (e.g. the league boss vs. the arena rival) instead of only ever
+// seeing one at a time. It returns the picture asset of the first quest line
+// with a boss image (empty when none apply) so callers can upload it.
 func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent, string) {
-	qid, def, uq, uqd := c.findBossBattleQuest(userID)
-	if qid == "" {
-		// Try to auto-start boss_league if any pet is level 20+
+	if uq, _, err := c.qsvc.GetQuestProgress(userID, "boss_league"); err != nil || uq == nil {
+		// boss_league not started yet: auto-start it once any pet hits level 20+.
 		pets, _ := petsvc.New(c.store, c.cfg).GetPets(userID)
-		hasLv20 := false
 		for _, p := range pets {
 			if p.Level >= 20 {
-				hasLv20 = true
+				_ = c.qsvc.StartQuest(userID, "boss_league")
 				break
 			}
 		}
-		if hasLv20 {
-			_ = c.qsvc.StartQuest(userID, "boss_league")
-			qid, def, uq, uqd = c.findBossBattleQuest(userID)
-		}
 	}
 
-	if qid == "" {
-		embed := components.Embed(
-			i18n.T("boss_league.title", lang),
-			i18n.T("boss_league.locked", lang),
-			0x992d22,
-		)
-		return embed, nil, ""
-	}
-	stepIdx := 0
-	if uqd != nil {
-		stepIdx = uqd.StepIndex
-	}
-
-	title := i18n.T(def.TitleKey, lang)
-	stepStr := i18n.T("quests.step_progress", lang, map[string]any{
-		"current": stepIdx + 1,
-		"total":   len(def.Steps),
-	})
-
-	if uq.Status == "COMPLETED" {
-		if qid == "boss_league" {
-			embed := components.Embed(title, i18n.T("boss_league.champion", lang), 0xf1c40f)
+	lines := c.findBossQuestLines(userID)
+	if len(lines) == 0 {
+		if uq, _, _ := c.qsvc.GetQuestProgress(userID, "boss_league"); uq != nil && uq.Status == "COMPLETED" {
+			embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.champion", lang), 0xf1c40f)
 			return embed, nil, ""
 		}
-		embed := components.Embed(title, "✅ Quest completed!", 0x2ecc71)
+		embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.locked", lang), 0x992d22)
 		return embed, nil, ""
 	}
 
-	step := def.Steps[stepIdx]
-	var desc string
-	var btns []discordgo.MessageComponent
+	var fields []*discordgo.MessageEmbedField
+	var comps []discordgo.MessageComponent
 	var bossImage string
 
-	switch step.Type {
-	case questssvc.StepDialogue:
-		desc = i18n.T(step.TextKey, lang)
-		btns = append(btns,
-			components.Button(i18n.T("quests.continue_label", lang),
-				components.EncodeOwner(userID, "quest", "advance", qid),
-				discordgo.SuccessButton),
-		)
-	case questssvc.StepBossBattle:
-		bossStage := questStepBossStage(def, stepIdx)
-		if bossStage >= 0 && bossStage < len(bosssvc.BossLeague) {
-			boss := bosssvc.BossLeague[bossStage]
-			bossName := boss.NameEN
-			bossDesc := boss.DescEN
-			if lang == "fr" {
-				bossName = boss.NameFR
-				bossDesc = boss.DescFR
-			}
-			desc = fmt.Sprintf("**%s**\n*%s*\n\n", bossName, bossDesc)
-			statsTxt := fmt.Sprintf("Lvl %d | %s | HP: %d | ATK: %d | DEF: %d | SPD: %d",
-				boss.Level, boss.Species, boss.HP, boss.Atk, boss.Defense, boss.Speed)
-			desc += fmt.Sprintf("🐾 %s\n", statsTxt)
-			bossImage = boss.Image
-		} else {
+	for _, line := range lines {
+		lineTitle := i18n.T(line.def.TitleKey, lang)
+		stepStr := i18n.T("quests.step_progress", lang, map[string]any{
+			"current": line.stepIdx + 1,
+			"total":   len(line.def.Steps),
+		})
+
+		step := line.def.Steps[line.stepIdx]
+		var desc string
+		var btn discordgo.MessageComponent
+
+		switch step.Type {
+		case questssvc.StepDialogue:
 			desc = i18n.T(step.TextKey, lang)
+			btn = components.Button(i18n.T("quests.continue_label", lang),
+				components.EncodeOwner(userID, "quest", "advance", line.qid),
+				discordgo.SuccessButton)
+		case questssvc.StepBossBattle:
+			bossStage := questStepBossStage(line.def, line.stepIdx)
+			var bossName string
+			if bossStage >= 0 && bossStage < len(bosssvc.BossLeague) {
+				boss := bosssvc.BossLeague[bossStage]
+				bossName = boss.NameEN
+				bossDesc := boss.DescEN
+				if lang == "fr" {
+					bossName = boss.NameFR
+					bossDesc = boss.DescFR
+				}
+				desc = fmt.Sprintf("**%s**\n*%s*\n\n", bossName, bossDesc)
+				statsTxt := fmt.Sprintf("Lvl %d | %s | HP: %d | ATK: %d | DEF: %d | SPD: %d",
+					boss.Level, boss.Species, boss.HP, boss.Atk, boss.Defense, boss.Speed)
+				desc += fmt.Sprintf("🐾 %s\n", statsTxt)
+				if bossImage == "" {
+					bossImage = boss.Image
+				}
+			} else {
+				desc = i18n.T(step.TextKey, lang)
+			}
+			desc += "\n" + i18n.T("boss_league.fight_hint", lang)
+			label := "⚔️ " + i18n.T("quests.boss_fight_btn", lang)
+			if bossName != "" {
+				label = "⚔️ " + bossName
+			}
+			btn = components.Button(label,
+				components.EncodeOwner(userID, "boss", "fight", line.qid),
+				discordgo.DangerButton)
+		default:
+			continue
 		}
-		desc += "\n" + i18n.T("boss_league.fight_hint", lang)
-		btns = append(btns,
-			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang),
-				components.EncodeOwner(userID, "boss", "fight"),
-				discordgo.DangerButton),
-		)
-	}
 
-	btns = append(btns,
-		components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
-	)
-
-	embed := components.Embed(
-		title+" ("+stepStr+")",
-		desc,
-		0x992d22,
-	)
-
-	var comps []discordgo.MessageComponent
-	for _, btn := range btns {
+		fields = append(fields, components.Field(lineTitle+" ("+stepStr+")", desc, false))
 		comps = append(comps, components.ActionRow(btn))
 	}
+
+	comps = append(comps, components.ActionRow(
+		components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
+	))
+
+	embed := components.Embed(i18n.T("boss_league.title", lang), "", 0x992d22)
+	embed.Fields = fields
 	return embed, comps, bossImage
 }
 
 func (c *Cog) onFightButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	o, errEmbed, errComps := c.prepareFight(userID, lang)
+	_, _, rest := components.Decode(i.MessageComponentData().CustomID)
+	qid := ""
+	if len(rest) >= 2 {
+		qid = rest[0]
+	}
+	o, errEmbed, errComps := c.prepareFight(userID, lang, qid)
 	if o == nil {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, errEmbed, errComps))
@@ -250,7 +295,10 @@ type fightOutcome struct {
 
 // prepareFight validates the boss fight, runs it, and prepares the animated
 // frames. On failure it returns a nil outcome plus the error embed/buttons.
-func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo.MessageEmbed, []discordgo.MessageComponent) {
+// qid names the quest line to fight; when empty it falls back to the legacy
+// single-boss lookup (used by callers that predate multi-boss lines, e.g.
+// /start's boss button).
+func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome, *discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	backBtn := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
@@ -265,7 +313,23 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 		return nil, components.Embed("❌", i18n.T("economy.daily_footer", lang), 0xe74c3c), backBtn
 	}
 
-	qid, def, _, uqd := c.findBossBattleQuest(userID)
+	var def *questssvc.QuestDef
+	var uqd *model.UserQuestData
+	if qid != "" {
+		var uq *model.UserQuest
+		uq, uqd, err = c.qsvc.GetQuestProgress(userID, qid)
+		if err != nil || uq == nil || uq.Status != "ACTIVE" || uqd == nil {
+			qid = ""
+		} else {
+			def = c.qsvc.GetQuestDef(qid)
+			if def == nil {
+				qid = ""
+			}
+		}
+	}
+	if qid == "" {
+		qid, def, _, uqd = c.findBossBattleQuest(userID)
+	}
 	if qid == "" {
 		return nil, components.Embed("❌", i18n.T("boss_league.locked", lang), 0xe74c3c), backBtn
 	}
@@ -322,7 +386,7 @@ func (c *Cog) prepareFight(userID int64, lang string) (*fightOutcome, *discordgo
 	}
 	o.comps = []discordgo.MessageComponent{
 		components.ActionRow(
-			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang), components.EncodeOwner(userID, "boss", "fight"), discordgo.DangerButton),
+			components.Button("⚔️ "+i18n.T("quests.boss_fight_btn", lang), components.EncodeOwner(userID, "boss", "fight", qid), discordgo.DangerButton),
 			components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
 		),
 	}

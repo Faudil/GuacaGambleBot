@@ -3,6 +3,7 @@ package housing
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -273,14 +274,9 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	collectInfo, _ := c.hsvc.GetCollectInfo(userID)
 	if collectInfo != nil {
-		incomeText := fmt.Sprintf("💰 **$%d** pending\n", collectInfo.Income)
-		if len(collectInfo.Items) > 0 {
-			for _, item := range collectInfo.Items {
-				parts := strings.SplitN(item, ":", 2)
-				if len(parts) == 2 {
-					incomeText += fmt.Sprintf("• %s: `x%s`\n", parts[0], parts[1])
-				}
-			}
+		incomeText := i18n.T("housing.pending_income", lang, map[string]any{"amount": collectInfo.Income}) + "\n"
+		for _, line := range localizedResources(collectInfo.Items, lang) {
+			incomeText += "• " + line + "\n"
 		}
 		embed.Fields = append(embed.Fields, components.Field(i18n.T("housing.pending_rewards", lang), incomeText, false))
 	}
@@ -305,10 +301,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if h.UnderConstruction != nil && *h.UnderConstruction != "" {
 		uc := *h.UnderConstruction
-		ucName := uc
-		if upg := housingsvc.UpgradesTree[uc]; upg != nil {
-			ucName = upg.Name
-		}
+		ucName := upgradeName(uc, lang)
 		status := fmt.Sprintf("**%s** %s", ucName, i18n.T("housing.tree_in_progress", lang))
 		if h.FinishTime != nil && time.Now().After(*h.FinishTime) {
 			status = fmt.Sprintf("**%s** %s", ucName, i18n.T("housing.tree_ready", lang))
@@ -318,10 +311,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	_, comps := c.menuForUser(lang, userID)
 	if h.UnderConstruction != nil && *h.UnderConstruction != "" && h.FinishTime != nil && time.Now().After(*h.FinishTime) {
-		ucName := *h.UnderConstruction
-		if upg := housingsvc.UpgradesTree[*h.UnderConstruction]; upg != nil {
-			ucName = upg.Name
-		}
+		ucName := upgradeName(*h.UnderConstruction, lang)
 		comps = append(comps, components.ActionRow(
 			components.Button("✅ "+ucName, components.EncodeOwner(userID, "house", "tree_complete", *h.UnderConstruction), discordgo.SuccessButton),
 		))
@@ -333,16 +323,18 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onCollect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	income, items, err := c.hsvc.Collect(userID)
+	res, err := c.hsvc.Collect(userID)
 	if err != nil {
 		interaction.RespondError(b, i, lang, "housing.nothing_to_collect")
 		return
 	}
-	msg := fmt.Sprintf("💰 **Collected!** +$%d", income)
-	if len(items) > 0 {
-		msg += "\n📦 **Resources:** " + strings.Join(items, ", ")
+	msg := i18n.T("housing.collect_success", lang, map[string]any{"amount": res.Income})
+	if lines := localizedResources(res.Items, lang); len(lines) > 0 {
+		msg += "\n" + i18n.T("housing.collect_resources", lang, map[string]any{
+			"resources": strings.Join(lines, ", "),
+		})
 	}
-	embed := components.Embed("📦 Collect", msg, 0x2ecc71)
+	embed := components.Embed(i18n.T("housing.btn_collect", lang), msg, 0x2ecc71)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -388,15 +380,11 @@ func (c *Cog) onTree(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		case underConstruction == upg.ID:
 			status = "⏳ " + i18n.T("housing.tree_in_progress", lang)
 		case upg.Requires != "" && !owned[upg.Requires]:
-			req := upg.Requires
-			if rd := housingsvc.UpgradesTree[req]; rd != nil {
-				req = rd.Name
-			}
-			status = "🔒 " + i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": req})
+			status = "🔒 " + i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": upgradeName(upg.Requires, lang)})
 		}
 		embed.Fields = append(embed.Fields, components.Field(
-			fmt.Sprintf("%s (%s) %s", upg.Name, upg.Branch, status),
-			fmt.Sprintf("💰 $%d\n📦 %s\n⏱ %dh\n*%s*", upg.CostMoney, itemsReq, upg.TimeHours, upg.BonusDesc),
+			fmt.Sprintf("%s (%s) %s", upgradeName(upg.ID, lang), upg.Branch, status),
+			fmt.Sprintf("💰 $%d\n📦 %s\n⏱ %dh\n*%s*", upg.CostMoney, itemsReq, upg.TimeHours, upgradeEffect(upg.ID, lang)),
 			false,
 		))
 	}
@@ -406,10 +394,7 @@ func (c *Cog) onTree(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
 	}
 	if constructionReady {
-		name := underConstruction
-		if upg := housingsvc.UpgradesTree[underConstruction]; upg != nil {
-			name = upg.Name
-		}
+		name := upgradeName(underConstruction, lang)
 		row = append(row, components.Button("✅ "+name, components.EncodeOwner(userID, "house", "tree_complete", underConstruction), discordgo.SuccessButton))
 	}
 	comps = append(comps, components.ActionRow(row...))
@@ -683,6 +668,17 @@ func (c *Cog) activeEffects(userID int64, lang string) []string {
 
 // furnitureName resolves the localized furniture name, falling back to the
 // English name from the furniture catalog when a locale key is missing.
+// localizedResources renders an item ID → quantity map as "Name x12" entries in
+// the player's language, sorted by localized name so the order is stable.
+func localizedResources(res map[string]int, lang string) []string {
+	lines := make([]string, 0, len(res))
+	for id, qty := range res {
+		lines = append(lines, fmt.Sprintf("%s x%d", items.LocalizedName(id, lang), qty))
+	}
+	sort.Strings(lines)
+	return lines
+}
+
 func furnitureName(id string, lang string) string {
 	if fd := furnituresvc.FurnitureDefs[id]; fd != nil {
 		key := "housing.furnitures." + id
@@ -702,6 +698,31 @@ func furnitureEffect(id string, lang string) string {
 	}
 	if fd := furnituresvc.FurnitureDefs[id]; fd != nil && len(fd.Effects) > 0 {
 		return fd.Effects[0].Description
+	}
+	return ""
+}
+
+// upgradeName resolves the localized name of a housing upgrade, falling back to
+// the catalog name when a locale key is missing.
+func upgradeName(id string, lang string) string {
+	if upg := housingsvc.UpgradesTree[id]; upg != nil {
+		key := "housing.upgrades." + id
+		if name := i18n.T(key, lang); name != key {
+			return name
+		}
+		return upg.Name
+	}
+	return id
+}
+
+// upgradeEffect resolves the localized bonus description of a housing upgrade.
+func upgradeEffect(id string, lang string) string {
+	if upg := housingsvc.UpgradesTree[id]; upg != nil {
+		key := "housing.upgrade_effects." + id
+		if desc := i18n.T(key, lang); desc != key {
+			return desc
+		}
+		return upg.BonusDesc
 	}
 	return ""
 }
@@ -1060,10 +1081,7 @@ func (c *Cog) onTreeStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
 				req = upg.Requires
 			}
-			if rd := housingsvc.UpgradesTree[req]; rd != nil {
-				req = rd.Name
-			}
-			msg = i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": req})
+			msg = i18n.T("housing.tree_requires", lang, map[string]any{"upgrade": upgradeName(req, lang)})
 		case strings.Contains(err.Error(), "already owned"):
 			msg = i18n.T("housing.tree_already", lang)
 		case strings.Contains(err.Error(), "in progress"):
@@ -1076,10 +1094,9 @@ func (c *Cog) onTreeStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	name := upgradeID
+	name := upgradeName(upgradeID, lang)
 	hours := 0
 	if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
-		name = upg.Name
 		hours = upg.TimeHours
 	}
 	embed := components.Embed("🏗️", i18n.T("housing.tree_started", lang, map[string]any{"name": name, "hours": hours}), 0x2ecc71)
@@ -1112,10 +1129,7 @@ func (c *Cog) onTreeComplete(b *interaction.Bot, i *discordgo.InteractionCreate)
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	name := upgradeID
-	if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
-		name = upg.Name
-	}
+	name := upgradeName(upgradeID, lang)
 	embed := components.Embed("✅", i18n.T("housing.tree_completed", lang, map[string]any{"name": name}), 0x2ecc71)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,

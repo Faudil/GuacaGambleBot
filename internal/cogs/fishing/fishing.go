@@ -14,6 +14,7 @@ import (
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
+	"guacagamblebot/internal/items"
 	fishingsvc "guacagamblebot/internal/service/fishing"
 	invsvc "guacagamblebot/internal/service/inventory"
 	jsvc "guacagamblebot/internal/service/journal"
@@ -966,7 +967,7 @@ func fishDisplayName(rawName, lang string) string {
 	key := "fishing.fish_" + strings.ReplaceAll(strings.ToLower(rawName), " ", "_")
 	loc := i18n.T(key, lang)
 	if loc == "" || loc == key {
-		return rawName
+		return items.LocalizedName(rawName, lang)
 	}
 	return loc
 }

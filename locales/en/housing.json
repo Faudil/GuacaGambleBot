@@ -18,6 +18,7 @@
     "already_owned": "❌ You already own this house!",
     "buy_failed": "❌ Something went wrong while buying this house: {error}",
     "buy_success": "🎉 **Congratulations!** You are now the owner of a **{house}**!",
+    "collect_resources": "📦 **Resources:** {resources}",
     "collect_success": "💰 **Rent Collected!** You gained **${amount}** from your property.",
     "color_success": "🎨 Theme color updated to **{hex}**!",
     "construction_finished": "🛠️ **Construction Finished**: {item} is ready!\nUse `!house complete` to finalize.",
@@ -51,6 +52,7 @@
     "no_money": "❌ You don't have enough money ({price}$).",
     "nothing_to_collect": "⏳ Your property hasn't generated enough income yet. Come back later!",
     "owned": "✅ Owned",
+    "pending_income": "💰 **${amount}** pending",
     "pending_rewards": "💰 Pending Rewards",
     "pet_full_warning": "❌ **Your zoo is full ({current}/{limit})!**\nRelease some pets or expand your capacity at `!house expand pets`.",
     "rename_success": "✅ Your home is now known as: **{name}**",
@@ -106,7 +108,23 @@
       "magnetic_coil": "Magnetic Coil",
       "workbench": "Workbench"
     },
+    "upgrade_effects": {
+      "industrial_drill": "Sometimes yields rare ores",
+      "industrial_workshop": "Resource production x2",
+      "merchant_office": "+20% Bank Capacity, +15% Income",
+      "merchant_vault": "Bank Capacity doubled",
+      "mystic_altar": "-5% Crafting Costs, Pet Regeneration",
+      "mystic_laboratory": "-15% Crafting Costs, increased Pet XP chance"
+    },
     "upgrade_success": "🛠️ **Upgrade Complete!** Your home is now Level **{level}**. **+1 furniture slot!**",
-    "sanctuary_house_max": "❌ Your house cannot support a larger sanctuary — buy a bigger house to expand further."
+    "sanctuary_house_max": "❌ Your house cannot support a larger sanctuary — buy a bigger house to expand further.",
+    "upgrades": {
+      "industrial_drill": "Automatic Drill",
+      "industrial_workshop": "Industrial Workshop",
+      "merchant_office": "Merchant Office",
+      "merchant_vault": "Strongroom",
+      "mystic_altar": "Mystic Altar",
+      "mystic_laboratory": "Alchemy Laboratory"
+    }
   }
 }

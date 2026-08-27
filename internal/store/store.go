@@ -466,6 +466,23 @@ func (s *Store) GrantGameLimitCredit(userID int64, gameName string, credits int)
 	return res.Error
 }
 
+// PlayGameLimited runs play under gameName's daily play limit for userID. It
+// checks whether a play is available and, if so, invokes play; the use is
+// only counted against the limit when play returns a nil error, so a game
+// that fails partway through (insufficient funds, a DB error, etc.) never
+// costs the player a try. ok is false when the daily limit was already
+// reached, in which case play is not invoked.
+func (s *Store) PlayGameLimited(userID int64, gameName string, maxUsage int, play func() error) (ok bool, err error) {
+	ok, _, err = s.CheckGameLimit(userID, gameName, maxUsage)
+	if err != nil || !ok {
+		return ok, err
+	}
+	if err := play(); err != nil {
+		return true, err
+	}
+	return true, s.IncrementGameLimit(userID, gameName)
+}
+
 // ResetGameLimit clears today's usage for gameName so the full daily limit is
 // available again. Rows from previous days are irrelevant to CheckGameLimit.
 func (s *Store) ResetGameLimit(userID int64, gameName string) error {

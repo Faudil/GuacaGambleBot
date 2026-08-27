@@ -80,41 +80,41 @@ func (s *Service) BuyTicket(userID, serverID int64, number int) (*TicketResult, 
 	if number < 1 || number > 100 {
 		return nil, ErrInvalidNum
 	}
-	if _, err := s.store.Debit(userID, s.TicketPrice); err != nil {
+
+	var res *TicketResult
+	var state *model.ServerLottoState
+	ok, err := s.store.PlayGameLimited(userID, "lotto", 3, func() error {
+		if _, err := s.store.Debit(userID, s.TicketPrice); err != nil {
+			return err
+		}
+		_ = achievement.IncrementStat(s.store.DB, userID, "lotto_participations", 1)
+
+		var err error
+		state, err = s.getState(serverID)
+		if err != nil {
+			return err
+		}
+
+		return s.store.DB.Model(&model.ServerLottoState{}).
+			Where("server_id = ?", serverID).
+			UpdateColumn("jackpot", gorm.Expr("jackpot + ?", s.TicketPrice)).Error
+	})
+	if err != nil {
 		if errors.Is(err, store.ErrInsufficientFunds) {
 			return nil, ErrNoMoney
 		}
 		return nil, err
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, "lotto", 3)
-	if err != nil {
-		return nil, err
-	}
 	if !ok {
 		return nil, ErrLimit
 	}
-	if err := s.store.IncrementGameLimit(userID, "lotto"); err != nil {
-		return nil, err
-	}
-	_ = achievement.IncrementStat(s.store.DB, userID, "lotto_participations", 1)
 
-	state, err := s.getState(serverID)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &TicketResult{
+	res = &TicketResult{
 		Number:     number,
 		WinningNum: state.WinningNumber,
 		Jackpot:    state.Jackpot,
 		AddedValue: s.TicketPrice,
 		NewJackpot: state.Jackpot + s.TicketPrice,
-	}
-
-	if err := s.store.DB.Model(&model.ServerLottoState{}).
-		Where("server_id = ?", serverID).
-		UpdateColumn("jackpot", gorm.Expr("jackpot + ?", s.TicketPrice)).Error; err != nil {
-		return nil, err
 	}
 
 	if number == state.WinningNumber {

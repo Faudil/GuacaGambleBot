@@ -391,7 +391,7 @@ func (c *Cog) onScrapConfirm(b *interaction.Bot, i *discordgo.InteractionCreate)
 
 	var parts []string
 	for itemID, qty := range rewards {
-		parts = append(parts, fmt.Sprintf("%s x%d", items.DisplayName(itemID), qty))
+		parts = append(parts, fmt.Sprintf("%s x%d", items.LocalizedName(itemID, lang), qty))
 	}
 	sort.Strings(parts)
 

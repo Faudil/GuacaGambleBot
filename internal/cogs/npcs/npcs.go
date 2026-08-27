@@ -405,7 +405,7 @@ func (c *Cog) onGiftPick(npcID string) func(b *interaction.Bot, i *discordgo.Int
 			desc = i18n.T("npcs.gift_success", lang, map[string]any{
 				"name":   npcData.Name,
 				"qty":    1,
-				"item":   items.DisplayName(itemID),
+				"item":   items.LocalizedName(itemID, lang),
 				"points": repGained,
 			})
 		}

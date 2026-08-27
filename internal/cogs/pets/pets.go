@@ -1796,7 +1796,7 @@ func localizedEggName(eggType, lang string) string {
 	if loc != key {
 		return loc
 	}
-	return items.DisplayName(eggType)
+	return items.LocalizedName(eggType, lang)
 }
 
 var eggBiomes = map[string]string{

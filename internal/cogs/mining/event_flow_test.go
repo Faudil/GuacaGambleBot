@@ -99,7 +99,7 @@ func TestEventFlowRepro(t *testing.T) {
 		if eff.Message != "" {
 			msg = i18n.T(eff.Message, "en")
 		}
-		membed, mcomps := c.mineEmbed("en", 42, msg)
+		membed, mcomps := c.mineEmbed("en", 42, msg, nil)
 		if membed == nil {
 			t.Fatalf("option %d: mineEmbed nil embed", idx)
 		}
@@ -196,7 +196,7 @@ func TestConcurrentSessionAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < iterations; i++ {
-				embed, comps := c.mineEmbed("en", 42, "")
+				embed, comps := c.mineEmbed("en", 42, "", nil)
 				if embed == nil || len(comps) == 0 {
 					t.Error("mineEmbed returned nil embed/components")
 				}

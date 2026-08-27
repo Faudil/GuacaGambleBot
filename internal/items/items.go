@@ -217,6 +217,10 @@ func AllItems() []Item {
 
 // DisplayName resolves a name or ID to the canonical English display name.
 // If the item is not found, the input is returned unchanged.
+//
+// This is for matching an ID or alias against the canonical catalog, not for
+// player-facing output: it is language-blind and always yields English. Use
+// LocalizedName for anything a player reads.
 func DisplayName(nameOrID string) string {
 	it := Get(nameOrID)
 	if it == nil {

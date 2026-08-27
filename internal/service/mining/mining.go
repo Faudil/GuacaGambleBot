@@ -158,6 +158,12 @@ const (
 	loreEngine   = "mine_lore_engine"
 	loreFracture = "mine_lore_fracture"
 	loreKing     = "mine_lore_king"
+
+	// NPCCharterEventID marks a narrative event that offers a mine charter
+	// (contract) through an NPC encounter, in place of choosing one up front.
+	NPCCharterEventID     = "npc_charter"
+	charterOfferMinDepth  = 2
+	charterOfferChancePct = 20
 )
 
 type ToolInfo struct {
@@ -1117,10 +1123,13 @@ func (s *Service) RemainingEntries(userID int64) (int, error) {
 	return remaining, err
 }
 
-// RiskFor returns the collapse chance (0-100) the next descend would have for
-// the user at the given depth, tool and active effects. Descend uses the same
-// math so the displayed risk always matches the actual roll.
-func (s *Service) RiskFor(userID int64, depth int, toolID string, ghostVeilTurns, riskMod int) int {
+// RiskFor returns the collapse chance (0-100) the next dig would have for the
+// user at the given risk level, tool and active effects. riskUnits accumulates
+// in half-steps: a normal descend (going one depth deeper) adds 2 units (the
+// full +5% per depth), while staying in place to prospect again adds only 1
+// unit (half that risk increase). Descend uses the same math so the displayed
+// risk always matches the actual roll.
+func (s *Service) RiskFor(userID int64, riskUnits int, toolID string, ghostVeilTurns, riskMod int) int {
 	ml, err := s.GetMinerLevel(userID)
 	if err != nil {
 		ml = 1
@@ -1131,7 +1140,7 @@ func (s *Service) RiskFor(userID int64, depth int, toolID string, ghostVeilTurns
 		ti = GetToolInfo("")
 	}
 
-	risk := (depth-1)*5 - ti.RiskReduction + riskMod
+	risk := riskUnits*5/2 - ti.RiskReduction + riskMod
 	risk -= int(float64(ml) * 1.5)
 	risk -= int(charsvc.GetVITReduction(s.store, userID) * 100)
 	if charsvc.HasPassive(s.store, userID, "perk_collapse_resist") {
@@ -1150,7 +1159,7 @@ func (s *Service) RiskFor(userID int64, depth int, toolID string, ghostVeilTurns
 	return risk
 }
 
-func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string, ghostVeilTurns, riskMod int) (*DescendResult, error) {
+func (s *Service) Descend(userID int64, depth, riskUnits int, bag []BagEntry, toolID string, ghostVeilTurns, riskMod int, hasContract, charterDeclined bool) (*DescendResult, error) {
 	free, err := s.store.FreeSlots(s.store.DB, userID)
 	if err != nil {
 		return nil, err
@@ -1170,7 +1179,7 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 		ti = GetToolInfo("")
 	}
 
-	risk := s.RiskFor(userID, depth, toolID, ghostVeilTurns, riskMod)
+	risk := s.RiskFor(userID, riskUnits, toolID, ghostVeilTurns, riskMod)
 	if charsvc.HasBuff(s.store, userID, "reinforce") {
 		charsvc.ConsumeBuff(s.store, userID, "reinforce")
 	}
@@ -1306,7 +1315,11 @@ func (s *Service) Descend(userID int64, depth int, bag []BagEntry, toolID string
 	}
 
 	var nEvent *NarrativeEvent
-	if rand.Intn(100) < rollEventChance(depth) {
+	offerCharter := !hasContract && !charterDeclined && depth >= charterOfferMinDepth &&
+		rand.Intn(100) < charterOfferChancePct
+	if offerCharter {
+		nEvent = &NarrativeEvent{ID: NPCCharterEventID, Stage: getStage(depth), Rarity: EventCommon}
+	} else if rand.Intn(100) < rollEventChance(depth) {
 		nEvent = pickNarrativeEvent(depth)
 	}
 
@@ -1412,14 +1425,16 @@ const StaleSessionTimeout = 2 * time.Hour
 // PersistedSession is the session state that survives bot restarts. The bag is
 // serialized to JSON inside the DB row.
 type PersistedSession struct {
-	Depth          int
-	ToolID         string
-	GhostVeilTurns int
-	RiskMod        int
-	RiskTurns      int
-	Bag            []BagEntry
-	Contract       *Contract
-	EventCount     int
+	Depth           int
+	ToolID          string
+	GhostVeilTurns  int
+	RiskMod         int
+	RiskTurns       int
+	Bag             []BagEntry
+	Contract        *Contract
+	EventCount      int
+	CharterDeclined bool
+	RiskUnits       int
 }
 
 // RepairTool restores durability to the active tool.
@@ -1461,15 +1476,17 @@ func (s *Service) SaveSession(userID int64, ps *PersistedSession) error {
 		}
 	}
 	return s.store.SaveMiningSession(&model.MiningSession{
-		UserID:         userID,
-		Depth:          ps.Depth,
-		ToolID:         ps.ToolID,
-		GhostVeilTurns: ps.GhostVeilTurns,
-		RiskMod:        ps.RiskMod,
-		RiskTurns:      ps.RiskTurns,
-		Bag:            string(bagJSON),
-		Contract:       contractJSON,
-		UpdatedAt:      time.Now(),
+		UserID:          userID,
+		Depth:           ps.Depth,
+		ToolID:          ps.ToolID,
+		GhostVeilTurns:  ps.GhostVeilTurns,
+		RiskMod:         ps.RiskMod,
+		RiskTurns:       ps.RiskTurns,
+		Bag:             string(bagJSON),
+		Contract:        contractJSON,
+		CharterDeclined: ps.CharterDeclined,
+		RiskUnits:       ps.RiskUnits,
+		UpdatedAt:       time.Now(),
 	})
 }
 
@@ -1524,15 +1541,23 @@ func (s *Service) LoadSession(userID int64) (*PersistedSession, error) {
 			contract = &c
 		}
 	}
+	riskUnits := m.RiskUnits
+	if riskUnits == 0 && m.Depth > 1 {
+		// Backfills sessions persisted before risk_units existed, so an
+		// in-progress expedition doesn't suddenly look risk-free.
+		riskUnits = 2 * (m.Depth - 1)
+	}
 	return &PersistedSession{
-		Depth:          m.Depth,
-		ToolID:         m.ToolID,
-		GhostVeilTurns: m.GhostVeilTurns,
-		RiskMod:        m.RiskMod,
-		RiskTurns:      m.RiskTurns,
-		Bag:            bag,
-		Contract:       contract,
-		EventCount:     0,
+		Depth:           m.Depth,
+		ToolID:          m.ToolID,
+		GhostVeilTurns:  m.GhostVeilTurns,
+		RiskMod:         m.RiskMod,
+		RiskTurns:       m.RiskTurns,
+		Bag:             bag,
+		Contract:        contract,
+		EventCount:      0,
+		CharterDeclined: m.CharterDeclined,
+		RiskUnits:       riskUnits,
 	}, nil
 }
 

@@ -305,66 +305,17 @@ func (s *Service) SetColor(userID int64, hex string) error {
 		Update("custom_color", hex).Error
 }
 
-func (s *Service) Collect(userID int64) (int, []string, error) {
-	h, err := s.GetHousing(userID)
-	if err != nil {
-		return 0, nil, err
-	}
-	ht := Houses[h.HouseType]
-	if ht == nil {
-		return 0, nil, fmt.Errorf("unknown house")
-	}
-	now := time.Now()
-	elapsed := now.Sub(*h.LastCollected)
-	hours := elapsed.Hours()
-
-	baseIncome := float64(ht.IncomePerHour) * (1 + float64(h.Level-1)*0.1)
-	income := int(math.Floor(hours * baseIncome))
-
-	var upgrades []model.UserHousingUpgrade
-	s.store.DB.Where("user_id = ?", userID).Find(&upgrades)
-	upgMap := map[string]bool{}
-	for _, u := range upgrades {
-		upgMap[u.UpgradeID] = true
-	}
-	if upgMap["merchant_office"] {
-		income = int(math.Floor(float64(income) * 1.15))
-	}
-
-	prod := BaseProduction[h.HouseType]
-	prodMult := 1.0
-	if upgMap["industrial_workshop"] {
-		prodMult = 2.0
-	}
-	var items []string
-	for itemID, rate := range prod {
-		qty := int(math.Floor(hours * rate * prodMult))
-		if qty > 0 {
-			items = append(items, fmt.Sprintf("%s:%d", itemID, qty))
-		}
-	}
-
-	tx := s.store.DB.Begin()
-	if income > 0 {
-		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
-			UpdateColumn("balance", gorm.Expr("balance + ?", income)).Error; err != nil {
-			tx.Rollback()
-			return 0, nil, err
-		}
-	}
-	tx.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
-		Update("last_collected", now)
-	tx.Commit()
-
-	return income, items, nil
-}
-
+// CollectResult is what a house has accrued since its last collection. Items
+// maps item ID to quantity; callers localize the IDs for display.
 type CollectResult struct {
 	Income int
-	Items  []string
+	Items  map[string]int
 }
 
-func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
+// pendingCollect computes the income and resources accrued since the house was
+// last collected, without banking either. Shared by Collect and GetCollectInfo
+// so the preview always matches what collecting actually grants.
+func (s *Service) pendingCollect(userID int64) (*CollectResult, error) {
 	h, err := s.GetHousing(userID)
 	if err != nil {
 		return nil, err
@@ -373,9 +324,7 @@ func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
 	if ht == nil {
 		return nil, fmt.Errorf("unknown house")
 	}
-	now := time.Now()
-	elapsed := now.Sub(*h.LastCollected)
-	hours := elapsed.Hours()
+	hours := time.Since(*h.LastCollected).Hours()
 
 	baseIncome := float64(ht.IncomePerHour) * (1 + float64(h.Level-1)*0.1)
 	income := int(math.Floor(hours * baseIncome))
@@ -390,19 +339,43 @@ func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
 		income = int(math.Floor(float64(income) * 1.15))
 	}
 
-	prod := BaseProduction[h.HouseType]
 	prodMult := 1.0
 	if upgMap["industrial_workshop"] {
 		prodMult = 2.0
 	}
-	var items []string
-	for itemID, rate := range prod {
-		qty := int(math.Floor(hours * rate * prodMult))
-		if qty > 0 {
-			items = append(items, fmt.Sprintf("%s:%d", itemID, qty))
+	produced := map[string]int{}
+	for itemID, rate := range BaseProduction[h.HouseType] {
+		if qty := int(math.Floor(hours * rate * prodMult)); qty > 0 {
+			produced[itemID] = qty
 		}
 	}
-	return &CollectResult{Income: income, Items: items}, nil
+	return &CollectResult{Income: income, Items: produced}, nil
+}
+
+func (s *Service) Collect(userID int64) (*CollectResult, error) {
+	res, err := s.pendingCollect(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	tx := s.store.DB.Begin()
+	if res.Income > 0 {
+		if err := tx.Model(&model.User{}).Where("user_id = ?", userID).
+			UpdateColumn("balance", gorm.Expr("balance + ?", res.Income)).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+	tx.Model(&model.UserHousing{}).Where("user_id = ? AND is_active = ?", userID, true).
+		Update("last_collected", now)
+	tx.Commit()
+
+	return res, nil
+}
+
+func (s *Service) GetCollectInfo(userID int64) (*CollectResult, error) {
+	return s.pendingCollect(userID)
 }
 
 // HasUpgrade reports whether the user already owns the given house upgrade.

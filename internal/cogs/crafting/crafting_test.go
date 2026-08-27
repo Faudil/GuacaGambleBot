@@ -63,6 +63,27 @@ func completeAllResearch(t *testing.T, c *Cog, userID int64) {
 	}
 }
 
+// grantAllIngredients stocks the user with exactly enough of every ingredient
+// used by any recipe (the largest quantity any single recipe requires), so
+// recipe select-menu visibility in tests reflects only unlock state
+// (level/research), not incidental ingredient shortages. Inventory slots are
+// consumed one per quantity unit, so this stays well under the 300-slot cap
+// instead of over-granting.
+func grantAllIngredients(t *testing.T, c *Cog, userID int64) {
+	t.Helper()
+	need := map[string]int{}
+	for _, r := range crtsvc.Recipes {
+		for ing, qty := range r.Ingredients {
+			if qty > need[ing] {
+				need[ing] = qty
+			}
+		}
+	}
+	for ing, qty := range need {
+		require.NoError(t, c.store.AddItemRaw(c.store.DB, userID, ing, qty))
+	}
+}
+
 func menuSelects(t *testing.T, comps []discordgo.MessageComponent) (filter, recipe discordgo.SelectMenu) {
 	t.Helper()
 	require.Len(t, comps, 3)
@@ -105,6 +126,7 @@ func anyFieldContains(vals []string, substr string) bool {
 
 func TestCraftMenuOnlyShowsUnlockedRecipes(t *testing.T) {
 	c := testCog(t)
+	grantAllIngredients(t, c, 1)
 	// Level 1, no research completed: only the recipes without a research gate
 	// and with a reachable level must be craftable.
 	embed, comps := c.buildCraftMenu(1, "en", "all", 1)
@@ -166,6 +188,7 @@ func TestCraftMenuResearchUnlocksRecipeAtLevel1(t *testing.T) {
 	require.NoError(t, c.store.DB.Create(&model.UserResearch{
 		UserID: 1, ResearchID: "tool_crafting", Completed: true,
 	}).Error)
+	grantAllIngredients(t, c, 1)
 
 	_, comps := c.buildCraftMenu(1, "en", "all", 1)
 	_, recipeSel := menuSelects(t, comps)
@@ -203,6 +226,7 @@ func TestCraftMenuPaginates(t *testing.T) {
 	c := testCog(t)
 	setCrafterLevel(t, c, 1, 15)
 	completeAllResearch(t, c, 1)
+	grantAllIngredients(t, c, 1)
 
 	embed, comps := c.buildCraftMenu(1, "en", "all", 1)
 	assert.Len(t, crtsvc.Recipes, 72)
@@ -232,6 +256,7 @@ func TestCraftMenuCategoryFilter(t *testing.T) {
 	c := testCog(t)
 	setCrafterLevel(t, c, 1, 15)
 	completeAllResearch(t, c, 1)
+	grantAllIngredients(t, c, 1)
 
 	embed, comps := c.buildCraftMenu(1, "en", "pets", 1)
 	assert.Len(t, embed.Fields, 25, "pets page 1 shows the first 25 recipes")

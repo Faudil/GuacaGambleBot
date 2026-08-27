@@ -127,7 +127,7 @@ var PetTypes = map[string]*PetType{
 	"Ratatosk":           {Name: "Ratatosk", Emoji: "🐿️❄️", Rarity: RarityLegendary, Biome: BiomeTundra, Bonus: BonusMINE, MaxHP: 90, Atk: 30, Defense: 15, Speed: 40, DGE: 25, ACC: 30, CritC: 25, CritD: 2.0, Hatchable: true},
 
 	// ── Volcano 🌋 ──
-	"Fourmi":       {Name: "Fourmi", Emoji: "🐜", Rarity: RarityCommon, Biome: BiomeVolcano, Bonus: BonusMINE, MaxHP: 5, Atk: 5, Defense: 5, Speed: 5, DGE: 5, ACC: 5, CritC: 5, CritD: 1.2, Hatchable: true},
+	"Fourmi":       {Name: "Fourmi", Emoji: "🐜", Rarity: RarityCommon, Biome: BiomeVolcano, Bonus: BonusMINE, MaxHP: 25, Atk: 10, Defense: 5, Speed: 5, DGE: 5, ACC: 5, CritC: 10, CritD: 1.2, Hatchable: true},
 	"Chat":         {Name: "Chat", Emoji: "😼", Rarity: RarityRare, Biome: BiomeVolcano, Bonus: BonusFISH, MaxHP: 45, Atk: 25, Defense: 2, Speed: 35, DGE: 20, ACC: 10, CritC: 20, CritD: 1.8, Hatchable: true},
 	"Tigre":        {Name: "Tigre", Emoji: "🐯", Rarity: RarityEpic, Biome: BiomeVolcano, Bonus: BonusMINE, MaxHP: 85, Atk: 35, Defense: 12, Speed: 32, DGE: 15, ACC: 20, CritC: 25, CritD: 2.0, Hatchable: true},
 	"Dragon":       {Name: "Dragon", Emoji: "🐉", Rarity: RarityLegendary, Biome: BiomeVolcano, Bonus: BonusHUNT, MaxHP: 130, Atk: 35, Defense: 20, Speed: 20, DGE: 15, ACC: 25, CritC: 10, CritD: 1.2, Hatchable: true},

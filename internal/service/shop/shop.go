@@ -58,6 +58,15 @@ func OfferableItems() []items.Item {
 	return out
 }
 
+// NextRefresh returns when today's offers expire and the shop rolls over to a
+// new set, i.e. the next local midnight after now. Must stay in sync with the
+// "2006-01-02" seed used by DailyOffers.
+func (s *Service) NextRefresh() time.Time {
+	now := time.Now()
+	next := now.AddDate(0, 0, 1)
+	return time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
+}
+
 func (s *Service) DailyOffers(count int) []ShopOffer {
 	all := OfferableItems()
 	seed := time.Now().Format("2006-01-02")

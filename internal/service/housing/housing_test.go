@@ -158,7 +158,7 @@ func TestSetColor(t *testing.T) {
 
 func TestCollectNotOwned(t *testing.T) {
 	svc, _ := testService(t)
-	_, _, err := svc.Collect(1)
+	_, err := svc.Collect(1)
 	assert.Error(t, err)
 }
 
@@ -173,10 +173,10 @@ func TestCollectWithNoElapsedTime(t *testing.T) {
 		IsActive: true,
 	}).Error)
 
-	income, items, err := svc.Collect(1)
+	res, err := svc.Collect(1)
 	require.NoError(t, err)
-	assert.Equal(t, 0, income)
-	assert.Empty(t, items)
+	assert.Equal(t, 0, res.Income)
+	assert.Empty(t, res.Items)
 }
 
 func TestGetCollectInfo(t *testing.T) {

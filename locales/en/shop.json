@@ -9,9 +9,10 @@
     "flash_sale_desc": "A traveling merchant offers: **{item}**\n{desc}\nNormal price: ~~${price}~~\n**Flash Price: ${flash_price}** (-{discount}%)",
     "flash_sale_title": "⚡ FLASH SALE!",
     "not_your_shop": "❌ This is not your shop!",
-    "personal_desc": "Pick an item to buy! Note: **you can only buy one item** out of the 4.\n\n",
+    "personal_desc": "Pick an item to buy from today's selection!\n\n",
     "personal_title": "🛒 {user}'s Shop",
     "price_label": "Price",
+    "refresh_footer": "🔄 New offers in {time}",
     "sold_label": "SOLD!",
     "too_broke": "❌ You're too broke!",
     "too_broke_item": "❌ You're too broke for this item!"

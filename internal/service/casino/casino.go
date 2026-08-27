@@ -139,8 +139,11 @@ type wagerParams struct {
 }
 
 // placeWager validates the bet amount, enforces the daily play limit,
-// records the wagered achievement stat and debits the stake. It returns a
-// translated sentinel error (ErrMaxBet/ErrLimit/ErrNoMoney) on failure.
+// records the wagered achievement stat and debits the stake. The play only
+// counts against the daily limit once the stat record and debit both
+// succeed, so a failure (e.g. insufficient funds) never costs the player a
+// try. It returns a translated sentinel error (ErrMaxBet/ErrLimit/ErrNoMoney)
+// on failure.
 func (s *Service) placeWager(userID int64, amount int, p wagerParams) error {
 	if amount <= 0 {
 		return ErrMaxBet
@@ -148,24 +151,21 @@ func (s *Service) placeWager(userID int64, amount int, p wagerParams) error {
 	if p.maxBet > 0 && amount > p.maxBet {
 		return ErrMaxBet
 	}
-	ok, _, err := s.store.CheckGameLimit(userID, p.game, p.limitMax)
+	ok, err := s.store.PlayGameLimited(userID, p.game, p.limitMax, func() error {
+		if err := achievement.IncrementStat(s.store.DB, userID, p.statKey, amount); err != nil {
+			return err
+		}
+		_, err := s.store.Debit(userID, amount)
+		return err
+	})
 	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrLimit
-	}
-	if err := s.store.IncrementGameLimit(userID, p.game); err != nil {
-		return err
-	}
-	if err := achievement.IncrementStat(s.store.DB, userID, p.statKey, amount); err != nil {
-		return err
-	}
-	if _, err := s.store.Debit(userID, amount); err != nil {
 		if errors.Is(err, store.ErrInsufficientFunds) {
 			return ErrNoMoney
 		}
 		return err
+	}
+	if !ok {
+		return ErrLimit
 	}
 	return nil
 }
