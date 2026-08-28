@@ -24,7 +24,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: shop.New(s, cfg)}
-	r.Slash("shop", "Daily shop: buy items before today's offers refresh.", c.onSlashMenu)
+	r.Slash("shop", "cmd.shop.desc", c.onSlashMenu)
 	r.Prefix("shop", c.onPrefix)
 	r.Prefix("boutique", c.onPrefix)
 	r.Component("shop", "buy", c.onBuy)
@@ -38,14 +38,14 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(offers) == 0 {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("❌", "No items available today.", 0xe74c3c), nil))
+				components.Embed("❌", "No items available today.", components.ColorDanger), nil))
 		return
 	}
 
 	bal, _ := c.store.GetBalance(userID)
 	embed := components.Embed(
 		i18n.T("shop.personal_title", lang, map[string]any{"user": i.Member.User.Username}),
-		i18n.T("shop.personal_desc", lang), 0x3498db,
+		i18n.T("shop.personal_desc", lang), components.ColorInfo,
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent
@@ -88,7 +88,7 @@ func (c *Cog) onPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo
 	bal, _ := c.store.GetBalance(userID)
 	embed := components.Embed(
 		i18n.T("shop.personal_title", lang, map[string]any{"user": m.Author.Username}),
-		i18n.T("shop.personal_desc", lang), 0x3498db,
+		i18n.T("shop.personal_desc", lang), components.ColorInfo,
 	)
 	embed.Fields = make([]*discordgo.MessageEmbedField, 0, len(offers))
 	var btns []discordgo.MessageComponent

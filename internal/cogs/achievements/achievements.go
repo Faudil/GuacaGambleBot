@@ -32,8 +32,8 @@ type Cog struct {
 // Register wires the cog into the router under both slash and prefix triggers.
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: achievementsvc.New(s, cfg)}
-	r.Slash("achievements", "Voir vos succès et récompenses.", c.onSlashMenu)
-	r.Slash("ach", "Voir vos succès et récompenses.", c.onSlashMenu)
+	r.Slash("achievements", "cmd.achievements.desc", c.onSlashMenu)
+	r.Slash("ach", "cmd.achievements.desc", c.onSlashMenu)
 	r.Prefix("achievements", c.onPrefixMenu)
 	r.Prefix("ach", c.onPrefixMenu)
 	r.Component("achievements", "show", c.onShow)
@@ -74,7 +74,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("achievements.list_title", lang),
 		i18n.T("achievements.menu_desc", lang),
-		0xf1c40f,
+		components.ColorReward,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -144,7 +144,7 @@ func (c *Cog) onNav(b *interaction.Bot, i *discordgo.InteractionCreate) {
 // navigation. Views must arrive in a stable order (the service sorts them by
 // glory) so pages do not shuffle between renders.
 func (c *Cog) listView(lang string, userID int64, views []achievementsvc.View, page int) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	embed := components.Embed(i18n.T("achievements.list_title", lang), "", 0xf1c40f)
+	embed := components.Embed(i18n.T("achievements.list_title", lang), "", components.ColorReward)
 	if len(views) == 0 {
 		embed.Description = i18n.T("achievements.empty", lang)
 	} else {

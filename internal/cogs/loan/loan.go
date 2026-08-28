@@ -24,7 +24,7 @@ type Cog struct {
 // Register wires the cog into the router under both slash and prefix triggers.
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: loansvc.New(s)}
-	r.Slash("loan", "Emprunter, rembourser et consulter ses dettes.", c.onSlashMenu)
+	r.Slash("loan", "cmd.loan.desc", c.onSlashMenu)
 	r.Prefix("loan", c.onPrefixMenu)
 	r.Prefix("ln", c.onPrefixMenu)
 	r.Component("loan", "borrow", c.onBorrowOpen)
@@ -56,7 +56,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("loan.menu_title", lang),
 		i18n.T("loan.menu_desc", lang),
-		0x3498db,
+		components.ColorInfo,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -112,7 +112,7 @@ func (c *Cog) onBorrowSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("loan.borrow_done", lang, map[string]any{"amount": amount}), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("loan.borrow_done", lang, map[string]any{"amount": amount}), "", components.ColorSuccess)
 	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -139,7 +139,7 @@ func (c *Cog) onRepaySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("loan.repay_done", lang, map[string]any{"amount": amount}), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("loan.repay_done", lang, map[string]any{"amount": amount}), "", components.ColorSuccess)
 	_ = paid
 	_, comps := c.menu(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -154,7 +154,7 @@ func (c *Cog) onList(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "loan.invalid")
 		return
 	}
-	embed := components.Embed(i18n.T("loan.list_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("loan.list_title", lang), "", components.ColorInfo)
 	if len(loans) == 0 {
 		embed.Description = i18n.T("loan.list_empty", lang)
 	} else {

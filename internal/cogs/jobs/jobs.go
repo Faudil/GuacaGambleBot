@@ -21,8 +21,8 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: jobssvc.New(s, cfg)}
-	r.Slash("jobs", "Affiche tes métiers et niveaux.", c.onSlashMenu)
-	r.Slash("job", "Affiche tes métiers et niveaux.", c.onSlashMenu)
+	r.Slash("jobs", "cmd.jobs.desc", c.onSlashMenu)
+	r.Slash("job", "cmd.jobs.desc", c.onSlashMenu)
 	r.Prefix("jobs", c.onPrefixMenu)
 	r.Prefix("level", c.onPrefixMenu)
 	r.Prefix("jobstats", c.onPrefixMenu)
@@ -52,7 +52,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("jobs.menu_title", lang),
 		i18n.T("jobs.menu_desc", lang),
-		0xe67e22,
+		components.ColorWarning,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -73,7 +73,7 @@ func (c *Cog) onShow(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("jobs.title", lang, map[string]any{"user": interaction.DisplayName(b.Session, i.GuildID, i.Member, userID)}),
 		i18n.T("jobs.footer", lang, map[string]any{"total": res.TotalLevel}),
-		0xe67e22,
+		components.ColorWarning,
 	)
 	for _, j := range res.Jobs {
 		pct := 0

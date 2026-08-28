@@ -29,7 +29,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: duelsvc.New(s, cfg), pendingDuels: map[int64]pendingDuel{}}
-	r.Slash("duel", "Provoque quelqu'un en duel (50/50).", c.onSlashMenu)
+	r.Slash("duel", "cmd.duel.desc", c.onSlashMenu)
 	r.Prefix("duel", c.onPrefixMenu)
 	r.Prefix("du", c.onPrefixMenu)
 	r.Component("duel", "challenge", c.onChallengeOpen)

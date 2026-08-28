@@ -21,7 +21,7 @@ func (c *Cog) startMinigame(b *interaction.Bot, i *discordgo.InteractionCreate, 
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.minigame.atk_title", lang),
 			Description: i18n.T("veil.minigame.atk_desc", lang, map[string]any{"mult": 1, "dmg": 15}),
-			Color:       0xe74c3c,
+			Color:       components.ColorDanger,
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -37,7 +37,7 @@ func (c *Cog) startMinigame(b *interaction.Bot, i *discordgo.InteractionCreate, 
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.minigame.heal_title", lang),
 			Description: i18n.T("veil.minigame.heal_desc", lang),
-			Color:       0x2ecc71,
+			Color:       components.ColorSuccess,
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -54,7 +54,7 @@ func (c *Cog) startMinigame(b *interaction.Bot, i *discordgo.InteractionCreate, 
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.minigame.shield_title", lang),
 			Description: veilsvc.ShieldDescription(st, lang),
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -89,7 +89,7 @@ func (c *Cog) handleMinigameAction(b *interaction.Bot, i *discordgo.InteractionC
 				embed := &discordgo.MessageEmbed{
 					Title:       i18n.T("veil.minigame.atk_fail_title", lang, map[string]any{"mult": mult}),
 					Description: i18n.T("veil.minigame.atk_fail_desc", lang),
-					Color:       0xe74c3c,
+					Color:       components.ColorDanger,
 				}
 				c.respond(b, i, embed, nil)
 				return
@@ -98,7 +98,7 @@ func (c *Cog) handleMinigameAction(b *interaction.Bot, i *discordgo.InteractionC
 			embed := &discordgo.MessageEmbed{
 				Title:       i18n.T("veil.minigame.atk_gamble_title", lang),
 				Description: i18n.T("veil.minigame.atk_gamble_desc", lang, map[string]any{"mult": mult, "odds": odds, "dmg": mult * 15}),
-				Color:       0xe74c3c,
+				Color:       components.ColorDanger,
 			}
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
@@ -116,7 +116,7 @@ func (c *Cog) handleMinigameAction(b *interaction.Bot, i *discordgo.InteractionC
 			c.respond(b, i, &discordgo.MessageEmbed{
 				Title:       i18n.T("veil.minigame.atk_lock_title", lang),
 				Description: i18n.T("veil.minigame.atk_lock_desc", lang, map[string]any{"dmg": value}),
-				Color:       0x2ecc71,
+				Color:       components.ColorSuccess,
 			}, nil)
 			c.resolveWithMiniGameResult(b, i, userID, actType, value)
 		}
@@ -140,7 +140,7 @@ func (c *Cog) handleMinigameAction(b *interaction.Bot, i *discordgo.InteractionC
 			c.respond(b, i, &discordgo.MessageEmbed{
 				Title:       i18n.T("veil.minigame.heal_result_title", lang),
 				Description: i18n.T("veil.minigame.heal_result_desc", lang, map[string]any{"pct": healPercent}),
-				Color:       0x2ecc71,
+				Color:       components.ColorSuccess,
 			}, nil)
 			c.resolveWithMiniGameResult(b, i, userID, actType, healPercent)
 		}
@@ -167,7 +167,7 @@ func (c *Cog) handleMinigameAction(b *interaction.Bot, i *discordgo.InteractionC
 			c.respond(b, i, &discordgo.MessageEmbed{
 				Title:       i18n.T("veil.minigame.shield_result_title", lang),
 				Description: desc,
-				Color:       0x2ecc71,
+				Color:       components.ColorSuccess,
 			}, nil)
 			c.resolveWithMiniGameResult(b, i, userID, actType, val)
 		}
@@ -208,7 +208,7 @@ func (c *Cog) showDiceEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, 
 	c.respond(b, i, &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.minigame.dice_title", lang),
 		Description: veilsvc.DiceHandDescription(st, lang),
-		Color:       0x2ecc71,
+		Color:       components.ColorSuccess,
 	}, comps)
 }
 
@@ -216,7 +216,7 @@ func (c *Cog) showShieldEmbed(b *interaction.Bot, i *discordgo.InteractionCreate
 	c.respond(b, i, &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.minigame.shield_title", lang),
 		Description: veilsvc.ShieldDescription(st, lang),
-		Color:       0x3498db,
+		Color:       components.ColorInfo,
 	}, []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("veil.minigame.shield_btn_down", lang), components.Encode("veil", "mg_minus"), discordgo.SecondaryButton),

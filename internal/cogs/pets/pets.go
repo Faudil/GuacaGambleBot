@@ -47,9 +47,9 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: petsvc.New(s, cfg, npcSvc), sanSvc: sansvc.New(s, cfg)}
-	r.Slash("pets", "Gérer vos familiers", c.onSlashMenu)
-	r.Slash("pet", "Gérer vos familiers", c.onSlashMenu)
-	r.Slash("hatch", "Éclore un œuf de familier", c.onHatchCommand)
+	r.Slash("pets", "cmd.pets.desc", c.onSlashMenu)
+	r.Slash("pet", "cmd.pets.desc", c.onSlashMenu)
+	r.Slash("hatch", "cmd.hatch.desc", c.onHatchCommand)
 	r.Prefix("pets", c.onPrefixMenu)
 	r.Prefix("pet", c.onPrefixMenu)
 	r.Prefix("hatch", c.onHatchPrefix)
@@ -69,24 +69,24 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("pets", "skill_choose", c.onSkillChoose)
 	r.Component("pets", "activate", c.onPetActivate)
 	r.Component("pets", "interact", c.onInteractionChoice)
-	r.Slash("heal", "Soigner ton familier actif", c.onHealCommand)
+	r.Slash("heal", "cmd.heal.desc", c.onHealCommand)
 	r.Prefix("heal", c.onHealPrefix)
 	r.Component("pets", "heal", c.onHealButton)
-	r.Slash("play", "Jouer avec ton familier actif", c.onPlayCommand)
+	r.Slash("play", "cmd.play.desc", c.onPlayCommand)
 	r.Prefix("play", c.onPlayPrefix)
 	r.Prefix("jouer", c.onPlayPrefix)
-	r.Slash("artifact", "Gérer votre artefact de familier", c.onArtifactMenu)
-	r.Slash("weekly", "Classement hebdomadaire des familiers", c.onWeeklyLeaderboard)
+	r.Slash("artifact", "cmd.artifact.desc", c.onArtifactMenu)
+	r.Slash("weekly", "cmd.weekly.desc", c.onWeeklyLeaderboard)
 	r.Prefix("weekly", c.onWeeklyPrefix)
 	r.Component("pets", "artifact_view", c.onArtifactView)
 	r.Component("pets", "artifact_reset", c.onArtifactReset)
 	r.Component("pets", "artifact_stat_choose", c.onArtifactStatChoose)
 	r.Component("pets", "weekly_refresh", c.onWeeklyRefresh)
 	r.Component("pets", "weekly_history", c.onWeeklyHistory)
-	r.SlashWithOptions("pet-retire", "Send a pet to your sanctuary", []*discordgo.ApplicationCommandOption{
+	r.SlashWithOptions("pet-retire", "cmd.pet-retire.desc", []*discordgo.ApplicationCommandOption{
 		{Type: discordgo.ApplicationCommandOptionString, Name: "pet", Description: "Pet to retire (autocomplete)", Required: true, Autocomplete: true},
 	}, c.onSlashRetire)
-	r.SlashWithOptions("pet-recall", "Recall a pet from your sanctuary", []*discordgo.ApplicationCommandOption{
+	r.SlashWithOptions("pet-recall", "cmd.pet-recall.desc", []*discordgo.ApplicationCommandOption{
 		{Type: discordgo.ApplicationCommandOptionString, Name: "pet", Description: "Pet to recall (autocomplete)", Required: true, Autocomplete: true},
 	}, c.onSlashRecall)
 	r.Prefix("retire", c.onPrefixRetire)
@@ -122,7 +122,7 @@ func (c *Cog) menu(s interaction.Session, i *discordgo.InteractionCreate, lang s
 func (c *Cog) menuFromUser(userID int64, pseudo, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	// Only active roster: max 10, never exceeds Discord limits. Overflow auto-migrated to sanctuary on boot.
 	pets, err := c.svc.GetActiveRosterPets(userID)
-	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": pseudo}), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("pets.list.title", lang, map[string]any{"name": pseudo}), "", components.ColorSuccess)
 
 	comps := []discordgo.MessageComponent{}
 
@@ -419,7 +419,7 @@ func (c *Cog) onRetireClick(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	embed := components.Embed(i18n.T("pets.retire.confirm_title", lang),
 		i18n.T("pets.retire.confirm_desc", lang, map[string]any{"emoji": emoji, "name": pet.Nickname, "used": used, "max": max}),
-		0xe67e22)
+		components.ColorWarning)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("pets.retire.confirm_btn", lang), components.EncodeOwner(userID, "pets", "retire_confirm", rest[0]), discordgo.DangerButton),
@@ -490,7 +490,7 @@ func (c *Cog) onRecallClick(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	embed := components.Embed(i18n.T("pets.recall.confirm_title", lang),
 		i18n.T("pets.recall.confirm_desc", lang, map[string]any{"name": pet.Nickname, "cost": 100}),
-		0x3498db)
+		components.ColorInfo)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("pets.recall.confirm_btn", lang), components.EncodeOwner(userID, "pets", "recall_confirm", rest[0]), discordgo.SuccessButton),
@@ -618,7 +618,7 @@ func (c *Cog) healErrorMessage(lang string, pet *model.UserPet, cost int, err er
 func (c *Cog) healSuccess(lang string, pet *model.UserPet, healed, cost int) *discordgo.MessageEmbed {
 	return components.Embed("🏥",
 		i18n.T("pets.heal.success", lang, map[string]any{"name": pet.Nickname, "hp": healed, "price": cost}),
-		0x2ecc71)
+		components.ColorSuccess)
 }
 
 // onHealCommand heals the caller's active pet via /heal.
@@ -970,7 +970,7 @@ func (c *Cog) onFeedMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("pets.feed.menu_title", lang, map[string]any{"name": pet.Nickname}),
 		i18n.T("pets.feed.menu_desc", lang, map[string]any{"current": pet.FoodEaten}),
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	_ = b.Session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -1133,7 +1133,7 @@ func (c *Cog) onDelete(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("pets.delete.confirm_desc", lang, map[string]any{
 			"emoji": emoji, "name": pet.Nickname, "rarity": rarityName, "level": pet.Level,
 		}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -1175,7 +1175,7 @@ func (c *Cog) onDeleteConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	embed := components.Embed(
 		i18n.T("pets.delete.success_title", lang, map[string]any{"name": pet.Nickname}),
 		i18n.T("pets.delete.success_desc", lang, map[string]any{"emoji": emoji, "name": pet.Nickname}),
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -1234,7 +1234,7 @@ func (c *Cog) onBattleSelect(b *interaction.Bot, i *discordgo.InteractionCreate)
 			"challenger": MentionUser(userID),
 			"pet":        emoji + " " + pet.Nickname,
 		}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
@@ -1285,7 +1285,7 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 				"challenger": MentionUser(userID),
 				"pet":        emoji + " " + pet1.Nickname,
 			}),
-			0xe74c3c,
+			components.ColorDanger,
 		)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
@@ -1395,7 +1395,7 @@ func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang
 	_ = c.svc.UpdatePet(pet1)
 	_ = c.svc.UpdatePet(pet2)
 	embedDesc := strings.Join(result.Log, "\n")
-	embed := components.Embed(i18n.T("pets.battle.arena_title", lang), embedDesc, 0x2ecc71)
+	embed := components.Embed(i18n.T("pets.battle.arena_title", lang), embedDesc, components.ColorSuccess)
 	artLine1 := fmt.Sprintf("🔮 Artifact +%d XP", artXP1)
 	if art1Leveled {
 		artLine1 += " ⬆️"
@@ -1406,15 +1406,15 @@ func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang
 	}
 
 	if result.WinnerID == pet1.ID {
-		embed.Color = 0x2ecc71
+		embed.Color = components.ColorSuccess
 		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
 			MentionUser(challengerID), strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	} else if result.WinnerID == pet2.ID {
-		embed.Color = 0xe74c3c
+		embed.Color = components.ColorDanger
 		embedDesc += fmt.Sprintf("\n\n🏆 **%s** wins! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
 			MentionUser(opponentID), strconv.Itoa(pet2.Elo), diff2, strconv.Itoa(pet1.Elo), diff1, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	} else {
-		embed.Color = 0xf39c12
+		embed.Color = components.ColorWarning
 		embedDesc += fmt.Sprintf("\n\n🤝 Draw! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
 			strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
 	}
@@ -1902,7 +1902,7 @@ func (c *Cog) onSkillSelect(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(
 		i18n.T("pets.skills.choose_title", lang, map[string]any{"level": (slot + 1) * 10}),
 		i18n.T("pets.skills.choose_desc", lang),
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, []discordgo.MessageComponent{
@@ -2065,7 +2065,7 @@ func (c *Cog) tryInteraction(b *interaction.Bot, i *discordgo.InteractionCreate,
 	embed := components.Embed(
 		i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
 		intro,
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Embeds: []*discordgo.MessageEmbed{embed},
@@ -2211,7 +2211,7 @@ func (c *Cog) artifactView(userID int64, lang string) (*discordgo.MessageEmbed, 
 	if err != nil {
 		a, err = c.svc.CreateArtifact(userID)
 		if err != nil {
-			return components.Embed("Artifact", "Could not create artifact.", 0xe74c3c), nil
+			return components.Embed("Artifact", "Could not create artifact.", components.ColorDanger), nil
 		}
 	}
 
@@ -2249,7 +2249,7 @@ func (c *Cog) artifactView(userID int64, lang string) (*discordgo.MessageEmbed, 
 
 	desc := fmt.Sprintf("**Level %d** %s\n\n**Stats:**\n%s%s",
 		a.Level, xpBar, statLines, unspentLine)
-	embed := components.Embed("💠 Pet Artifact", desc, 0x9b59b6)
+	embed := components.Embed("💠 Pet Artifact", desc, components.ColorArcane)
 
 	comps := []discordgo.MessageComponent{}
 	if len(allocBtns) > 0 {
@@ -2460,7 +2460,7 @@ func (c *Cog) weeklyLeaderboardEmbed(i *discordgo.InteractionCreate, lang string
 	}
 
 	desc := lines + modLine + personalLine
-	embed := components.Embed(i18n.T("weekly.title", lang), desc, 0xf1c40f)
+	embed := components.Embed(i18n.T("weekly.title", lang), desc, components.ColorReward)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("leaderboard.btn_refresh", lang), components.EncodeOwner(userID, "pets", "weekly_refresh"), discordgo.PrimaryButton),
@@ -2510,7 +2510,7 @@ func (c *Cog) weeklyHistoryEmbed(userID, serverID int64, lang string) *discordgo
 		}
 	}
 
-	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, 0x9b59b6)
+	embed := components.Embed(i18n.T("weekly.history_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(userID, 10) + ">"}), desc, components.ColorArcane)
 	return embed
 }
 

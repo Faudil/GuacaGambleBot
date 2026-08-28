@@ -1,0 +1,20 @@
+{
+  "help": {
+    "title": "🧩 GuacaGambleBot — Commandes",
+    "desc": "Choisis une catégorie ci-dessous pour voir ce que fait chaque commande.\nChaque commande fonctionne en slash et en préfixe (ex. `{prefix}daily`).\nNouveau ? Commence par `/setup`, puis `/start`.",
+    "footer": "{count} commandes · utilise le menu pour explorer",
+    "cat_footer": "{count} commandes dans cette catégorie",
+    "select_placeholder": "Choisis une catégorie…",
+    "btn_overview": "Retour au sommaire",
+    "cat": {
+      "start": "Premiers pas",
+      "economy": "Économie et objets",
+      "casino": "Casino et paris",
+      "rpg": "RPG et donjons",
+      "activities": "Activités",
+      "pets": "Familiers",
+      "world": "Monde et communauté",
+      "admin": "Administration"
+    }
+  }
+}

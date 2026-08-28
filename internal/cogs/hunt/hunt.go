@@ -42,7 +42,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: huntsvc.New(s, cfg, npcSvc), qsvc: questssvc.New(s, cfg)}
-	r.Slash("hunt", "Pet hunting expedition", c.onSlashMenu)
+	r.Slash("hunt", "cmd.hunt.desc", c.onSlashMenu)
 	r.Prefix("hunt", c.onPrefixMenu)
 	r.Component("hunt", "menu", c.onMenu)
 	r.Component("hunt", "zone", c.onHuntZone)
@@ -81,7 +81,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("hunt.dashboard_title", lang),
 		desc,
-		0x0000FF,
+		components.ColorInfo,
 	)
 	progress, _ := c.store.GetZoneProgress(userID)
 	zones := sortedZoneKeys()
@@ -257,7 +257,7 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
 		emb := components.Embed(
 			i18n.T("hunt.expedition_title", lang, map[string]any{"emoji": zone.Emoji, "name": zoneName}),
-			desc, 0xFFA500,
+			desc, components.ColorHunt,
 		)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, emb, back))
@@ -301,12 +301,12 @@ func (c *Cog) onHuntZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		},
 		func(journal []string) {
 			footerKey := "hunt.end_footer"
-			color := 0xFFA500
+			color := components.ColorHunt
 			if res.PlayerWon {
-				color = 0xFFD700
+				color = components.ColorLegendary
 				footerKey = "hunt.victory_footer"
 			} else if res.EnemyWon {
-				color = 0xFF0000
+				color = components.ColorDanger
 				footerKey = "hunt.defeat_footer"
 			}
 			desc := c.resultDesc(res, petName, lang, artifactLeveled, userID, unlockedZone)
@@ -423,7 +423,7 @@ func (c *Cog) maybePetInteraction(b *interaction.Bot, i *discordgo.InteractionCr
 	}
 	embed := components.Embed(
 		i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
-		intro, 0x9b59b6)
+		intro, components.ColorArcane)
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Embeds: []*discordgo.MessageEmbed{embed},
 		Components: []discordgo.MessageComponent{

@@ -39,8 +39,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	rsvc := researchsvc.New(s, cfg, fsvc)
 	ssvc := sansvc.New(s, cfg)
 	c := &Cog{store: s, cfg: cfg, hsvc: hsvc, fsvc: fsvc, rsvc: rsvc, ssvc: ssvc}
-	r.Slash("house", "Gère ta maison (acheter, améliorer, collecter).", c.onSlashMenu)
-	r.Slash("hs", "Gère ta maison (acheter, améliorer, collecter).", c.onSlashMenu)
+	r.Slash("house", "cmd.house.desc", c.onSlashMenu)
+	r.Slash("hs", "cmd.house.desc", c.onSlashMenu)
 	r.Prefix("house", c.onPrefixMenu)
 	r.Prefix("hs", c.onPrefixMenu)
 	r.Component("house", "show", c.onShow)
@@ -68,6 +68,10 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Modal("house", "color", c.onColor)
 }
 
+// researchTreeColor is the deep green of the housing research tree, a shade
+// darker than ColorFarm so the tree reads as its own screen.
+const researchTreeColor = 0x1B5E20
+
 func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
@@ -94,7 +98,7 @@ func (c *Cog) menuForUser(lang string, userID int64) (*discordgo.MessageEmbed, [
 	embed := components.Embed(
 		i18n.T("housing.menu_title", lang),
 		i18n.T("housing.menu_desc", lang),
-		0xB9936C,
+		components.ColorHome,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -143,7 +147,7 @@ func (c *Cog) shopMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 	embed := components.Embed(
 		i18n.T("housing.shop_title", lang),
 		i18n.T("housing.shop_desc", lang)+"\n\n"+desc,
-		0xB9936C,
+		components.ColorHome,
 	)
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
@@ -198,7 +202,7 @@ func (c *Cog) onHouses(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("housing.houses_title", lang),
 		i18n.T("housing.houses_desc", lang)+"\n\n"+desc,
-		0xB9936C,
+		components.ColorHome,
 	)
 	var comps []discordgo.MessageComponent
 	row := []discordgo.MessageComponent{
@@ -240,7 +244,7 @@ func (c *Cog) onSwitch(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	houseName := i18n.T("housing.types."+houseType, lang)
-	embed := components.Embed("🏠", i18n.T("housing.switch_success", lang, map[string]any{"house": houseName}), 0x2ecc71)
+	embed := components.Embed("🏠", i18n.T("housing.switch_success", lang, map[string]any{"house": houseName}), components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -334,7 +338,7 @@ func (c *Cog) onCollect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"resources": strings.Join(lines, ", "),
 		})
 	}
-	embed := components.Embed(i18n.T("housing.btn_collect", lang), msg, 0x2ecc71)
+	embed := components.Embed(i18n.T("housing.btn_collect", lang), msg, components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -346,7 +350,7 @@ func (c *Cog) onTree(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("housing.tree_title", lang),
 		i18n.T("housing.tree_desc", lang),
-		0x1B5E20,
+		researchTreeColor,
 	)
 
 	owned := map[string]bool{}
@@ -433,7 +437,7 @@ func (c *Cog) onUpgrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if h, herr := c.hsvc.GetHousing(userID); herr == nil {
 		level = strconv.Itoa(h.Level)
 	}
-	embed := components.Embed("✅", i18n.T("housing.upgrade_success", lang, map[string]any{"level": level}), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.upgrade_success", lang, map[string]any{"level": level}), components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -472,7 +476,7 @@ func (c *Cog) onBuy(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		return
 	}
 	houseName := i18n.T("housing.types."+houseType, lang)
-	embed := components.Embed("🎉", i18n.T("housing.buy_success", lang, map[string]any{"house": houseName}), 0x2ecc71)
+	embed := components.Embed("🎉", i18n.T("housing.buy_success", lang, map[string]any{"house": houseName}), components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -491,7 +495,7 @@ func (c *Cog) onRename(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "housing.no_house")
 		return
 	}
-	embed := components.Embed("✅", i18n.T("housing.rename_success", lang, map[string]any{"name": name}), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.rename_success", lang, map[string]any{"name": name}), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -510,7 +514,7 @@ func (c *Cog) onColor(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "housing.no_house")
 		return
 	}
-	embed := components.Embed("✅", i18n.T("housing.color_success", lang, map[string]any{"hex": "#" + hex}), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.color_success", lang, map[string]any{"hex": "#" + hex}), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -539,7 +543,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		houseName := i18n.T("housing.types."+h.HouseType, lang)
 		embed := components.Embed(i18n.T("housing.furniture_title", lang),
 			i18n.T("housing.furniture_house_none", lang, map[string]any{"house": houseName}),
-			0xB9936C)
+			components.ColorHome)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
 				components.Button(i18n.T("housing.btn_back", lang), components.EncodeOwner(userID, "house", "show"), discordgo.SecondaryButton),
@@ -602,7 +606,7 @@ func (c *Cog) onFurniture(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		desc += fmt.Sprintf("\n%s %s | %s (%d slot)%s%s", fd.Emoji, furnitureName(fd.ID, lang), costStr, fd.Slots, effectInfo, researchInfo)
 	}
 
-	embed := components.Embed(i18n.T("housing.furniture_title", lang), desc, 0xB9936C)
+	embed := components.Embed(i18n.T("housing.furniture_title", lang), desc, components.ColorHome)
 
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
@@ -775,7 +779,7 @@ func (c *Cog) onPlace(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	embed := components.Embed("✅", i18n.T("housing.furniture_place_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.furniture_place_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -803,7 +807,7 @@ func (c *Cog) onRemove(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("housing.furniture_remove_confirm_desc", lang, map[string]any{
 			"emoji": emoji, "name": furnitureName(furnitureID, lang), "slots": slots,
 		}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -826,12 +830,12 @@ func (c *Cog) onRemoveConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	furnitureID := rest[0]
 
 	if err := c.fsvc.Remove(userID, furnitureID); err != nil {
-		embed := components.Embed("❌", err.Error(), 0xe74c3c)
+		embed := components.Embed("❌", err.Error(), components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	embed := components.Embed("🗑️", i18n.T("housing.furniture_remove_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), 0xe67e22)
+	embed := components.Embed("🗑️", i18n.T("housing.furniture_remove_success", lang, map[string]any{"name": furnitureName(furnitureID, lang)}), components.ColorWarning)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -850,12 +854,12 @@ func (c *Cog) onRest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		default:
 			msg = err.Error()
 		}
-		embed := components.Embed("❌", msg, 0xe74c3c)
+		embed := components.Embed("❌", msg, components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
-	embed := components.Embed("🛏️", i18n.T("housing.rest_success", lang), 0x2ecc71)
+	embed := components.Embed("🛏️", i18n.T("housing.rest_success", lang), components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -951,7 +955,7 @@ func (c *Cog) onResearchView(b *interaction.Bot, i *discordgo.InteractionCreate)
 		desc += "*(" + i18n.T("housing.research_empty_locked", lang) + ")*"
 	}
 
-	embed := components.Embed(i18n.T("housing.research_title", lang), desc, 0x1B5E20)
+	embed := components.Embed(i18n.T("housing.research_title", lang), desc, researchTreeColor)
 
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
@@ -1010,7 +1014,7 @@ func (c *Cog) onStartResearch(b *interaction.Bot, i *discordgo.InteractionCreate
 	researchID := rest[0]
 
 	if err := c.rsvc.Start(userID, researchID); err != nil {
-		embed := components.Embed("❌", err.Error(), 0xe74c3c)
+		embed := components.Embed("❌", err.Error(), components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
@@ -1021,7 +1025,7 @@ func (c *Cog) onStartResearch(b *interaction.Bot, i *discordgo.InteractionCreate
 	if rd != nil {
 		timeHours = rd.TimeHours
 	}
-	embed := components.Embed("🔬", i18n.T("housing.research_started", lang, map[string]any{"name": rName, "time": timeHours}), 0x2ecc71)
+	embed := components.Embed("🔬", i18n.T("housing.research_started", lang, map[string]any{"name": rName, "time": timeHours}), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -1037,7 +1041,7 @@ func (c *Cog) onCompleteResearch(b *interaction.Bot, i *discordgo.InteractionCre
 	researchID := rest[0]
 
 	if err := c.rsvc.Complete(userID, researchID); err != nil {
-		embed := components.Embed("❌", err.Error(), 0xe74c3c)
+		embed := components.Embed("❌", err.Error(), components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
@@ -1056,7 +1060,7 @@ func (c *Cog) onCompleteResearch(b *interaction.Bot, i *discordgo.InteractionCre
 			msg += " " + strings.Join(names, ", ")
 		}
 	}
-	embed := components.Embed("✅", msg, 0x2ecc71)
+	embed := components.Embed("✅", msg, components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -1089,7 +1093,7 @@ func (c *Cog) onTreeStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		default:
 			msg = err.Error()
 		}
-		embed := components.Embed("❌", msg, 0xe74c3c)
+		embed := components.Embed("❌", msg, components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
@@ -1099,7 +1103,7 @@ func (c *Cog) onTreeStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if upg := housingsvc.UpgradesTree[upgradeID]; upg != nil {
 		hours = upg.TimeHours
 	}
-	embed := components.Embed("🏗️", i18n.T("housing.tree_started", lang, map[string]any{"name": name, "hours": hours}), 0x2ecc71)
+	embed := components.Embed("🏗️", i18n.T("housing.tree_started", lang, map[string]any{"name": name, "hours": hours}), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -1124,13 +1128,13 @@ func (c *Cog) onTreeComplete(b *interaction.Bot, i *discordgo.InteractionCreate)
 		default:
 			msg = err.Error()
 		}
-		embed := components.Embed("❌", msg, 0xe74c3c)
+		embed := components.Embed("❌", msg, components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 		return
 	}
 	name := upgradeName(upgradeID, lang)
-	embed := components.Embed("✅", i18n.T("housing.tree_completed", lang, map[string]any{"name": name}), 0x2ecc71)
+	embed := components.Embed("✅", i18n.T("housing.tree_completed", lang, map[string]any{"name": name}), components.ColorSuccess)
 	_, comps := c.menuForUser(lang, userID)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -1194,7 +1198,7 @@ func (c *Cog) buildHouseSanctuaryEmbed(userID int64, lang string) (*discordgo.Me
 	}
 	desc += "\nUse buttons below to manage sanctuary."
 
-	embed := components.Embed("🏡 Pet Sanctuary", desc, 0x2ecc71)
+	embed := components.Embed("🏡 Pet Sanctuary", desc, components.ColorSuccess)
 
 	var comps []discordgo.MessageComponent
 	var buttons []discordgo.MessageComponent

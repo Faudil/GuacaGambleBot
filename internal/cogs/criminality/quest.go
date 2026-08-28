@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 )
@@ -89,7 +90,7 @@ func (c *Cog) sheriffMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.sheriff_menu_title", lang),
 			Description: i18n.T("criminality.quest.sheriff_error", lang),
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 		}
 	}
 
@@ -97,7 +98,7 @@ func (c *Cog) sheriffMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.sheriff_hunter_title", lang),
 			Description: i18n.T("criminality.quest.sheriff_hunter_desc", lang),
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 		}
 	}
 
@@ -105,7 +106,7 @@ func (c *Cog) sheriffMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.sheriff_menu_title", lang),
 			Description: i18n.T("criminality.quest.sheriff_thief_desc", lang),
-			Color:       0xe74c3c,
+			Color:       components.ColorDanger,
 		}
 	}
 
@@ -114,14 +115,14 @@ func (c *Cog) sheriffMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.sheriff_questing_title", lang),
 			Description: i18n.T("criminality.quest.sheriff_questing_desc", lang),
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 		}
 	}
 
 	return &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.quest.sheriff_menu_title", lang),
 		Description: i18n.T("criminality.quest.sheriff_default_desc", lang),
-		Color:       0x3498db,
+		Color:       components.ColorInfo,
 	}
 }
 
@@ -131,7 +132,7 @@ func (c *Cog) whisperMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.whisper_menu_title", lang),
 			Description: i18n.T("criminality.quest.whisper_error", lang),
-			Color:       0x8e44ad,
+			Color:       components.ColorUnderworld,
 		}
 	}
 
@@ -139,7 +140,7 @@ func (c *Cog) whisperMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.whisper_thief_title", lang),
 			Description: i18n.T("criminality.quest.whisper_thief_desc", lang),
-			Color:       0x8e44ad,
+			Color:       components.ColorUnderworld,
 		}
 	}
 
@@ -147,7 +148,7 @@ func (c *Cog) whisperMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.whisper_menu_title", lang),
 			Description: i18n.T("criminality.quest.whisper_hunter_desc", lang),
-			Color:       0x8e44ad,
+			Color:       components.ColorUnderworld,
 		}
 	}
 
@@ -156,14 +157,14 @@ func (c *Cog) whisperMenu(userID int64, lang string) *discordgo.MessageEmbed {
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("criminality.quest.whisper_questing_title", lang),
 			Description: i18n.T("criminality.quest.whisper_questing_desc", lang),
-			Color:       0x8e44ad,
+			Color:       components.ColorUnderworld,
 		}
 	}
 
 	return &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.quest.whisper_menu_title", lang),
 		Description: i18n.T("criminality.quest.whisper_default_desc", lang),
-		Color:       0x8e44ad,
+		Color:       components.ColorUnderworld,
 	}
 }
 
@@ -199,7 +200,7 @@ func (c *Cog) onPrefixSheriffJoin(b *interaction.Bot, s *discordgo.Session, m *d
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.quest.sheriff_join_success_title", lang),
 		Description: i18n.T("criminality.quest.sheriff_join_success_desc", lang),
-		Color:       0x3498db,
+		Color:       components.ColorInfo,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("criminality.quest.sheriff_join_success_footer", lang)},
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
@@ -237,7 +238,7 @@ func (c *Cog) onPrefixWhisperJoin(b *interaction.Bot, s *discordgo.Session, m *d
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.quest.whisper_join_success_title", lang),
 		Description: i18n.T("criminality.quest.whisper_join_success_desc", lang),
-		Color:       0x8e44ad,
+		Color:       components.ColorUnderworld,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("criminality.quest.whisper_join_success_footer", lang)},
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
@@ -272,7 +273,7 @@ func (c *Cog) onPrefixForgivePath(b *interaction.Bot, s *discordgo.Session, m *d
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.quest.forgive_success_title", lang),
 		Description: i18n.T("criminality.quest.forgive_success_desc", lang),
-		Color:       0xf1c40f,
+		Color:       components.ColorReward,
 	}
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }

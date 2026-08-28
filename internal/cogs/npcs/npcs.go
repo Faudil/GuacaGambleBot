@@ -35,7 +35,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	}
 	inv := invsvc.New(s, cfg)
 	c := &Cog{store: s, cfg: cfg, svc: npcsvc.New(s, cfg, def, inv)}
-	r.Slash("npc", "Interagis avec les personnages du village.", c.onSlashMenu)
+	r.Slash("npc", "cmd.npc.desc", c.onSlashMenu)
 	r.Prefix("npc", c.onPrefixMenu)
 	r.Prefix("np", c.onPrefixMenu)
 	r.Component("npc", "select", c.onNPCSelect)
@@ -82,7 +82,7 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 }
 
 func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
-	embed := components.Embed(i18n.T("npcs.list_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("npcs.list_title", lang), "", components.ColorInfo)
 	var desc string
 	allReps, _ := c.svc.GetAllReputations(userID)
 	repMap := map[string]*model.UserNPCReputation{}
@@ -319,7 +319,7 @@ func (c *Cog) onAcceptQuestline(questID string) func(b *interaction.Bot, i *disc
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(title, text, 0x2ecc71), comps))
+				components.Embed(title, text, components.ColorSuccess), comps))
 	}
 }
 

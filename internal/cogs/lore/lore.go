@@ -26,7 +26,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		def = universe.Get("hoakhaven")
 	}
 	c := &Cog{store: s, cfg: cfg, svc: loresvc.New(s, cfg, def)}
-	r.Slash("lore", "Browse discovered lore fragments", c.onSlash)
+	r.Slash("lore", "cmd.lore.desc", c.onSlash)
 	r.Prefix("lore", c.onPrefix)
 	r.Prefix("lr", c.onPrefix)
 	r.Component("lore", "category", c.onCategorySelect)
@@ -66,19 +66,19 @@ var catMeta = map[universe.Category]struct {
 	Color int
 	Hint  string
 }{
-	"aether_log":   {"Aether-Logs", "🟦", 0x3498db, "Found while mining deep strata"},
-	"tide_scroll":  {"Tide-Scrolls", "🟩", 0x2ecc71, "Found while fishing"},
-	"root_whisper": {"Root-Whispers", "🟫", 0x8b4513, "Found while farming"},
-	"field_obs":    {"Field Observations", "🟧", 0xe67e22, "Found while hunting"},
-	"rust_memory":  {"Rust-Memories", "🟥", 0xe74c3c, "Found while excavating fossils"},
-	"echo_shard":   {"Echo-Shards", "🟨", 0xf1c40f, "Found during pet expeditions"},
-	"bonus":        {"Secret Fragments", "💠", 0x9b59b6, "Special discoveries"},
+	"aether_log":   {"Aether-Logs", "🟦", components.ColorInfo, "Found while mining deep strata"},
+	"tide_scroll":  {"Tide-Scrolls", "🟩", components.ColorSuccess, "Found while fishing"},
+	"root_whisper": {"Root-Whispers", "🟫", components.ColorDig, "Found while farming"},
+	"field_obs":    {"Field Observations", "🟧", components.ColorWarning, "Found while hunting"},
+	"rust_memory":  {"Rust-Memories", "🟥", components.ColorDanger, "Found while excavating fossils"},
+	"echo_shard":   {"Echo-Shards", "🟨", components.ColorReward, "Found during pet expeditions"},
+	"bonus":        {"Secret Fragments", "💠", components.ColorArcane, "Special discoveries"},
 }
 
 func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	progress, totalD, totalT, err := c.svc.AllProgress(userID)
 	if err != nil {
-		return components.Embed("Error", "Could not load lore progress.", 0xff0000), nil
+		return components.Embed("Error", "Could not load lore progress.", components.ColorDanger), nil
 	}
 
 	def := c.svc.Universe()
@@ -102,7 +102,7 @@ func (c *Cog) buildOverview(userID int64, lang string) (*discordgo.MessageEmbed,
 		})
 	}
 
-	embed := components.Embed("📖 Lore Codex", desc, 0x2c3e50)
+	embed := components.Embed("📖 Lore Codex", desc, components.ColorIdle)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: fmt.Sprintf("Use !lore to browse your collection | %d%% complete", percent(totalD, totalT)),
 	}

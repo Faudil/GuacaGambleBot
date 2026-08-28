@@ -29,7 +29,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: mktsvc.New(s, cfg)}
-	r.Slash("market", "Marché : voir les prix et échanger des objets.", c.onSlashMenu)
+	r.Slash("market", "cmd.market.desc", c.onSlashMenu)
 	r.Prefix("market", c.onPrefix)
 	r.Prefix("market_sell", c.onSellPrefix)
 	r.Prefix("ms", c.onSellPrefix)
@@ -141,7 +141,7 @@ func (c *Cog) buildMarketEmbed(views []mktsvc.MarketItemView, lang, weekID, cate
 		catLabel = i18n.T("market.cat_"+category, lang)
 	}
 	desc := i18n.T("market.greeting", lang, map[string]any{"week": weekID, "filter": catLabel})
-	embed := components.Embed(i18n.T("market.title", lang), desc, 0xf1c40f)
+	embed := components.Embed(i18n.T("market.title", lang), desc, components.ColorReward)
 
 	for _, v := range views {
 		var trendStr string
@@ -268,7 +268,7 @@ func (c *Cog) buildMarketComponents(views []mktsvc.MarketItemView, total int, ca
 // buildSellEmbed builds the embed shown in the market's sell view, listing the
 // player's own sellable items with their unit prices and owned quantities.
 func (c *Cog) buildSellEmbed(views []mktsvc.PlayerSellItemView, lang string, page, totalPages, balance int) *discordgo.MessageEmbed {
-	embed := components.Embed(i18n.T("market.title", lang), i18n.T("market.sell_greeting", lang), 0x2ecc71)
+	embed := components.Embed(i18n.T("market.title", lang), i18n.T("market.sell_greeting", lang), components.ColorSuccess)
 	for _, v := range views {
 		name := fmt.Sprintf("%s %s", v.Item.Emoji, items.LocalizedName(v.Item.Name, lang))
 		embed.Fields = append(embed.Fields, components.Field(
@@ -468,7 +468,7 @@ func (c *Cog) onSelectItem(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("market.modal_title", lang, map[string]any{"item": items.LocalizedName(it.Name, lang)}),
 		i18n.T("market.action_confirm", lang, map[string]any{"price": price}),
-		0xf1c40f,
+		components.ColorReward,
 	)
 
 	buyBtn := components.Button(i18n.T("market.action_buy", lang),

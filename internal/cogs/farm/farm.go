@@ -47,7 +47,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: farmsvc.New(s, cfg, npcSvc)}
-	r.Slash("farm", "Farming minigame", c.onSlashMenu)
+	r.Slash("farm", "cmd.farm.desc", c.onSlashMenu)
 	r.Prefix("farm", c.onPrefixMenu)
 	r.Prefix("fm", c.onPrefixMenu)
 	r.Prefix("seedmaker", c.onSeedMakerPrefix)
@@ -153,7 +153,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("farm.main_title", lang),
 		desc,
-		0x006400,
+		components.ColorFarm,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("farm.footer", lang),
@@ -205,7 +205,7 @@ func (c *Cog) onZone(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed := components.Embed(
 			i18n.T("farm.no_land_title", lang),
 			i18n.T("farm.no_land_desc", lang, map[string]any{"deed": items.LocalizedName(deed, lang)}),
-			0xE74C3C,
+			components.ColorDanger,
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -383,7 +383,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(
 		i18n.T(result.Title, lang),
 		desc,
-		0x006400,
+		components.ColorFarm,
 	)
 
 	comps := []discordgo.MessageComponent{
@@ -457,7 +457,7 @@ func (c *Cog) onPlot(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.choose_seed", lang),
 		"",
-		0x00FF00,
+		components.ColorSuccess,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(menu),
@@ -516,7 +516,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed := components.Embed(
 			i18n.T("farm.planted_mysterious_title", lang),
 			i18n.T("farm.planted_mysterious_desc", lang),
-			0x9B59B6,
+			components.ColorArcane,
 		)
 		back := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -535,7 +535,7 @@ func (c *Cog) onSeedChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"item": items.LocalizedName(seedName, lang),
 			"time": mins,
 		}),
-		0x00FF00,
+		components.ColorSuccess,
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -584,7 +584,7 @@ func (c *Cog) onSeedMaker(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed(i18n.T("farm.seedmaker_title", lang), i18n.T("farm.seedmaker_desc", lang), 0x006400), comps))
+			components.Embed(i18n.T("farm.seedmaker_title", lang), i18n.T("farm.seedmaker_desc", lang), components.ColorFarm), comps))
 }
 
 func (c *Cog) onSeedMakerChoose(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -616,7 +616,7 @@ func (c *Cog) onSeedMakerChoose(b *interaction.Bot, i *discordgo.InteractionCrea
 			"qty":  qty,
 			"seed": items.LocalizedName(seedID, lang),
 		}),
-		0x00FF00,
+		components.ColorSuccess,
 	)
 	back := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -685,7 +685,7 @@ func (c *Cog) onSeedMakerPrefix(b *interaction.Bot, s *discordgo.Session, m *dis
 			"qty":  totalSeeds,
 			"seed": items.LocalizedName(seedID, lang),
 		}),
-		0x00FF00,
+		components.ColorSuccess,
 	)
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, embed)
 }
@@ -766,7 +766,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.harvest_title", lang),
 		desc,
-		0x00FF00,
+		components.ColorSuccess,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -794,7 +794,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		seedEmbed := components.Embed(
 			i18n.T("farm.event_mysterious_seed_title", lang),
 			i18n.T("farm.event_mysterious_seed_desc", lang),
-			0x9B59B6,
+			components.ColorArcane,
 		)
 		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 			Embeds: []*discordgo.MessageEmbed{seedEmbed},
@@ -807,7 +807,7 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		scareEmbed := components.Embed(
 			i18n.T("farm.scarecrow_title", lang),
 			i18n.T("farm.scarecrow_desc", lang),
-			0xFFD700,
+			components.ColorLegendary,
 		)
 		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 			Embeds: []*discordgo.MessageEmbed{scareEmbed},
@@ -837,7 +837,7 @@ func (c *Cog) onWater(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.water_title", lang),
 		i18n.T("farm.water_desc", lang),
-		0x3498DB,
+		components.ColorInfo,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -869,7 +869,7 @@ func (c *Cog) onFertilize(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.fertilize_title", lang),
 		i18n.T("farm.fertilize_desc", lang),
-		0xE67E22,
+		components.ColorWarning,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -901,7 +901,7 @@ func (c *Cog) onAccelerate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.accelerate_title", lang),
 		i18n.T("farm.accelerate_desc", lang),
-		0xF1C40F,
+		components.ColorReward,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -977,7 +977,7 @@ func (c *Cog) onInspect(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.inspect_title", lang, map[string]any{"n": p.PlotIndex + 1}),
 		desc,
-		0x008080,
+		components.ColorInfo,
 	)
 
 	var btns []discordgo.MessageComponent
@@ -1076,7 +1076,7 @@ func (c *Cog) onInspectFarm(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(
 		i18n.T("farm.inspect_main_title", lang),
 		desc,
-		0x008080,
+		components.ColorInfo,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -1113,7 +1113,7 @@ func (c *Cog) onStats(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("farm.stats_title", lang),
 		desc,
-		0x9B59B6,
+		components.ColorArcane,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -1159,18 +1159,25 @@ func zoneDisplayName(key, lang string) string {
 	return key
 }
 
+// Zone tints sit between ColorFarm and ColorSuccess, giving each farm zone
+// its own shade of green without leaving the farm's colour family.
+const (
+	zoneVeggieColor     = 0x27AE60
+	zoneGreenhouseColor = 0x1ABC9C
+)
+
 func zoneColor(key string) int {
 	switch key {
 	case "public":
-		return 0x2ECC71
+		return components.ColorSuccess
 	case "veggie":
-		return 0x27AE60
+		return zoneVeggieColor
 	case "greenhouse":
-		return 0x1ABC9C
+		return zoneGreenhouseColor
 	case "orchard":
-		return 0x9B59B6
+		return components.ColorArcane
 	}
-	return 0x006400
+	return components.ColorFarm
 }
 
 func zoneFlavorText(key, lang string) string {
@@ -1190,17 +1197,17 @@ func zoneFlavorText(key, lang string) string {
 func eventColor(et farmsvc.EventType) int {
 	switch et {
 	case farmsvc.EventPest:
-		return 0xE74C3C
+		return components.ColorDanger
 	case farmsvc.EventMerchant:
-		return 0xF39C12
+		return components.ColorWarning
 	case farmsvc.EventBlessing:
-		return 0x2ECC71
+		return components.ColorSuccess
 	case farmsvc.EventCropCircles:
-		return 0x9B59B6
+		return components.ColorArcane
 	case farmsvc.EventBuriedMagnet:
-		return 0x95A5A6
+		return components.ColorMuted
 	}
-	return 0x006400
+	return components.ColorFarm
 }
 
 func (c *Cog) plotField(p *farmsvc.PlotInfo, lang string) string {

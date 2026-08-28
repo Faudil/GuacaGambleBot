@@ -25,7 +25,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: jsvc.New(s)}
-	r.Slash("journal", "Your personal journal: goals, paths and ranks.", c.onSlash)
+	r.Slash("journal", "cmd.journal.desc", c.onSlash)
 	r.Prefix("journal", c.onPrefix)
 	r.Prefix("j", c.onPrefix)
 	r.Component("journal", "show", c.onShow)
@@ -107,7 +107,7 @@ func (c *Cog) announceMastery(sess interaction.Session, lang string, guildID, us
 		embed := components.Embed(
 			i18n.T("journal.mastery.announce_title", lang, map[string]any{"user": interaction.DisplayName(sess, strconv.FormatInt(guildID, 10), nil, userID)}),
 			i18n.T("journal.mastery.announce_desc", lang),
-			0xf1c40f,
+			components.ColorReward,
 		)
 		_, _ = sess.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), embed)
 	}()
@@ -147,7 +147,7 @@ func rankName(rank int, lang string) string {
 func (c *Cog) buildEmbed(sess interaction.Session, lang string, guildID, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	v, err := c.svc.View(userID)
 	if err != nil {
-		return components.Embed(i18n.T("journal.title", lang), i18n.T("journal.error", lang), 0xe74c3c), nil
+		return components.Embed(i18n.T("journal.title", lang), i18n.T("journal.error", lang), components.ColorDanger), nil
 	}
 
 	// Fresh Mastery unlock: celebrate in the server announcement channel.
@@ -257,7 +257,7 @@ func (c *Cog) buildEmbed(sess interaction.Session, lang string, guildID, userID 
 		components.Button("🔄", components.EncodeOwner(userID, "journal", "show"), discordgo.SecondaryButton),
 	))
 
-	return components.Embed(i18n.T("journal.title", lang)+" — <@"+strconv.FormatInt(userID, 10)+">", desc.String(), 0x2ecc71), comps
+	return components.Embed(i18n.T("journal.title", lang)+" — <@"+strconv.FormatInt(userID, 10)+">", desc.String(), components.ColorSuccess), comps
 }
 
 func (c *Cog) buildLeaderboard(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
@@ -285,5 +285,5 @@ func (c *Cog) buildLeaderboard(lang string, userID int64) (*discordgo.MessageEmb
 			components.Button("◀ "+i18n.T("journal.btn_back", lang), components.EncodeOwner(userID, "journal", "back"), discordgo.SecondaryButton),
 		),
 	}
-	return components.Embed(i18n.T("journal.title", lang), desc.String(), 0xf1c40f), comps
+	return components.Embed(i18n.T("journal.title", lang), desc.String(), components.ColorReward), comps
 }

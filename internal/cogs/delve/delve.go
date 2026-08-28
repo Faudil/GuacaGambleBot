@@ -47,8 +47,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		riddles:        make(map[int64]riddleEntry),
 	}
 
-	r.Slash("delve", "Enter The Undercroft dungeon", c.onSlashDelve)
-	r.Slash("myjourney", "View your personal chronicle", c.onSlashJourney)
+	r.Slash("delve", "cmd.delve.desc", c.onSlashDelve)
+	r.Slash("myjourney", "cmd.myjourney.desc", c.onSlashJourney)
 
 	r.Prefix("delve", c.onPrefixDelve)
 	r.Prefix("myjourney", c.onPrefixJourney)
@@ -274,12 +274,12 @@ func (c *Cog) buildFloorTransition(session *model.DelveSession, summary string, 
 		desc += "\n⚠️ " + i18n.T("delve.handler.weakness_warning", lang)
 	}
 
-	color := 0xf39c12
+	color := components.ColorWarning
 	switch {
 	case danger.Skulls >= 4:
-		color = 0xe74c3c
+		color = components.ColorDanger
 	case danger.Skulls >= 2:
-		color = 0xf39c12
+		color = components.ColorWarning
 	}
 
 	embed := &discordgo.MessageEmbed{
@@ -401,7 +401,7 @@ func (c *Cog) onSlashDelve(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Embeds: []*discordgo.MessageEmbed{
-						{Title: "🔔 Rescue Status", Description: msg, Color: 0x2ecc71},
+						{Title: "🔔 Rescue Status", Description: msg, Color: components.ColorSuccess},
 					},
 				},
 			})
@@ -450,7 +450,7 @@ func (c *Cog) onSlashJourney(b *interaction.Bot, i *discordgo.InteractionCreate)
 		pages = append(pages, &discordgo.MessageEmbed{
 			Title:       i18n.T("delve.chronicle.title", lang),
 			Description: i18n.T("delve.chronicle.empty", lang),
-			Color:       0x9b59b6,
+			Color:       components.ColorArcane,
 		})
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -469,7 +469,7 @@ func (c *Cog) onPrefixJourney(b *interaction.Bot, s *discordgo.Session, m *disco
 		pages = append(pages, &discordgo.MessageEmbed{
 			Title:       i18n.T("delve.chronicle.title", lang),
 			Description: i18n.T("delve.chronicle.empty", lang),
-			Color:       0x9b59b6,
+			Color:       components.ColorArcane,
 		})
 	}
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{

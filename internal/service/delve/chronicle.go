@@ -29,7 +29,7 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 
 	if len(flags) == 0 && len(history) == 0 {
 		return []*discordgo.MessageEmbed{
-			components.Embed(i18n.T("delve.chronicle.title", lang), i18n.T("delve.chronicle.empty", lang), 0x9b59b6),
+			components.Embed(i18n.T("delve.chronicle.title", lang), i18n.T("delve.chronicle.empty", lang), components.ColorArcane),
 		}, nil
 	}
 
@@ -74,7 +74,7 @@ func BuildChronicle(userID int64, svc *Service, lang string) ([]*discordgo.Messa
 	embed := &discordgo.MessageEmbed{
 		Title:       title,
 		Description: desc.String(),
-		Color:       0x9b59b6,
+		Color:       components.ColorArcane,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.chronicle.footer", lang)},
 	}
 	pages = append(pages, embed)

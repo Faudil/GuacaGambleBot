@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
@@ -52,16 +53,16 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("blessing", c.onPrefixBlessing)
 	r.Prefix("chronicle", c.onPrefixChronicle)
 
-	r.Slash("steal", "Pickpocket a player", c.onSlashSteal)
-	r.Slash("burgle", "Burgle an item from a player", c.onSlashBurgle)
-	r.Slash("bounty", "Place a bounty on a criminal", c.onSlashBounty)
-	r.Slash("crimhunt", "Hunt a wanted criminal", c.onSlashHunt)
-	r.Slash("track", "Track clues for a hunt", c.onSlashTrack)
-	r.Slash("report", "Report a thief to increase their notoriety", c.onSlashReport)
-	r.Slash("forgive", "Forgive a thief who stole from you", c.onSlashForgive)
-	r.Slash("notoriety", "Check your criminal notoriety", c.onSlashNotoriety)
-	r.Slash("sheriff", "Speak to Sheriff Aldric Vance", c.onSlashSheriff)
-	r.Slash("whisper", "Speak to The Whisper", c.onSlashWhisper)
+	r.Slash("steal", "cmd.steal.desc", c.onSlashSteal)
+	r.Slash("burgle", "cmd.burgle.desc", c.onSlashBurgle)
+	r.Slash("bounty", "cmd.bounty.desc", c.onSlashBounty)
+	r.Slash("crimhunt", "cmd.crimhunt.desc", c.onSlashHunt)
+	r.Slash("track", "cmd.track.desc", c.onSlashTrack)
+	r.Slash("report", "cmd.report.desc", c.onSlashReport)
+	r.Slash("forgive", "cmd.forgive.desc", c.onSlashForgive)
+	r.Slash("notoriety", "cmd.notoriety.desc", c.onSlashNotoriety)
+	r.Slash("sheriff", "cmd.sheriff.desc", c.onSlashSheriff)
+	r.Slash("whisper", "cmd.whisper.desc", c.onSlashWhisper)
 }
 
 func (c *Cog) requireAwake(b *interaction.Bot, i *discordgo.InteractionCreate, command, lang string) bool {
@@ -208,7 +209,7 @@ func (c *Cog) onPrefixBounty(b *interaction.Bot, s *discordgo.Session, m *discor
 	// !bounty — list bounties
 	listing := c.svc.ListBounties(lang)
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, c.embedResponse(
-		i18n.T("criminality.bounty.board_title", lang), listing, 0x3498db,
+		i18n.T("criminality.bounty.board_title", lang), listing, components.ColorInfo,
 		i18n.T("criminality.bounty.usage_list", lang)))
 }
 
@@ -402,7 +403,7 @@ func (c *Cog) onPrefixChronicle(b *interaction.Bot, s *discordgo.Session, m *dis
 	if err != nil || len(records) == 0 {
 		_, _ = s.ChannelMessageSendEmbed(m.ChannelID, c.embedResponse(
 			i18n.T("criminality.chronicle.title", lang),
-			i18n.T("criminality.chronicle.empty", lang), 0x8e44ad, ""))
+			i18n.T("criminality.chronicle.empty", lang), components.ColorUnderworld, ""))
 		return
 	}
 
@@ -434,7 +435,7 @@ func (c *Cog) onPrefixChronicle(b *interaction.Bot, s *discordgo.Session, m *dis
 	_, _ = s.ChannelMessageSendEmbed(m.ChannelID, &discordgo.MessageEmbed{
 		Title:       i18n.T("criminality.chronicle.title", lang),
 		Description: strings.Join(lines, "\n"),
-		Color:       0x8e44ad,
+		Color:       components.ColorUnderworld,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("criminality.chronicle.footer", lang)},
 	})
 }
@@ -504,7 +505,7 @@ func (c *Cog) onSlashBounty(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Embeds: []*discordgo.MessageEmbed{c.embedResponse(
-				i18n.T("criminality.bounty.board_title", lang), listing, 0x3498db,
+				i18n.T("criminality.bounty.board_title", lang), listing, components.ColorInfo,
 				i18n.T("criminality.bounty.usage_list", lang))},
 		},
 	})
@@ -579,9 +580,9 @@ func (c *Cog) onSlashNotoriety(b *interaction.Bot, i *discordgo.InteractionCreat
 }
 
 func (c *Cog) sendStealResult(s *discordgo.Session, channelID string, result *crimsvc.StealResult, lang string) {
-	color := 0xe74c3c
+	color := components.ColorDanger
 	if result.Success {
-		color = 0x2ecc71
+		color = components.ColorSuccess
 	}
 	embed := &discordgo.MessageEmbed{
 		Title: result.Message,
@@ -600,9 +601,9 @@ func (c *Cog) sendStealResult(s *discordgo.Session, channelID string, result *cr
 }
 
 func (c *Cog) sendBurgleResult(s *discordgo.Session, channelID string, result *crimsvc.BurgleResult, lang string) {
-	color := 0xe74c3c
+	color := components.ColorDanger
 	if result.Success {
-		color = 0x2ecc71
+		color = components.ColorSuccess
 	}
 	title := result.Message
 	if !result.Success {
@@ -624,9 +625,9 @@ func (c *Cog) sendBurgleResult(s *discordgo.Session, channelID string, result *c
 }
 
 func (c *Cog) sendHuntResult(s *discordgo.Session, channelID string, result *crimsvc.HuntResult, lang string) {
-	color := 0xe74c3c
+	color := components.ColorDanger
 	if result.Success {
-		color = 0x2ecc71
+		color = components.ColorSuccess
 	}
 	embed := &discordgo.MessageEmbed{
 		Title: result.Message,
@@ -645,12 +646,12 @@ func (c *Cog) sendHuntResult(s *discordgo.Session, channelID string, result *cri
 func notorietyColor(n int) int {
 	switch {
 	case n >= 80:
-		return 0xe74c3c // red
+		return components.ColorDanger // red
 	case n >= 50:
-		return 0xe67e22 // orange
+		return components.ColorWarning // orange
 	case n >= 20:
-		return 0xf1c40f // yellow
+		return components.ColorReward // yellow
 	default:
-		return 0x2ecc71 // green
+		return components.ColorSuccess // green
 	}
 }

@@ -28,7 +28,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		svc:         tournamentsvc.New(s, cfg),
 		tournaments: map[int64]*tournamentsvc.TournamentState{},
 	}
-	r.Slash("tournament", "Tournois de familiers", c.onSlash)
+	r.Slash("tournament", "cmd.tournament.desc", c.onSlash)
 	r.Prefix("tournament", c.onPrefix)
 	r.Prefix("tournoi", c.onPrefix)
 }
@@ -87,7 +87,7 @@ func (c *Cog) handleAction(userID, serverID int64, sub, feeStr, lang string) *di
 		return components.Embed(
 			i18n.T("tournament.title", lang),
 			i18n.T("tournament.desc", lang),
-			0xf1c40f,
+			components.ColorReward,
 		)
 	}
 }
@@ -95,14 +95,14 @@ func (c *Cog) handleAction(userID, serverID int64, sub, feeStr, lang string) *di
 func (c *Cog) create(userID, serverID int64, feeStr, lang string) *discordgo.MessageEmbed {
 	fee, err := strconv.Atoi(feeStr)
 	if err != nil || fee < 0 {
-		return components.Embed("❌", i18n.T("tournament.invalid_fee", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.invalid_fee", lang), components.ColorDanger)
 	}
 	if _, ok := c.tournaments[serverID]; ok {
-		return components.Embed("❌", i18n.T("tournament.already_prep", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.already_prep", lang), components.ColorDanger)
 	}
 	bal, err := c.svc.GetBalance(userID)
 	if err != nil || bal < fee {
-		return components.Embed("❌", i18n.T("tournament.no_money", lang, map[string]any{"fee": fee}), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.no_money", lang, map[string]any{"fee": fee}), components.ColorDanger)
 	}
 	if fee > 0 {
 		_, _ = c.svc.UpdateBalance(userID, -fee)
@@ -115,30 +115,30 @@ func (c *Cog) create(userID, serverID int64, feeStr, lang string) *discordgo.Mes
 	return components.Embed(
 		i18n.T("tournament.new_title", lang),
 		i18n.T("tournament.new_desc", lang, map[string]any{"user": MentionUser(userID), "fee": fee}),
-		0xf1c40f,
+		components.ColorReward,
 	)
 }
 
 func (c *Cog) join(userID, serverID int64, lang string) *discordgo.MessageEmbed {
 	t, ok := c.tournaments[serverID]
 	if !ok {
-		return components.Embed("❌", i18n.T("tournament.not_found", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.not_found", lang), components.ColorDanger)
 	}
 	if t.Started {
-		return components.Embed("❌", i18n.T("tournament.started_error", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.started_error", lang), components.ColorDanger)
 	}
 	for _, p := range t.Players {
 		if p.UserID == userID {
-			return components.Embed("❌", i18n.T("tournament.already_joined", lang), 0xe74c3c)
+			return components.Embed("❌", i18n.T("tournament.already_joined", lang), components.ColorDanger)
 		}
 	}
 	bal, err := c.svc.GetBalance(userID)
 	if err != nil || bal < t.Fee {
-		return components.Embed("❌", i18n.T("tournament.join_no_money", lang, map[string]any{"fee": t.Fee}), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.join_no_money", lang, map[string]any{"fee": t.Fee}), components.ColorDanger)
 	}
 	pet, err := c.svc.GetActivePet(userID)
 	if err != nil || pet == nil {
-		return components.Embed("❌", i18n.T("tournament.join_no_pet", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.join_no_pet", lang), components.ColorDanger)
 	}
 	if t.Fee > 0 {
 		_, _ = c.svc.UpdateBalance(userID, -t.Fee)
@@ -148,20 +148,20 @@ func (c *Cog) join(userID, serverID int64, lang string) *discordgo.MessageEmbed 
 	return components.Embed(
 		"✅",
 		i18n.T("tournament.joined_msg", lang, map[string]any{"user": MentionUser(userID), "pet": pet.Nickname, "prize": cashPrize}),
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 }
 
 func (c *Cog) start(userID, serverID int64, lang string) *discordgo.MessageEmbed {
 	t, ok := c.tournaments[serverID]
 	if !ok {
-		return components.Embed("❌", i18n.T("tournament.no_tournament", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.no_tournament", lang), components.ColorDanger)
 	}
 	if userID != t.CreatorID {
-		return components.Embed("❌", i18n.T("tournament.only_creator_start", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.only_creator_start", lang), components.ColorDanger)
 	}
 	if len(t.Players) < 2 {
-		return components.Embed("❌", i18n.T("tournament.min_players", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.min_players", lang), components.ColorDanger)
 	}
 	t.Started = true
 	tournamentsvc.ShufflePlayers(t.Players)
@@ -170,7 +170,7 @@ func (c *Cog) start(userID, serverID int64, lang string) *discordgo.MessageEmbed
 	embed := components.Embed(
 		i18n.T("tournament.started_title", lang),
 		i18n.T("tournament.started_desc", lang, map[string]any{"count": len(t.Players), "prize": cashPrize}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	delete(c.tournaments, serverID)
 	return embed
@@ -179,13 +179,13 @@ func (c *Cog) start(userID, serverID int64, lang string) *discordgo.MessageEmbed
 func (c *Cog) cancel(userID, serverID int64, lang string) *discordgo.MessageEmbed {
 	t, ok := c.tournaments[serverID]
 	if !ok {
-		return components.Embed("❌", i18n.T("tournament.no_tournament", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.no_tournament", lang), components.ColorDanger)
 	}
 	if userID != t.CreatorID {
-		return components.Embed("❌", i18n.T("tournament.cancel_error", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.cancel_error", lang), components.ColorDanger)
 	}
 	if t.Started {
-		return components.Embed("❌", i18n.T("tournament.cancel_too_late", lang), 0xe74c3c)
+		return components.Embed("❌", i18n.T("tournament.cancel_too_late", lang), components.ColorDanger)
 	}
 	if t.Fee > 0 {
 		for _, p := range t.Players {
@@ -193,7 +193,7 @@ func (c *Cog) cancel(userID, serverID int64, lang string) *discordgo.MessageEmbe
 		}
 	}
 	delete(c.tournaments, serverID)
-	return components.Embed("🛑", i18n.T("tournament.cancelled_msg", lang), 0xf39c12)
+	return components.Embed("🛑", i18n.T("tournament.cancelled_msg", lang), components.ColorWarning)
 }
 
 func MentionUser(id int64) string {

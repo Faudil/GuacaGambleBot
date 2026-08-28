@@ -31,7 +31,7 @@ type Cog struct {
 // being added to a guild.
 func Register(r *interaction.Router, st *store.Store, cfg *config.Config) {
 	c := &Cog{store: st, cfg: cfg}
-	r.Slash("setup", "Configure the bot for this server.", c.onSetupSlash)
+	r.Slash("setup", "cmd.setup.desc", c.onSetupSlash)
 	r.Prefix("setup", c.onSetupPrefix)
 	r.Component("onboarding", "channel", c.onChannelSelect)
 	r.Component("onboarding", "language", c.onLanguageSelect)
@@ -313,7 +313,7 @@ func (c *Cog) onFinish(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("onboarding.configured_title", lang),
 		i18n.T("onboarding.configured_desc", lang, map[string]any{"channel": "<#" + strconv.FormatInt(ss.ChannelID, 10) + ">"}),
-		0x57f287,
+		components.ColorSuccess,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -344,7 +344,7 @@ func (c *Cog) menu(lang string, ss *model.ServerSetting) (*discordgo.MessageEmbe
 	embed := components.Embed(
 		i18n.T("onboarding.menu_title", lang),
 		i18n.T("onboarding.menu_desc", lang),
-		0x5865f2,
+		components.ColorBrand,
 	)
 	uniName := c.universeLabel(ss)
 	embed.Fields = []*discordgo.MessageEmbedField{

@@ -1,0 +1,217 @@
+{
+  "cmd": {
+    "achievements": {
+      "desc": "View your achievements and rewards."
+    },
+    "admin": {
+      "desc": "Administration panel."
+    },
+    "artifact": {
+      "desc": "Manage your pet artifact"
+    },
+    "balance": {
+      "desc": "Check your balance."
+    },
+    "bank": {
+      "desc": "Bank: deposit, withdraw, balance."
+    },
+    "bankbal": {
+      "desc": "Check your bank balance."
+    },
+    "betting": {
+      "desc": "Custom bets: create, bet, close."
+    },
+    "blackjack": {
+      "desc": "Blackjack PvP: challenge a player."
+    },
+    "boss": {
+      "desc": "Boss League — fight bosses"
+    },
+    "bounty": {
+      "desc": "Place a bounty on a criminal"
+    },
+    "burgle": {
+      "desc": "Burgle an item from a player"
+    },
+    "casino": {
+      "desc": "Casino: slot machines and coin flip."
+    },
+    "character": {
+      "desc": "View your RPG player profile, stats, and equipment."
+    },
+    "community": {
+      "desc": "Manage the server's community projects."
+    },
+    "craft": {
+      "desc": "Craft an item from a recipe."
+    },
+    "crimhunt": {
+      "desc": "Hunt a wanted criminal"
+    },
+    "daily": {
+      "desc": "Claim your daily reward."
+    },
+    "delve": {
+      "desc": "Enter The Undercroft dungeon"
+    },
+    "deposit": {
+      "desc": "Deposit money into your bank."
+    },
+    "dig": {
+      "desc": "Archaeology fossil excavation"
+    },
+    "duel": {
+      "desc": "Challenge someone to a duel (50/50)."
+    },
+    "economy": {
+      "desc": "Economy: balance, daily, giving."
+    },
+    "expedition": {
+      "desc": "Send your pet exploring"
+    },
+    "farm": {
+      "desc": "Farming minigame"
+    },
+    "fish": {
+      "desc": "Fishing minigame"
+    },
+    "forge": {
+      "desc": "Fuse 5 pieces of equipment into a higher rarity, or scrap them for resources."
+    },
+    "forgive": {
+      "desc": "Forgive a thief who stole from you"
+    },
+    "give": {
+      "desc": "Give money to another user."
+    },
+    "hatch": {
+      "desc": "Hatch a pet egg"
+    },
+    "heal": {
+      "desc": "Heal your active pet"
+    },
+    "help": {
+      "desc": "Show a list of all available commands."
+    },
+    "house": {
+      "desc": "Manage your house: buy, upgrade and collect."
+    },
+    "hunt": {
+      "desc": "Pet hunting expedition"
+    },
+    "inventory": {
+      "desc": "View your inventory or another player's."
+    },
+    "jobs": {
+      "desc": "Show your jobs and levels."
+    },
+    "journal": {
+      "desc": "Your personal journal: goals, paths and ranks."
+    },
+    "leaderboard": {
+      "desc": "Ranking of the richest players and the biggest wins."
+    },
+    "loan": {
+      "desc": "Borrow, repay and check your debts."
+    },
+    "lore": {
+      "desc": "Browse discovered lore fragments"
+    },
+    "lotto": {
+      "desc": "Server lottery: buy a ticket."
+    },
+    "market": {
+      "desc": "Market: check prices and trade items."
+    },
+    "mine": {
+      "desc": "Mining expedition"
+    },
+    "myjourney": {
+      "desc": "View your personal chronicle"
+    },
+    "notoriety": {
+      "desc": "Check your criminal notoriety"
+    },
+    "npc": {
+      "desc": "Interact with the village characters."
+    },
+    "pet-recall": {
+      "desc": "Recall a pet from your sanctuary"
+    },
+    "pet-retire": {
+      "desc": "Send a pet to your sanctuary"
+    },
+    "pets": {
+      "desc": "Manage your pets"
+    },
+    "play": {
+      "desc": "Play with your active pet"
+    },
+    "quest": {
+      "desc": "View your active quests and progress."
+    },
+    "raid": {
+      "desc": "Veil Rift raid commands"
+    },
+    "reanimate": {
+      "desc": "Reanimate 5 fossils into a pet (needs Genetics Lab + research)"
+    },
+    "reanimatelist": {
+      "desc": "Show reanimation lab progress"
+    },
+    "recipes": {
+      "desc": "View the available crafting recipes."
+    },
+    "report": {
+      "desc": "Report a thief to increase their notoriety"
+    },
+    "roulette": {
+      "desc": "Russian roulette: join or create a game."
+    },
+    "sanctuary": {
+      "desc": "Manage or visit your pet sanctuary"
+    },
+    "sell": {
+      "desc": "Sell an item to another player."
+    },
+    "setup": {
+      "desc": "Configure the bot for this server."
+    },
+    "sheriff": {
+      "desc": "Speak to Sheriff Aldric Vance"
+    },
+    "shop": {
+      "desc": "Daily shop: buy items before today's offers refresh."
+    },
+    "skills": {
+      "desc": "View and activate your RPG skills."
+    },
+    "start": {
+      "desc": "Begin your journey!"
+    },
+    "steal": {
+      "desc": "Pickpocket a player"
+    },
+    "tournament": {
+      "desc": "Pet tournaments"
+    },
+    "track": {
+      "desc": "Track clues for a hunt"
+    },
+    "trade": {
+      "desc": "Trade items with another player."
+    },
+    "use": {
+      "desc": "Use a consumable item from your inventory."
+    },
+    "weekly": {
+      "desc": "Weekly pet leaderboard"
+    },
+    "whisper": {
+      "desc": "Speak to The Whisper"
+    },
+    "withdraw": {
+      "desc": "Withdraw money from your bank."
+    }
+  }
+}

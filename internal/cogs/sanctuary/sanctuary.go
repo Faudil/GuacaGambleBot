@@ -30,7 +30,7 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	psvc := ps.New(s, cfg)
 	c := &Cog{store: s, cfg: cfg, svc: sansvc.New(s, cfg, psvc), psvc: psvc}
-	r.SlashWithOptions("sanctuary", "Manage or visit your pet sanctuary", []*discordgo.ApplicationCommandOption{
+	r.SlashWithOptions("sanctuary", "cmd.sanctuary.desc", []*discordgo.ApplicationCommandOption{
 		{
 			Type:        discordgo.ApplicationCommandOptionUser,
 			Name:        "user",
@@ -147,7 +147,7 @@ func (c *Cog) buildSanctuaryEmbed(userID int64, lang string) (*discordgo.Message
 	embed := components.Embed(
 		"🏡 **Pet Sanctuary**",
 		desc+nextTier,
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	return embed, c.buildButtons(san, tier, used, max, lang, userID)
 }
@@ -356,7 +356,7 @@ func (c *Cog) onFusionMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		desc += fmt.Sprintf("\n**%s → %s** : %d pets + $%d + %s", rarity, target, req, cost.Money, mats)
 	}
-	embed := components.Embed("⚗️ Fusion Lab", desc, 0x9b59b6)
+	embed := components.Embed("⚗️ Fusion Lab", desc, components.ColorArcane)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button("Common→Rare (5)", components.EncodeOwner(userID, "sanctuary", "fusion_rarity", ps.RarityCommon), discordgo.PrimaryButton),
@@ -422,7 +422,7 @@ func (c *Cog) onFusionRarity(b *interaction.Bot, i *discordgo.InteractionCreate)
 		})
 		return
 	}
-	embed := components.Embed("⚗️ Select pets", fmt.Sprintf("Select exactly **%d %s** pets to fuse.", req, rarity), 0x9b59b6)
+	embed := components.Embed("⚗️ Select pets", fmt.Sprintf("Select exactly **%d %s** pets to fuse.", req, rarity), components.ColorArcane)
 	sel := discordgo.SelectMenu{
 		CustomID:    components.EncodeOwner(userID, "sanctuary", "fusion_pick", rarity),
 		Placeholder: fmt.Sprintf("Pick %d pets", req),
@@ -459,7 +459,7 @@ func (c *Cog) onFusionPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		mats += fmt.Sprintf("%dx %s", v, k)
 	}
-	embed := components.Embed("⚗️ Confirm Fusion", fmt.Sprintf("%d %s → 1 %s\nCost: $%d + %s\nRandom species of %s", req, rarity, target, cost.Money, mats, target), 0xf1c40f)
+	embed := components.Embed("⚗️ Confirm Fusion", fmt.Sprintf("%d %s → 1 %s\nCost: $%d + %s\nRandom species of %s", req, rarity, target, cost.Money, mats, target), components.ColorReward)
 	joined := ""
 	for idx, id := range ids {
 		if idx > 0 {
@@ -534,7 +534,7 @@ func (c *Cog) onFusionConfirm(b *interaction.Bot, i *discordgo.InteractionCreate
 	if pt != nil {
 		emoji = pt.Emoji
 	}
-	embed := components.Embed("✨ Fusion Success!", fmt.Sprintf("%s **%s** (%s) created!", emoji, newPet.Nickname, newPet.PetType), 0x2ecc71)
+	embed := components.Embed("✨ Fusion Success!", fmt.Sprintf("%s **%s** (%s) created!", emoji, newPet.Nickname, newPet.PetType), components.ColorSuccess)
 	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
 		interaction.SendAchievements(b, i, lang, unlocks)
@@ -620,7 +620,7 @@ func (c *Cog) onAscendMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	embed := components.Embed("👑 Ascend — Transcend", fmt.Sprintf("Active: **%s** (%s) Lvl %d TRS %d\nSacrifice same species to gain +1 TRS and lock 24h.", active.Nickname, active.PetType, active.Level, active.TrsLvl), 0x9b59b6)
+	embed := components.Embed("👑 Ascend — Transcend", fmt.Sprintf("Active: **%s** (%s) Lvl %d TRS %d\nSacrifice same species to gain +1 TRS and lock 24h.", active.Nickname, active.PetType, active.Level, active.TrsLvl), components.ColorArcane)
 	sel := discordgo.SelectMenu{
 		CustomID:    components.EncodeOwner(userID, "sanctuary", "ascend_pick"),
 		Placeholder: "Choose sacrifice",
@@ -645,7 +645,7 @@ func (c *Cog) onAscendPick(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	embed := components.Embed("✨ Transcendence!", i18n.T("pets.transcend.success", lang, map[string]any{"name": active.Nickname, "level": active.TrsLvl}), 0x9b59b6)
+	embed := components.Embed("✨ Transcendence!", i18n.T("pets.transcend.success", lang, map[string]any{"name": active.Nickname, "level": active.TrsLvl}), components.ColorArcane)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: "Locked for 24h"}
 	_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 	if unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID); uerr == nil && len(unlocks) > 0 {
@@ -695,21 +695,21 @@ func petLabel(p model.UserPet) (string, string) {
 
 var petPickers = map[petPickerKind]petPickerSpec{
 	pickerRetire: {
-		title: "🏞️ Retire a Pet", color: 0x2ecc71,
+		title: "🏞️ Retire a Pet", color: components.ColorSuccess,
 		promptKey: "sanctuary.retire_prompt", placeholderKey: "sanctuary.retire_placeholder",
 		noneKey: "sanctuary.no_active_pets", pickAction: "retire_pick",
 		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetActiveRosterPets(userID) },
 		label: petLabel,
 	},
 	pickerRecall: {
-		title: "🔙 Recall a Pet", color: 0x3498db,
+		title: "🔙 Recall a Pet", color: components.ColorInfo,
 		promptKey: "sanctuary.recall_prompt", placeholderKey: "sanctuary.recall_placeholder",
 		noneKey: "sanctuary.no_sanctuary_pets", pickAction: "recall_pick",
 		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetSanctuaryPets(userID) },
 		label: petLabel,
 	},
 	pickerShowcase: {
-		title: "⭐ Showcase Pets", color: 0xf1c40f,
+		title: "⭐ Showcase Pets", color: components.ColorReward,
 		promptKey: "sanctuary.showcase_prompt", placeholderKey: "sanctuary.showcase_placeholder",
 		noneKey: "sanctuary.no_sanctuary_pets", pickAction: "showcase_select",
 		fetch: func(c *Cog, userID int64) ([]model.UserPet, error) { return c.psvc.GetSanctuaryPets(userID) },
@@ -948,7 +948,7 @@ func (c *Cog) onShowcaseSet(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("⭐ Choose Showcase Slot", i18n.T("sanctuary.showcase_slot_prompt", lang), 0xf1c40f),
+			components.Embed("⭐ Choose Showcase Slot", i18n.T("sanctuary.showcase_slot_prompt", lang), components.ColorReward),
 			[]discordgo.MessageComponent{
 				components.ActionRow(
 					discordgo.SelectMenu{
@@ -1043,7 +1043,7 @@ func (c *Cog) buildVisitEmbed(targetID int64, lang string) *discordgo.MessageEmb
 	embed := components.Embed(
 		i18n.T("sanctuary.visit_title", lang, map[string]any{"user": "<@" + strconv.FormatInt(targetID, 10) + ">"}),
 		desc,
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	return embed
 }

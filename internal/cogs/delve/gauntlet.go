@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
@@ -29,7 +30,7 @@ func (c *Cog) gauntletLeaderboard(guildID int64, lang string) *discordgo.Message
 		return &discordgo.MessageEmbed{
 			Title:       i18n.T("delve.gauntlet.title", lang),
 			Description: i18n.T("delve.gauntlet.empty", lang),
-			Color:       0xf1c40f,
+			Color:       components.ColorReward,
 		}
 	}
 
@@ -55,7 +56,7 @@ func (c *Cog) gauntletLeaderboard(guildID int64, lang string) *discordgo.Message
 	return &discordgo.MessageEmbed{
 		Title:       i18n.T("delve.gauntlet.title_date", lang, map[string]any{"date": weekStart}),
 		Description: desc,
-		Color:       0xf1c40f,
+		Color:       components.ColorReward,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.gauntlet.footer", lang)},
 	}
 }

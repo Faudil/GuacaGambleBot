@@ -1,0 +1,217 @@
+{
+  "cmd": {
+    "achievements": {
+      "desc": "Voir vos succès et récompenses."
+    },
+    "admin": {
+      "desc": "Panneau d'administration."
+    },
+    "artifact": {
+      "desc": "Gérer votre artefact de familier"
+    },
+    "balance": {
+      "desc": "Voir ton solde économique."
+    },
+    "bank": {
+      "desc": "Banque : dépôt, retrait, solde."
+    },
+    "bankbal": {
+      "desc": "Voir ton solde bancaire."
+    },
+    "betting": {
+      "desc": "Paris personnalisés : créer, parier, clôturer."
+    },
+    "blackjack": {
+      "desc": "Blackjack PvP : défie un joueur."
+    },
+    "boss": {
+      "desc": "Boss League — combattez des boss"
+    },
+    "bounty": {
+      "desc": "Mets une prime sur un criminel"
+    },
+    "burgle": {
+      "desc": "Cambriole un objet chez un joueur"
+    },
+    "casino": {
+      "desc": "Casino : machines à sous et pile ou face."
+    },
+    "character": {
+      "desc": "Voir ton profil RPG, tes stats et ton équipement."
+    },
+    "community": {
+      "desc": "Gère les projets communautaires du serveur."
+    },
+    "craft": {
+      "desc": "Fabriquer un objet à partir de recettes."
+    },
+    "crimhunt": {
+      "desc": "Traque un criminel recherché"
+    },
+    "daily": {
+      "desc": "Réclamer ta récompense quotidienne."
+    },
+    "delve": {
+      "desc": "Entre dans le donjon de la Crypte"
+    },
+    "deposit": {
+      "desc": "Déposer de l'argent dans ta banque."
+    },
+    "dig": {
+      "desc": "Fouille archéologique de fossiles"
+    },
+    "duel": {
+      "desc": "Provoque quelqu'un en duel (50/50)."
+    },
+    "economy": {
+      "desc": "Économie : solde, daily, don."
+    },
+    "expedition": {
+      "desc": "Envoie ton familier explorer"
+    },
+    "farm": {
+      "desc": "Mini-jeu de ferme"
+    },
+    "fish": {
+      "desc": "Mini-jeu de pêche"
+    },
+    "forge": {
+      "desc": "Fusionne 5 équipements en une rareté supérieure, ou démonte-les pour des ressources."
+    },
+    "forgive": {
+      "desc": "Pardonne à un voleur qui t'a volé"
+    },
+    "give": {
+      "desc": "Donner de l'argent à un autre utilisateur."
+    },
+    "hatch": {
+      "desc": "Éclore un œuf de familier"
+    },
+    "heal": {
+      "desc": "Soigner ton familier actif"
+    },
+    "help": {
+      "desc": "Affiche la liste de toutes les commandes."
+    },
+    "house": {
+      "desc": "Gère ta maison (acheter, améliorer, collecter)."
+    },
+    "hunt": {
+      "desc": "Expédition de chasse avec ton familier"
+    },
+    "inventory": {
+      "desc": "Voir ton inventaire ou celui d'un autre joueur."
+    },
+    "jobs": {
+      "desc": "Affiche tes métiers et niveaux."
+    },
+    "journal": {
+      "desc": "Ton journal personnel : objectifs, voies et rangs."
+    },
+    "leaderboard": {
+      "desc": "Classement des plus riches joueurs et des plus gros gains."
+    },
+    "loan": {
+      "desc": "Emprunter, rembourser et consulter ses dettes."
+    },
+    "lore": {
+      "desc": "Parcours les fragments de lore découverts"
+    },
+    "lotto": {
+      "desc": "Loterie du serveur : acheter un ticket."
+    },
+    "market": {
+      "desc": "Marché : voir les prix et échanger des objets."
+    },
+    "mine": {
+      "desc": "Expédition minière"
+    },
+    "myjourney": {
+      "desc": "Consulte ta chronique personnelle"
+    },
+    "notoriety": {
+      "desc": "Consulte ta notoriété criminelle"
+    },
+    "npc": {
+      "desc": "Interagis avec les personnages du village."
+    },
+    "pet-recall": {
+      "desc": "Rappelle un familier de ton sanctuaire"
+    },
+    "pet-retire": {
+      "desc": "Envoie un familier dans ton sanctuaire"
+    },
+    "pets": {
+      "desc": "Gérer vos familiers"
+    },
+    "play": {
+      "desc": "Jouer avec ton familier actif"
+    },
+    "quest": {
+      "desc": "Voir tes quêtes actives et ta progression."
+    },
+    "raid": {
+      "desc": "Commandes de raid de la Faille du Voile"
+    },
+    "reanimate": {
+      "desc": "Réanime 5 fossiles en familier (nécessite le labo génétique + recherche)"
+    },
+    "reanimatelist": {
+      "desc": "Affiche la progression du labo de réanimation"
+    },
+    "recipes": {
+      "desc": "Voir les recettes de craft disponibles."
+    },
+    "report": {
+      "desc": "Dénonce un voleur pour augmenter sa notoriété"
+    },
+    "roulette": {
+      "desc": "Roulette russe : rejoignez ou créez une partie."
+    },
+    "sanctuary": {
+      "desc": "Gère ou visite ton sanctuaire de familiers"
+    },
+    "sell": {
+      "desc": "Vendre un objet à un autre joueur."
+    },
+    "setup": {
+      "desc": "Configure le bot pour ce serveur."
+    },
+    "sheriff": {
+      "desc": "Parle au shérif Aldric Vance"
+    },
+    "shop": {
+      "desc": "Boutique du jour : achète avant que les offres changent."
+    },
+    "skills": {
+      "desc": "Voir et activer tes compétences RPG."
+    },
+    "start": {
+      "desc": "Commence ton aventure !"
+    },
+    "steal": {
+      "desc": "Fais les poches d'un joueur"
+    },
+    "tournament": {
+      "desc": "Tournois de familiers"
+    },
+    "track": {
+      "desc": "Suis les indices d'une traque"
+    },
+    "trade": {
+      "desc": "Échanger des objets avec un autre joueur."
+    },
+    "use": {
+      "desc": "Utilise un consommable de ton inventaire."
+    },
+    "weekly": {
+      "desc": "Classement hebdomadaire des familiers"
+    },
+    "whisper": {
+      "desc": "Parle au Murmure"
+    },
+    "withdraw": {
+      "desc": "Retirer de l'argent de ta banque."
+    }
+  }
+}

@@ -32,7 +32,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: forgesvc.New(s, cfg)}
-	r.Slash("forge", "Fuse 5 pieces of equipment into a higher rarity, or scrap them for resources.", c.onSlashMenu)
+	r.Slash("forge", "cmd.forge.desc", c.onSlashMenu)
 	r.Prefix("forge", c.onPrefixMenu)
 	r.Component("forge", "menu", c.onMenu)
 	r.Component("forge", "back", c.onBack)
@@ -91,7 +91,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 		desc += fmt.Sprintf("%s %s — %s\n", marker, label, i18n.T("forge.research_"+string(from), lang))
 	}
 
-	embed := components.Embed(i18n.T("forge.menu_title", lang), desc, 0x8e6b23)
+	embed := components.Embed(i18n.T("forge.menu_title", lang), desc, components.ColorForge)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("forge.fuse_btn", lang), components.EncodeOwner(userID, "forge", "fuse"), discordgo.PrimaryButton),
@@ -264,7 +264,7 @@ func (c *Cog) onFuseConfirm(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		"from": rarityName(rarity, lang),
 		"item": c.pieceSummary(eq, lang),
 	})
-	embed := components.Embed(i18n.T("forge.fuse_result_title", lang), desc, 0x8e6b23)
+	embed := components.Embed(i18n.T("forge.fuse_result_title", lang), desc, components.ColorForge)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("forge.back_btn", lang), components.EncodeOwner(userID, "forge", "back"), discordgo.SecondaryButton),
@@ -398,7 +398,7 @@ func (c *Cog) onScrapConfirm(b *interaction.Bot, i *discordgo.InteractionCreate)
 	desc := i18n.T("forge.scrap_result_desc", lang, map[string]any{
 		"resources": "• " + strings.Join(parts, "\n• "),
 	})
-	embed := components.Embed(i18n.T("forge.scrap_result_title", lang), desc, 0x8e6b23)
+	embed := components.Embed(i18n.T("forge.scrap_result_title", lang), desc, components.ColorForge)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("forge.back_btn", lang), components.EncodeOwner(userID, "forge", "back"), discordgo.SecondaryButton),

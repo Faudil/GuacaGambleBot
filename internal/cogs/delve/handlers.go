@@ -213,7 +213,7 @@ func (c *Cog) onFloorLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "📜 " + i18n.T("delve.summary.title", lang),
 		Description: desc,
-		Color:       0x2ecc71,
+		Color:       components.ColorSuccess,
 	}
 	c.respond(b, i, embed, nil)
 
@@ -243,7 +243,7 @@ func (c *Cog) onKeyTake(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "🔑 " + i18n.T("delve.vault_key_title", lang),
 		Description: truncateEmbedDesc(i18n.T("delve.vault_key_taken", lang) + "\n\n" + c.runSummaryText(s, lang)),
-		Color:       0x2ecc71,
+		Color:       components.ColorSuccess,
 	}
 	c.respond(b, i, embed, nil)
 
@@ -655,7 +655,7 @@ func (c *Cog) applyFallenPenalties(b *interaction.Bot, i *discordgo.InteractionC
 	embed := &discordgo.MessageEmbed{
 		Title:       "💀 " + i18n.T("delve.handler.death_fallen_title", lang),
 		Description: truncateEmbedDesc(i18n.T("delve.handler.death_fallen_desc", lang) + "\n" + lootDesc + rescueMsg + "\n\n" + i18n.T("delve.summary.title", lang) + "\n" + c.runSummaryText(s, lang)),
-		Color:       0xe74c3c,
+		Color:       components.ColorDanger,
 	}
 	c.respond(b, i, embed, nil)
 }
@@ -1210,7 +1210,7 @@ func (c *Cog) showMerchantShop(b *interaction.Bot, i *discordgo.InteractionCreat
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("delve.handler.merchant_title", lang),
 		Description: desc,
-		Color:       0xf1c40f,
+		Color:       components.ColorReward,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("delve.handler.merchant_gold", lang, map[string]any{"gold": fmt.Sprintf("%d", s.Gold)})},
 	}
 	c.respond(b, i, embed, comps)

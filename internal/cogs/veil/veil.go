@@ -40,7 +40,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		turnActions: make(map[int64]map[int64]string),
 	}
 
-	r.Slash("raid", "Veil Rift raid commands", c.onSlashRaid)
+	r.Slash("raid", "cmd.raid.desc", c.onSlashRaid)
 	r.Prefix("raid", c.onPrefixRaid)
 
 	actions := []string{
@@ -138,7 +138,7 @@ func (c *Cog) onSlashRaid(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.group.title", lang),
 		Description: i18n.T("veil.group.desc_created", lang, map[string]any{"leader": userID}),
-		Color:       0x9b59b6,
+		Color:       components.ColorArcane,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("veil.group.footer", lang, map[string]any{"id": raid.ID})},
 	}
 	comps := []discordgo.MessageComponent{
@@ -175,7 +175,7 @@ func (c *Cog) onPrefixRaid(b *interaction.Bot, s *discordgo.Session, m *discordg
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.group.title", lang),
 		Description: i18n.T("veil.group.desc_created", lang, map[string]any{"leader": userID}),
-		Color:       0x9b59b6,
+		Color:       components.ColorArcane,
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -208,7 +208,7 @@ func (c *Cog) handleJoin(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.group.title", lang),
 		Description: i18n.T("veil.group.desc_updated", lang, map[string]any{"leader": raid.LeaderID, "count": len(ids)}),
-		Color:       0x9b59b6,
+		Color:       components.ColorArcane,
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(

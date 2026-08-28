@@ -101,7 +101,7 @@ func (c *Cog) handleFlameAction(b *interaction.Bot, i *discordgo.InteractionCrea
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.flames_title", lang),
 			Description: desc,
-			Color:       0xe67e22,
+			Color:       components.ColorWarning,
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -137,7 +137,7 @@ func (c *Cog) handleGuardianAction(b *interaction.Bot, i *discordgo.InteractionC
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.guardian_title", lang),
 			Description: desc,
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 		}
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(

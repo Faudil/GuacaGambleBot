@@ -60,8 +60,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: miningsvc.New(s, cfg, npcSvc)}
-	r.Slash("mine", "Mining expedition", c.onSlashMenu)
-	r.Slash("m", "Mining expedition", c.onSlashMenu)
+	r.Slash("mine", "cmd.mine.desc", c.onSlashMenu)
+	r.Slash("m", "cmd.mine.desc", c.onSlashMenu)
 	r.Prefix("mine", c.onPrefixMenu)
 	r.Prefix("m", c.onPrefixMenu)
 	r.Component("mine", "tool_select", c.onToolSelect)
@@ -260,7 +260,7 @@ func (c *Cog) toolSelection(lang string, userID int64, remaining int) (*discordg
 		i18n.T("mining.tool_desc", lang)+
 			fmt.Sprintf("\n🧑‍🏭 **%s:** %d", i18n.T("mining.miner_level_label", lang), level)+
 			fmt.Sprintf("\n⛏️ %s", i18n.T("mining.entries_remaining", lang, map[string]any{"count": remaining})),
-		0x4A90D9,
+		components.ColorMining,
 	)
 	owned := c.svc.OwnedTools(userID, level)
 	locked := miningsvc.LockedTools(level)
@@ -328,7 +328,7 @@ func (c *Cog) charterEmbed(lang string, userID int64) (*discordgo.MessageEmbed, 
 	embed := components.Embed(
 		i18n.T("mining.charter_title", lang),
 		i18n.T("mining.charter_desc", lang),
-		0xF1C40F,
+		components.ColorReward,
 	)
 	for idx, ct := range contracts {
 		titleKey := fmt.Sprintf("mining.contract_%s_title", string(ct.Type))
@@ -412,7 +412,7 @@ func (c *Cog) mineEmbed(lang string, userID int64, eventMsg string, found *minin
 	sess, ok := sessions[userID]
 	if !ok {
 		sessionsMu.Unlock()
-		return components.Embed(i18n.T("mining.title", lang), i18n.T("mining.desc", lang), 0x4A90D9), nil
+		return components.Embed(i18n.T("mining.title", lang), i18n.T("mining.desc", lang), components.ColorMining), nil
 	}
 	sessCopy := *sess
 	sessionsMu.Unlock()
@@ -592,14 +592,14 @@ func (c *Cog) eventEmbed(lang string, userID int64, ev *miningsvc.NarrativeEvent
 	titleKey := "mining.ev_" + eventKeyID(ev.ID) + "_title"
 	descKey := "mining.ev_" + eventKeyID(ev.ID) + "_desc"
 
-	color := 0x9B59B6
+	color := components.ColorArcane
 	switch ev.Rarity {
 	case "common":
-		color = 0x4A90D9
+		color = components.ColorMining
 	case "rare":
-		color = 0x9B59B6
+		color = components.ColorArcane
 	case "legendary":
-		color = 0xF1C40F
+		color = components.ColorReward
 	}
 
 	embed := components.Embed(
@@ -706,7 +706,7 @@ func (c *Cog) performDig(b *interaction.Bot, i *discordgo.InteractionCreate, adv
 		if len(res.Bag) == 0 {
 			msg = i18n.T("mining.collapse_empty", lang)
 		}
-		c.respond(b, i, components.Embed(i18n.T("mining.collapse_title", lang), msg, 0xFF0000), nil)
+		c.respond(b, i, components.Embed(i18n.T("mining.collapse_title", lang), msg, components.ColorDanger), nil)
 		return
 	}
 
@@ -972,7 +972,7 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if msg != "" {
 		resultMsg = msg + "\n\n" + resultMsg
 	}
-	c.respond(b, i, components.Embed(i18n.T("mining.expedition_complete_title", lang), resultMsg, 0x00FF00), nil)
+	c.respond(b, i, components.Embed(i18n.T("mining.expedition_complete_title", lang), resultMsg, components.ColorSuccess), nil)
 	if n, ok := c.store.PopQuestNotification(userID); ok {
 		interaction.SendQuestNotification(b, i, n, lang)
 	}
@@ -991,7 +991,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	sess := c.loadSession(userID)
 	if sess == nil {
 		c.respond(b, i, components.Embed(
-			i18n.T("mining.title", lang), i18n.T("mining.no_session", lang), 0x4A90D9,
+			i18n.T("mining.title", lang), i18n.T("mining.no_session", lang), components.ColorMining,
 		), nil)
 		return
 	}
@@ -1007,7 +1007,7 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	} else {
 		sessionsMu.Unlock()
 		c.respond(b, i, components.Embed(
-			i18n.T("mining.title", lang), i18n.T("mining.no_session", lang), 0x4A90D9,
+			i18n.T("mining.title", lang), i18n.T("mining.no_session", lang), components.ColorMining,
 		), nil)
 		return
 	}
@@ -1068,12 +1068,12 @@ func (c *Cog) onLeave(b *interaction.Bot, i *discordgo.InteractionCreate) {
 // result. The empty case must still pass {xp} so the placeholder never leaks.
 func (c *Cog) leaveResultDisplay(res *miningsvc.LeaveResult, lang string) (string, int) {
 	title := i18n.T("mining.empty_msg", lang, map[string]any{"xp": res.XP})
-	color := 0xC0C0C0
+	color := components.ColorMuted
 	if len(res.Bag) > 0 {
 		title = i18n.T("mining.success_msg", lang, map[string]any{
 			"bag": c.bagString(res.Bag, lang), "xp": res.XP,
 		})
-		color = 0x00FF00
+		color = components.ColorSuccess
 	}
 	if res.LeveledUp {
 		title += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})

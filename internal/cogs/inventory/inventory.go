@@ -29,7 +29,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: invsvc.New(s, cfg), mkt: mktsvc.New(s, cfg)}
-	r.SlashWithOptions("inventory", "Voir ton inventaire ou celui d'un autre joueur.",
+	r.SlashWithOptions("inventory", "cmd.inventory.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
@@ -132,7 +132,7 @@ func (c *Cog) onSlashMenu(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if len(result.Entries) == 0 {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("", i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(targetID)}), 0xe74c3c), nil))
+				components.Embed("", i18n.T("inventory.empty", lang, map[string]any{"user": interaction.Mention(targetID)}), components.ColorDanger), nil))
 		return
 	}
 
@@ -192,7 +192,7 @@ func contains(list []string, s string) bool {
 }
 
 func (c *Cog) buildEmbed(lang string, result *invsvc.InvResult, title, cat string, showSell bool) *discordgo.MessageEmbed {
-	embed := components.Embed(title, "", 0x3498db)
+	embed := components.Embed(title, "", components.ColorInfo)
 	embed.Fields = buildCategoryFields(result, cat, lang)
 	footer := fmt.Sprintf(" — %d/%d", result.Current, result.Limit)
 	if showSell {
@@ -409,7 +409,7 @@ func (c *Cog) onSellButton(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-			components.Embed("", i18n.T("inventory.sell_choose", lang), 0x3498db),
+			components.Embed("", i18n.T("inventory.sell_choose", lang), components.ColorInfo),
 			[]discordgo.MessageComponent{components.ActionRow(selectMenu)}))
 }
 

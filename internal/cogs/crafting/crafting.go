@@ -52,11 +52,11 @@ const maxCraftAmount = 10
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: crtsvc.New(s, cfg)}
-	r.SlashWithOptions("craft", "Fabriquer un objet à partir de recettes.", []*discordgo.ApplicationCommandOption{
+	r.SlashWithOptions("craft", "cmd.craft.desc", []*discordgo.ApplicationCommandOption{
 		{Type: discordgo.ApplicationCommandOptionString, Name: "item", Description: "Recipe to craft", Required: false, Autocomplete: true},
 		{Type: discordgo.ApplicationCommandOptionInteger, Name: "quantity", Description: "How many (1-10)", Required: false, MinValue: float64Ptr(1), MaxValue: 10},
 	}, c.onSlashCraft)
-	r.Slash("recipes", "Voir les recettes de craft disponibles.", c.onSlashRecipes)
+	r.Slash("recipes", "cmd.recipes.desc", c.onSlashRecipes)
 	r.Prefix("craft", c.onCraftPrefix)
 	r.Prefix("fabriquer", c.onCraftPrefix)
 	r.Prefix("recipes", c.onRecipesPrefix)
@@ -106,7 +106,7 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if amount < 1 || amount > maxCraftAmount {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-					components.Embed("❌", i18n.T("crafting.invalid_qty_range", lang), 0xe74c3c), nil))
+					components.Embed("❌", i18n.T("crafting.invalid_qty_range", lang), components.ColorDanger), nil))
 			return
 		}
 		query := strings.ToLower(strings.TrimSpace(*itemOpt))
@@ -115,14 +115,14 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		if !ok {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-					components.Embed("❌", i18n.T("crafting.no_recipe", lang, map[string]any{"item": query}), 0xe74c3c), nil))
+					components.Embed("❌", i18n.T("crafting.no_recipe", lang, map[string]any{"item": query}), components.ColorDanger), nil))
 			return
 		}
 		// Enforce max craftable hint if requested exceeds possible
 		if max := c.maxCraftable(userID, recipe); amount > max {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-					components.Embed("❌", i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})+i18n.T("crafting.max_hint", lang, map[string]any{"max": max}), 0xe74c3c), nil))
+					components.Embed("❌", i18n.T("crafting.no_ingredients", lang, map[string]any{"missing": "..."})+i18n.T("crafting.max_hint", lang, map[string]any{"max": max}), components.ColorDanger), nil))
 			return
 		}
 		charLeveled, charNewLevel, err := c.svc.Craft(userID, recipeKey, amount)
@@ -151,7 +151,7 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-					components.Embed("❌", msg, 0xe74c3c), nil))
+					components.Embed("❌", msg, components.ColorDanger), nil))
 			return
 		}
 		resDisplay := items.LocalizedName(recipe.Result, lang)
@@ -164,7 +164,7 @@ func (c *Cog) onSlashCraft(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("✅", msg, 0x2ecc71), nil))
+				components.Embed("✅", msg, components.ColorSuccess), nil))
 		return
 	}
 
@@ -447,7 +447,7 @@ func (c *Cog) buildRecipesView(userID int64, level int, lang string, page int) (
 
 	embed := components.Embed(
 		i18n.T("crafting.title", lang, map[string]any{"level": level}),
-		desc, 0xe67e22,
+		desc, components.ColorWarning,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("crafting.nav_page", lang, map[string]any{"page": page, "total": totalPages}),
@@ -555,7 +555,7 @@ func (c *Cog) buildCraftMenu(userID int64, lang, category string, page int) (*di
 	}
 
 	desc := i18n.T("crafting.menu_desc", lang, map[string]any{"filter": catLabel})
-	embed := components.Embed(i18n.T("crafting.menu_title", lang, map[string]any{"level": level}), desc, 0xe67e22)
+	embed := components.Embed(i18n.T("crafting.menu_title", lang, map[string]any{"level": level}), desc, components.ColorWarning)
 
 	start := (page - 1) * maxMenuOptions
 	end := min(start+maxMenuOptions, len(recipes))
@@ -816,7 +816,7 @@ func (c *Cog) onCraftConfirm(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("❌", msg, 0xe74c3c), nil))
+				components.Embed("❌", msg, components.ColorDanger), nil))
 		return
 	}
 	resDisplay := items.LocalizedName(recipe.Result, lang)
@@ -835,7 +835,7 @@ func (c *Cog) onCraftConfirm(b *interaction.Bot, i *discordgo.InteractionCreate)
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("✅", msg, 0x2ecc71), comps))
+			components.Embed("✅", msg, components.ColorSuccess), comps))
 }
 
 // onCraftBack reopens the craft menu so the user can craft another item.
@@ -982,7 +982,7 @@ func (c *Cog) buildCraftQuantityView(userID int64, recipeKey, lang string, qty i
 	})
 	embed := components.Embed(
 		i18n.T("crafting.qty_title", lang, map[string]any{"item": itemName}),
-		desc, 0xe67e22,
+		desc, components.ColorWarning,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("crafting.craft_qty_label", lang, map[string]any{"qty": qty})}
 

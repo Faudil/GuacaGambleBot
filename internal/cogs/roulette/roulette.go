@@ -25,7 +25,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, games: map[int64]*rlt.Game{}}
-	r.Slash("roulette", "Roulette russe : rejoignez ou créez une partie.", c.onSlashMenu)
+	r.Slash("roulette", "cmd.roulette.desc", c.onSlashMenu)
 	r.Prefix("roulette", c.onPrefixMenu)
 	r.Prefix("rt", c.onPrefixMenu)
 	r.Component("roulette", "new", c.onNewOpen)
@@ -71,7 +71,7 @@ func (c *Cog) menu(lang string, serverID int64) (*discordgo.MessageEmbed, []disc
 	embed := components.Embed(
 		i18n.T("roulette.finish_title", lang),
 		desc,
-		0xe74c3c,
+		components.ColorDanger,
 	)
 
 	comps := []discordgo.MessageComponent{
@@ -138,7 +138,7 @@ func (c *Cog) onNewSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"amount": entryFee,
 			"user":   interaction.Mention(leaderID),
 		})+"\n\n👤 "+interaction.Mention(leaderID),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -186,7 +186,7 @@ func (c *Cog) onJoin(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.Embed(
 				"",
 				i18n.T("roulette.joined_msg", lang, map[string]any{"user": interaction.Mention(userID)}),
-				0x2ecc71,
+				components.ColorSuccess,
 			),
 			nil,
 		))
@@ -219,7 +219,7 @@ func (c *Cog) onStart(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("roulette.finish_title", lang),
 		i18n.T("roulette.start_announcement", lang, map[string]any{"user": interaction.Mention(cp.UserID)}),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -294,7 +294,7 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 		}
 
-		embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, 0xe74c3c)
+		embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 
@@ -320,7 +320,7 @@ func (c *Cog) onTrigger(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	desc += "\n" + i18n.T("roulette.next_turn", lang, map[string]any{"user": interaction.Mention(cp.UserID)})
 
-	embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, 0x95a5a6)
+	embed := components.Embed(i18n.T("roulette.finish_title", lang), desc, components.ColorMuted)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("roulette.trigger_label", lang), components.Encode("roulette", "trigger"), discordgo.DangerButton),

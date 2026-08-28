@@ -23,8 +23,8 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: bettingsvc.New(s, cfg)}
-	r.Slash("betting", "Paris personnalisés : créer, parier, clôturer.", c.onSlashMenu)
-	r.Slash("bet", "Paris personnalisés : créer, parier, clôturer.", c.onSlashMenu)
+	r.Slash("betting", "cmd.betting.desc", c.onSlashMenu)
+	r.Slash("bet", "cmd.betting.desc", c.onSlashMenu)
 	r.Prefix("betting", c.onPrefixMenu)
 	r.Prefix("bet", c.onPrefixMenu)
 	r.Component("betting", "create", c.onCreateOpen)
@@ -59,7 +59,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	embed := components.Embed(
 		i18n.T("betting.status_title", lang, map[string]any{"id": "?"}),
 		i18n.T("betting.odds_footer_open", lang),
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -167,7 +167,7 @@ func (c *Cog) onCreateSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 	embed := components.Embed(
 		i18n.T("betting.created", lang, map[string]any{"id": betID, "desc": desc}),
 		"",
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -212,7 +212,7 @@ func (c *Cog) onPlaceSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(
 		i18n.T("betting.placed", lang, map[string]any{"choice": choice}),
 		"",
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -265,7 +265,7 @@ func (c *Cog) onCloseSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	embed := components.Embed(
 		i18n.T("betting.result_title", lang, map[string]any{"id": betID}),
 		desc,
-		0x9b59b6,
+		components.ColorArcane,
 	)
 
 	if len(res.WagerResults) > 0 {
@@ -321,7 +321,7 @@ func (c *Cog) onOddsSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	embed := components.Embed(
 		i18n.T("betting.status_title", lang, map[string]any{"id": odds.BetID}),
 		odds.Description,
-		0x3498db,
+		components.ColorInfo,
 	)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("betting.total_bet", lang), "$"+strconv.Itoa(odds.Total), false),
@@ -371,7 +371,7 @@ func (c *Cog) onFreezeSubmit(b *interaction.Bot, i *discordgo.InteractionCreate)
 	embed := components.Embed(
 		i18n.T("betting.freeze_success", lang, map[string]any{"desc": "Bet #" + strconv.FormatInt(betID, 10)}),
 		"",
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	_, comps := c.menu(lang)
 	_ = b.Session.InteractionRespond(i.Interaction,

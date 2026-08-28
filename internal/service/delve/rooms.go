@@ -507,12 +507,12 @@ func BuildRoomEmbed(session *model.DelveSession, room *Room, lang string, svc *S
 	dangerLine := DescribeDanger(danger, lang)
 	desc := dangerLine + "\n\n" + room.Description
 
-	color := 0x2ecc71
+	color := components.ColorSuccess
 	switch {
 	case danger.Skulls >= 4:
-		color = 0xe74c3c
+		color = components.ColorDanger
 	case danger.Skulls >= 2:
-		color = 0xf39c12
+		color = components.ColorWarning
 	}
 
 	embed := &discordgo.MessageEmbed{

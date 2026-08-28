@@ -26,13 +26,13 @@ type Cog struct {
 // Register wires the cog into the router under both slash and prefix triggers.
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: banksvc.New(s, cfg)}
-	r.Slash("bank", "Banque : dépôt, retrait, solde.", c.onSlashMenu)
-	r.Slash("bankbal", "Voir ton solde bancaire.", c.onSlashBalance)
-	r.SlashWithOptions("deposit", "Déposer de l'argent dans ta banque.",
+	r.Slash("bank", "cmd.bank.desc", c.onSlashMenu)
+	r.Slash("bankbal", "cmd.bankbal.desc", c.onSlashBalance)
+	r.SlashWithOptions("deposit", "cmd.deposit.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionInteger, Name: "amount", Description: "Le montant à déposer.", Required: true},
 		}, c.onSlashDeposit)
-	r.SlashWithOptions("withdraw", "Retirer de l'argent de ta banque.",
+	r.SlashWithOptions("withdraw", "cmd.withdraw.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionInteger, Name: "amount", Description: "Le montant à retirer.", Required: true},
 		}, c.onSlashWithdraw)
@@ -74,7 +74,7 @@ func (c *Cog) onSlashBalance(b *interaction.Bot, i *discordgo.InteractionCreate)
 		interaction.RespondError(b, i, lang, "bank.invalid")
 		return
 	}
-	embed := components.Embed(i18n.T("bank.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("bank.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank)+"/"+strconv.Itoa(maxBank), true),
@@ -92,7 +92,7 @@ func (c *Cog) onPrefixBalance(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("bank.invalid", lang))
 		return
 	}
-	embed := components.Embed(i18n.T("bank.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("bank.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank)+"/"+strconv.Itoa(maxBank), true),
@@ -121,7 +121,7 @@ func (c *Cog) onSlashDeposit(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
@@ -159,7 +159,7 @@ func (c *Cog) onPrefixDeposit(b *interaction.Bot, s *discordgo.Session, m *disco
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
@@ -189,7 +189,7 @@ func (c *Cog) onSlashWithdraw(b *interaction.Bot, i *discordgo.InteractionCreate
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", 0xe67e22)
+	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", components.ColorWarning)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
@@ -222,7 +222,7 @@ func (c *Cog) onPrefixWithdraw(b *interaction.Bot, s *discordgo.Session, m *disc
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", 0xe67e22)
+	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", components.ColorWarning)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
@@ -235,7 +235,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("bank.menu_title", lang),
 		i18n.T("bank.menu_desc", lang),
-		0xf1c40f,
+		components.ColorReward,
 	)
 	if wallet, bank, _, maxBank, err := c.svc.Info(userID); err == nil {
 		embed.Fields = []*discordgo.MessageEmbedField{
@@ -300,7 +300,7 @@ func (c *Cog) onDepositSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("bank.deposit_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(res.Deposited)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
@@ -333,7 +333,7 @@ func (c *Cog) onWithdrawSubmit(b *interaction.Bot, i *discordgo.InteractionCreat
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", 0xe67e22)
+	embed := components.Embed(i18n.T("bank.withdraw_title", lang), "", components.ColorWarning)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.amount_label", lang), "**$"+strconv.Itoa(amount)+"**", false),
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
@@ -352,7 +352,7 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "bank.invalid")
 		return
 	}
-	embed := components.Embed(i18n.T("bank.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("bank.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("bank.wallet", lang), "$"+strconv.Itoa(wallet), true),
 		components.Field(i18n.T("bank.safe", lang), "$"+strconv.Itoa(bank)+"/"+strconv.Itoa(maxBank), true),

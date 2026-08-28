@@ -54,3 +54,25 @@ const (
 	ColorEpic      = ColorArcane
 	ColorLegendary = 0xFFD700
 )
+
+// Activity identity colours. Each major activity owns a recognisable border so
+// that a player can tell at a glance which system a message came from, the way
+// the fishing screens have always been teal and the mining screens blue. This
+// is a second axis, not a replacement for the semantic palette above: an
+// activity colour sets the resting tone of that activity's own screens, while a
+// win or a failure inside it still reaches for ColorSuccess or ColorDanger.
+//
+// These were already consistent by convention before they were named here; the
+// names exist so the convention survives the next contributor.
+const (
+	ColorCasino     = 0x7289DA
+	ColorEconomy    = 0x1ABC9C
+	ColorFishing    = 0x008080
+	ColorMining     = 0x4A90D9
+	ColorFarm       = 0x006400
+	ColorDig        = 0x8B4513
+	ColorForge      = 0x8E6B23
+	ColorHunt       = 0xFFA500
+	ColorUnderworld = 0x8E44AD
+	ColorHome       = 0xB9936C
+)

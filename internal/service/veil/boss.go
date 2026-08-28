@@ -54,7 +54,7 @@ func startBossPhase1(raid *model.VeilRaid, lang string) BossTurnResult {
 		Embed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.boss.p1_title", lang),
 			Description: i18n.T("veil.boss.p1_desc", lang),
-			Color:       0x8e44ad,
+			Color:       components.ColorArcane,
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: i18n.T("veil.boss.p1_field_boss", lang), Value: i18n.T("veil.boss.p1_field_boss_val", lang, map[string]any{"hp": raid.BossHP, "max": raid.BossMaxHP})},
 				{Name: i18n.T("veil.boss.p1_field_adds", lang), Value: i18n.T("veil.boss.p1_field_adds_val", lang, map[string]any{"a": adds[0], "b": adds[1]})},
@@ -75,7 +75,7 @@ func startBossPhase2(raid *model.VeilRaid, lang string) BossTurnResult {
 		Embed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.boss.p2_title", lang),
 			Description: i18n.T("veil.boss.p2_desc", lang),
-			Color:       0xe74c3c,
+			Color:       components.ColorDanger,
 		},
 		Comps: []discordgo.MessageComponent{
 			components.ActionRow(
@@ -96,7 +96,7 @@ func startBossPhase3(raid *model.VeilRaid, lang string) BossTurnResult {
 		Embed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.boss.p3_title", lang),
 			Description: i18n.T("veil.boss.p3_desc", lang),
-			Color:       0xc0392b,
+			Color:       components.ColorDanger,
 		},
 		Comps: []discordgo.MessageComponent{
 			components.ActionRow(
@@ -257,7 +257,7 @@ func RenderBossEmbed(raid *model.VeilRaid, resultDesc string, lang string) *disc
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.boss.render_title", lang, map[string]any{"phase": raid.BossPhase, "turn": raid.Turn}),
 		Description: resultDesc,
-		Color:       0xe74c3c,
+		Color:       components.ColorDanger,
 	}
 	states := (&Service{}).GetPlayerStates(raid)
 	playerLine := ""
@@ -274,7 +274,7 @@ func RenderAnchorEmbed(lang string) *discordgo.MessageEmbed {
 	return &discordgo.MessageEmbed{
 		Title:       i18n.T("veil.boss.anchor_title", lang),
 		Description: i18n.T("veil.boss.anchor_desc", lang),
-		Color:       0xe67e22,
+		Color:       components.ColorWarning,
 	}
 }
 

@@ -70,6 +70,82 @@ import (
 	"guacagamblebot/internal/onboarding"
 )
 
+// cogRegistration is one help category and the cogs filed under it.
+type cogRegistration struct {
+	category string
+	cogs     []func(*interaction.Router, *store.Store, *config.Config)
+}
+
+// cogGroups is the bot's whole command taxonomy in one table. /help is
+// generated from it, so a cog added here appears in /help automatically, and a
+// cog left out of it is reported by the startup check and by the tests in this
+// package. Tests build their router from this same table, so what they inspect
+// is exactly what the running bot registers.
+func cogGroups() []cogRegistration {
+	return []cogRegistration{
+		{helpcog.CatStart, []func(*interaction.Router, *store.Store, *config.Config){
+			startcog.Register,
+			onboarding.Register,
+			helpcog.Register,
+		}},
+		{helpcog.CatEconomy, []func(*interaction.Router, *store.Store, *config.Config){
+			economycog.Register,
+			bankcog.Register,
+			loancog.Register,
+			jobscog.Register,
+			shopcog.Register,
+			marketcog.Register,
+			itemmanagercog.Register,
+			inventorycog.Register,
+			usecog.Register,
+			craftingcog.Register,
+			forgecog.Register,
+		}},
+		{helpcog.CatCasino, []func(*interaction.Router, *store.Store, *config.Config){
+			casinocog.Register,
+			blackjackcog.Register,
+			roulettecog.Register,
+			lottocog.Register,
+			bettingcog.Register,
+			duelcog.Register,
+		}},
+		{helpcog.CatRPG, []func(*interaction.Router, *store.Store, *config.Config){
+			charactercog.Register,
+			skillscog.Register,
+			questscog.Register,
+			journalcog.Register,
+			achievementscog.Register,
+			bosscog.Register,
+			delvecog.Register,
+			veilcog.Register,
+			tournamentcog.Register,
+		}},
+		{helpcog.CatActivities, []func(*interaction.Router, *store.Store, *config.Config){
+			fishingcog.Register,
+			miningcog.Register,
+			farmcog.Register,
+			huntcog.Register,
+			archeologycog.Register,
+			expeditioncog.Register,
+			housingcog.Register,
+		}},
+		{helpcog.CatPets, []func(*interaction.Router, *store.Store, *config.Config){
+			petscog.Register,
+			sanctuarycog.Register,
+		}},
+		{helpcog.CatWorld, []func(*interaction.Router, *store.Store, *config.Config){
+			leadercog.Register,
+			communitycog.Register,
+			npcscog.Register,
+			lorecog.Register,
+			criminalitycog.Register,
+		}},
+		{helpcog.CatAdmin, []func(*interaction.Router, *store.Store, *config.Config){
+			admincog.Register,
+		}},
+	}
+}
+
 func main() {
 	cfg := config.Load()
 	logger.Init(cfg)
@@ -124,50 +200,19 @@ func main() {
 	go elosimulation.RunWeeklyReset(ctx, str, dg)
 	router := interaction.NewRouter(bot, str)
 
-	admincog.Register(router, str, cfg)
-	achievementscog.Register(router, str, cfg)
-	archeologycog.Register(router, str, cfg)
-	bankcog.Register(router, str, cfg)
-	bettingcog.Register(router, str, cfg)
-	blackjackcog.Register(router, str, cfg)
-	bosscog.Register(router, str, cfg)
-	casinocog.Register(router, str, cfg)
-	charactercog.Register(router, str, cfg)
-	communitycog.Register(router, str, cfg)
-	craftingcog.Register(router, str, cfg)
-	criminalitycog.Register(router, str, cfg)
-	delvecog.Register(router, str, cfg)
-	duelcog.Register(router, str, cfg)
-	economycog.Register(router, str, cfg)
-	expeditioncog.Register(router, str, cfg)
-	farmcog.Register(router, str, cfg)
-	fishingcog.Register(router, str, cfg)
-	forgecog.Register(router, str, cfg)
-	housingcog.Register(router, str, cfg)
-	huntcog.Register(router, str, cfg)
-	helpcog.Register(router, str, cfg)
-	inventorycog.Register(router, str, cfg)
-	itemmanagercog.Register(router, str, cfg)
-	journalcog.Register(router, str, cfg)
-	jobscog.Register(router, str, cfg)
-	leadercog.Register(router, str, cfg)
-	loancog.Register(router, str, cfg)
-	lottocog.Register(router, str, cfg)
-	marketcog.Register(router, str, cfg)
-	miningcog.Register(router, str, cfg)
-	npcscog.Register(router, str, cfg)
-	petscog.Register(router, str, cfg)
-	questscog.Register(router, str, cfg)
-	roulettecog.Register(router, str, cfg)
-	sanctuarycog.Register(router, str, cfg)
-	shopcog.Register(router, str, cfg)
-	lorecog.Register(router, str, cfg)
-	skillscog.Register(router, str, cfg)
-	startcog.Register(router, str, cfg)
-	tournamentcog.Register(router, str, cfg)
-	usecog.Register(router, str, cfg)
-	veilcog.Register(router, str, cfg)
-	onboarding.Register(router, str, cfg)
+	for _, group := range cogGroups() {
+		router.Categorize(group.category, func() {
+			for _, register := range group.cogs {
+				register(router, str, cfg)
+			}
+		})
+	}
+
+	for _, cmd := range router.CommandList() {
+		if cmd.Category == "" {
+			slog.Warn("command missing help category", "command", cmd.Name)
+		}
+	}
 
 	router.Register()
 

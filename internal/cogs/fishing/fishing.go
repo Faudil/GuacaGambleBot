@@ -67,8 +67,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 
 	c := &Cog{store: s, cfg: cfg, svc: fishingsvc.New(s, cfg, loreSvc, npcSvc)}
-	r.Slash("fish", "Fishing minigame", c.onSlashMenu)
-	r.Slash("f", "Fishing minigame", c.onSlashMenu)
+	r.Slash("fish", "cmd.fish.desc", c.onSlashMenu)
+	r.Slash("f", "cmd.fish.desc", c.onSlashMenu)
 	r.Prefix("fish", c.onPrefixMenu)
 	r.Prefix("f", c.onPrefixMenu)
 	r.Component("fish", "menu", c.onMenu)
@@ -128,7 +128,7 @@ func (c *Cog) baitMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 	embed := components.Embed(
 		i18n.T("fishing.session_title", lang),
 		i18n.T("fishing.bait_desc", lang),
-		0x008080,
+		components.ColorFishing,
 	)
 
 	fields := []*discordgo.MessageEmbedField{
@@ -211,7 +211,7 @@ func (c *Cog) spotMenu(lang string, userID int64, tier fishingsvc.BaitTier) (*di
 	embed := components.Embed(
 		i18n.T("fishing.spot_title", lang),
 		i18n.T("fishing.spot_desc", lang, map[string]any{"bait": tierName}),
-		0x008080,
+		components.ColorFishing,
 	)
 
 	fields := []*discordgo.MessageEmbedField{
@@ -451,13 +451,13 @@ func (c *Cog) editWaitMessage(s interaction.Session, channelID, msgID, state str
 		embed = components.Embed(
 			i18n.T("fishing.wait_title", lang),
 			i18n.T("fishing.wait_desc", lang),
-			0x008080,
+			components.ColorFishing,
 		)
 	case "nibble":
 		embed = components.Embed(
 			i18n.T("fishing.nibble_title", lang),
 			i18n.T("fishing.nibble_desc", lang),
-			0x008080,
+			components.ColorFishing,
 		)
 	case "bite":
 		expireTime := time.Now().Add(7 * time.Second)
@@ -468,13 +468,13 @@ func (c *Cog) editWaitMessage(s interaction.Session, channelID, msgID, state str
 		embed = components.Embed(
 			i18n.T("fishing.bite_title", lang),
 			desc,
-			0xFF0000,
+			components.ColorDanger,
 		)
 	case "expired":
 		embed = components.Embed(
 			i18n.T("fishing.expired_title", lang),
 			i18n.T("fishing.expired_desc", lang),
-			0x808080,
+			components.ColorMuted,
 		)
 	}
 
@@ -499,7 +499,7 @@ func (c *Cog) waitEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []d
 	embed := components.Embed(
 		i18n.T("fishing.wait_title", lang),
 		i18n.T("fishing.wait_desc", lang),
-		0x008080,
+		components.ColorFishing,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -548,7 +548,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed := components.Embed(
 			i18n.T("fishing.empty_title", lang),
 			i18n.T(descKey, lang),
-			0x808080,
+			components.ColorMuted,
 		)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
@@ -561,7 +561,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			embed := components.Embed(
 				i18n.T("fishing.spooked_title", lang),
 				i18n.T("fishing.spooked_desc", lang),
-				0xFF0000,
+				components.ColorDanger,
 			)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
@@ -589,7 +589,7 @@ func (c *Cog) onStrike(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			embed := components.Embed(
 				i18n.T("fishing.bite_missed_title", lang),
 				i18n.T("fishing.bite_missed_desc", lang),
-				0xFF0000,
+				components.ColorDanger,
 			)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
@@ -685,15 +685,15 @@ func (c *Cog) fightEmbed(state *fishingsvc.FishFightState, lang string, userID i
 		distStr = i18n.T("fishing.distance_caught", lang)
 	}
 
-	color := 0x008080
+	color := components.ColorFishing
 	if state.Golden {
-		color = 0xFFD700
+		color = components.ColorLegendary
 	} else if state.Mutated {
-		color = 0x00FF00
+		color = components.ColorSuccess
 	} else if state.Species.Secret == "ghost_carp" {
-		color = 0xC0C0C0
+		color = components.ColorMuted
 	} else if state.Species.Secret == "cosmic_jellyfish" {
-		color = 0x9B59B6
+		color = components.ColorArcane
 	}
 
 	embed := components.Embed(
@@ -801,7 +801,7 @@ func (c *Cog) quietCatchEmbed(res *fishingsvc.FightResolve, lang string) *discor
 	return components.Embed(
 		i18n.T("fishing.caught_title", lang),
 		desc,
-		0x55CC55,
+		components.ColorSuccess,
 	)
 }
 
@@ -844,11 +844,11 @@ func (c *Cog) catchEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.M
 		lvlText = "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
 	}
 
-	color := 0xFFD700
+	color := components.ColorLegendary
 	if res.Mutated {
-		color = 0x00FF00
+		color = components.ColorSuccess
 	} else if res.Secret != "" {
-		color = 0x9B59B6
+		color = components.ColorArcane
 	}
 
 	embed := components.Embed(
@@ -872,7 +872,7 @@ func (c *Cog) escapeEmbed(res *fishingsvc.FightResolve, lang string) *discordgo.
 	return components.Embed(
 		i18n.T("fishing.escaped_title", lang),
 		desc,
-		0xFF0000,
+		components.ColorDanger,
 	)
 }
 
@@ -888,7 +888,7 @@ func (c *Cog) bottleEmbed(bottleKey string, res *fishingsvc.FightResolve, lang s
 	return components.Embed(
 		i18n.T("fishing.bottle_title", lang),
 		desc,
-		0x8B4513,
+		components.ColorDig,
 	)
 }
 

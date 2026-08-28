@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+
+	"guacagamblebot/internal/components"
 )
 
 // RequiredShadowFlags lists the delve flags that together qualify a player
@@ -170,7 +172,7 @@ func (svc *Service) OnFirstMaskEquip(userID int64, serverID int64, lang string) 
 	return &discordgo.MessageEmbed{
 		Title:       svc.T(lang, "awakening.mask_title"),
 		Description: svc.T(lang, "awakening.mask_desc"),
-		Color:       0x2c3e50,
+		Color:       components.ColorIdle,
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: svc.T(lang, "awakening.mask_footer"),
 		},
@@ -200,7 +202,7 @@ func (svc *Service) OnFirstTheft(thiefID int64, victimID int64, serverID int64, 
 	return &discordgo.MessageEmbed{
 		Title:       svc.T(lang, "awakening.first_theft_title"),
 		Description: svc.T(lang, "awakening.first_theft_desc"),
-		Color:       0x8e44ad,
+		Color:       components.ColorUnderworld,
 		Footer: &discordgo.MessageEmbedFooter{
 			Text: svc.T(lang, "awakening.first_theft_footer"),
 		},

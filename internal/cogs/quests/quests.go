@@ -241,7 +241,7 @@ func (c *Cog) rewardSummary(lang string, r *questssvc.QuestReward) string {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: questssvc.New(s, cfg)}
-	r.Slash("quest", "View your active quests and progress.", c.onSlash)
+	r.Slash("quest", "cmd.quest.desc", c.onSlash)
 	r.Prefix("quest", c.onPrefix)
 	r.Prefix("q", c.onPrefix)
 	r.Component("quest", "show", c.onShow)
@@ -282,7 +282,7 @@ func progressBar(current, target int) string {
 func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	quests, err := c.svc.GetAllActiveQuests(userID)
 	if err != nil {
-		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), 0x2ecc71), nil
+		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), components.ColorSuccess), nil
 	}
 
 	granted, _ := c.svc.EnsureTutorialEgg(userID)
@@ -303,7 +303,7 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 	btns = append(btns, hubBtns...)
 
 	if len(quests) == 0 && strings.TrimSpace(desc) == "" {
-		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), 0x2ecc71), nil
+		return components.Embed(i18n.T("quests.title", lang), i18n.T("quests.no_active", lang), components.ColorSuccess), nil
 	}
 
 	for _, q := range quests {
@@ -436,7 +436,7 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 		btns = btns[n:]
 	}
 
-	return components.Embed(i18n.T("quests.title", lang), desc, 0x2ecc71), comps
+	return components.Embed(i18n.T("quests.title", lang), desc, components.ColorSuccess), comps
 }
 
 // dailyQuestLine renders the daily quest compactly for /quest. The full view
@@ -662,7 +662,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				text, comps := c.completionResponse(lang, def, userID)
 				_ = b.Session.InteractionRespond(i.Interaction,
 					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-						components.Embed("✅", text, 0x2ecc71), comps))
+						components.Embed("✅", text, components.ColorSuccess), comps))
 				return
 			}
 			nextIdx := 0
@@ -691,7 +691,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed(title, text, 0x2ecc71), comps))
+					components.Embed(title, text, components.ColorSuccess), comps))
 			return
 		} else {
 			embed, comps := c.buildQuestEmbed(lang, userID)
@@ -711,12 +711,12 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if errors.As(err, &reqErr) {
 				_ = b.Session.InteractionRespond(i.Interaction,
 					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-						components.Embed(reqTitle, c.requirementErrorDesc(reqErr, lang), 0xe74c3c), nil))
+						components.Embed(reqTitle, c.requirementErrorDesc(reqErr, lang), components.ColorDanger), nil))
 				return
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed(reqTitle, i18n.T("quests.req_missing", lang), 0xe74c3c), nil))
+					components.Embed(reqTitle, i18n.T("quests.req_missing", lang), components.ColorDanger), nil))
 			return
 		}
 		uq2, uqd2, _ := c.svc.GetQuestProgress(userID, questID)
@@ -724,7 +724,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			text, comps := c.completionResponse(lang, def, userID)
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed("✅", text, 0x2ecc71), comps))
+					components.Embed("✅", text, components.ColorSuccess), comps))
 			return
 		}
 		nextStep := def.Steps[uqd2.StepIndex]
@@ -735,7 +735,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		})
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(doneTitle, i18n.T("quests.req_done", lang)+"\n\n"+text, 0x2ecc71),
+				components.Embed(doneTitle, i18n.T("quests.req_done", lang)+"\n\n"+text, components.ColorSuccess),
 				[]discordgo.MessageComponent{
 					components.ActionRow(
 						discordgo.Button{
@@ -759,7 +759,7 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		text, comps := c.completionResponse(lang, def, userID)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("✅", text, 0x2ecc71), comps))
+				components.Embed("✅", text, components.ColorSuccess), comps))
 		return
 	}
 
@@ -791,5 +791,5 @@ func (c *Cog) onAdvance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	})
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed(title, text, 0x2ecc71), comps))
+			components.Embed(title, text, components.ColorSuccess), comps))
 }

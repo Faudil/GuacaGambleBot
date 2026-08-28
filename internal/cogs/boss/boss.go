@@ -33,7 +33,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: bosssvc.New(s, cfg), qsvc: questssvc.New(s, cfg)}
-	r.Slash("boss", "Boss League - Combattez des boss", c.onSlash)
+	r.Slash("boss", "cmd.boss.desc", c.onSlash)
 	r.Prefix("boss", c.onPrefix)
 	r.Prefix("league", c.onPrefix)
 	r.Prefix("bl", c.onPrefix)
@@ -180,10 +180,10 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 	lines := c.findBossQuestLines(userID)
 	if len(lines) == 0 {
 		if uq, _, _ := c.qsvc.GetQuestProgress(userID, "boss_league"); uq != nil && uq.Status == "COMPLETED" {
-			embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.champion", lang), 0xf1c40f)
+			embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.champion", lang), components.ColorReward)
 			return embed, nil, ""
 		}
-		embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.locked", lang), 0x992d22)
+		embed := components.Embed(i18n.T("boss_league.title", lang), i18n.T("boss_league.locked", lang), components.ColorDanger)
 		return embed, nil, ""
 	}
 
@@ -249,7 +249,7 @@ func (c *Cog) show(userID int64, lang string) (*discordgo.MessageEmbed, []discor
 		components.Button("🔄", components.EncodeOwner(userID, "boss", "show"), discordgo.SecondaryButton),
 	))
 
-	embed := components.Embed(i18n.T("boss_league.title", lang), "", 0x992d22)
+	embed := components.Embed(i18n.T("boss_league.title", lang), "", components.ColorDanger)
 	embed.Fields = fields
 	return embed, comps, bossImage
 }
@@ -307,10 +307,10 @@ func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome
 
 	ok, _, err := c.store.CheckGameLimit(userID, "boss_fight", 5)
 	if err != nil {
-		return nil, components.Embed("❌", "Error checking limit.", 0xe74c3c), backBtn
+		return nil, components.Embed("❌", "Error checking limit.", components.ColorDanger), backBtn
 	}
 	if !ok {
-		return nil, components.Embed("❌", i18n.T("economy.daily_footer", lang), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("economy.daily_footer", lang), components.ColorDanger), backBtn
 	}
 
 	var def *questssvc.QuestDef
@@ -331,30 +331,30 @@ func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome
 		qid, def, _, uqd = c.findBossBattleQuest(userID)
 	}
 	if qid == "" {
-		return nil, components.Embed("❌", i18n.T("boss_league.locked", lang), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("boss_league.locked", lang), components.ColorDanger), backBtn
 	}
 
 	stepIdx := uqd.StepIndex
 
 	bossStage := questStepBossStage(def, stepIdx)
 	if bossStage < 0 {
-		return nil, components.Embed("❌", i18n.T("boss_league.no_battle_step", lang), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("boss_league.no_battle_step", lang), components.ColorDanger), backBtn
 	}
 	if bossStage >= len(bosssvc.BossLeague) {
-		return nil, components.Embed("❌", "Unknown boss stage.", 0xe74c3c), backBtn
+		return nil, components.Embed("❌", "Unknown boss stage.", components.ColorDanger), backBtn
 	}
 
 	pet, err := petsvc.New(c.store, c.cfg).GetActivePet(userID)
 	if err != nil || pet == nil {
-		return nil, components.Embed("❌", i18n.T("boss_league.no_pet", lang), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("boss_league.no_pet", lang), components.ColorDanger), backBtn
 	}
 
 	if pet.HP <= 0 {
-		return nil, components.Embed("❌", i18n.T("boss_league.pet_ko", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("boss_league.pet_ko", lang, map[string]any{"name": pet.Nickname}), components.ColorDanger), backBtn
 	}
 
 	if pet.OnExpedition {
-		return nil, components.Embed("❌", i18n.T("boss_league.pet_on_expedition", lang, map[string]any{"name": pet.Nickname}), 0xe74c3c), backBtn
+		return nil, components.Embed("❌", i18n.T("boss_league.pet_on_expedition", lang, map[string]any{"name": pet.Nickname}), components.ColorDanger), backBtn
 	}
 
 	bossCfg := bosssvc.BossLeague[bossStage]
@@ -415,7 +415,7 @@ func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome
 
 		o.final = c.bossRetroFrame(o, userBP.HP, bossPet.HP, result.Log, lang)
 		o.final.Title = i18n.T("boss_league.victory", lang, map[string]any{"boss_name": o.bossD.Name})
-		o.final.Color = 0x2ecc71
+		o.final.Color = components.ColorSuccess
 
 		if bossCfg.RewardMoney > 0 {
 			o.final.Description += fmt.Sprintf("\n💵 +$%d", bossCfg.RewardMoney)
@@ -452,7 +452,7 @@ func (c *Cog) prepareFight(userID int64, lang string, qid string) (*fightOutcome
 	} else {
 		o.final = c.bossRetroFrame(o, userBP.HP, bossPet.HP, result.Log, lang)
 		o.final.Title = i18n.T("boss_league.defeat", lang, map[string]any{"pet_name": o.petD.Name, "boss_name": o.bossD.Name})
-		o.final.Color = 0xe74c3c
+		o.final.Color = components.ColorDanger
 		o.final.Description += "\n\n" + i18n.T("boss_league.try_again", lang)
 		// A defeat may unlock an optional side quest line with an NPC mentor
 		// (see questssvc.BossLossUnlocks). Notify the player and offer a

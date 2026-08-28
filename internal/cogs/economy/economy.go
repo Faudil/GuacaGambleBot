@@ -45,11 +45,11 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	npc := npcsvc.New(s, cfg, def, inv)
 	dq := dailyquestsvc.New(s, npc)
 	c := &Cog{store: s, cfg: cfg, svc: economysvc.New(s, cfg, dq), dq: dq}
-	r.Slash("economy", "Économie : solde, daily, don.", c.onSlashMenu)
-	r.Slash("eco", "Économie : solde, daily, don.", c.onSlashMenu)
-	r.Slash("bal", "Voir ton solde économique.", c.onSlashBalance)
-	r.Slash("balance", "Voir ton solde économique.", c.onSlashBalance)
-	r.Slash("daily", "Réclamer ta récompense quotidienne.", c.onSlashDaily)
+	r.Slash("economy", "cmd.economy.desc", c.onSlashMenu)
+	r.Slash("eco", "cmd.economy.desc", c.onSlashMenu)
+	r.Slash("bal", "cmd.balance.desc", c.onSlashBalance)
+	r.Slash("balance", "cmd.balance.desc", c.onSlashBalance)
+	r.Slash("daily", "cmd.daily.desc", c.onSlashDaily)
 	r.Prefix("economy", c.onPrefixMenu)
 	r.Prefix("eco", c.onPrefixMenu)
 	r.Prefix("bal", c.onPrefixBalance)
@@ -58,7 +58,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Prefix("daily", c.onPrefixDaily)
 	r.Prefix("give", c.onPrefixGive)
 	r.Prefix("pay", c.onPrefixGive)
-	r.SlashWithOptions("give", "Donner de l'argent à un autre utilisateur.",
+	r.SlashWithOptions("give", "cmd.give.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionUser,
@@ -109,7 +109,7 @@ func (c *Cog) onSlashBalance(b *interaction.Bot, i *discordgo.InteractionCreate)
 		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
-	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("economy.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
 		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
@@ -128,7 +128,7 @@ func (c *Cog) onPrefixBalance(b *interaction.Bot, s *discordgo.Session, m *disco
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_no_money", lang))
 		return
 	}
-	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("economy.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
 		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
@@ -150,7 +150,7 @@ func (c *Cog) onSlashDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
-	embed := components.Embed(i18n.T("economy.daily_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.daily_title", lang), "", components.ColorSuccess)
 	fields := []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.quantity", lang), "+$"+strconv.Itoa(res.Amount), true),
 	}
@@ -204,7 +204,7 @@ func (c *Cog) onPrefixDaily(b *interaction.Bot, s *discordgo.Session, m *discord
 		_, _ = s.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_no_money", lang))
 		return
 	}
-	embed := components.Embed(i18n.T("economy.daily_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.daily_title", lang), "", components.ColorSuccess)
 	fields := []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.quantity", lang), "+$"+strconv.Itoa(res.Amount), true),
 	}
@@ -259,7 +259,7 @@ func (c *Cog) onPrefixGive(b *interaction.Bot, s *discordgo.Session, m *discordg
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("economy.give_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.give_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.sender", lang), interaction.Mention(sender), true),
 		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
@@ -272,7 +272,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("economy.menu_title", lang),
 		i18n.T("economy.menu_desc", lang),
-		0x1abc9c,
+		components.ColorEconomy,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("economy.menu_footer", lang)}
 	comps := []discordgo.MessageComponent{
@@ -293,7 +293,7 @@ func (c *Cog) onBalance(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
-	embed := components.Embed(i18n.T("economy.balance_title", lang), "", 0x3498db)
+	embed := components.Embed(i18n.T("economy.balance_title", lang), "", components.ColorInfo)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.wallet", lang), "$"+strconv.Itoa(res.Wallet), true),
 		components.Field(i18n.T("economy.safe", lang), "$"+strconv.Itoa(res.Bank)+"/"+strconv.Itoa(res.MaxBank), true),
@@ -317,7 +317,7 @@ func (c *Cog) onDaily(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		interaction.RespondError(b, i, lang, "economy.give_no_money")
 		return
 	}
-	embed := components.Embed(i18n.T("economy.daily_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.daily_title", lang), "", components.ColorSuccess)
 	fields := []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.quantity", lang), "+$"+strconv.Itoa(res.Amount), true),
 	}
@@ -395,7 +395,7 @@ func (c *Cog) onGiveSubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("economy.give_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.give_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.sender", lang), interaction.Mention(sender), true),
 		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
@@ -435,7 +435,7 @@ func (c *Cog) onSlashGive(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		return
 	}
-	embed := components.Embed(i18n.T("economy.give_title", lang), "", 0x2ecc71)
+	embed := components.Embed(i18n.T("economy.give_title", lang), "", components.ColorSuccess)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("economy.sender", lang), interaction.Mention(sender), true),
 		components.Field(i18n.T("economy.receiver", lang), interaction.Mention(recipient), true),
@@ -481,7 +481,7 @@ func (c *Cog) onDailyDeliver(b *interaction.Bot, i *discordgo.InteractionCreate)
 				}))
 			}
 			embed := components.Embed("❌ "+i18n.T("quests.daily.title", lang),
-				i18n.T("quests.daily.missing_items", lang)+"\n"+strings.Join(lines, "\n"), 0xe74c3c)
+				i18n.T("quests.daily.missing_items", lang)+"\n"+strings.Join(lines, "\n"), components.ColorDanger)
 			comps := []discordgo.MessageComponent{
 				components.ActionRow(
 					components.Button("↩️", components.EncodeOwner(userID, "economy", "daily_view"), discordgo.SecondaryButton),
@@ -510,7 +510,7 @@ func (c *Cog) onDailyDeliver(b *interaction.Bot, i *discordgo.InteractionCreate)
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("✅ "+i18n.T("quests.daily.title", lang), desc, 0x2ecc71), comps))
+				components.Embed("✅ "+i18n.T("quests.daily.title", lang), desc, components.ColorSuccess), comps))
 		return
 	}
 
@@ -524,12 +524,12 @@ func (c *Cog) onDailyDeliver(b *interaction.Bot, i *discordgo.InteractionCreate)
 func (c *Cog) buildDailyEmbed(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	recipe, data, err := c.dq.Current(userID)
 	if err != nil {
-		return components.Embed(i18n.T("quests.daily.title", lang), i18n.T("quests.daily.no_active", lang), 0x2ecc71), nil
+		return components.Embed(i18n.T("quests.daily.title", lang), i18n.T("quests.daily.no_active", lang), components.ColorSuccess), nil
 	}
 	uq, _, uerr := c.store.GetUserQuest(userID, "daily_quest")
 	if uerr != nil || uq == nil || uq.Status == "COMPLETED" {
 		return components.Embed(i18n.T("quests.daily.title", lang),
-			i18n.T("quests.daily.completed_short", lang, map[string]any{"title": i18n.T(recipe.TitleKey, lang)}), 0x2ecc71), nil
+			i18n.T("quests.daily.completed_short", lang, map[string]any{"title": i18n.T(recipe.TitleKey, lang)}), components.ColorSuccess), nil
 	}
 
 	npcName := c.npcName(recipe.Requestor)
@@ -580,7 +580,7 @@ func (c *Cog) buildDailyEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 				components.EncodeOwner(userID, "economy", "daily_deliver"), discordgo.SuccessButton),
 		))
 	}
-	return components.Embed(i18n.T("quests.daily.title", lang)+" — "+i18n.T(recipe.TitleKey, lang), desc, 0x2ecc71), comps
+	return components.Embed(i18n.T("quests.daily.title", lang)+" — "+i18n.T(recipe.TitleKey, lang), desc, components.ColorSuccess), comps
 }
 
 // dailyStepText renders one recipe step's line with its placeholders.

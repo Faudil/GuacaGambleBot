@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/config"
 	"guacagamblebot/internal/db"
 	"guacagamblebot/internal/i18n"
@@ -154,7 +155,7 @@ func TestLeaveResultDisplay(t *testing.T) {
 	title, color := c.leaveResultDisplay(&miningsvc.LeaveResult{XP: 0, Bag: nil}, "en")
 	require.NotContains(t, title, "{xp}", "empty result must not leak the {xp} placeholder")
 	require.Contains(t, title, "+0")
-	require.Equal(t, 0xC0C0C0, color)
+	require.Equal(t, components.ColorMuted, color)
 
 	title, color = c.leaveResultDisplay(&miningsvc.LeaveResult{
 		XP:  42,
@@ -162,7 +163,7 @@ func TestLeaveResultDisplay(t *testing.T) {
 	}, "en")
 	require.Contains(t, title, "Coal")
 	require.Contains(t, title, "+42")
-	require.Equal(t, 0x00FF00, color)
+	require.Equal(t, components.ColorSuccess, color)
 }
 
 func TestConcurrentSessionAccess(t *testing.T) {

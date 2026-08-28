@@ -24,8 +24,8 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: tradesvc.New(s, cfg)}
-	r.Slash("trade", "Échanger des objets avec un autre joueur.", c.onSlashTrade)
-	r.SlashWithOptions("sell", "Vendre un objet à un autre joueur.",
+	r.Slash("trade", "cmd.trade.desc", c.onSlashTrade)
+	r.SlashWithOptions("sell", "cmd.sell.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionUser, Name: "recipient", Description: "Le joueur à qui vendre.", Required: true},
 			{Type: discordgo.ApplicationCommandOptionString, Name: "item", Description: "Le nom de l'objet à vendre.", Required: true},
@@ -41,7 +41,7 @@ func (c *Cog) onSlashTrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-			components.Embed("📦", i18n.T("item_manager.trade_usage", lang), 0xe67e22), nil))
+			components.Embed("📦", i18n.T("item_manager.trade_usage", lang), components.ColorWarning), nil))
 }
 
 func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -70,7 +70,7 @@ func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			"price":  priceVal,
 			"buyer":  interaction.Mention(recipientID),
 		}),
-		0xe67e22,
+		components.ColorWarning,
 	)
 
 	btns := []discordgo.MessageComponent{
@@ -132,7 +132,7 @@ func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *disco
 			"price":  priceVal,
 			"buyer":  "<@" + fmt.Sprint(recipientID) + ">",
 		}),
-		0xe67e22,
+		components.ColorWarning,
 	)
 
 	btns := []discordgo.MessageComponent{

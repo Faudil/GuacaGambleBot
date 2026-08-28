@@ -109,7 +109,7 @@ func SendAchievements(b *Bot, i *discordgo.InteractionCreate, lang string, unloc
 				glory := i18n.T("achievements.ui.new_achievement_glory", lang, map[string]any{"glory": a.Glory})
 				desc += "🎖️ **" + name + "** " + a.Emoji + "\n" + glory + "\n" + adesc + "\n\n"
 			}
-			embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, 0xf1c40f)
+			embed := components.Embed(i18n.T("achievements.ui.new_achievement_title", lang), desc, components.ColorReward)
 			if _, err := b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{Embeds: []*discordgo.MessageEmbed{embed}}); err != nil {
 				logger.Log().Error("failed to send achievement unlock notification",
 					"error", err,
@@ -127,7 +127,7 @@ func SendQuestNotification(b *Bot, i *discordgo.InteractionCreate, n store.Quest
 	if n.QuestID == "" {
 		return
 	}
-	embed := components.Embed(i18n.T("quests.notification_title", lang), questssvc.QuestNotificationMsg(n, lang), 0x9b59b6)
+	embed := components.Embed(i18n.T("quests.notification_title", lang), questssvc.QuestNotificationMsg(n, lang), components.ColorArcane)
 	goSafe("quest_notification", func() {
 		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 			Embeds: []*discordgo.MessageEmbed{embed},
@@ -152,7 +152,7 @@ func SendJournalScene(b *Bot, i *discordgo.InteractionCreate, text string, dm bo
 				}
 			}
 		}
-		embed := components.Embed("🕯️", text, 0x2c3e50)
+		embed := components.Embed("🕯️", text, components.ColorIdle)
 		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 			Embeds: []*discordgo.MessageEmbed{embed},
 			Flags:  discordgo.MessageFlagsEphemeral,

@@ -63,8 +63,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 			MinValue:    &one,
 		},
 	}
-	r.SlashWithOptions("blackjack", "Blackjack PvP: challenge a player.", opts, c.onSlashChallenge)
-	r.SlashWithOptions("bj", "Blackjack PvP: challenge a player.", opts, c.onSlashChallenge)
+	r.SlashWithOptions("blackjack", "cmd.blackjack.desc", opts, c.onSlashChallenge)
+	r.SlashWithOptions("bj", "cmd.blackjack.desc", opts, c.onSlashChallenge)
 	r.Prefix("blackjack", c.onPrefixChallenge)
 	r.Prefix("bj", c.onPrefixChallenge)
 	r.Component("blackjack", "challenge", c.onChallengeOpen)
@@ -227,7 +227,7 @@ func (c *Cog) onPrefixChallenge(b *interaction.Bot, s *discordgo.Session, m *dis
 			"opponent":   interaction.Mention(opponentID),
 			"amount":     amount,
 		}),
-		0x3498db,
+		components.ColorInfo,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -264,7 +264,7 @@ func (c *Cog) createChallenge(challengerID, opponentID int64, amount int, b *int
 			"opponent":   interaction.Mention(opponentID),
 			"amount":     amount,
 		}),
-		0x3498db,
+		components.ColorInfo,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -287,7 +287,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	embed := components.Embed(
 		i18n.T("blackjack.title", lang),
 		i18n.T("blackjack.challenge_msg", lang, map[string]any{"challenger": "?", "opponent": "?", "amount": 0}),
-		0x3498db,
+		components.ColorInfo,
 	)
 	embed.Description += "\n\n" + i18n.T("blackjack.howto", lang)
 	comps := []discordgo.MessageComponent{
@@ -401,7 +401,7 @@ func (c *Cog) onDeny(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if _, ok := c.pendingChallenges[opponentID]; ok {
 		delete(c.pendingChallenges, opponentID)
 		c.mu.Unlock()
-		embed := components.Embed("", i18n.T("blackjack.deny_msg", lang, map[string]any{"user": interaction.Mention(opponentID)}), 0x95a5a6)
+		embed := components.Embed("", i18n.T("blackjack.deny_msg", lang, map[string]any{"user": interaction.Mention(opponentID)}), components.ColorMuted)
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, nil))
 		return
@@ -504,9 +504,9 @@ func (c *Cog) gameEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, gs *
 	desc += "👤 **" + interaction.Mention(gs.Player2ID) + "** " + statusP2 + "\n"
 	desc += i18n.T("blackjack.hand", lang, map[string]any{"hand": gs.Hands[gs.Player2ID].Format(), "score": s2})
 
-	color := 0x3498db
+	color := components.ColorInfo
 	if gs.Turn == gs.Player2ID {
-		color = 0x9b59b6
+		color = components.ColorArcane
 	}
 
 	embed := components.Embed(i18n.T("blackjack.title", lang), desc, color)
@@ -531,7 +531,7 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 	c.mu.Unlock()
 
 	embed, _ := c.gameEmbed(b, i, gs, lang)
-	color := 0x95a5a6
+	color := components.ColorMuted
 
 	if isDraw {
 		_, _ = c.store.UpdateBalance(gs.Player1ID, gs.Amount)
@@ -539,7 +539,7 @@ func (c *Cog) endGame(b *interaction.Bot, i *discordgo.InteractionCreate, gs *bj
 		resultText := i18n.T("blackjack.draw_msg", lang, map[string]any{"reason": i18n.T("blackjack.draw", lang)})
 		embed.Description += "\n\n" + i18n.T("blackjack.game_over", lang) + "\n" + resultText
 	} else {
-		color = 0xf1c40f
+		color = components.ColorReward
 		loserID := gs.Player2ID
 		if winnerID == gs.Player2ID {
 			loserID = gs.Player1ID

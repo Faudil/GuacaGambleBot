@@ -30,7 +30,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: usesvc.New(s, cfg), inv: invsvc.New(s, cfg)}
-	r.Slash("use", "Use a consumable item from your inventory.", c.onSlashUse)
+	r.Slash("use", "cmd.use.desc", c.onSlashUse)
 	r.Prefix("use", c.onPrefixUse)
 	r.Component("use", "pick", c.onPickItem)
 }
@@ -112,7 +112,7 @@ func (c *Cog) usableMenu(lang string, userID int64) (*discordgo.MessageEmbed, []
 	embed := components.Embed(
 		i18n.T("use.title", lang),
 		i18n.T("use.choose", lang),
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(discordgo.SelectMenu{
@@ -143,7 +143,7 @@ func (c *Cog) doUse(b *interaction.Bot, i *discordgo.InteractionCreate, lang str
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed(i18n.T("use.title", lang), desc, 0x2ecc71), nil))
+			components.Embed(i18n.T("use.title", lang), desc, components.ColorSuccess), nil))
 }
 
 func (c *Cog) errorText(err error, lang string) string {

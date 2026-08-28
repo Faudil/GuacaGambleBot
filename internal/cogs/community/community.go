@@ -33,7 +33,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: communitysvc.New(s, cfg)}
-	r.SlashWithOptions("community", "Gère les projets communautaires du serveur.",
+	r.SlashWithOptions("community", "cmd.community.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{Type: discordgo.ApplicationCommandOptionString, Name: "invest", Description: "Bâtiment à financer (market, bank, hospital, statue).", Required: false},
 			{Type: discordgo.ApplicationCommandOptionString, Name: "resource", Description: "Ressource à donner (ex: money, pebble, wheat).", Required: false},
@@ -158,7 +158,7 @@ func (c *Cog) onInvestModal(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if err != nil || amount <= 0 {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("❌", i18n.T("community.invalid_amount", lang), 0xe74c3c), nil))
+				components.Embed("❌", i18n.T("community.invalid_amount", lang), components.ColorDanger), nil))
 		return
 	}
 	serverID := interaction.ToInt64(i.GuildID)
@@ -167,7 +167,7 @@ func (c *Cog) onInvestModal(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	if err != nil {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("❌", c.errorText(err, building, resource, lang), 0xe74c3c), nil))
+				components.Embed("❌", c.errorText(err, building, resource, lang), components.ColorDanger), nil))
 		return
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -197,7 +197,7 @@ func (c *Cog) listView(lang string, serverID int64) (*discordgo.MessageEmbed, []
 	embed := components.Embed(
 		i18n.T("community.list_title", lang),
 		i18n.T("community.menu_desc", lang),
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	projects, _ := c.svc.GetAllProjects(serverID)
 	for _, p := range projects {
@@ -221,7 +221,7 @@ func (c *Cog) listView(lang string, serverID int64) (*discordgo.MessageEmbed, []
 func (c *Cog) inspectView(lang string, serverID int64, building string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	info, err := c.svc.GetProjectInfo(serverID, building)
 	if err != nil || info == nil {
-		return components.Embed("❌", i18n.T("community.not_found", lang, map[string]any{"name": building}), 0xe74c3c),
+		return components.Embed("❌", i18n.T("community.not_found", lang, map[string]any{"name": building}), components.ColorDanger),
 			c.listButtons(lang)
 	}
 	bName := c.buildingName(building, lang)
@@ -231,7 +231,7 @@ func (c *Cog) inspectView(lang string, serverID int64, building string) (*discor
 			"name": bName, "level": info.Level + 1,
 		}),
 		bDesc+"\n\n"+i18n.T("community.cur_level", lang, map[string]any{"level": info.Level, "max": info.MaxLevel}),
-		0x3498db,
+		components.ColorInfo,
 	)
 	if info.Level >= info.MaxLevel {
 		embed.Description += "\n\n" + i18n.T("community.maxed", lang)
@@ -322,7 +322,7 @@ func (c *Cog) statsEmbed(s interaction.Session, lang string, serverID, userID in
 	embed := components.Embed(
 		i18n.T("community.stats_title", lang, map[string]any{"user": interaction.DisplayName(s, fmt.Sprintf("%d", serverID), member, userID)}),
 		"",
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("community.res_money", lang), fmt.Sprintf("%d", stats.TotalMoneyInvested), true),
@@ -346,7 +346,7 @@ func (c *Cog) successEmbed(lang string, serverID int64, building string, res *co
 	msg := i18n.T("community.invest_success", lang, map[string]any{
 		"amount": res.Invested, "res": c.resourceName(resource, lang), "building": bName,
 	})
-	embed := components.Embed("✅", msg, 0x2ecc71)
+	embed := components.Embed("✅", msg, components.ColorSuccess)
 	if res.LeveledUp {
 		embed.Title = i18n.T("community.level_up_title", lang)
 		embed.Description = i18n.T("community.level_up_desc", lang, map[string]any{
@@ -363,7 +363,7 @@ func (c *Cog) doInvest(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 	if err != nil {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed("❌", c.errorText(err, building, resource, lang), 0xe74c3c), nil))
+				components.Embed("❌", c.errorText(err, building, resource, lang), components.ColorDanger), nil))
 		return
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,

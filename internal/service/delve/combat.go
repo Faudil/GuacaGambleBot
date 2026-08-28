@@ -8,6 +8,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/model"
 )
@@ -402,7 +403,7 @@ func RenderCombatEmbed(session *model.DelveSession, cs *CombatState, svc *Servic
 		Title: i18n.T("delve.combat.encounter_title", lang, map[string]any{
 			"enemy": EnemyName(cs.Enemy.Name, lang), "hp": cs.Enemy.HP, "max_hp": cs.Enemy.MaxHP,
 		}),
-		Color: 0xe74c3c,
+		Color: components.ColorDanger,
 	}
 	fields := []*discordgo.MessageEmbedField{
 		{Name: "\u200b", Value: "\u200b", Inline: false},

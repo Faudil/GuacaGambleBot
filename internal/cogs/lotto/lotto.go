@@ -23,7 +23,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: lottosvc.New(s, cfg)}
-	r.Slash("lotto", "Loterie du serveur : acheter un ticket.", c.onSlashMenu)
+	r.Slash("lotto", "cmd.lotto.desc", c.onSlashMenu)
 	r.Prefix("lotto", c.onPrefixMenu)
 	r.Prefix("lt", c.onPrefixMenu)
 	r.Component("lotto", "buy", c.onBuyOpen)
@@ -63,7 +63,7 @@ func (c *Cog) menu(lang string, serverID int64) (*discordgo.MessageEmbed, []disc
 	embed := components.Embed(
 		i18n.T("lotto.show_jackpot_title", lang),
 		desc,
-		0x2ecc71,
+		components.ColorSuccess,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("lotto.show_jackpot_footer", lang)}
 	comps := []discordgo.MessageComponent{
@@ -129,7 +129,7 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed = components.Embed(
 			i18n.T("lotto.jackpot_title", lang),
 			desc,
-			0xf1c40f,
+			components.ColorReward,
 		)
 	} else {
 		desc := i18n.T("lotto.ticket_valid_desc", lang, map[string]any{
@@ -143,7 +143,7 @@ func (c *Cog) onBuySubmit(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed = components.Embed(
 			i18n.T("lotto.ticket_valid_title", lang),
 			desc,
-			0x3498db,
+			components.ColorInfo,
 		)
 		embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("lotto.ticket_valid_footer", lang)}
 	}

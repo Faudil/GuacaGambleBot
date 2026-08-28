@@ -38,7 +38,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: casinosvc.New(s, cfg, npcSvc)}
-	r.SlashWithOptions("casino", "Casino : machines à sous et pile ou face.",
+	r.SlashWithOptions("casino", "cmd.casino.desc",
 		[]*discordgo.ApplicationCommandOption{
 			{
 				Type:        discordgo.ApplicationCommandOptionInteger,
@@ -59,7 +59,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 			},
 		},
 		c.onSlashMenu)
-	r.Slash("cas", "Casino : machines à sous et pile ou face.", c.onSlashMenu)
+	r.Slash("cas", "cmd.casino.desc", c.onSlashMenu)
 	r.Prefix("casino", c.onPrefixMenu)
 	r.Prefix("cas", c.onPrefixMenu)
 	r.Component("casino", "slots", c.onSlotsOpen)
@@ -142,7 +142,7 @@ func (c *Cog) menu(lang string, userID int64) (*discordgo.MessageEmbed, []discor
 	embed := components.Embed(
 		i18n.T("slots.title", lang),
 		desc,
-		0xf1c40f,
+		components.ColorReward,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -184,7 +184,7 @@ func (c *Cog) onSlotsOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 func (c *Cog) onCoinflipOpen(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
-	embed := components.Embed(i18n.T("slots.title", lang), i18n.T("coinflip.choose_prompt", lang), 0xf1c40f)
+	embed := components.Embed(i18n.T("slots.title", lang), i18n.T("coinflip.choose_prompt", lang), components.ColorReward)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("coinflip.heads_label", lang), components.EncodeOwner(userID, "casino", "coinflip_choice", "heads"), discordgo.PrimaryButton),
@@ -359,11 +359,11 @@ func megaSlotsErrorKey(err error) string {
 // slotsResultStatus builds the flavor + gain/loss (+ level-up) text and embed
 // color for a finished slots spin, shared by the interaction and prefix flows.
 func (c *Cog) slotsResultStatus(res *casinosvc.SlotsResult, amount int, lang string) (status string, color int) {
-	color = 0xe74c3c
+	color = components.ColorDanger
 	if res.WinType == "JACKPOT" {
-		color = 0xf1c40f
+		color = components.ColorReward
 	} else if res.IsWin {
-		color = 0x2ecc71
+		color = components.ColorSuccess
 	}
 	flavor := c.getSlotsFlavor(res.WinType, res.WinSym, lang)
 	if res.IsWin {
@@ -380,12 +380,12 @@ func (c *Cog) slotsResultStatus(res *casinosvc.SlotsResult, amount int, lang str
 // coinflipResultStatus builds the win/lose (+ level-up) text and embed color
 // for a finished coinflip, shared by the interaction and prefix flows.
 func coinflipResultStatus(res *casinosvc.CoinflipResult, lang string) (text string, color int) {
-	color = 0x2ecc71
+	color = components.ColorSuccess
 	if res.Win {
 		text = i18n.T("coinflip.win_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
 	} else {
 		text = i18n.T("coinflip.lose_msg", lang, map[string]any{"result": strings.ToUpper(res.Result)})
-		color = 0xe74c3c
+		color = components.ColorDanger
 	}
 	if res.LeveledUp {
 		text += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": res.NewLevel})
@@ -415,7 +415,7 @@ func (c *Cog) playMegaSlots(b *interaction.Bot, i *discordgo.InteractionCreate, 
 	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
-	blurple := 0x7289da
+	blurple := components.ColorCasino
 	_, menuComps := c.menu(lang, userID)
 	embed := c.megaSlotsEmbed(nil, i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -434,9 +434,9 @@ func (c *Cog) playMegaSlots(b *interaction.Bot, i *discordgo.InteractionCreate, 
 
 		time.Sleep(900 * time.Millisecond)
 
-		color := 0xe74c3c
+		color := components.ColorDanger
 		if res.IsWin {
-			color = 0x2ecc71
+			color = components.ColorSuccess
 		}
 		var status string
 		if res.IsWin {
@@ -520,7 +520,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 	}
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
-	blurple := 0x7289da
+	blurple := components.ColorCasino
 	_, menuComps := c.menu(lang, userID)
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
@@ -548,7 +548,7 @@ func (c *Cog) playSlots(b *interaction.Bot, i *discordgo.InteractionCreate, amou
 		}
 
 		if res.LuckReroll {
-			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, 0xf1c40f)
+			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, components.ColorReward)
 			_, _ = b.Session.InteractionResponseEdit(i.Interaction, components.WebhookEditResponse(embed, menuComps))
 			time.Sleep(900 * time.Millisecond)
 		}
@@ -586,7 +586,7 @@ func (c *Cog) playCoinflip(b *interaction.Bot, i *discordgo.InteractionCreate, c
 	questMsg, _ := c.store.PopQuestNotification(userID)
 
 	_, menuComps := c.menu(lang, userID)
-	blurple := 0x7289da
+	blurple := components.ColorCasino
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(responseType, embed, menuComps))
@@ -639,7 +639,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		interaction.SendJournalSceneMsg(s, m.ChannelID, m.Author.ID, text, dm)
 	}
 
-	blurple := 0x7289da
+	blurple := components.ColorCasino
 	_, menuComps := c.menu(lang, userID)
 	embed := c.slotsEmbed("🌀", "🌀", "🌀", i18n.T("slots.state_start", lang), amount, lang, blurple)
 	msg, err := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -679,7 +679,7 @@ func (c *Cog) playSlotsFromPrefix(b *interaction.Bot, s *discordgo.Session, m *d
 		}
 
 		if res.LuckReroll {
-			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, 0xf1c40f)
+			embed = c.slotsEmbed(res.Symbol1, res.Symbol2, res.PreRerollSymbol3, i18n.T("slots.state_luck_reroll", lang), amount, lang, components.ColorReward)
 			_, _ = s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 				Channel:    m.ChannelID,
 				ID:         msgID,
@@ -725,7 +725,7 @@ func (c *Cog) playCoinflipFromPrefix(b *interaction.Bot, s *discordgo.Session, m
 	}
 
 	_, menuComps := c.menu(lang, userID)
-	blurple := 0x7289da
+	blurple := components.ColorCasino
 	startMsg := i18n.T("coinflip.start_msg", lang, map[string]any{"choice": choice, "amount": amount})
 	embed := components.Embed(i18n.T("slots.title", lang), startMsg, blurple)
 	msg, err := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -847,7 +847,7 @@ func (c *Cog) announceBigWin(sess interaction.Session, guildID, userID int64, ga
 				"user":   interaction.Mention(userID),
 				"amount": strconv.Itoa(amount),
 			}),
-			0xf1c40f,
+			components.ColorReward,
 		)
 		_, _ = sess.ChannelMessageSendEmbed(strconv.FormatInt(ss.AnnouncementChannelID, 10), embed)
 	}()

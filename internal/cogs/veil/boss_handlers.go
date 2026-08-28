@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/interaction"
 	"guacagamblebot/internal/model"
@@ -96,7 +97,7 @@ func (c *Cog) finishBossTurn(b *interaction.Bot, i *discordgo.InteractionCreate,
 		embed := &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.rewards.victory_title", lang),
 			Description: desc,
-			Color:       0xf1c40f,
+			Color:       components.ColorReward,
 		}
 		c.respond(b, i, embed, nil)
 		return

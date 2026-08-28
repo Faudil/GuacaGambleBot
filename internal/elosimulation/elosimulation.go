@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"guacagamblebot/internal/battle"
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/i18n"
 	"guacagamblebot/internal/model"
 	"guacagamblebot/internal/service/pets"
@@ -186,7 +187,7 @@ func sendWeeklyAnnouncement(s *discordgo.Session, ss model.ServerSetting, topFiv
 	embed := &discordgo.MessageEmbed{
 		Title:       i18n.T("weekly.announcement_title", lang),
 		Description: desc + modLine,
-		Color:       0xf1c40f,
+		Color:       components.ColorReward,
 		Footer:      &discordgo.MessageEmbedFooter{Text: i18n.T("weekly.announcement_footer", lang)},
 	}
 

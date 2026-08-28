@@ -43,7 +43,7 @@ func startWhisperingGallery(raid *model.VeilRaid, lang string) EncounterResult {
 		PublicEmbed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.whisper_title", lang),
 			Description: i18n.T("veil.encounter.whisper_desc", lang),
-			Color:       0x9b59b6,
+			Color:       components.ColorArcane,
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: "Hint", Value: i18n.T("veil.encounter.whisper_hint", lang)},
 			},
@@ -101,7 +101,7 @@ func startShiftingFlames(raid *model.VeilRaid, lang string) EncounterResult {
 		PublicEmbed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.flames_title", lang),
 			Description: i18n.T("veil.encounter.flames_desc", lang),
-			Color:       0xe67e22,
+			Color:       components.ColorWarning,
 		},
 		Comps: []discordgo.MessageComponent{
 			components.ActionRow(
@@ -173,7 +173,7 @@ func startGuardian(raid *model.VeilRaid, lang string) EncounterResult {
 		PublicEmbed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.guardian_title", lang),
 			Description: i18n.T("veil.encounter.guardian_desc", lang),
-			Color:       0x3498db,
+			Color:       components.ColorInfo,
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: i18n.T("veil.encounter.guardian_hp", lang), Value: i18n.T("veil.encounter.guardian_hp_val", lang)},
 			},
@@ -245,7 +245,7 @@ func startBreachCore(raid *model.VeilRaid, lang string) EncounterResult {
 		PublicEmbed: &discordgo.MessageEmbed{
 			Title:       i18n.T("veil.encounter.breach_title", lang),
 			Description: i18n.T("veil.encounter.breach_desc", lang),
-			Color:       0x2ecc71,
+			Color:       components.ColorSuccess,
 			Fields: []*discordgo.MessageEmbedField{
 				{Name: i18n.T("veil.encounter.breach_field_awe_name", lang), Value: i18n.T("veil.encounter.breach_field_awe_val", lang)},
 				{Name: i18n.T("veil.encounter.breach_field_defy_name", lang), Value: i18n.T("veil.encounter.breach_field_defy_val", lang)},

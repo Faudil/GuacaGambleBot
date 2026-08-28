@@ -159,8 +159,8 @@ func stepCommandHint(step questssvc.QuestStep) string {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: questssvc.New(s, cfg)}
-	r.Slash("start", "Begin your journey!", c.onSlash)
-	r.Slash("begin", "Begin your journey!", c.onSlash)
+	r.Slash("start", "cmd.start.desc", c.onSlash)
+	r.Slash("begin", "cmd.start.desc", c.onSlash)
 	r.Prefix("start", c.onPrefix)
 	r.Prefix("begin", c.onPrefix)
 	r.Component("start", "continue", c.onContinue)
@@ -242,7 +242,7 @@ func (c *Cog) completedDesc(lang string, def *questssvc.QuestDef) string {
 func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
 	_, err := c.store.EnsureCharacter(userID)
 	if err != nil {
-		return components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil
+		return components.Embed("", i18n.T("start.error", lang), components.ColorDanger), nil
 	}
 
 	startErr := c.svc.StartQuest(userID, "tutorial")
@@ -255,7 +255,7 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 				components.Button(i18n.T("start.continue_btn", lang), components.EncodeOwner(userID, "start", "continue", "tutorial"), discordgo.SuccessButton),
 			),
 		}
-		return components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps
+		return components.Embed(i18n.T("start.begin_title", lang), text, components.ColorSuccess), comps
 	}
 
 	uq, uqd, err := c.svc.GetQuestProgress(userID, "tutorial")
@@ -296,15 +296,15 @@ func (c *Cog) buildJourneyResponse(lang string, userID int64) (*discordgo.Messag
 				},
 			),
 		}
-		return components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps
+		return components.Embed(i18n.T("start.begin_title", lang), text, components.ColorSuccess), comps
 	}
 
 	if uq != nil && uq.Status == "COMPLETED" {
 		def := c.svc.GetQuestDef("tutorial")
-		return components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), 0x2ecc71), nil
+		return components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), components.ColorSuccess), nil
 	}
 
-	return components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil
+	return components.Embed("", i18n.T("start.error", lang), components.ColorDanger), nil
 }
 
 func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
@@ -325,7 +325,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if err != nil || uq.Status != "ACTIVE" {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+				components.Embed("", i18n.T("start.error", lang), components.ColorDanger), nil))
 		return
 	}
 
@@ -341,7 +341,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
 				_ = b.Session.InteractionRespond(i.Interaction,
 					components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-						components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+						components.Embed("", i18n.T("start.error", lang), components.ColorDanger), nil))
 				return
 			}
 		} else {
@@ -362,7 +362,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed(i18n.T("start.begin_title", lang), text, 0x2ecc71), comps))
+					components.Embed(i18n.T("start.begin_title", lang), text, components.ColorSuccess), comps))
 			return
 		}
 
@@ -377,7 +377,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			}
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed(i18n.T("start.begin_title", lang), text, 0xe74c3c), comps))
+					components.Embed(i18n.T("start.begin_title", lang), text, components.ColorDanger), comps))
 			return
 		}
 
@@ -395,14 +395,14 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		}
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(i18n.T("start.begin_title", lang), text, 0x992d22), comps))
+				components.Embed(i18n.T("start.begin_title", lang), text, components.ColorDanger), comps))
 		return
 
 	default:
 		if err := c.svc.AdvanceStep(userID, questID, ""); err != nil {
 			_ = b.Session.InteractionRespond(i.Interaction,
 				components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-					components.Embed("", i18n.T("start.error", lang), 0xe74c3c), nil))
+					components.Embed("", i18n.T("start.error", lang), components.ColorDanger), nil))
 			return
 		}
 	}
@@ -411,7 +411,7 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	if uq2.Status == "COMPLETED" {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-				components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), 0x2ecc71), nil))
+				components.Embed(i18n.T("start.completed_title", lang), c.completedDesc(lang, def), components.ColorSuccess), nil))
 		return
 	}
 
@@ -445,5 +445,5 @@ func (c *Cog) onContinue(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	}
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage,
-			components.Embed("", text, 0x2ecc71), comps))
+			components.Embed("", text, components.ColorSuccess), comps))
 }

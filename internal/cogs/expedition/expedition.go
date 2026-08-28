@@ -50,8 +50,8 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 		psvc:  petsvc.New(s, cfg),
 		qsvc:  questssvc.New(s, cfg),
 	}
-	r.Slash("expedition", "Send your pet exploring", c.onSlashMenu)
-	r.Slash("exp", "Send your pet exploring", c.onSlashMenu)
+	r.Slash("expedition", "cmd.expedition.desc", c.onSlashMenu)
+	r.Slash("exp", "cmd.expedition.desc", c.onSlashMenu)
 	r.Prefix("expedition", c.onPrefixMenu)
 	r.Prefix("exp", c.onPrefixMenu)
 	r.Component("expedition", "menu", c.onMenu)
@@ -111,7 +111,7 @@ func (c *Cog) idleMenu(lang string, userID int64) (*discordgo.MessageEmbed, []di
 		}
 	}
 
-	embed := components.Embed(i18n.T("expedition.menu_title", lang), desc, 0x3498db)
+	embed := components.Embed(i18n.T("expedition.menu_title", lang), desc, components.ColorInfo)
 	embed.Footer = &discordgo.MessageEmbedFooter{Text: i18n.T("expedition.menu_footer", lang)}
 	if pet != nil {
 		embed.Fields = []*discordgo.MessageEmbedField{
@@ -175,9 +175,9 @@ func (c *Cog) statusView(lang string, userID int64, exp *model.PetExpedition) (*
 		progress = 100
 	}
 
-	color := 0xf39c12
+	color := components.ColorWarning
 	if done {
-		color = 0x2ecc71
+		color = components.ColorSuccess
 	}
 
 	desc := i18n.T("expedition.status_progress", lang, map[string]any{
@@ -416,7 +416,7 @@ func (c *Cog) claimView(userID int64, pet *model.UserPet, exp *model.PetExpediti
 		desc += "\n\n" + i18n.T("expedition.artifact_leveled", lang)
 	}
 
-	embed := components.Embed(i18n.T("expedition.claim_title", lang), desc, 0xf1c40f)
+	embed := components.Embed(i18n.T("expedition.claim_title", lang), desc, components.ColorReward)
 	embed.Fields = []*discordgo.MessageEmbedField{
 		components.Field(i18n.T("expedition.claim_field_loot", lang), lootStr, false),
 	}
@@ -500,7 +500,7 @@ func (c *Cog) maybePetInteraction(b *interaction.Bot, i *discordgo.InteractionCr
 	}
 	embed := components.Embed(
 		i18n.T("pets.interact.title", lang, map[string]any{"name": pet.Nickname}),
-		intro, 0x9b59b6)
+		intro, components.ColorArcane)
 	_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
 		Embeds: []*discordgo.MessageEmbed{embed},
 		Components: []discordgo.MessageComponent{

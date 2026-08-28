@@ -108,7 +108,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	inv := invsvc.New(s, cfg)
 	npcSvc := npcsvc.New(s, cfg, def, inv)
 	c := &Cog{store: s, cfg: cfg, svc: archsvc.New(s, cfg, npcSvc, petsvc.New(s, cfg, npcSvc))}
-	r.Slash("dig", "Archaeology fossil excavation", c.onSlashMenu)
+	r.Slash("dig", "cmd.dig.desc", c.onSlashMenu)
 	r.Prefix("dig", c.onPrefixMenu)
 	r.Prefix("arch", c.onPrefixMenu)
 	r.Component("arch", "menu", c.onMenu)
@@ -122,7 +122,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("arch", "reanimate", c.onReanimateButton)
 	r.Component("arch", "reanimate_menu", c.onReanimateMenu)
 	r.Component("arch", "reanimate_refresh", c.onReanimateMenu)
-	r.SlashWithOptions("reanimate", "Reanimate 5 fossils into a pet (needs Genetics Lab + research)", []*discordgo.ApplicationCommandOption{
+	r.SlashWithOptions("reanimate", "cmd.reanimate.desc", []*discordgo.ApplicationCommandOption{
 		{
 			Type:        discordgo.ApplicationCommandOptionString,
 			Name:        "rarity",
@@ -138,7 +138,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 			},
 		},
 	}, c.onSlashReanimate)
-	r.Slash("reanimatelist", "Show reanimation lab progress", c.onSlashReanimateList)
+	r.Slash("reanimatelist", "cmd.reanimatelist.desc", c.onSlashReanimateList)
 	r.Prefix("reanimate", c.onPrefixReanimate)
 	r.Prefix("rl", c.onPrefixReanimateList)
 	r.Prefix("reanimatelist", c.onPrefixReanimateList)
@@ -224,7 +224,7 @@ func (c *Cog) bureau(lang string, userID int64) (*discordgo.MessageEmbed, []disc
 	embed := components.Embed(
 		i18n.T("arch.bureau_title", lang),
 		desc,
-		0x8B4513,
+		components.ColorDig,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("arch.bureau_footer", lang, map[string]any{"remaining": remaining}),
@@ -484,7 +484,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 	}
 
 	if result.BackToDig && sess.state != nil && !sess.state.Finished {
-		embed := components.Embed(i18n.T(result.TitleID, lang), desc, 0x006400)
+		embed := components.Embed(i18n.T(result.TitleID, lang), desc, components.ColorFarm)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
 				components.Button(i18n.T("arch.back_dig", lang), components.EncodeOwner(userID, "arch", "action", "continue"), discordgo.SecondaryButton),
@@ -505,7 +505,7 @@ func (c *Cog) onEventChoice(b *interaction.Bot, i *discordgo.InteractionCreate) 
 		return
 	}
 
-	embed := components.Embed(i18n.T(result.TitleID, lang), desc, 0x006400)
+	embed := components.Embed(i18n.T(result.TitleID, lang), desc, components.ColorFarm)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
 			components.Button(i18n.T("arch.back_menu", lang), components.EncodeOwner(userID, "arch", "menu"), discordgo.SecondaryButton),
@@ -571,7 +571,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			embed = components.Embed(
 				i18n.T("arch.sold_title", lang),
 				desc,
-				0xF1C40F,
+				components.ColorReward,
 			)
 		}
 
@@ -585,7 +585,7 @@ func (c *Cog) onPostExtract(b *interaction.Bot, i *discordgo.InteractionCreate) 
 			embed = components.Embed(
 				i18n.T("arch.keep_title", lang),
 				i18n.T("arch.keep_desc", lang, map[string]any{"item": items.LocalizedName(res.ItemName, lang), "xp": xpStr}),
-				0x00FF00,
+				components.ColorSuccess,
 			)
 		}
 	}
@@ -639,7 +639,7 @@ func (c *Cog) buildGrindView(lang string, userID int64) (*discordgo.MessageEmbed
 	embed := components.Embed(
 		i18n.T("arch.dust_title", lang),
 		i18n.T("arch.dust_desc", lang, map[string]any{"rates": strings.Join(rateLines, "\n")}),
-		0x8B4513,
+		components.ColorDig,
 	)
 
 	var inv []model.Inventory
@@ -742,7 +742,7 @@ func (c *Cog) onGrindModal(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		i18n.T("arch.dust_success_desc", lang, map[string]any{
 			"qty": amount, "item": items.LocalizedName(itemID, lang), "dust": dust,
 		}),
-		0x8B4513,
+		components.ColorDig,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -858,7 +858,7 @@ func (c *Cog) showEventEmbed(b *interaction.Bot, i *discordgo.InteractionCreate,
 	embed := components.Embed(
 		i18n.T(evt.TitleID, lang),
 		desc,
-		0x9B59B6,
+		components.ColorArcane,
 	)
 
 	var btns []discordgo.MessageComponent
@@ -877,28 +877,33 @@ func (c *Cog) showEventEmbed(b *interaction.Bot, i *discordgo.InteractionCreate,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
 }
 
+// shadowQualityColor is the void black reserved for a "shadow" dig result;
+// it is deliberately outside the shared palette because the absence of
+// colour is the point.
+const shadowQualityColor = 0x000000
+
 func (c *Cog) showResultEmbed(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, res *archsvc.DigResult) {
 	uid := interaction.ToInt64(interaction.UserID(i))
-	color := 0x00FF00
+	color := components.ColorSuccess
 	switch res.Quality {
 	case "disaster":
-		color = 0xE74C3C
+		color = components.ColorDanger
 	case "damaged":
-		color = 0xF39C12
+		color = components.ColorWarning
 	case "shadow":
-		color = 0x000000
+		color = shadowQualityColor
 	case "cursed":
-		color = 0x8B0000
+		color = components.ColorDanger
 	case "journal":
-		color = 0x8B4513
+		color = components.ColorDig
 	case "pure_dna":
-		color = 0x9B59B6
+		color = components.ColorArcane
 	case "legendary":
-		color = 0xFFD700
+		color = components.ColorLegendary
 	case "epic":
-		color = 0x9B59B6
+		color = components.ColorArcane
 	case "rare":
-		color = 0x3498DB
+		color = components.ColorInfo
 	}
 
 	desc := outcomeDesc(res, lang)
@@ -1097,7 +1102,7 @@ func (c *Cog) reanimateLabView(lang string, userID int64) (*discordgo.MessageEmb
 	embed := components.Embed(
 		i18n.T("arch.reanimate_list_title", lang),
 		fullDesc,
-		0x9B59B6,
+		components.ColorArcane,
 	)
 
 	// Build rarity buttons (max 5 per row).
@@ -1216,10 +1221,10 @@ func (c *Cog) handleReanimatePrefix(s *discordgo.Session, channelID, lang string
 		return
 	}
 	if success {
-		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), components.ColorArcane)
 		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
 	} else {
-		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), components.ColorDanger)
 		_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{Embeds: []*discordgo.MessageEmbed{embed}})
 	}
 }
@@ -1300,10 +1305,10 @@ func (c *Cog) onSlashReanimate(b *interaction.Bot, i *discordgo.InteractionCreat
 	}
 
 	if success {
-		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+		embed := components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), components.ColorArcane)
 		_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 	} else {
-		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+		embed := components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), components.ColorDanger)
 		_ = b.Session.InteractionRespond(i.Interaction, components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 	}
 }
@@ -1374,9 +1379,9 @@ func (c *Cog) onReanimateButton(b *interaction.Bot, i *discordgo.InteractionCrea
 	}
 	var embed *discordgo.MessageEmbed
 	if success {
-		embed = components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), 0x9B59B6)
+		embed = components.Embed(i18n.T("arch.reanimate_success_title", lang), i18n.T("arch.reanimate_success_desc", lang, map[string]any{"pet": petName}), components.ColorArcane)
 	} else {
-		embed = components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), 0xE74C3C)
+		embed = components.Embed(i18n.T("arch.reanimate_fail_title", lang), i18n.T("arch.reanimate_fail_desc", lang), components.ColorDanger)
 	}
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(components.Button(i18n.T("arch.reanimate_btn_back_lab", lang), components.EncodeOwner(userID, "arch", "reanimate_menu"), discordgo.SecondaryButton)),

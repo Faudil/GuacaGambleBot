@@ -24,8 +24,8 @@ type Cog struct {
 // Register wires the cog into the router under both slash and prefix triggers.
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: lb.New(s, cfg)}
-	r.Slash("leaderboard", "Classement des plus riches joueurs et des plus gros gains.", c.onSlashMenu)
-	r.Slash("lb", "Classement des plus riches joueurs et des plus gros gains.", c.onSlashMenu)
+	r.Slash("leaderboard", "cmd.leaderboard.desc", c.onSlashMenu)
+	r.Slash("lb", "cmd.leaderboard.desc", c.onSlashMenu)
 	r.Prefix("leaderboard", c.onPrefixMenu)
 	r.Prefix("lb", c.onPrefixMenu)
 	r.Component("leaderboard", "category", c.onCategory)
@@ -104,7 +104,7 @@ func (c *Cog) wealthEmbed(lang string) *discordgo.MessageEmbed {
 	embed := components.Embed(
 		i18n.T("leaderboard.menu_title", lang),
 		i18n.T("leaderboard.menu_desc", lang),
-		0xf1c40f,
+		components.ColorReward,
 	)
 	users, err := c.svc.Top(10)
 	if err == nil {
@@ -131,7 +131,7 @@ func (c *Cog) recordsEmbed(lang, game string) *discordgo.MessageEmbed {
 	if game == "coinflip" {
 		titleKey = "leaderboard.records_title_coinflip"
 	}
-	embed := components.Embed(i18n.T(titleKey, lang), "", 0xf1c40f)
+	embed := components.Embed(i18n.T(titleKey, lang), "", components.ColorReward)
 	records, err := c.svc.TopWinRecords(game, 10)
 	if err == nil {
 		if len(records) == 0 {

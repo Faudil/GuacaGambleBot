@@ -22,7 +22,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: charsvc.New(s, cfg)}
-	r.Slash("skills", "View and activate your RPG skills.", c.onSlashMenu)
+	r.Slash("skills", "cmd.skills.desc", c.onSlashMenu)
 	r.Prefix("skills", c.onPrefixMenu)
 	r.Prefix("sk", c.onPrefixMenu)
 	r.Component("skills", "refresh", c.onRefresh)
@@ -81,7 +81,7 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		_ = b.Session.InteractionRespond(i.Interaction,
 			components.InteractionResponse(
 				discordgo.InteractionResponseChannelMessageWithSource,
-				components.Embed(i18n.T("skills.activate_title", lang), msg, 0xe74c3c),
+				components.Embed(i18n.T("skills.activate_title", lang), msg, components.ColorDanger),
 				nil,
 			))
 		return
@@ -109,7 +109,7 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				components.Embed(
 					i18n.T("skills.activated_title", lang),
 					i18n.T("skills.overclock_done", lang),
-					0x2ecc71,
+					components.ColorSuccess,
 				),
 				nil,
 			))
@@ -119,7 +119,7 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 		embed := components.Embed(
 			i18n.T("skills.sw_title", lang),
 			i18n.T("skills.sw_desc", lang),
-			0x3498db,
+			components.ColorInfo,
 		)
 		comps := []discordgo.MessageComponent{
 			components.ActionRow(
@@ -147,7 +147,7 @@ func (c *Cog) onActivate(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.Embed(
 				i18n.T("skills.activated_title", lang),
 				i18n.T("skills.activated_desc", lang, map[string]any{"skill": sk.Emoji + " " + sk.Name}),
-				0x2ecc71,
+				components.ColorSuccess,
 			),
 			nil,
 		))
@@ -175,7 +175,7 @@ func (c *Cog) onSecondWindPick(b *interaction.Bot, i *discordgo.InteractionCreat
 			components.Embed(
 				i18n.T("skills.activated_title", lang),
 				i18n.T("skills.sw_picked", lang, map[string]any{"game": i18n.T("skills.game_"+game, lang)}),
-				0x2ecc71,
+				components.ColorSuccess,
 			),
 			nil,
 		))
@@ -192,7 +192,7 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 		return components.Embed(
 			i18n.T("skills.title", lang),
 			i18n.T("skills.error", lang),
-			0xe74c3c,
+			components.ColorDanger,
 		), nil
 	}
 
@@ -241,6 +241,6 @@ func (c *Cog) buildDisplay(lang string, userID int64) (*discordgo.MessageEmbed, 
 	}
 
 	return components.Embed(
-		i18n.T("skills.title", lang), sb.String(), 0x3498db,
+		i18n.T("skills.title", lang), sb.String(), components.ColorInfo,
 	), comps
 }

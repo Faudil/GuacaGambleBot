@@ -24,7 +24,7 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: adminsvc.New(s, cfg)}
-	r.Slash("admin", "Panneau d'administration.", c.onSlashMenu)
+	r.Slash("admin", "cmd.admin.desc", c.onSlashMenu)
 	r.Prefix("airdrop", c.onAirdrop)
 	r.Prefix("rain", c.onAirdrop)
 	r.Prefix("airdrop_item", c.onAirdropItem)
@@ -86,7 +86,7 @@ func (c *Cog) menu(lang string) (*discordgo.MessageEmbed, []discordgo.MessageCom
 	embed := components.Embed(
 		i18n.T("admin.menu_title", lang),
 		i18n.T("admin.menu_desc", lang),
-		0xe74c3c,
+		components.ColorDanger,
 	)
 	comps := []discordgo.MessageComponent{
 		components.ActionRow(
@@ -141,7 +141,7 @@ func (c *Cog) onAirdropSubmit(b *interaction.Bot, i *discordgo.InteractionCreate
 	embed := components.Embed(
 		i18n.T("admin.airdrop_title", lang),
 		i18n.T("admin.airdrop_desc", lang, map[string]any{"amount": amount, "user": interaction.Mention(userID)}),
-		0xf1c40f,
+		components.ColorReward,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("admin.gifted_by", lang, map[string]any{"author": interaction.DisplayName(b.Session, i.GuildID, i.Member, interaction.ToInt64(interaction.UserID(i)))}),
@@ -300,7 +300,7 @@ func (c *Cog) itemAirdropEmbed(lang string, it *items.Item, quantity int, all bo
 			"user":      interaction.Mention(userID),
 		})
 	}
-	embed := components.Embed(title, desc, 0xf1c40f)
+	embed := components.Embed(title, desc, components.ColorReward)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("admin.gifted_by", lang, map[string]any{"author": author}),
 	}
@@ -345,7 +345,7 @@ func (c *Cog) onGiveCrownsSubmit(b *interaction.Bot, i *discordgo.InteractionCre
 	}
 	embed := components.Embed("✅",
 		fmt.Sprintf("Added `%d` 👑 Crowns to %s.", amount, interaction.Mention(userID)),
-		0xf1c40f)
+		components.ColorReward)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -359,7 +359,7 @@ func (c *Cog) onResetEconomyBtn(b *interaction.Bot, i *discordgo.InteractionCrea
 		interaction.RespondError(b, i, lang, "admin.amount_positive")
 		return
 	}
-	embed := components.Embed("🔄", "Economy reset complete!", 0xe74c3c)
+	embed := components.Embed("🔄", "Economy reset complete!", components.ColorDanger)
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, nil))
 }
@@ -421,7 +421,7 @@ func (c *Cog) onAirdrop(b *interaction.Bot, s *discordgo.Session, m *discordgo.M
 	embed := components.Embed(
 		i18n.T("admin.airdrop_title", lang),
 		i18n.T("admin.airdrop_desc", lang, map[string]any{"amount": amount, "user": interaction.Mention(userID)}),
-		0xf1c40f,
+		components.ColorReward,
 	)
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: i18n.T("admin.gifted_by", lang, map[string]any{"author": m.Author.Username}),

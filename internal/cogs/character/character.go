@@ -29,9 +29,9 @@ type Cog struct {
 
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: charsvc.New(s, cfg)}
-	r.Slash("character", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
-	r.Slash("char", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
-	r.Slash("profile", "View your RPG player profile, stats, and equipment.", c.onSlashMenu)
+	r.Slash("character", "cmd.character.desc", c.onSlashMenu)
+	r.Slash("char", "cmd.character.desc", c.onSlashMenu)
+	r.Slash("profile", "cmd.character.desc", c.onSlashMenu)
 	r.Prefix("character", c.onPrefixMenu)
 	r.Prefix("char", c.onPrefixMenu)
 	r.Prefix("profile", c.onPrefixMenu)
@@ -328,7 +328,7 @@ func profileEmbed(svc *charsvc.Service, lang string, userID int64, pseudo string
 		return components.Embed(
 			i18n.T("character.profile_title", lang),
 			i18n.T("character.profile_error", lang),
-			0x9b59b6,
+			components.ColorArcane,
 		)
 	}
 
@@ -368,7 +368,7 @@ func profileEmbed(svc *charsvc.Service, lang string, userID int64, pseudo string
 	embed := components.Embed(
 		i18n.T("character.profile_title", lang, map[string]any{"user": pseudo}),
 		desc,
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	return embed
 }
@@ -379,7 +379,7 @@ func statsEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Mess
 		return components.Embed(
 			i18n.T("character.stats_title", lang),
 			i18n.T("character.profile_error", lang),
-			0x9b59b6,
+			components.ColorArcane,
 		)
 	}
 
@@ -415,7 +415,7 @@ func statsEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.Mess
 	embed := components.Embed(
 		i18n.T("character.stats_title", lang),
 		sb.String(),
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	return embed
 }
@@ -464,7 +464,7 @@ func equipmentEmbed(svc *charsvc.Service, lang string, userID int64) *discordgo.
 	embed := components.Embed(
 		i18n.T("character.equipment_title", lang),
 		desc,
-		0x9b59b6,
+		components.ColorArcane,
 	)
 	return embed
 }

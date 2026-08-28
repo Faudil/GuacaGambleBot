@@ -106,9 +106,13 @@ type Router struct {
 	rawSession *discordgo.Session
 	slash      map[string]SlashHandler
 	slashDefs  []*discordgo.ApplicationCommand
-	prefix     map[string]PrefixHandler
-	component  map[string]ComponentHandler
-	modal      map[string]ModalHandler
+	// commands mirrors slashDefs with the metadata /help renders from, and
+	// category is the bucket currently being registered (see Categorize).
+	commands  []Command
+	category  string
+	prefix    map[string]PrefixHandler
+	component map[string]ComponentHandler
+	modal     map[string]ModalHandler
 
 	rateLimitMu    sync.Mutex
 	rateLimitTimes map[string]time.Time
@@ -143,17 +147,21 @@ func NewRouter(bot *Bot, st *store.Store) *Router {
 	}
 }
 
-// Slash registers a slash command and its handler.
-func (r *Router) Slash(name, description string, h SlashHandler) {
+// Slash registers a slash command and its handler. descKey is an i18n key
+// ("cmd.daily.desc"), not a literal sentence: the router resolves it per
+// language for Discord and /help renders from the same key.
+func (r *Router) Slash(name, descKey string, h SlashHandler) {
 	r.slash[name] = h
-	r.slashDefs = append(r.slashDefs, &discordgo.ApplicationCommand{Name: name, Description: description})
+	r.slashDefs = append(r.slashDefs, slashDef(name, descKey, nil))
+	r.commands = append(r.commands, Command{Name: name, DescKey: descKey, Category: r.category})
 }
 
 // SlashWithOptions registers a slash command with Discord option arguments
 // (e.g. user picks, number inputs) and its handler.
-func (r *Router) SlashWithOptions(name, description string, options []*discordgo.ApplicationCommandOption, h SlashHandler) {
+func (r *Router) SlashWithOptions(name, descKey string, options []*discordgo.ApplicationCommandOption, h SlashHandler) {
 	r.slash[name] = h
-	r.slashDefs = append(r.slashDefs, &discordgo.ApplicationCommand{Name: name, Description: description, Options: options})
+	r.slashDefs = append(r.slashDefs, slashDef(name, descKey, options))
+	r.commands = append(r.commands, Command{Name: name, DescKey: descKey, Category: r.category})
 }
 
 // Prefix registers a `!name` message handler.
