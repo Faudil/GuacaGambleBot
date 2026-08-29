@@ -221,6 +221,12 @@ func simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 			}
 
 			msg := resolveAttack(attacker, defender, aEmoji, dEmoji, an, dn, fatigueMult)
+			if rebirthMsg := checkRebirth(p1, p1.Emoji, p1.Nickname); rebirthMsg != "" {
+				msg += rebirthMsg
+			}
+			if rebirthMsg := checkRebirth(p2, p2.Emoji, p2.Nickname); rebirthMsg != "" {
+				msg += rebirthMsg
+			}
 			log = append(log, msg)
 			if len(log) > 10 {
 				log = log[1:]
@@ -238,23 +244,21 @@ func simulate(p1, p2 *BattlePet, modID ...string) *BattleResult {
 		Log:    log,
 		Turns:  turns,
 	}
-	// Phoenix Rebirth check
-	if !p1.IsAlive() && p1.PerkInt["rebirth"] > 0 {
-		p1.PerkInt["rebirth"] = 0
-		p1.HP = p1.MaxHP * 3 / 10
-		result.Pet1HP = p1.HP
-	}
-	if !p2.IsAlive() && p2.PerkInt["rebirth"] > 0 {
-		p2.PerkInt["rebirth"] = 0
-		p2.HP = p2.MaxHP * 3 / 10
-		result.Pet2HP = p2.HP
-	}
 	if !p1.IsAlive() && p2.IsAlive() {
 		result.WinnerID = p2.ID
 	} else if p1.IsAlive() && !p2.IsAlive() {
 		result.WinnerID = p1.ID
 	}
 	return result
+}
+
+func checkRebirth(p *BattlePet, emoji, name string) string {
+	if p.IsAlive() || p.PerkInt["rebirth"] <= 0 {
+		return ""
+	}
+	p.PerkInt["rebirth"] = 0
+	p.HP = p.MaxHP * 3 / 10
+	return fmt.Sprintf(" | 🔥 %s **%s** rises from the ashes!", emoji, name)
 }
 
 func resolveAttack(attacker, defender *BattlePet, aEmoji, dEmoji, an, dn string, fatigueMult float64) string {

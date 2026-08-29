@@ -42,6 +42,9 @@ type BossStage struct {
 	RewardItems map[string]int
 	XP          int
 	Achievement string
+	// Skills are battle skill IDs (see service/pets/skills.go) applied to the
+	// boss at battle start, e.g. "phoenix_rebirth".
+	Skills []string
 	// Image is the asset file (e.g. "bosses/vezir.png") shown on the boss
 	// fight embeds. Empty means no picture.
 	Image string
@@ -92,6 +95,7 @@ var BossLeague = []BossStage{
 		DescEN:      "The League's final guardian. He rises from his ashes. To win, you must give everything.",
 		RewardMoney: 5000, RewardItems: map[string]int{},
 		XP: 250, Achievement: "boss_league_5", Image: "bosses/solaris.png",
+		Skills: []string{"phoenix_rebirth"},
 	},
 	{
 		Stage: 6, NameFR: "Le Gardien du Coffre", NameEN: "The Vault Guardian",
@@ -135,6 +139,7 @@ func (s *Service) CreateBossPet(stage BossStage) *battle.BattlePet {
 		Level: stage.Level, HP: stage.HP, MaxHP: stage.HP,
 		Atk: stage.Atk, Defense: stage.Defense, Speed: stage.Speed,
 		DGE: stage.DGE, ACC: stage.ACC, CritC: stage.CritC, CritD: stage.CritD, SpcC: stage.SpcC,
+		Skills: stage.Skills,
 	}
 }
 

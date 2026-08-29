@@ -62,7 +62,7 @@ var ResearchDefs = map[string]*ResearchDef{
 	},
 	"dna_research": {
 		ID: "dna_research", Name: "DNA Research", Description: "Genetic engineering to create new life forms.",
-		TimeHours: 24, CostMoney: 8000, CostItems: map[string]int{"pure_dna": 3, "golden_apple": 2, "emerald": 1},
+		TimeHours: 24, CostMoney: 8000, CostItems: map[string]int{"rare_fossil": 12, "golden_apple": 2, "emerald": 4, "bone_dust": 30},
 		RequiredFurniture: "genetics_lab",
 		UnlocksRecipes:    []string{"volcano_egg"},
 		BonusDesc:         "Unlocks: Volcano Egg",
@@ -103,13 +103,13 @@ var ResearchDefs = map[string]*ResearchDef{
 	},
 	"reanimate_legendary": {
 		ID: "reanimate_legendary", Name: "Reanimation: Legendary Fossils", Description: "The pinnacle of resurrection science for legendary giants.",
-		TimeHours: 24, CostMoney: 20000, CostItems: map[string]int{"bone_dust": 60, "epic_fossil": 2, "emerald": 20, "rough_diamond": 20},
+		TimeHours: 24, CostMoney: 20000, CostItems: map[string]int{"bone_dust": 60, "epic_fossil": 15, "emerald": 20, "rough_diamond": 20},
 		RequiredFurniture: "genetics_lab",
 		BonusDesc:         "Unlocks: Reanimating Legendary Fossils",
 	},
 	"reanimate_pure_dna": {
 		ID: "reanimate_pure_dna", Name: "Reanimation: Pure DNA", Description: "Ultra-rare pure DNA samples allow the revival of mythical life.",
-		TimeHours: 48, CostMoney: 50000, CostItems: map[string]int{"bone_dust": 150, "pure_dna": 5, "platinum": 20, "emerald": 20, "rough_diamond": 10},
+		TimeHours: 48, CostMoney: 50000, CostItems: map[string]int{"bone_dust": 150, "legendary_fragment": 10, "platinum": 20, "emerald": 20, "rough_diamond": 10},
 		RequiredFurniture: "genetics_lab",
 		BonusDesc:         "Unlocks: Reanimating Pure DNA Fossils",
 	},
@@ -145,7 +145,7 @@ var ResearchDefs = map[string]*ResearchDef{
 	},
 	"equip_legendary": {
 		ID: "equip_legendary", Name: "Legendary Equipment", Description: "Attain the pinnacle of crafting — Legendary gear.",
-		TimeHours: 24, CostMoney: 30000, CostItems: map[string]int{"rough_diamond": 10, "pure_dna": 6},
+		TimeHours: 24, CostMoney: 30000, CostItems: map[string]int{"rough_diamond": 10, "epic_fossil": 12},
 		RequiredFurniture: "arcane_forge",
 		UnlocksRecipes:    []string{},
 		BonusDesc:         "Unlocks: Legendary equipment crafting (coming soon)",
