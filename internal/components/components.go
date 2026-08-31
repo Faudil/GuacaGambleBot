@@ -129,3 +129,125 @@ func WebhookEditResponse(embed *discordgo.MessageEmbed, comps []discordgo.Messag
 	}
 	return data
 }
+
+// SafeEmoji builds a ComponentEmoji from a Unicode emoji string, returning nil
+// when the string is not exactly one emoji. Discord rejects the entire
+// interaction response with 400 Invalid Form Body if a component emoji name
+// holds more than one emoji (e.g. "🐺🐺🐺"), so a single bad entry in a content
+// table silently blanks the whole menu for every user who owns that entry.
+func SafeEmoji(name string) *discordgo.ComponentEmoji {
+	if !isSingleEmoji(name) {
+		return nil
+	}
+	return &discordgo.ComponentEmoji{Name: name}
+}
+
+// Discord's label limits, which the emoji fallback below must respect.
+const (
+	maxOptionLabel = 100
+	maxButtonLabel = 80
+)
+
+// SanitizeComponents rewrites any component emoji Discord would reject into the
+// component's label, where multi-emoji strings are perfectly legal. Emoji reach
+// components from content tables (pet species, items, NPCs, lore, rarities), so
+// one bad entry would otherwise take down the whole message with a 400 rather
+// than just looking odd. Moving it into the label keeps the emoji visible.
+//
+// This runs at the session boundary, so it protects every component the bot
+// sends, including call sites that build discordgo structs directly.
+func SanitizeComponents(rows []discordgo.MessageComponent) []discordgo.MessageComponent {
+	if rows == nil {
+		return nil
+	}
+	out := make([]discordgo.MessageComponent, len(rows))
+	for i, row := range rows {
+		out[i] = sanitizeComponent(row)
+	}
+	return out
+}
+
+func sanitizeComponent(c discordgo.MessageComponent) discordgo.MessageComponent {
+	switch v := c.(type) {
+	case discordgo.ActionsRow:
+		v.Components = SanitizeComponents(v.Components)
+		return v
+	case *discordgo.ActionsRow:
+		if v == nil {
+			return c
+		}
+		row := *v
+		row.Components = SanitizeComponents(row.Components)
+		return &row
+	case discordgo.Button:
+		v.Label, v.Emoji = demoteEmoji(v.Label, v.Emoji, maxButtonLabel)
+		return v
+	case *discordgo.Button:
+		if v == nil {
+			return c
+		}
+		b := *v
+		b.Label, b.Emoji = demoteEmoji(b.Label, b.Emoji, maxButtonLabel)
+		return &b
+	case discordgo.SelectMenu:
+		v.Options = sanitizeOptions(v.Options)
+		return v
+	case *discordgo.SelectMenu:
+		if v == nil {
+			return c
+		}
+		m := *v
+		m.Options = sanitizeOptions(m.Options)
+		return &m
+	default:
+		return c
+	}
+}
+
+func sanitizeOptions(opts []discordgo.SelectMenuOption) []discordgo.SelectMenuOption {
+	if opts == nil {
+		return nil
+	}
+	out := make([]discordgo.SelectMenuOption, len(opts))
+	for i, o := range opts {
+		o.Label, o.Emoji = demoteEmoji(o.Label, o.Emoji, maxOptionLabel)
+		out[i] = o
+	}
+	return out
+}
+
+// demoteEmoji leaves a legal emoji alone; an illegal one is prefixed onto the
+// label and cleared from the emoji field. Custom emoji (which carry an ID) are
+// never touched — their Name is a plain identifier, not a Unicode emoji.
+func demoteEmoji(label string, e *discordgo.ComponentEmoji, maxLabel int) (string, *discordgo.ComponentEmoji) {
+	if e == nil || e.ID != "" || isSingleEmoji(e.Name) {
+		return label, e
+	}
+	if e.Name != "" {
+		label = strings.TrimSpace(e.Name + " " + label)
+	}
+	if len([]rune(label)) > maxLabel {
+		label = string([]rune(label)[:maxLabel])
+	}
+	return label, nil
+}
+
+// isSingleEmoji reports whether name is one emoji: a single rune, or a single
+// ZWJ/variation-selector/skin-tone sequence built around one base rune.
+func isSingleEmoji(name string) bool {
+	if name == "" {
+		return false
+	}
+	base := 0
+	for _, r := range name {
+		switch {
+		case r == 0x200D: // zero-width joiner: continues the same emoji
+			return true
+		case r == 0xFE0F || r == 0xFE0E: // variation selector
+		case r >= 0x1F3FB && r <= 0x1F3FF: // skin-tone modifier
+		default:
+			base++
+		}
+	}
+	return base == 1
+}

@@ -128,7 +128,8 @@ func (c *Cog) onPrefixMenu(b *interaction.Bot, s *discordgo.Session, m *discordg
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	userID := interaction.ToInt64(m.Author.ID)
 	embed, comps := c.menuFromUser(userID, interaction.DisplayName(s, m.GuildID, &discordgo.Member{User: m.Author}, userID), lang)
-	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+	// b.Session, not the raw session: it applies the component emoji guard.
+	_, _ = b.Session.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Embeds:     []*discordgo.MessageEmbed{embed},
 		Components: comps,
 	})

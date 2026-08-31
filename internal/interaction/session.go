@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"guacagamblebot/internal/components"
 	"guacagamblebot/internal/logger"
 )
 
@@ -115,11 +116,28 @@ func (d *DeferringSession) isDeferred(i *discordgo.Interaction) bool {
 }
 
 func (d *DeferringSession) InteractionRespond(i *discordgo.Interaction, r *discordgo.InteractionResponse, opts ...discordgo.RequestOption) error {
+	// Emoji reach components from content tables, and Discord rejects the whole
+	// response with 400 Invalid Form Body over a single bad one. Sanitize here,
+	// at the one point every interaction response passes through, so no cog can
+	// lose a message to a bad content entry.
+	if r != nil && r.Data != nil {
+		r.Data.Components = components.SanitizeComponents(r.Data.Components)
+	}
 	if !d.isDeferred(i) {
 		start := time.Now()
 		err := d.Session.InteractionRespond(i, r, opts...)
 		if i != nil {
 			d.addDiscordTime(i.ID, time.Since(start))
+		}
+		if err != nil {
+			// Cogs almost universally discard this error (`_ = ...Respond`), so
+			// a rejected payload would otherwise leave no trace at all: the user
+			// sees "the application did not respond" and the logs stay clean.
+			logger.Log().Error("interaction response rejected",
+				"error", err,
+				"type", r.Type,
+				"interaction_id", i.ID,
+			)
 		}
 		return err
 	}
@@ -142,6 +160,23 @@ func (d *DeferringSession) InteractionRespond(i *discordgo.Interaction, r *disco
 			"interaction_id", i.ID)
 		return d.Session.InteractionRespond(i, r, opts...)
 	}
+}
+
+// ChannelMessageSendComplex and ChannelMessageEditComplex are the prefix-command
+// equivalents of an interaction response, so they carry the same emoji guard.
+func (d *DeferringSession) ChannelMessageSendComplex(channelID string, data *discordgo.MessageSend, opts ...discordgo.RequestOption) (*discordgo.Message, error) {
+	if data != nil {
+		data.Components = components.SanitizeComponents(data.Components)
+	}
+	return d.Session.ChannelMessageSendComplex(channelID, data, opts...)
+}
+
+func (d *DeferringSession) ChannelMessageEditComplex(data *discordgo.MessageEdit, opts ...discordgo.RequestOption) (*discordgo.Message, error) {
+	if data != nil && data.Components != nil {
+		sanitized := components.SanitizeComponents(*data.Components)
+		data.Components = &sanitized
+	}
+	return d.Session.ChannelMessageEditComplex(data, opts...)
 }
 
 // translateEdit rewrites an UpdateMessage response into an edit of the
