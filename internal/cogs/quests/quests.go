@@ -317,6 +317,11 @@ func (c *Cog) buildQuestEmbed(lang string, userID int64) (*discordgo.MessageEmbe
 		// and managed in /daily — see the economy cog.
 		if q.QuestID == "daily_quest" {
 			desc += c.dailyQuestLine(lang, q) + "\n\n"
+			btns = append(btns, discordgo.Button{
+				Label:    "📅 " + i18n.T("quests.daily.manage_btn", lang),
+				CustomID: components.EncodeOwner(userID, "economy", "daily_view"),
+				Style:    discordgo.SuccessButton,
+			})
 			continue
 		}
 

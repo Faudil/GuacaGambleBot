@@ -49,6 +49,17 @@ type Loan struct {
 	CreatedAt  string `gorm:"column:created_at"`
 }
 
+type TradeOffer struct {
+	ID        int64  `gorm:"primaryKey;column:id;autoIncrement"`
+	SellerID  int64  `gorm:"column:seller_id"`
+	BuyerID   int64  `gorm:"column:buyer_id"`
+	ItemID    string `gorm:"column:item_id"`
+	Quantity  int    `gorm:"column:quantity"`
+	Price     int    `gorm:"column:price"`
+	Status    string `gorm:"column:status;default:pending"`
+	CreatedAt string `gorm:"column:created_at"`
+}
+
 type MarketState struct {
 	ItemID       string `gorm:"primaryKey;column:item_id"`
 	CurrentPrice int    `gorm:"column:current_price"`

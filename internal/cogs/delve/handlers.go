@@ -1248,7 +1248,7 @@ func (c *Cog) onMerchantBuy(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 
-	if idx < 0 || idx >= len(offers) {
+	if idx < 0 || idx > 6 || (idx <= 2 && idx >= len(offers)) {
 		c.errorMsg(b, i, i18n.T("delve.handler.invalid_selection", lang))
 		return
 	}

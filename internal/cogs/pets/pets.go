@@ -39,6 +39,8 @@ type Cog struct {
 	sanSvc *sansvc.Service
 }
 
+var oneMinBet = float64(1)
+
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	def := universe.Get(cfg.Universe)
 	if def == nil {
@@ -50,9 +52,27 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Slash("pets", "cmd.pets.desc", c.onSlashMenu)
 	r.Slash("pet", "cmd.pets.desc", c.onSlashMenu)
 	r.Slash("hatch", "cmd.hatch.desc", c.onHatchCommand)
+	r.SlashWithOptions("fight", "cmd.fight.desc",
+		[]*discordgo.ApplicationCommandOption{
+			{
+				Type:        discordgo.ApplicationCommandOptionUser,
+				Name:        "opponent",
+				Description: "The player to challenge",
+				Required:    true,
+			},
+			{
+				Type:        discordgo.ApplicationCommandOptionInteger,
+				Name:        "bet",
+				Description: "Optional wager the winner takes",
+				Required:    false,
+				MinValue:    &oneMinBet,
+			},
+		},
+		c.onFightSlash)
 	r.Prefix("pets", c.onPrefixMenu)
 	r.Prefix("pet", c.onPrefixMenu)
 	r.Prefix("hatch", c.onHatchPrefix)
+	r.Prefix("fight", c.onFightPrefix)
 	r.Component("pets", "menu", c.onMenu)
 	r.Component("pets", "hatch", c.onHatchButton)
 	r.Component("pets", "pet", c.onPetDetail)
@@ -261,23 +281,29 @@ func (c *Cog) petDetail(pet *model.UserPet, lang string) (*discordgo.MessageEmbe
 		color,
 	)
 
-	// Combat
+	// Vitals: HP bar gets its own full-width line since it's the stat players scan first.
 	hpBar := buildHPBar(pet.HP, pet.MaxHP)
 	embed.Fields = append(embed.Fields, components.Field(
-		i18n.T("pets.detail.combat", lang),
-		fmt.Sprintf("HP %s %d/%d\n⚔️ ATK %d · 🛡️ DEF %d · 💨 SPD %d", hpBar, pet.HP, pet.MaxHP, pet.Atk, pet.Defense, pet.Speed),
+		i18n.T("pets.detail.vitals", lang),
+		fmt.Sprintf("%s `%d/%d HP`", hpBar, pet.HP, pet.MaxHP),
 		false,
 	))
 
-	// Precision
+	// Offense / Defense: split side-by-side (inline) instead of one mixed block,
+	// so related stats (e.g. all attack stats) line up together.
 	embed.Fields = append(embed.Fields, components.Field(
-		i18n.T("pets.detail.precision", lang),
-		fmt.Sprintf("DGE %d%% · ACC %d%%\nCRIT %d%% / %.1fx · ✨ SPC %d%%", pet.DGE, pet.ACC, pet.CritC, pet.CritD, pet.SpcC),
-		false,
+		i18n.T("pets.detail.offense", lang),
+		fmt.Sprintf("⚔️ ATK **%d**\n🎯 ACC **%d%%**\n💥 CRIT **%d%%** / **%.1fx**\n✨ SPC **%d%%**", pet.Atk, pet.ACC, pet.CritC, pet.CritD, pet.SpcC),
+		true,
+	))
+	embed.Fields = append(embed.Fields, components.Field(
+		i18n.T("pets.detail.defense", lang),
+		fmt.Sprintf("🛡️ DEF **%d**\n💨 SPD **%d**\n🌀 DGE **%d%%**", pet.Defense, pet.Speed, pet.DGE),
+		true,
 	))
 
 	// Progression
-	prog := fmt.Sprintf("XP %d · 🏆 ELO %d\n💕 Bond %s %d/%d\n🍖 Fed %d", pet.XP, pet.Elo, buildBondBar(pet.BondLevel), pet.BondLevel, petsvc.MaxBond, pet.FoodEaten)
+	prog := fmt.Sprintf("XP **%d** · 🏆 ELO **%d**\n💕 Bond %s **%d**/%d\n🍽️ Fed **%d**", pet.XP, pet.Elo, buildBondBar(pet.BondLevel), pet.BondLevel, petsvc.MaxBond, pet.FoodEaten)
 	if pet.SkillPoints > 0 {
 		prog += fmt.Sprintf("\n⚡ **%d** skill point(s) available!", pet.SkillPoints)
 	}
@@ -1313,13 +1339,106 @@ func (c *Cog) onBattleAccept(b *interaction.Bot, i *discordgo.InteractionCreate)
 		interaction.RespondError(b, i, lang, "pets.battle.wrong_opponent")
 		return
 	}
-	c.runBattle(b, i, lang, petID, challengerID, opponentID)
+	var bet int
+	if len(rest) >= 4 {
+		bet, _ = strconv.Atoi(rest[3])
+	}
+	c.runBattle(b, i, lang, petID, challengerID, opponentID, bet)
+}
+
+// onFightSlash handles `/fight opponent:@user`: it challenges the target with
+// the caller's active pet, reusing the same accept/decline flow as the pet
+// detail "Battle" button (onBattleAccept/onBattleDecline).
+func (c *Cog) onFightSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	opts := i.ApplicationCommandData().Options
+	opponentID := interaction.ToInt64(opts[0].StringValue())
+	var bet int
+	if len(opts) > 1 {
+		bet = int(opts[1].IntValue())
+	}
+	embed, comps := c.fightChallenge(userID, opponentID, bet, lang)
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, comps))
+}
+
+// onFightPrefix handles `!fight @user [bet]`.
+func (c *Cog) onFightPrefix(b *interaction.Bot, s *discordgo.Session, m *discordgo.Message) {
+	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
+	userID := interaction.ToInt64(m.Author.ID)
+	var opponentID int64
+	parts := strings.Fields(m.Content)
+	if len(m.Mentions) > 0 {
+		opponentID = interaction.ToInt64(m.Mentions[0].ID)
+	} else if len(parts) > 1 {
+		opponentID, _ = interaction.ParseUserID(parts[1])
+	}
+	var bet int
+	if len(parts) > 2 {
+		bet, _ = strconv.Atoi(strings.TrimSpace(parts[2]))
+	}
+	embed, comps := c.fightChallenge(userID, opponentID, bet, lang)
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Embeds:     []*discordgo.MessageEmbed{embed},
+		Components: comps,
+	})
+}
+
+// fightChallenge builds the accept/decline challenge card for the challenger's
+// active pet against the opponent, using the same battle_accept/battle_decline
+// component keys as the pet detail "Battle" button so runBattle handles both.
+// bet is an optional wager (0 = none): the winner takes the whole pot.
+func (c *Cog) fightChallenge(userID, opponentID int64, bet int, lang string) (*discordgo.MessageEmbed, []discordgo.MessageComponent) {
+	if opponentID == 0 {
+		return components.Embed("❌", i18n.T("pets.battle.invalid_opponent", lang), components.ColorDanger), nil
+	}
+	if opponentID == userID {
+		return components.Embed("❌", i18n.T("pets.battle.self_challenge", lang), components.ColorDanger), nil
+	}
+	if bet < 0 {
+		return components.Embed("❌", i18n.T("duel.invalid_bet", lang), components.ColorDanger), nil
+	}
+	pet, err := c.svc.GetActivePet(userID)
+	if err != nil || pet == nil {
+		return components.Embed("❌", i18n.T("pets.play.no_pet", lang), components.ColorDanger), nil
+	}
+	if bet > 0 {
+		bal, err := c.store.GetBalance(userID)
+		if err != nil || bal < bet {
+			return components.Embed("❌", i18n.T("pets.battle.no_money_challenger", lang, map[string]any{"bet": bet}), components.ColorDanger), nil
+		}
+	}
+	emoji := "🐾"
+	if pt := petsvc.PetTypes[pet.PetType]; pt != nil {
+		emoji = pt.Emoji
+	}
+	desc := i18n.T("pets.battle.challenge_msg", lang, map[string]any{
+		"opponent":   MentionUser(opponentID),
+		"challenger": MentionUser(userID),
+		"pet":        emoji + " " + pet.Nickname,
+	})
+	if bet > 0 {
+		desc += i18n.T("pets.battle.bet_msg", lang, map[string]any{"bet": bet})
+	}
+	embed := components.Embed(i18n.T("pets.battle.arena_title", lang), desc, components.ColorDanger)
+	petIDStr := strconv.FormatInt(pet.ID, 10)
+	userIDStr := strconv.FormatInt(userID, 10)
+	opponentIDStr := strconv.FormatInt(opponentID, 10)
+	betStr := strconv.Itoa(bet)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("pets.battle.accept_label", lang), components.EncodeOwner(userID, "pets", "battle_accept", petIDStr, userIDStr, opponentIDStr, betStr), discordgo.SuccessButton),
+			components.Button(i18n.T("pets.battle.decline_label", lang), components.EncodeOwner(userID, "pets", "battle_decline", petIDStr, userIDStr, opponentIDStr, betStr), discordgo.DangerButton),
+		),
+	}
+	return embed, comps
 }
 
 // runBattle executes the duel between the challenger's selected pet and the
 // opponent's active pet, then updates ELO, weekly scores, artifact XP, bonds
 // and battle history.
-func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, petID, challengerID, opponentID int64) {
+func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang string, petID, challengerID, opponentID int64, bet int) {
 	pet1, err := c.svc.GetPetByID(petID)
 	if err != nil || pet1 == nil || pet1.UserID != challengerID {
 		interaction.RespondError(b, i, lang, "pets.equip.fail")
@@ -1336,6 +1455,15 @@ func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang
 			},
 		})
 		return
+	}
+
+	if bet > 0 {
+		cb, cerr := c.store.GetBalance(challengerID)
+		ob, oerr := c.store.GetBalance(opponentID)
+		if cerr != nil || oerr != nil || cb < bet || ob < bet {
+			interaction.RespondError(b, i, lang, "pets.battle.money_spent_cancel")
+			return
+		}
 	}
 
 	bp1 := c.petToBattlePet(pet1)
@@ -1417,6 +1545,16 @@ func (c *Cog) runBattle(b *interaction.Bot, i *discordgo.InteractionCreate, lang
 		embed.Color = components.ColorWarning
 		embedDesc += fmt.Sprintf("\n\n🤝 Draw! ELO: %s (%+d) | %s (%+d)\n📊 Weekly: +%d | +%d\n%s | %s",
 			strconv.Itoa(pet1.Elo), diff1, strconv.Itoa(pet2.Elo), diff2, weeklyScoreA, weeklyScoreB, artLine1, artLine2)
+	}
+
+	if bet > 0 && result.WinnerID != 0 {
+		winnerID, loserID := challengerID, opponentID
+		if result.WinnerID == pet2.ID {
+			winnerID, loserID = opponentID, challengerID
+		}
+		if _, _, terr := c.store.Transfer(loserID, winnerID, bet); terr == nil {
+			embedDesc += i18n.T("pets.battle.win_pot_msg", lang, map[string]any{"name": MentionUser(winnerID), "pot": bet * 2})
+		}
 	}
 
 	if art1Leveled || art2Leveled {

@@ -75,6 +75,9 @@
     "fish": {
       "desc": "Fishing minigame"
     },
+    "fight": {
+      "desc": "Challenge a player to a pet battle with your active pet."
+    },
     "forge": {
       "desc": "Fuse 5 pieces of equipment into a higher rarity, or scrap them for resources."
     },
@@ -179,6 +182,9 @@
     },
     "sheriff": {
       "desc": "Speak to Sheriff Aldric Vance"
+    },
+    "sell": {
+      "desc": "Sell an item to another player."
     },
     "shop": {
       "desc": "Daily shop: buy items before today's offers refresh."

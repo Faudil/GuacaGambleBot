@@ -94,7 +94,9 @@ func TestEventFlowRepro(t *testing.T) {
 		}
 		if eff.RiskTurns > 0 {
 			sess.riskMod += eff.RiskMod
-			sess.riskTurns += eff.RiskTurns
+			if eff.RiskTurns > sess.riskTurns {
+				sess.riskTurns = eff.RiskTurns
+			}
 		}
 		msg := ""
 		if eff.Message != "" {
@@ -133,6 +135,33 @@ func TestRiskTurnsDecay(t *testing.T) {
 	require.Equal(t, 0, sess.riskMod, "risk modifier must clear when turns run out")
 
 	decayTurns(&userSession{riskMod: 0, riskTurns: 0})
+}
+
+// TestRiskEffectStacking exercises overlapping risk events: magnitudes should
+// add, but duration must extend to the longer remaining effect rather than
+// summing both durations together (which previously made overlapping events
+// linger far longer than either effect intended).
+func TestRiskEffectStacking(t *testing.T) {
+	sess := &userSession{riskMod: -10, riskTurns: 5}
+
+	applyRiskEffect := func(sess *userSession, mod, turns int) {
+		if turns > 0 {
+			sess.riskMod += mod
+			if turns > sess.riskTurns {
+				sess.riskTurns = turns
+			}
+		}
+	}
+
+	decayTurns(sess)
+	decayTurns(sess)
+	decayTurns(sess)
+	require.Equal(t, 2, sess.riskTurns)
+	require.Equal(t, -10, sess.riskMod)
+
+	applyRiskEffect(sess, 15, 5)
+	require.Equal(t, 5, sess.riskMod, "modifiers stack additively")
+	require.Equal(t, 5, sess.riskTurns, "duration takes the longer remaining effect, not the sum")
 }
 
 func TestLeaveResultDisplay(t *testing.T) {

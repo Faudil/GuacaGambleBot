@@ -30,9 +30,8 @@ type HouseType struct {
 	MaxSanctuaryTier int
 }
 
-// MaxFurnitureSlots caps the total furniture a house can hold: the game has 8
-// furniture items, so slots beyond that are meaningless.
-const MaxFurnitureSlots = 8
+// MaxFurnitureSlots caps the total furniture a house can hold.
+const MaxFurnitureSlots = 10
 
 // SlotsAt returns how many furniture slots the house offers at a given level:
 // one extra slot per level above 1, never exceeding the cap.
@@ -74,7 +73,7 @@ var Houses = map[string]*HouseType{
 	},
 	"gilded_palace": {
 		ID: "gilded_palace", Price: 1000000, MaxLevel: 20, IncomePerHour: 50,
-		InventoryBonus: 2000, PetSlotsBonus: 7, BankCapacity: 100000, CraftingDiscount: 0.30, FurnitureSlots: 8, Color: 0xFFB300,
+		InventoryBonus: 2000, PetSlotsBonus: 7, BankCapacity: 100000, CraftingDiscount: 0.30, FurnitureSlots: 7, Color: 0xFFB300,
 		Buffs:            []string{"+2000 Inventory Slots", "+7 Pet Slots", "$100,000 Bank Cap", "30% Crafting Discount"},
 		MaxSanctuaryTier: 10,
 	},

@@ -1,0 +1,23 @@
+{
+  "trade": {
+    "offer_title": "🤝 Offre d'échange",
+    "offer_desc": "{seller} propose **{quantity}x {item}** à {buyer} pour **${price}**.",
+    "btn_accept": "✅ Accepter",
+    "btn_decline": "❌ Refuser",
+    "accepted_title": "🤝 Échange conclu",
+    "accepted_desc": "{buyer} a acheté **{quantity}x {item}** à {seller} pour **${price}**.",
+    "declined_title": "🤝 Échange annulé",
+    "declined_desc": "L'échange entre {seller} et {buyer} a été annulé.",
+    "invalid": "❌ Utilisation : `!sell <objet> <quantité> <prix> @acheteur`",
+    "err_self": "❌ Tu ne peux pas te vendre un objet à toi-même.",
+    "err_amount": "❌ La quantité et le prix doivent être positifs.",
+    "err_not_tradeable": "❌ Cet objet ne peut pas être échangé entre joueurs.",
+    "err_insufficient_items": "❌ Tu n'as pas autant de cet objet.",
+    "err_no_money": "❌ L'acheteur n'a pas assez d'argent.",
+    "err_inventory_full": "❌ L'inventaire de l'acheteur est plein.",
+    "err_not_found": "❌ Cette offre d'échange n'existe plus.",
+    "err_not_pending": "❌ Cette offre d'échange a déjà été traitée.",
+    "err_wrong_user": "❌ Ce n'est pas ton offre d'échange.",
+    "err_generic": "❌ Un problème est survenu avec cet échange."
+  }
+}

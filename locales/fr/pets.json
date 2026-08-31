@@ -18,8 +18,10 @@
       "money_spent_cancel": "❌ L'un des joueurs a dépensé son argent avant le début du combat. Annulation !",
       "no_money_challenger": "❌ Tu n'as pas assez d'argent pour miser **{bet} $**.",
       "no_money_opponent": "❌ {name} n'a pas les fonds nécessaires pour suivre cette mise.",
+      "invalid_opponent": "❌ Tu dois mentionner un joueur valide à défier.",
       "opponent_no_pet": "❌ {name} n'a pas de familier actif !",
       "opponent_pet_ko": "❌ Le familier de {name} est K.O. !",
+      "self_challenge": "❌ Tu ne peux pas te défier toi-même !",
       "pet_ko": "❌ Ton familier **{name}** est K.O. ! Utilise `!feed`.",
       "pet_ko_msg": "\n\n💀 **{name} est K.O. !**\n",
       "refund_msg": "\n💰 Les mises ({bet} $) ont été remboursées.",
@@ -58,11 +60,12 @@
       "btn_rename": "Renommer",
       "btn_retire": "🏞️ Retirer",
       "btn_skills": "⚡ Compétences",
-      "combat": "🛡️ Combat",
+      "defense": "🛡️ Défense",
       "history": "📜 Historique récent",
-      "precision": "🎯 Précision",
+      "offense": "⚔️ Attaque",
       "progression": "📈 Progression",
-      "skills": "💡 Compétences"
+      "skills": "💡 Compétences",
+      "vitals": "❤️ Vitalité"
     },
     "equip": {
       "fail": "❌ Impossible d'équiper ce familier. Es-tu sûr de le posséder ?",

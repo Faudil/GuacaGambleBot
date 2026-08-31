@@ -1,0 +1,23 @@
+{
+  "trade": {
+    "offer_title": "🤝 Trade Offer",
+    "offer_desc": "{seller} offers **{quantity}x {item}** to {buyer} for **${price}**.",
+    "btn_accept": "✅ Accept",
+    "btn_decline": "❌ Decline",
+    "accepted_title": "🤝 Trade Complete",
+    "accepted_desc": "{buyer} bought **{quantity}x {item}** from {seller} for **${price}**.",
+    "declined_title": "🤝 Trade Cancelled",
+    "declined_desc": "The trade between {seller} and {buyer} was cancelled.",
+    "invalid": "❌ Usage: `!sell <item> <quantity> <price> @buyer`",
+    "err_self": "❌ You can't sell an item to yourself.",
+    "err_amount": "❌ Quantity and price must be positive.",
+    "err_not_tradeable": "❌ That item can't be traded between players.",
+    "err_insufficient_items": "❌ You don't have that many of that item.",
+    "err_no_money": "❌ The buyer doesn't have enough money.",
+    "err_inventory_full": "❌ The buyer's inventory is full.",
+    "err_not_found": "❌ This trade offer no longer exists.",
+    "err_not_pending": "❌ This trade offer has already been resolved.",
+    "err_wrong_user": "❌ This isn't your trade offer to respond to.",
+    "err_generic": "❌ Something went wrong with this trade."
+  }
+}

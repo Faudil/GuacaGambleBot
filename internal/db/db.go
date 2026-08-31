@@ -124,6 +124,7 @@ func Migrate(db *gorm.DB) error {
 		&model.ServerProjectContribution{},
 		&model.UserCommunityStat{},
 		&model.Loan{},
+		&model.TradeOffer{},
 		&model.UserCharacter{},
 		&model.UserEquipment{},
 		&model.ActiveBuff{},

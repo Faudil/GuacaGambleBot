@@ -129,11 +129,11 @@ func TestPlaceFailsOnZeroSlotHouse(t *testing.T) {
 func TestSlotsAt(t *testing.T) {
 	ht := housingsvc.Houses["brick_house"]
 	require.NotNil(t, ht)
-	// base 4, +1 per level, capped at 8.
+	// base 4, +1 per level, capped at housingsvc.MaxFurnitureSlots.
 	assert.Equal(t, 4, ht.SlotsAt(1))
 	assert.Equal(t, 5, ht.SlotsAt(2))
 	assert.Equal(t, 8, ht.SlotsAt(5))
-	assert.Equal(t, 8, ht.SlotsAt(99))
+	assert.Equal(t, housingsvc.MaxFurnitureSlots, ht.SlotsAt(99))
 
 	// cardboard has no slots at any level.
 	cb := housingsvc.Houses["cardboard_box"]
@@ -178,7 +178,7 @@ func TestPlaceFailsWhenSizeExceedsSlots(t *testing.T) {
 
 	_, err := s.UpdateBalance(uid, 100000)
 	require.NoError(t, err)
-	require.NoError(t, s.AddItemRaw(s.DB, uid, "pure_dna", 50))
+	require.NoError(t, s.AddItemRaw(s.DB, uid, "epic_fossil", 50))
 	require.NoError(t, s.AddItemRaw(s.DB, uid, "bone_dust", 100))
 	require.NoError(t, s.AddItemRaw(s.DB, uid, "emerald", 50))
 

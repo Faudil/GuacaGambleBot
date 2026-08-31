@@ -101,7 +101,7 @@ var FurnitureDefs = map[string]*FurnitureDef{
 		CostMoney:       20000,
 		SlotType:        "floor",
 		Slots:           3,
-		CostItems:       map[string]int{"pure_dna": 1, "bone_dust": 30, "iron_ore": 20, "emerald": 10},
+		CostItems:       map[string]int{"epic_fossil": 2, "bone_dust": 30, "iron_ore": 20, "emerald": 10},
 		Effects:         []Effect{{Stat: "pet_xp", Value: 0.05, Description: "+5% pet XP"}},
 		UnlocksResearch: []string{"dna_research"},
 	},

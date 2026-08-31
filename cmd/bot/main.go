@@ -65,6 +65,7 @@ import (
 	skillscog "guacagamblebot/internal/cogs/skills"
 	startcog "guacagamblebot/internal/cogs/start"
 	tournamentcog "guacagamblebot/internal/cogs/tournament"
+	tradecog "guacagamblebot/internal/cogs/trade"
 	usecog "guacagamblebot/internal/cogs/use"
 	veilcog "guacagamblebot/internal/cogs/veil"
 	"guacagamblebot/internal/onboarding"
@@ -95,6 +96,7 @@ func cogGroups() []cogRegistration {
 			jobscog.Register,
 			shopcog.Register,
 			marketcog.Register,
+			tradecog.Register,
 			itemmanagercog.Register,
 			inventorycog.Register,
 			usecog.Register,

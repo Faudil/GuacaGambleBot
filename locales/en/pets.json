@@ -18,8 +18,10 @@
       "money_spent_cancel": "❌ One of the players spent their money before the fight started. Canceled!",
       "no_money_challenger": "❌ You don't have enough money to bet **{bet} $**.",
       "no_money_opponent": "❌ {name} doesn't have the necessary funds to follow this bet.",
+      "invalid_opponent": "❌ You must mention a valid player to challenge.",
       "opponent_no_pet": "❌ {name} has no active pet!",
       "opponent_pet_ko": "❌ {name}'s pet is K.O.!",
+      "self_challenge": "❌ You cannot fight yourself!",
       "pet_ko": "❌ Your pet **{name}** is K.O.! Use `!feed`.",
       "pet_ko_msg": "\n\n💀 **{name} is K.O.!**\n",
       "refund_msg": "\n💰 Bets ({bet} $) have been refunded.",
@@ -58,11 +60,12 @@
       "btn_rename": "Rename",
       "btn_retire": "🏞️ Retire",
       "btn_skills": "⚡ Skills",
-      "combat": "🛡️ Combat",
+      "defense": "🛡️ Defense",
       "history": "📜 Recent History",
-      "precision": "🎯 Precision",
+      "offense": "⚔️ Offense",
       "progression": "📈 Progression",
-      "skills": "💡 Skills"
+      "skills": "💡 Skills",
+      "vitals": "❤️ Vitals"
     },
     "equip": {
       "fail": "❌ Unable to equip this pet. Are you sure you own it?",

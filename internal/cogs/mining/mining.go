@@ -909,7 +909,9 @@ func (c *Cog) onEventOption(b *interaction.Bot, i *discordgo.InteractionCreate) 
 
 	if eff.RiskTurns > 0 {
 		sess.riskMod += eff.RiskMod
-		sess.riskTurns += eff.RiskTurns
+		if eff.RiskTurns > sess.riskTurns {
+			sess.riskTurns = eff.RiskTurns
+		}
 	}
 	if eff.DepthGain != 0 {
 		sess.depth += eff.DepthGain
