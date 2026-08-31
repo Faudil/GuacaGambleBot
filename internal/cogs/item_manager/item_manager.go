@@ -2,7 +2,6 @@ package item_manager
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -25,14 +24,11 @@ type Cog struct {
 func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	c := &Cog{store: s, cfg: cfg, svc: tradesvc.New(s, cfg)}
 	r.Slash("trade", "cmd.trade.desc", c.onSlashTrade)
-	r.SlashWithOptions("sell", "cmd.sell.desc",
-		[]*discordgo.ApplicationCommandOption{
-			{Type: discordgo.ApplicationCommandOptionUser, Name: "recipient", Description: "Le joueur à qui vendre.", Required: true},
-			{Type: discordgo.ApplicationCommandOptionString, Name: "item", Description: "Le nom de l'objet à vendre.", Required: true},
-			{Type: discordgo.ApplicationCommandOptionInteger, Name: "price", Description: "Le prix de vente.", Required: true},
-		}, c.onSlashSell)
+	// /sell and !sell are owned by the trade cog; registering them here too
+	// would duplicate the command name and fail Discord's bulk overwrite.
+	// The accept/decline components stay registered so in-flight proposals
+	// created before the change can still be resolved.
 	r.Prefix("trade", c.onTradePrefix)
-	r.Prefix("sell", c.onSellPrefix)
 	r.Component("item_manager", "accept", c.onAccept)
 	r.Component("item_manager", "decline", c.onDecline)
 }
@@ -44,109 +40,10 @@ func (c *Cog) onSlashTrade(b *interaction.Bot, i *discordgo.InteractionCreate) {
 			components.Embed("📦", i18n.T("item_manager.trade_usage", lang), components.ColorWarning), nil))
 }
 
-func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
-	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
-	opts := i.ApplicationCommandData().Options
-	recipientID := interaction.ToInt64(opts[0].StringValue())
-	itemName := strings.ToLower(opts[1].StringValue())
-	priceVal := int(opts[2].IntValue())
-
-	if priceVal <= 0 {
-		interaction.RespondError(b, i, lang, "loan.invalid_amount")
-		return
-	}
-
-	sellerID := interaction.ToInt64(interaction.UserID(i))
-	if sellerID == recipientID {
-		interaction.RespondError(b, i, lang, "economy.give_invalid")
-		return
-	}
-
-	embed := components.Embed(
-		i18n.T("item_manager.trade_proposal_title", lang),
-		i18n.T("item_manager.trade_proposal_desc", lang, map[string]any{
-			"seller": interaction.Mention(sellerID),
-			"item":   items.LocalizedName(itemName, lang),
-			"price":  priceVal,
-			"buyer":  interaction.Mention(recipientID),
-		}),
-		components.ColorWarning,
-	)
-
-	btns := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button(i18n.T("item_manager.accept_label", lang), components.Encode("item_manager", "accept", fmt.Sprint(sellerID), fmt.Sprint(recipientID), itemName, fmt.Sprint(priceVal)), discordgo.SuccessButton),
-			components.Button(i18n.T("item_manager.refuse_label", lang), components.Encode("item_manager", "decline", fmt.Sprint(sellerID), fmt.Sprint(recipientID)), discordgo.DangerButton),
-		),
-	}
-
-	_ = b.Session.InteractionRespond(i.Interaction,
-		components.InteractionResponse(discordgo.InteractionResponseChannelMessageWithSource, embed, btns))
-}
-
 func (c *Cog) onTradePrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
 	_ = b
 	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
 	_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("item_manager.trade_usage", lang))
-}
-
-func (c *Cog) onSellPrefix(b *interaction.Bot, sess *discordgo.Session, m *discordgo.Message) {
-	lang := c.store.GetLanguage(interaction.ToInt64(m.GuildID))
-	content := strings.TrimSpace(strings.TrimPrefix(m.Content, "!sell "))
-	if content == "" {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("item_manager.trade_usage", lang))
-		return
-	}
-
-	parts := strings.SplitN(content, " ", 3)
-	if len(parts) < 3 {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("item_manager.trade_usage", lang))
-		return
-	}
-
-	recipientMention := parts[0]
-	itemName := strings.ToLower(parts[1])
-	priceVal := int(interaction.ToInt64(parts[2]))
-	if priceVal <= 0 {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("loan.invalid_amount", lang))
-		return
-	}
-
-	recipientID, ok := interaction.ParseUserID(recipientMention)
-	if !ok {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
-		return
-	}
-
-	sellerID := interaction.ToInt64(m.Author.ID)
-	if sellerID == recipientID {
-		_, _ = sess.ChannelMessageSend(m.ChannelID, i18n.T("economy.give_invalid", lang))
-		return
-	}
-
-	embed := components.Embed(
-		i18n.T("item_manager.trade_proposal_title", lang),
-		i18n.T("item_manager.trade_proposal_desc", lang, map[string]any{
-			"seller": m.Author.Mention(),
-			"item":   items.LocalizedName(itemName, lang),
-			"price":  priceVal,
-			"buyer":  "<@" + fmt.Sprint(recipientID) + ">",
-		}),
-		components.ColorWarning,
-	)
-
-	btns := []discordgo.MessageComponent{
-		components.ActionRow(
-			components.Button(i18n.T("item_manager.accept_label", lang), components.Encode("item_manager", "accept", fmt.Sprint(sellerID), fmt.Sprint(recipientID), itemName, fmt.Sprint(priceVal)), discordgo.SuccessButton),
-			components.Button(i18n.T("item_manager.refuse_label", lang), components.Encode("item_manager", "decline", fmt.Sprint(sellerID), fmt.Sprint(recipientID)), discordgo.DangerButton),
-		),
-	}
-
-	_, _ = sess.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-		Content:    "<@" + fmt.Sprint(recipientID) + ">",
-		Embeds:     []*discordgo.MessageEmbed{embed},
-		Components: btns,
-	})
 }
 
 func (c *Cog) onAccept(b *interaction.Bot, i *discordgo.InteractionCreate) {

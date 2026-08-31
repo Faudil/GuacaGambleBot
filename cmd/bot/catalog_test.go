@@ -26,6 +26,26 @@ func TestNoCommandIsMissingFromHelp(t *testing.T) {
 	assert.Empty(t, uncategorised, "these commands are registered but filed under no help category, so /help would not show them")
 }
 
+// Discord's ApplicationCommandBulkOverwrite rejects the whole payload with
+// APPLICATION_COMMANDS_DUPLICATE_NAME when two cogs claim the same slash name —
+// registration then silently keeps serving the previous stale command set. This
+// is the check that catches a name clash before it ships.
+func TestSlashCommandNamesAreUnique(t *testing.T) {
+	r := buildTestRouter(t)
+
+	seen := map[string]bool{}
+	var duplicates []string
+	for _, def := range r.Commands() {
+		if seen[def.Name] {
+			duplicates = append(duplicates, def.Name)
+			continue
+		}
+		seen[def.Name] = true
+	}
+	assert.Empty(t, duplicates,
+		"these slash commands are registered more than once; Discord rejects the entire bulk overwrite and the bot keeps its stale command set")
+}
+
 func TestEveryHelpCategoryHasCommands(t *testing.T) {
 	r := buildTestRouter(t)
 	for _, cat := range []string{

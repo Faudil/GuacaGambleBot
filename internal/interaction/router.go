@@ -324,6 +324,14 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 	case discordgo.InteractionApplicationCommand, discordgo.InteractionApplicationCommandAutocomplete:
 		data := i.ApplicationCommandData()
 		if r.store != nil && data.Name != "setup" && !r.store.IsEnabled(ToInt64(gid)) {
+			// Log before rejecting: a DM (empty guild id) or a disabled server
+			// is otherwise invisible, which makes commands look broken to the
+			// user while the bot has no trace of the attempt.
+			log.Warn("slash command rejected: bot disabled or invoked outside an enabled server",
+				"cmd", data.Name,
+				"user", uid,
+				"guild", gid,
+			)
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -354,6 +362,12 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		cid := i.MessageComponentData().CustomID
 		domain, action, _ := components.Decode(cid)
 		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
+			log.Warn("component rejected: bot disabled or invoked outside an enabled server",
+				"domain", domain,
+				"action", action,
+				"user", uid,
+				"guild", gid,
+			)
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -392,6 +406,12 @@ func (r *Router) onInteraction(s *discordgo.Session, i *discordgo.InteractionCre
 		cid := i.ModalSubmitData().CustomID
 		domain, action, _ := components.Decode(cid)
 		if r.store != nil && domain != "onboarding" && !r.store.IsEnabled(ToInt64(gid)) {
+			log.Warn("modal rejected: bot disabled or invoked outside an enabled server",
+				"domain", domain,
+				"action", action,
+				"user", uid,
+				"guild", gid,
+			)
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
