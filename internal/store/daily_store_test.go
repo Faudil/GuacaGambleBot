@@ -16,8 +16,8 @@ func dayOffset(days int) string {
 
 func TestLogDailyQuestUpsertsPerDay(t *testing.T) {
 	s := newStore(t)
-	require.NoError(t, s.LogDailyQuest(1, "elara", "wheat"))
-	require.NoError(t, s.LogDailyQuest(1, "thorek", "coal"))
+	require.NoError(t, s.LogDailyQuest(1, "elara", "wheat", []string{"items_farmed"}))
+	require.NoError(t, s.LogDailyQuest(1, "thorek", "coal", []string{"items_mined"}))
 
 	entries, err := s.RecentDailyQuests(1, 10)
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestLogDailyQuestUpsertsPerDay(t *testing.T) {
 
 func TestCompleteDailyQuestMarksRow(t *testing.T) {
 	s := newStore(t)
-	require.NoError(t, s.LogDailyQuest(1, "elara", "wheat"))
+	require.NoError(t, s.LogDailyQuest(1, "elara", "wheat", []string{"items_farmed"}))
 	require.NoError(t, s.CompleteDailyQuest(1, "elara", "wheat"))
 
 	entries, err := s.RecentDailyQuests(1, 5)

@@ -56,6 +56,7 @@ func Register(r *interaction.Router, s *store.Store, cfg *config.Config) {
 	r.Component("farm", "zone", c.onZone)
 	r.Component("farm", "plot", c.onPlot)
 	r.Component("farm", "harvest", c.onHarvest)
+	r.Component("farm", "harvest_all", c.onHarvestAll)
 	r.Component("farm", "seed_choose", c.onSeedChoose)
 	r.Component("farm", "seedmaker", c.onSeedMaker)
 	r.Component("farm", "seedmaker_choose", c.onSeedMakerChoose)
@@ -265,6 +266,13 @@ func (c *Cog) showZone(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 	var comps []discordgo.MessageComponent
 	var row []discordgo.MessageComponent
 
+	readyCount := 0
+	for _, p := range plots {
+		if p.Ready {
+			readyCount++
+		}
+	}
+
 	for _, p := range plots {
 		if p.ItemName == "" {
 			row = append(row, components.Button(
@@ -289,9 +297,18 @@ func (c *Cog) showZone(b *interaction.Bot, i *discordgo.InteractionCreate, lang,
 	}
 
 	comps = append(comps, components.ActionRow(row...))
-	comps = append(comps, components.ActionRow(
+
+	bottomRow := []discordgo.MessageComponent{
 		components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
-	))
+	}
+	if readyCount > 1 {
+		bottomRow = append(bottomRow, components.Button(
+			i18n.T("farm.harvest_all_btn", lang, map[string]any{"n": readyCount}),
+			components.EncodeOwner(userID, "farm", "harvest_all", zoneKey),
+			discordgo.SuccessButton,
+		))
+	}
+	comps = append(comps, components.ActionRow(bottomRow...))
 
 	_ = b.Session.InteractionRespond(i.Interaction,
 		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
@@ -804,6 +821,187 @@ func (c *Cog) onHarvest(b *interaction.Bot, i *discordgo.InteractionCreate) {
 
 	if zoneKey == "public" && plotIdx == 1 && rand.Float64() < c.svc.GetScarecrowChance() {
 		_ = c.svc.AddItem(userID, "scarecrow_charm", 1)
+		scareEmbed := components.Embed(
+			i18n.T("farm.scarecrow_title", lang),
+			i18n.T("farm.scarecrow_desc", lang),
+			components.ColorLegendary,
+		)
+		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			Embeds: []*discordgo.MessageEmbed{scareEmbed},
+			Flags:  discordgo.MessageFlagsEphemeral,
+		})
+	}
+}
+
+func (c *Cog) onHarvestAll(b *interaction.Bot, i *discordgo.InteractionCreate) {
+	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
+	userID := interaction.ToInt64(interaction.UserID(i))
+	cid := i.MessageComponentData().CustomID
+	_, _, rest := components.Decode(cid)
+	if len(rest) < 1 {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	zoneKey := rest[0]
+
+	plots, err := c.svc.GetPlots(userID, zoneKey)
+	if err != nil {
+		interaction.RespondError(b, i, lang, "farm.error")
+		return
+	}
+	var readyIdx []int
+	for _, p := range plots {
+		if p.Ready {
+			readyIdx = append(readyIdx, p.PlotIndex)
+		}
+	}
+	if len(readyIdx) == 0 {
+		interaction.RespondError(b, i, lang, "farm.no_ready_plots")
+		return
+	}
+
+	blessed := c.svc.HasBlessing(userID) && c.svc.GetBlessingZone(userID) == zoneKey
+	blessingUsed := false
+
+	type cropTotal struct {
+		name    string
+		qty     int
+		mutated bool
+	}
+	var order []string
+	totals := map[string]*cropTotal{}
+	totalValue, totalXP, harvested := 0, 0, 0
+	leveledUp := false
+	newLevel := 0
+	mysteriousGained := 0
+	scarecrowGained := false
+	goldenCarrot := false
+	inventoryFull := false
+
+	for _, idx := range readyIdx {
+		hasMysteriousSeed := c.svc.RollMysteriousSeed(userID)
+
+		res, herr := c.svc.Harvest(userID, zoneKey, idx)
+		if herr != nil {
+			if errors.Is(herr, store.ErrInventoryFull) {
+				inventoryFull = true
+				break
+			}
+			continue
+		}
+		harvested++
+
+		if blessed && !blessingUsed {
+			c.svc.ConsumeBlessing(userID)
+			blessingUsed = true
+			res.Quantity *= 2
+			res.XP *= 2
+			res.Value *= 2
+		}
+
+		if t, ok := totals[res.CropName]; ok {
+			t.qty += res.Quantity
+			if res.Mutated {
+				t.mutated = true
+			}
+		} else {
+			totals[res.CropName] = &cropTotal{name: res.CropName, qty: res.Quantity, mutated: res.Mutated}
+			order = append(order, res.CropName)
+		}
+		totalValue += res.Value
+		totalXP += res.XP
+		if res.LeveledUp {
+			leveledUp = true
+			newLevel = res.NewLevel
+		}
+
+		if hasMysteriousSeed {
+			_ = c.svc.AddItem(userID, "mysterious_seed", 1)
+			mysteriousGained++
+		}
+
+		if zoneKey == "public" && idx == 1 && rand.Float64() < c.svc.GetScarecrowChance() {
+			_ = c.svc.AddItem(userID, "scarecrow_charm", 1)
+			scarecrowGained = true
+		}
+
+		if c.svc.CheckGoldenCarrot(userID) && zoneKey == "veggie" {
+			_ = c.svc.AddItem(userID, "golden_carrot", 1)
+			goldenCarrot = true
+		}
+	}
+
+	if harvested == 0 {
+		if inventoryFull {
+			interaction.RespondError(b, i, lang, "inventory.full")
+		} else {
+			interaction.RespondError(b, i, lang, "farm.error")
+		}
+		return
+	}
+
+	var lootLines []string
+	for _, name := range order {
+		t := totals[name]
+		lootLines = append(lootLines, i18n.T("farm.harvest_msg", lang, map[string]any{"qty": t.qty, "item": items.LocalizedName(name, lang)}))
+	}
+	loot := strings.Join(lootLines, "\n")
+
+	desc := i18n.T("farm.success_desc", lang, map[string]any{
+		"loot":  loot,
+		"value": strconv.Itoa(totalValue),
+		"xp":    totalXP,
+	})
+	if blessingUsed {
+		desc = i18n.T("farm.harvest_blessed", lang) + "\n" + desc
+	}
+	if leveledUp {
+		desc += "\n" + i18n.T("character.level_up", lang, map[string]any{"level": newLevel})
+	}
+	if goldenCarrot {
+		desc += "\n\n" + i18n.T("farm.secret_golden_carrot", lang)
+	}
+	if inventoryFull {
+		desc += "\n\n" + i18n.T("farm.harvest_all_partial", lang)
+	}
+
+	embed := components.Embed(
+		i18n.T("farm.harvest_all_title", lang, map[string]any{"n": harvested}),
+		desc,
+		components.ColorSuccess,
+	)
+	comps := []discordgo.MessageComponent{
+		components.ActionRow(
+			components.Button(i18n.T("farm.back", lang), components.EncodeOwner(userID, "farm", "menu"), discordgo.SecondaryButton),
+		),
+	}
+	_ = b.Session.InteractionRespond(i.Interaction,
+		components.InteractionResponse(discordgo.InteractionResponseUpdateMessage, embed, comps))
+
+	if n, ok := c.store.PopQuestNotification(userID); ok {
+		interaction.SendQuestNotification(b, i, n, lang)
+	}
+	if text, dm := jsvc.SceneLine(c.store, userID, "farm", lang); text != "" {
+		interaction.SendJournalScene(b, i, text, dm)
+	}
+	unlocks, uerr := achievement.CheckAndUnlock(b.DB, userID)
+	if uerr == nil && len(unlocks) > 0 {
+		interaction.SendAchievements(b, i, lang, unlocks)
+	}
+
+	if mysteriousGained > 0 {
+		seedEmbed := components.Embed(
+			i18n.T("farm.event_mysterious_seed_title", lang),
+			i18n.T("farm.event_mysterious_seed_desc", lang),
+			components.ColorArcane,
+		)
+		_, _ = b.Session.FollowupMessageCreate(i.Interaction, false, &discordgo.WebhookParams{
+			Embeds: []*discordgo.MessageEmbed{seedEmbed},
+			Flags:  discordgo.MessageFlagsEphemeral,
+		})
+	}
+
+	if scarecrowGained {
 		scareEmbed := components.Embed(
 			i18n.T("farm.scarecrow_title", lang),
 			i18n.T("farm.scarecrow_desc", lang),

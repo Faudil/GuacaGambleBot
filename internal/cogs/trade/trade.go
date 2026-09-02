@@ -92,7 +92,9 @@ func (c *Cog) onSlashSell(b *interaction.Bot, i *discordgo.InteractionCreate) {
 				price = int(v)
 			}
 		case "buyer":
-			buyerID = interaction.ToInt64(opt.StringValue())
+			if v, ok := opt.Value.(string); ok {
+				buyerID = interaction.ToInt64(v)
+			}
 		}
 	}
 

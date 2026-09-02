@@ -11,6 +11,7 @@ type UserDailyLog struct {
 	DateStr     string     `gorm:"uniqueIndex:idx_udl_user_date;column:date_str"` // YYYY-MM-DD
 	Requestor   string     `gorm:"column:requestor"`
 	TurnInItem  string     `gorm:"column:turnin_item"`
+	Activities  string     `gorm:"column:activities"` // comma-separated activity keys, for anti-repeat
 	Completed   bool       `gorm:"column:completed;default:false"`
 	CompletedAt *time.Time `gorm:"column:completed_at"`
 }

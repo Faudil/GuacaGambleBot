@@ -1354,7 +1354,12 @@ func (c *Cog) onFightSlash(b *interaction.Bot, i *discordgo.InteractionCreate) {
 	lang := c.store.GetLanguage(interaction.ToInt64(i.GuildID))
 	userID := interaction.ToInt64(interaction.UserID(i))
 	opts := i.ApplicationCommandData().Options
-	opponentID := interaction.ToInt64(opts[0].StringValue())
+	var opponentID int64
+	if len(opts) > 0 {
+		if u := opts[0].UserValue(nil); u != nil {
+			opponentID = interaction.ToInt64(u.ID)
+		}
+	}
 	var bet int
 	if len(opts) > 1 {
 		bet = int(opts[1].IntValue())

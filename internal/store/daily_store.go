@@ -1,6 +1,7 @@
 package store
 
 import (
+	"strings"
 	"time"
 
 	"gorm.io/gorm/clause"
@@ -11,24 +12,26 @@ import (
 // DailyHistoryEntry is one past daily quest row, used by the generator for
 // anti-repeat selection and streak tracking.
 type DailyHistoryEntry struct {
-	DateStr   string
-	Requestor string
-	TurnIn    string
-	Completed bool
+	DateStr    string
+	Requestor  string
+	TurnIn     string
+	Activities []string
+	Completed  bool
 }
 
 // LogDailyQuest upserts today's daily quest row. It runs at generation so the
-// anti-repeat window sees the requestor and turn-in immediately, before the
-// quest is completed.
-func (s *Store) LogDailyQuest(userID int64, requestor, turnIn string) error {
+// anti-repeat window sees the requestor, turn-in and activities immediately,
+// before the quest is completed.
+func (s *Store) LogDailyQuest(userID int64, requestor, turnIn string, activities []string) error {
+	acts := strings.Join(activities, ",")
 	row := &model.UserDailyLog{
 		UserID: userID, DateStr: time.Now().Format("2006-01-02"),
-		Requestor: requestor, TurnInItem: turnIn,
+		Requestor: requestor, TurnInItem: turnIn, Activities: acts,
 	}
 	return s.DB.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "date_str"}},
 		DoUpdates: clause.Assignments(map[string]any{
-			"requestor": requestor, "turnin_item": turnIn, "completed": false,
+			"requestor": requestor, "turnin_item": turnIn, "activities": acts, "completed": false,
 		}),
 	}).Create(row).Error
 }
@@ -53,8 +56,13 @@ func (s *Store) RecentDailyQuests(userID int64, limit int) ([]DailyHistoryEntry,
 	}
 	out := make([]DailyHistoryEntry, 0, len(rows))
 	for _, r := range rows {
+		var acts []string
+		if r.Activities != "" {
+			acts = strings.Split(r.Activities, ",")
+		}
 		out = append(out, DailyHistoryEntry{
-			DateStr: r.DateStr, Requestor: r.Requestor, TurnIn: r.TurnInItem, Completed: r.Completed,
+			DateStr: r.DateStr, Requestor: r.Requestor, TurnIn: r.TurnInItem,
+			Activities: acts, Completed: r.Completed,
 		})
 	}
 	return out, nil

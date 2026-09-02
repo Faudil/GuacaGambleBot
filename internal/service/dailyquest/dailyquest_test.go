@@ -277,6 +277,43 @@ func TestBuildStepsTurnInAntiRepeat(t *testing.T) {
 	}
 }
 
+func TestBuildStepsActivityRepeatCap(t *testing.T) {
+	req := elaraTemplate(t)
+	// items_farmed has already been asked 3 times recently: it must be
+	// rested in favor of another activity while alternatives remain.
+	var recent []store.DailyHistoryEntry
+	for i := 0; i < activityRepeatCap; i++ {
+		recent = append(recent, store.DailyHistoryEntry{
+			DateStr: "2026-01-0" + string(rune('1'+i)), Requestor: "elara", TurnIn: "x",
+			Activities: []string{"items_farmed"},
+		})
+	}
+	ctx := PlayerContext{
+		AccessibleZones: map[string]bool{"forest": true, "cave": true, "desert": true},
+		Recent:          recent,
+	}
+	for i := 0; i < 200; i++ {
+		for _, st := range buildSteps(req, ctx) {
+			assert.NotEqual(t, "items_farmed", st.Stat, "an activity asked 3 times recently must be rested")
+		}
+	}
+
+	// If every activity in the pool is rested, the cap must not block quest
+	// generation: the full pool is used as a fallback.
+	allRested := []store.DailyHistoryEntry{{
+		DateStr: "2026-01-01", Requestor: "elara", TurnIn: "x",
+		Activities: []string{"items_farmed", "pets_fed", "items_digged", "items_crafted"},
+	}}
+	for i := 1; i < activityRepeatCap; i++ {
+		allRested = append(allRested, allRested[0])
+	}
+	ctx.Recent = allRested
+	for i := 0; i < 50; i++ {
+		steps := buildSteps(req, ctx)
+		assert.GreaterOrEqual(t, len(steps), 2, "generation must still succeed when every activity is rested")
+	}
+}
+
 func TestGenerateLogsDailyQuest(t *testing.T) {
 	svc, s := testService(t)
 	recipe, err := svc.Generate(1)
@@ -288,6 +325,14 @@ func TestGenerateLogsDailyQuest(t *testing.T) {
 	assert.Equal(t, recipe.Requestor, entries[0].Requestor)
 	assert.Equal(t, recipe.TurnInItem(), entries[0].TurnIn)
 	assert.False(t, entries[0].Completed)
+
+	var wantActivities []string
+	for _, st := range recipe.Steps {
+		if st.Kind == store.DailyStepActivity {
+			wantActivities = append(wantActivities, activityStepKey(st.Stat, st.Zone))
+		}
+	}
+	assert.Equal(t, wantActivities, entries[0].Activities, "generated activities are logged for anti-repeat")
 }
 
 func TestClaimCompletesLogAndStat(t *testing.T) {

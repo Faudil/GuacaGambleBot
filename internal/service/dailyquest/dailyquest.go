@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 
 	"guacagamblebot/internal/achievement"
@@ -26,6 +27,7 @@ const (
 	activityCountCap    = 12 // hard cap on activity step counts
 	turnInCountCap      = 6  // hard cap on turn-in quantities
 	antiRepeatWindow    = 5  // days a requestor/turn-in is rested
+	activityRepeatCap   = 3  // max times an activity may appear within the anti-repeat window
 	jackpotPerStreakPct = 10 // jackpot chance gained per completed day
 	jackpotMaxPct       = 100
 	streakMoneyPerDay   = 25 // bonus credits per streak day
@@ -258,10 +260,36 @@ func (s *Service) Generate(userID int64) (store.DailyRecipe, error) {
 	if err != nil {
 		return recipe, err
 	}
-	if err := s.store.LogDailyQuest(userID, recipe.Requestor, recipe.TurnInItem()); err != nil {
+	var keys []string
+	for _, st := range recipe.Steps {
+		if st.Kind == store.DailyStepActivity {
+			keys = append(keys, activityStepKey(st.Stat, st.Zone))
+		}
+	}
+	if err := s.store.LogDailyQuest(userID, recipe.Requestor, recipe.TurnInItem(), keys); err != nil {
 		return recipe, err
 	}
 	return recipe, nil
+}
+
+// templateActivityKey identifies an activity template for anti-repeat and
+// no-duplicate-within-a-quest purposes, folding all boss steps into one
+// shared "boss" key regardless of which stat they eventually resolve to.
+func templateActivityKey(a activityTemplate) string {
+	if a.Boss {
+		return "boss"
+	}
+	return a.Stat + a.Zone
+}
+
+// activityStepKey identifies an activity for anti-repeat purposes. Boss steps
+// resolve their stat to the current boss stage (e.g. "boss_stage_2"), so they
+// are folded back into one shared "boss" key regardless of stage.
+func activityStepKey(stat, zone string) string {
+	if strings.HasPrefix(stat, "boss_stage_") {
+		return "boss"
+	}
+	return stat + zone
 }
 
 // loadContext gathers the user state used by the selection policies.
@@ -402,22 +430,27 @@ func buildSteps(req requestorTemplate, ctx PlayerContext) []store.DailyStep {
 	for n := 1 + rand.Intn(2); n > 0; n-- {
 		var cands []activityTemplate
 		for _, a := range avail {
-			key := a.Stat + a.Zone
-			if a.Boss {
-				key = "boss"
-			}
-			if !picked[key] {
+			if !picked[templateActivityKey(a)] {
 				cands = append(cands, a)
 			}
 		}
 		if len(cands) == 0 {
 			break
 		}
-		a := cands[rand.Intn(len(cands))]
-		key := a.Stat + a.Zone
-		if a.Boss {
-			key = "boss"
+		// Rest activities the player has already been asked to do too often
+		// recently; fall back to the full candidate set if that rests all of
+		// them (e.g. a short-lived pool with no other options).
+		var rested []activityTemplate
+		for _, a := range cands {
+			if ctx.recentActivityCount(templateActivityKey(a)) < activityRepeatCap {
+				rested = append(rested, a)
+			}
 		}
+		if len(rested) > 0 {
+			cands = rested
+		}
+		a := cands[rand.Intn(len(cands))]
+		key := templateActivityKey(a)
 		picked[key] = true
 		stat, count := a.Stat, scaleCount(a.Min, a.Max, ctx.Level, activityCountCap)
 		if a.Boss {
@@ -520,6 +553,20 @@ func (ctx PlayerContext) recentlySeenRequestor(npc string) bool {
 		}
 	}
 	return false
+}
+
+// recentActivityCount counts how many times an activity key was asked within
+// the anti-repeat window, across any requestor.
+func (ctx PlayerContext) recentActivityCount(key string) int {
+	c := 0
+	for _, e := range ctx.Recent {
+		for _, a := range e.Activities {
+			if a == key {
+				c++
+			}
+		}
+	}
+	return c
 }
 
 func (ctx PlayerContext) recentlySeenTurnIn(npc, item string) bool {
