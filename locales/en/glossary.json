@@ -1,0 +1,25 @@
+{
+  "glossary": {
+    "title": "📖 Glossary",
+    "overview_header": "**Resource & item codex** — {discovered}/{total} discovered",
+    "footer": "Pick a category to browse it.",
+    "category_placeholder": "📖 Choose a category",
+    "item_placeholder": "🔎 Choose a discovered item",
+    "locked": "???",
+    "back": "← Back",
+    "error": "❌ Could not load the glossary.",
+    "page_footer": "📄 {page}/{total}",
+    "discovered_on": "🗓️ Discovered on {date}",
+    "how_to_get": "How to get it",
+    "source_mining": "⛏️ Found while mining, depth {depth}+",
+    "source_fishing": "🎣 Caught fishing in biome: {biome}",
+    "source_hunt": "🗡️ Hunt loot in zone: {zone}",
+    "source_craft": "🛠️ Craftable with: {ingredients}",
+    "source_shop": "🏪 Available in the daily shop",
+    "source_quest": "📜 Quest reward",
+    "source_boss": "👑 Boss league reward",
+    "source_criminality": "🕵️ Criminality reward",
+    "source_veil": "🌀 Veil raid reward",
+    "source_unknown": "❔ Unknown source"
+  }
+}

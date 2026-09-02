@@ -87,6 +87,9 @@
     "give": {
       "desc": "Donner de l'argent à un autre utilisateur."
     },
+    "glossary": {
+      "desc": "Consulte le codex des ressources et objets déjà découverts."
+    },
     "hatch": {
       "desc": "Éclore un œuf de familier"
     },

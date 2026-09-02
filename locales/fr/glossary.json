@@ -1,0 +1,25 @@
+{
+  "glossary": {
+    "title": "📖 Codex",
+    "overview_header": "**Codex des ressources et objets** — {discovered}/{total} découverts",
+    "footer": "Choisis une catégorie pour l'explorer.",
+    "category_placeholder": "📖 Choisir une catégorie",
+    "item_placeholder": "🔎 Choisir un objet découvert",
+    "locked": "???",
+    "back": "← Retour",
+    "error": "❌ Impossible de charger le codex.",
+    "page_footer": "📄 {page}/{total}",
+    "discovered_on": "🗓️ Découvert le {date}",
+    "how_to_get": "Comment l'obtenir",
+    "source_mining": "⛏️ Trouvable en minant, profondeur {depth}+",
+    "source_fishing": "🎣 Pêchable dans le biome : {biome}",
+    "source_hunt": "🗡️ Butin de chasse dans la zone : {zone}",
+    "source_craft": "🛠️ Fabricable avec : {ingredients}",
+    "source_shop": "🏪 Disponible à la boutique quotidienne",
+    "source_quest": "📜 Récompense de quête",
+    "source_boss": "👑 Récompense de ligue de boss",
+    "source_criminality": "🕵️ Récompense de criminalité",
+    "source_veil": "🌀 Récompense de raid du Voile",
+    "source_unknown": "❔ Source inconnue"
+  }
+}

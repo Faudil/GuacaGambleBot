@@ -60,6 +60,13 @@ var oreMinDepth = map[string]int{
 	"resonance_core":   30,
 }
 
+// OreMinDepth returns the minimum mining depth required to find the given
+// ore, and whether it is a mining drop at all.
+func OreMinDepth(itemID string) (int, bool) {
+	d, ok := oreMinDepth[itemID]
+	return d, ok
+}
+
 // oreValueCurve returns the expected ore value at depth.
 // Continuous exponential curve: ~5@d1, ~20@d4, ~63@d7, ~161@d9, ~368@d11, ~600@d12, ~2200@d15, >5000@d24.
 func oreValueCurve(depth int) int {

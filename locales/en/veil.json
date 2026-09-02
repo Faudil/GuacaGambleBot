@@ -111,7 +111,6 @@
       "err_already_joined": "You have already joined this raid.",
       "err_char": "Your character must be level 50+ to enter a Veil Rift.",
       "err_consume": "Failed to consume Veil Key.",
-      "err_delve": "You must have reached delve floor 10+ to prove your worth.",
       "err_full": "Raid is full (6/6 players).",
       "err_key": "You need a Veil Key in your inventory.",
       "err_key_detail": "You need a **Veil Key** to enter. Find one in deep delve runs.",

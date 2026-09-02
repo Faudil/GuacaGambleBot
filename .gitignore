@@ -31,6 +31,11 @@ migrate_db.py
 
 # Local session notes
 .opencode/
+opencode.json
+
+# Local machine maintenance / notes (not part of the bot)
+cleanup-root.sh
+questlines.md
 
 # Logs
 *.log

@@ -111,7 +111,6 @@
       "err_already_joined": "Vous avez déjà rejoint ce raid.",
       "err_char": "Votre personnage doit être niveau 50+ pour entrer dans une Faille du Voile.",
       "err_consume": "Échec de la consommation de la Clé du Voile.",
-      "err_delve": "Vous devez avoir atteint l'étage 10+ des profondeurs pour prouver votre valeur.",
       "err_full": "Le raid est complet (6/6 joueurs).",
       "err_key": "Vous avez besoin d'une Clé du Voile dans votre inventaire.",
       "err_key_detail": "Vous avez besoin d'une **Clé du Voile** pour entrer. Trouvez-en une dans les profondeurs.",

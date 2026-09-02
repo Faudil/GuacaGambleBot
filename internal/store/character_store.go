@@ -269,6 +269,9 @@ func (s *Store) CreateEquipmentTx(tx *gorm.DB, userID int64, baseID, name, emoji
 	if err := tx.Create(&eq).Error; err != nil {
 		return nil, err
 	}
+	if err := s.recordItemDiscovery(tx, userID, baseID); err != nil {
+		return nil, err
+	}
 	return &eq, nil
 }
 

@@ -48,6 +48,14 @@ type UserLoreEntry struct {
 	DiscoveredAt time.Time `gorm:"column:discovered_at;autoCreateTime"`
 }
 
+// UserItemDiscovery records the first time a user ever obtained a given item
+// or equipment base (bought, crafted, or looted), for the /glossary command.
+type UserItemDiscovery struct {
+	UserID       int64     `gorm:"primaryKey;column:user_id"`
+	ItemID       string    `gorm:"primaryKey;column:item_id"`
+	DiscoveredAt time.Time `gorm:"column:discovered_at;autoCreateTime"`
+}
+
 type UserHuntUnlock struct {
 	UserID     int64     `gorm:"primaryKey;column:user_id"`
 	ZoneKey    string    `gorm:"primaryKey;column:zone_key"`
@@ -79,11 +87,12 @@ type WeeklyModifier struct {
 	CreatedAt time.Time `gorm:"column:created_at"`
 }
 
-func (UserCharacter) TableName() string    { return "user_characters" }
-func (UserEquipment) TableName() string    { return "user_equipment" }
-func (ActiveBuff) TableName() string       { return "active_buffs" }
-func (UserLoreEntry) TableName() string    { return "user_lore" }
-func (UserHuntUnlock) TableName() string   { return "user_hunt_unlocks" }
-func (UserHuntZoneStat) TableName() string { return "user_hunt_zone_stats" }
-func (WeeklyRank) TableName() string       { return "weekly_ranks" }
-func (WeeklyModifier) TableName() string   { return "weekly_modifiers" }
+func (UserCharacter) TableName() string     { return "user_characters" }
+func (UserEquipment) TableName() string     { return "user_equipment" }
+func (ActiveBuff) TableName() string        { return "active_buffs" }
+func (UserLoreEntry) TableName() string     { return "user_lore" }
+func (UserItemDiscovery) TableName() string { return "user_item_discoveries" }
+func (UserHuntUnlock) TableName() string    { return "user_hunt_unlocks" }
+func (UserHuntZoneStat) TableName() string  { return "user_hunt_zone_stats" }
+func (WeeklyRank) TableName() string        { return "weekly_ranks" }
+func (WeeklyModifier) TableName() string    { return "weekly_modifiers" }

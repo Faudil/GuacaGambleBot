@@ -44,11 +44,6 @@ func (svc *Service) ValidateGate(userID int64, lang string) (bool, string) {
 		return false, i18n.T("veil.gate.err_char", lang)
 	}
 
-	hasF10, _ := svc.store.HasDelveFlag(userID, "cleared_floor_10")
-	if !hasF10 {
-		return false, i18n.T("veil.gate.err_delve", lang)
-	}
-
 	ok, _ := svc.store.HasItem(userID, "veil_key", 1)
 	if !ok {
 		return false, i18n.T("veil.gate.err_key_detail", lang)

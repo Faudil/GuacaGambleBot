@@ -130,8 +130,11 @@ func (s *Store) AddItemRaw(db *gorm.DB, userID int64, itemID string, quantity in
 	if it.Durability > 0 {
 		inv.Durability = it.Durability
 	}
-	return db.Clauses(clause.OnConflict{
+	if err := db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "user_id"}, {Name: "item_id"}},
 		DoUpdates: clause.Assignments(map[string]any{"quantity": gorm.Expr("quantity + ?", quantity)}),
-	}).Create(inv).Error
+	}).Create(inv).Error; err != nil {
+		return err
+	}
+	return s.recordItemDiscovery(db, userID, it.ID)
 }

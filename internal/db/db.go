@@ -130,6 +130,7 @@ func Migrate(db *gorm.DB) error {
 		&model.ActiveBuff{},
 		&model.MarketState{},
 		&model.UserLoreEntry{},
+		&model.UserItemDiscovery{},
 		&model.UserHuntUnlock{},
 		&model.UserHuntZoneStat{},
 		&model.UserFurniture{},

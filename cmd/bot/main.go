@@ -43,6 +43,7 @@ import (
 	farmcog "guacagamblebot/internal/cogs/farm"
 	fishingcog "guacagamblebot/internal/cogs/fishing"
 	forgecog "guacagamblebot/internal/cogs/forge"
+	glossarycog "guacagamblebot/internal/cogs/glossary"
 	helpcog "guacagamblebot/internal/cogs/help"
 	housingcog "guacagamblebot/internal/cogs/housing"
 	huntcog "guacagamblebot/internal/cogs/hunt"
@@ -102,6 +103,7 @@ func cogGroups() []cogRegistration {
 			usecog.Register,
 			craftingcog.Register,
 			forgecog.Register,
+			glossarycog.Register,
 		}},
 		{helpcog.CatCasino, []func(*interaction.Router, *store.Store, *config.Config){
 			casinocog.Register,
